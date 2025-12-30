@@ -8,13 +8,13 @@ A CRM for small agencies (2-10 people) combining Perfex-style client management 
 
 ## Tech Stack
 
+- Python 3.12 (local venv)
 - Django 5.1
 - django-allauth (email/password authentication)
 - HTMX 2.0
 - Alpine.js 3.x
 - Tailwind CSS (CDN)
-- PostgreSQL 16
-- Docker + Docker Compose
+- PostgreSQL 16 (Docker container)
 
 ## Core Data Model
 
@@ -131,8 +131,7 @@ Single-tenant design (one organization per deployment).
 
 ```
 webftl_crm/
-├── docker-compose.yml
-├── Dockerfile
+├── docker-compose.yml      # PostgreSQL only
 ├── requirements.txt
 ├── manage.py
 ├── config/                 # Django project settings

@@ -6,7 +6,7 @@
 
 **Architecture:** Django monolith with HTMX for interactivity. Five apps: accounts, clients, projects, tasks, integrations. PostgreSQL database in Docker. Single-tenant (one organization per deployment).
 
-**Tech Stack:** Django 5.1, django-allauth, HTMX 2.0, Alpine.js 3.x, Tailwind CSS (CDN), PostgreSQL 16, Docker
+**Tech Stack:** Python 3.12 (local venv), Django 5.1, django-allauth, HTMX 2.0, Alpine.js 3.x, Tailwind CSS (CDN), PostgreSQL 16 (Docker)
 
 ---
 
@@ -81,40 +81,13 @@ git commit -m "feat: add .gitignore for Python/Django project"
 
 ---
 
-### Task 1.1: Docker Setup
+### Task 1.1: PostgreSQL Docker Setup
 
 **Files:**
-- Create: `Dockerfile`
 - Create: `docker-compose.yml`
-- Create: `.dockerignore`
 - Create: `.env.example`
 
-**Step 1: Create Dockerfile**
-
-```dockerfile
-FROM python:3.12-slim
-
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-WORKDIR /app
-
-RUN apt-get update && apt-get install -y \
-    libpq-dev \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
-EXPOSE 8000
-
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
-```
-
-**Step 2: Create docker-compose.yml**
+**Step 1: Create docker-compose.yml (PostgreSQL only)**
 
 ```yaml
 services:
@@ -129,40 +102,11 @@ services:
     ports:
       - "5432:5432"
 
-  web:
-    build: .
-    command: python manage.py runserver 0.0.0.0:8000
-    volumes:
-      - .:/app
-    ports:
-      - "8000:8000"
-    depends_on:
-      - db
-    environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-webftl_crm}
-      DEBUG: ${DEBUG:-True}
-      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
-
 volumes:
   postgres_data:
 ```
 
-**Step 3: Create .dockerignore**
-
-```
-__pycache__
-*.pyc
-*.pyo
-.git
-.gitignore
-.env
-*.md
-.venv
-venv
-*.sqlite3
-```
-
-**Step 4: Create .env.example**
+**Step 2: Create .env.example**
 
 ```
 DEBUG=True
@@ -170,14 +114,22 @@ SECRET_KEY=your-secret-key-here
 POSTGRES_DB=webftl_crm
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
-DATABASE_URL=postgres://postgres:postgres@db:5432/webftl_crm
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/webftl_crm
 ```
 
-**Step 5: Commit**
+> **Note:** DATABASE_URL uses `localhost` since Django runs locally, not in Docker.
+
+**Step 3: Start PostgreSQL**
 
 ```bash
-git add Dockerfile docker-compose.yml .dockerignore .env.example
-git commit -m "feat: add Docker configuration"
+docker-compose up -d
+```
+
+**Step 4: Commit**
+
+```bash
+git add docker-compose.yml .env.example
+git commit -m "feat: add Docker Compose for PostgreSQL"
 ```
 
 ---
@@ -2731,25 +2683,14 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-**Step 2: Run initial migrations**
-
-**Option A: With Docker (PostgreSQL in container)**
+**Step 2: Start PostgreSQL and run migrations**
 
 ```bash
-docker-compose up -d db  # Start only PostgreSQL
+docker-compose up -d  # Start PostgreSQL
 source .venv/bin/activate
 python manage.py makemigrations accounts clients projects tasks integrations
 python manage.py migrate
 python manage.py createsuperuser
-```
-
-**Option B: Full Docker setup**
-
-```bash
-docker-compose build
-docker-compose run web python manage.py makemigrations accounts clients projects tasks integrations
-docker-compose run web python manage.py migrate
-docker-compose run web python manage.py createsuperuser
 ```
 
 **Step 3: Add GITHUB_WEBHOOK_SECRET to settings**
@@ -2769,18 +2710,10 @@ GITHUB_WEBHOOK_SECRET=your-webhook-secret-here
 
 **Step 5: Verify the app runs**
 
-**Option A: Local development (venv + Docker PostgreSQL)**
-
 ```bash
-docker-compose up -d db  # Start PostgreSQL
+docker-compose up -d  # Ensure PostgreSQL is running
 source .venv/bin/activate
 python manage.py runserver
-```
-
-**Option B: Full Docker**
-
-```bash
-docker-compose up
 ```
 
 Visit http://localhost:8000 and:
@@ -2803,7 +2736,7 @@ git commit -m "feat: complete MVP setup with migrations"
 ## Summary
 
 **Phases completed:**
-1. Project Foundation (Docker, Django, templates)
+1. Project Foundation (venv, PostgreSQL Docker, Django, templates)
 2. Accounts App (User model, roles, team)
 3. Clients App (CRUD)
 4. Projects App (CRUD, Kanban, statuses)
