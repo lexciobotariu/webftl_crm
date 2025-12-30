@@ -349,43 +349,83 @@ git commit -m "feat: add Django project structure"
 
 ---
 
-### Task 1.3: Base Template with Tailwind and HTMX
+### Task 1.3: Base Template with Linear-Style Dark Theme
 
 **Files:**
 - Create: `templates/base.html`
 - Create: `templates/components/sidebar.html`
 - Create: `static/css/custom.css`
 
+> **Design:** Linear-style dark theme with Lucide icons. See design doc for full color palette.
+
 **Step 1: Create templates/base.html**
 
 ```html
+{% load static %}
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-gray-50">
+<html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}WebFTL CRM{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            bg: '#0d0d0d',
+                            sidebar: '#0a0a0a',
+                            card: '#171717',
+                            hover: '#262626',
+                            border: '#262626',
+                        },
+                        accent: {
+                            DEFAULT: '#8b5cf6',
+                            hover: '#a78bfa',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <script defer src="https://unpkg.com/alpinejs@3.14.8/dist/cdn.min.js"></script>
-    <link rel="stylesheet" href="{% load static %}{% static 'css/custom.css' %}">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
 </head>
-<body class="h-full" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<body class="h-full bg-dark-bg text-neutral-100" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     {% if user.is_authenticated %}
     <div class="min-h-full flex">
         {% include "components/sidebar.html" %}
-        <main class="flex-1 p-8">
+        <main class="flex-1 p-8 overflow-auto">
             {% block content %}{% endblock %}
         </main>
     </div>
     {% else %}
-    <main class="min-h-full flex items-center justify-center">
+    <main class="min-h-full flex items-center justify-center bg-dark-bg">
         {% block auth_content %}{% endblock %}
     </main>
     {% endif %}
 
+    <!-- Slide-over panel container -->
     <div id="slide-over" class="hidden"></div>
+
+    <!-- Modal container -->
     <div id="modal" class="hidden"></div>
+
+    <!-- Initialize Lucide icons -->
+    <script>
+        lucide.createIcons();
+        // Re-init icons after HTMX swaps
+        document.body.addEventListener('htmx:afterSwap', () => {
+            lucide.createIcons();
+        });
+    </script>
 </body>
 </html>
 ```
@@ -393,37 +433,82 @@ git commit -m "feat: add Django project structure"
 **Step 2: Create templates/components/sidebar.html**
 
 ```html
-<aside class="w-64 bg-gray-900 text-white min-h-screen p-4">
-    <div class="mb-8">
-        <h1 class="text-xl font-bold">WebFTL CRM</h1>
+<aside class="w-60 bg-dark-sidebar min-h-screen border-r border-dark-border flex flex-col">
+    <!-- Logo -->
+    <div class="p-4 border-b border-dark-border">
+        <h1 class="text-lg font-semibold text-neutral-100">WebFTL CRM</h1>
     </div>
-    <nav class="space-y-2">
+
+    <!-- Navigation -->
+    <nav class="flex-1 p-3 space-y-1">
         <a href="{% url 'dashboard' %}"
-           class="block px-4 py-2 rounded hover:bg-gray-800 {% if request.resolver_match.url_name == 'dashboard' %}bg-gray-800{% endif %}">
+           class="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors duration-150
+                  {% if request.resolver_match.url_name == 'dashboard' %}
+                  bg-accent/20 text-accent
+                  {% else %}
+                  text-neutral-400 hover:text-neutral-100 hover:bg-dark-hover
+                  {% endif %}">
+            <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
             Dashboard
         </a>
         <a href="{% url 'client_list' %}"
-           class="block px-4 py-2 rounded hover:bg-gray-800 {% if 'client' in request.resolver_match.url_name %}bg-gray-800{% endif %}">
+           class="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors duration-150
+                  {% if 'client' in request.resolver_match.url_name %}
+                  bg-accent/20 text-accent
+                  {% else %}
+                  text-neutral-400 hover:text-neutral-100 hover:bg-dark-hover
+                  {% endif %}">
+            <i data-lucide="building-2" class="w-4 h-4"></i>
             Clients
         </a>
         <a href="{% url 'project_list' %}"
-           class="block px-4 py-2 rounded hover:bg-gray-800 {% if 'project' in request.resolver_match.url_name %}bg-gray-800{% endif %}">
+           class="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors duration-150
+                  {% if 'project' in request.resolver_match.url_name %}
+                  bg-accent/20 text-accent
+                  {% else %}
+                  text-neutral-400 hover:text-neutral-100 hover:bg-dark-hover
+                  {% endif %}">
+            <i data-lucide="folder-kanban" class="w-4 h-4"></i>
             Projects
         </a>
         <a href="{% url 'my_tasks' %}"
-           class="block px-4 py-2 rounded hover:bg-gray-800 {% if request.resolver_match.url_name == 'my_tasks' %}bg-gray-800{% endif %}">
+           class="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors duration-150
+                  {% if request.resolver_match.url_name == 'my_tasks' %}
+                  bg-accent/20 text-accent
+                  {% else %}
+                  text-neutral-400 hover:text-neutral-100 hover:bg-dark-hover
+                  {% endif %}">
+            <i data-lucide="user-check" class="w-4 h-4"></i>
             My Tasks
         </a>
         {% if user.role == 'admin' %}
         <a href="{% url 'team_list' %}"
-           class="block px-4 py-2 rounded hover:bg-gray-800 {% if 'team' in request.resolver_match.url_name %}bg-gray-800{% endif %}">
+           class="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors duration-150
+                  {% if 'team' in request.resolver_match.url_name %}
+                  bg-accent/20 text-accent
+                  {% else %}
+                  text-neutral-400 hover:text-neutral-100 hover:bg-dark-hover
+                  {% endif %}">
+            <i data-lucide="users" class="w-4 h-4"></i>
             Team
         </a>
         {% endif %}
     </nav>
-    <div class="absolute bottom-4 left-4 right-4">
-        <div class="px-4 py-2 text-sm text-gray-400">{{ user.email }}</div>
-        <a href="{% url 'account_logout' %}" class="block px-4 py-2 rounded hover:bg-gray-800 text-red-400">
+
+    <!-- User section -->
+    <div class="p-3 border-t border-dark-border">
+        <div class="flex items-center gap-3 px-3 py-2">
+            <div class="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
+                <span class="text-accent text-sm font-medium">{{ user.name|slice:":1"|upper }}</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="text-sm text-neutral-100 truncate">{{ user.name }}</div>
+                <div class="text-xs text-neutral-500 truncate">{{ user.email }}</div>
+            </div>
+        </div>
+        <a href="{% url 'account_logout' %}"
+           class="flex items-center gap-3 px-3 py-2 mt-1 rounded-md text-sm text-neutral-400 hover:text-red-400 hover:bg-dark-hover transition-colors duration-150">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
             Logout
         </a>
     </div>
@@ -433,18 +518,25 @@ git commit -m "feat: add Django project structure"
 **Step 3: Create static/css/custom.css**
 
 ```css
-/* Custom scrollbar */
+/* Linear-style dark theme custom styles */
+
+/* Custom scrollbar - dark themed */
 ::-webkit-scrollbar {
     width: 8px;
+    height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: #171717;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #888;
+    background: #404040;
     border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #525252;
 }
 
 /* HTMX loading indicator */
@@ -461,22 +553,158 @@ git commit -m "feat: add Django project structure"
     position: fixed;
     top: 0;
     right: 0;
-    width: 40rem;
+    width: 480px;
     max-width: 100%;
     height: 100vh;
-    background: white;
-    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
+    background: #171717;
+    border-left: 1px solid #262626;
     z-index: 50;
     overflow-y: auto;
+    animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+/* Backdrop for slide-over */
+.slide-over-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 40;
 }
 
 /* Kanban drag styles */
 .dragging {
     opacity: 0.5;
+    transform: rotate(2deg);
 }
 
 .drag-over {
-    border: 2px dashed #3b82f6;
+    border: 2px dashed #8b5cf6;
+    background: rgba(139, 92, 246, 0.1);
+}
+
+/* Card hover effect */
+.card-hover {
+    transition: all 0.15s ease;
+}
+
+.card-hover:hover {
+    background: #262626;
+    border-color: #404040;
+}
+
+/* Button styles */
+.btn-primary {
+    background: #8b5cf6;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.15s ease;
+}
+
+.btn-primary:hover {
+    background: #a78bfa;
+}
+
+.btn-secondary {
+    background: transparent;
+    color: #a3a3a3;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    border: 1px solid #262626;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.15s ease;
+}
+
+.btn-secondary:hover {
+    background: #262626;
+    color: #fafafa;
+}
+
+.btn-ghost {
+    background: transparent;
+    color: #a3a3a3;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    transition: all 0.15s ease;
+}
+
+.btn-ghost:hover {
+    background: #262626;
+    color: #fafafa;
+}
+
+/* Form inputs - dark themed */
+.input-dark {
+    background: #171717;
+    border: 1px solid #262626;
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    color: #fafafa;
+    font-size: 0.875rem;
+    width: 100%;
+    transition: all 0.15s ease;
+}
+
+.input-dark:focus {
+    outline: none;
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+}
+
+.input-dark::placeholder {
+    color: #737373;
+}
+
+/* Priority badges */
+.priority-urgent {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+.priority-high {
+    background: rgba(249, 115, 22, 0.2);
+    color: #f97316;
+}
+
+.priority-medium {
+    background: rgba(234, 179, 8, 0.2);
+    color: #eab308;
+}
+
+.priority-low {
+    background: rgba(115, 115, 115, 0.2);
+    color: #737373;
+}
+
+/* Status badges */
+.status-badge {
+    padding: 0.125rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+/* Selection/focus styles */
+::selection {
+    background: rgba(139, 92, 246, 0.3);
+}
+
+/* Smooth transitions for all interactive elements */
+a, button, input, select, textarea {
+    transition: all 0.15s ease;
 }
 ```
 
@@ -484,7 +712,7 @@ git commit -m "feat: add Django project structure"
 
 ```bash
 git add templates/ static/
-git commit -m "feat: add base template with Tailwind, HTMX, Alpine"
+git commit -m "feat: add Linear-style dark theme with Lucide icons"
 ```
 
 ---

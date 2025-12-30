@@ -14,7 +14,115 @@ A CRM for small agencies (2-10 people) combining Perfex-style client management 
 - HTMX 2.0
 - Alpine.js 3.x
 - Tailwind CSS (CDN)
+- Lucide Icons (CDN)
 - PostgreSQL 16 (Docker container)
+
+## UI/UX Design
+
+### Design System: Linear-Style Dark Theme
+
+The UI follows Linear's design language - minimal, dark, professional, with subtle animations.
+
+**Theme:** Dark only (no theme switching for MVP)
+
+### Color Palette
+
+| Element | Color | Hex |
+|---------|-------|-----|
+| Background (main) | Near black | `#0d0d0d` |
+| Background (sidebar) | Darker | `#0a0a0a` |
+| Background (cards/panels) | Elevated | `#171717` |
+| Background (hover) | Subtle lift | `#262626` |
+| Border | Subtle | `#262626` |
+| Text (primary) | Off-white | `#fafafa` |
+| Text (secondary) | Muted gray | `#a3a3a3` |
+| Text (tertiary) | Dimmed | `#737373` |
+| Accent (primary) | Purple/violet | `#8b5cf6` |
+| Accent (hover) | Lighter purple | `#a78bfa` |
+| Success | Green | `#22c55e` |
+| Warning | Orange | `#f97316` |
+| Error | Red | `#ef4444` |
+| Urgent priority | Red | `#ef4444` |
+| High priority | Orange | `#f97316` |
+| Medium priority | Yellow | `#eab308` |
+| Low priority | Gray | `#737373` |
+
+### Typography
+
+- **Font:** System font stack (Inter-like): `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`
+- **Sizes:**
+  - xs: 12px, sm: 14px, base: 15px, lg: 16px, xl: 18px, 2xl: 20px
+- **Weights:** Regular (400), Medium (500), Semibold (600)
+
+### Icons
+
+**Library:** Lucide Icons (https://lucide.dev/)
+- Load via CDN: `<script src="https://unpkg.com/lucide@latest"></script>`
+- Usage: `<i data-lucide="icon-name"></i>` then call `lucide.createIcons()`
+
+**Key icons:**
+| Usage | Icon |
+|-------|------|
+| Dashboard | `layout-dashboard` |
+| Clients | `building-2` |
+| Projects | `folder-kanban` |
+| Tasks | `check-square` |
+| My Tasks | `user-check` |
+| Team | `users` |
+| Settings | `settings` |
+| Add/Create | `plus` |
+| Edit | `pencil` |
+| Delete | `trash-2` |
+| Search | `search` |
+| Filter | `filter` |
+| Priority | `signal` |
+| Due date | `calendar` |
+| Assignee | `user` |
+| GitHub | `github` |
+| Comments | `message-square` |
+| Attachments | `paperclip` |
+| Subtasks | `list-checks` |
+| Drag handle | `grip-vertical` |
+| Close | `x` |
+| Chevron | `chevron-right` / `chevron-down` |
+
+### Component Styling
+
+**Sidebar:**
+- Fixed left, full height
+- Width: 240px
+- Subtle separator border on right
+- Nav items: rounded-md, subtle hover state
+- Active item: accent background with accent text
+
+**Cards (tasks, clients, projects):**
+- Rounded corners (8px)
+- Subtle border
+- Slight shadow on hover
+- Smooth transition (150ms)
+
+**Buttons:**
+- Primary: Accent background, white text
+- Secondary: Transparent, border, text color
+- Ghost: Transparent, hover shows background
+- All: rounded-md, 150ms transition
+
+**Form inputs:**
+- Dark background (#171717)
+- Subtle border (#262626)
+- Focus: accent border with glow
+- Rounded-md
+
+**Slide-over panel:**
+- Right side, 480px width
+- Subtle left border
+- Overlay backdrop (optional)
+- Smooth slide animation
+
+**Kanban board:**
+- Columns: Subtle background, rounded
+- Cards: Elevated background, drag shadow
+- Drop zones: Dashed accent border when active
 
 ## Core Data Model
 
