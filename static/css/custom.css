@@ -1,0 +1,51 @@
+/*
+ * Minimal custom CSS - only for things Tailwind can't handle inline:
+ * - Scrollbar styling (pseudo-elements)
+ * - HTMX dynamic states
+ * - Drag-and-drop states (added via JS)
+ */
+
+/* Dark scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #171717;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #404040;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #525252;
+}
+
+/* Firefox scrollbar */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #404040 #171717;
+}
+
+/* HTMX loading states */
+.htmx-request .htmx-indicator {
+    display: inline-block;
+}
+
+.htmx-indicator {
+    display: none;
+}
+
+/* Kanban drag states (toggled via JS) */
+.dragging {
+    opacity: 0.5;
+    transform: rotate(2deg);
+}
+
+.drag-over {
+    border: 2px dashed #8b5cf6 !important;
+    background: rgba(139, 92, 246, 0.1) !important;
+}
