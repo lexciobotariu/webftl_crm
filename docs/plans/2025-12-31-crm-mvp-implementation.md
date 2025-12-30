@@ -12,6 +12,75 @@
 
 ## Phase 1: Project Foundation
 
+### Task 1.0: Python Virtual Environment Setup
+
+**Files:**
+- Create: `.venv/` (virtual environment directory)
+- Create: `.gitignore`
+
+**Step 1: Create virtual environment with Python 3.12**
+
+```bash
+python3.12 -m venv .venv
+```
+
+**Step 2: Create .gitignore**
+
+```
+# Virtual environment
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environment
+.env
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+media/
+
+# Static files
+staticfiles/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+```
+
+**Step 3: Activate venv and verify Python version**
+
+```bash
+source .venv/bin/activate
+python --version  # Should show Python 3.12.x
+```
+
+**Step 4: Commit**
+
+```bash
+git add .gitignore
+git commit -m "feat: add .gitignore for Python/Django project"
+```
+
+> **Note:** For all subsequent commands in this plan, always activate the virtual environment first:
+> ```bash
+> source .venv/bin/activate
+> ```
+
+---
+
 ### Task 1.1: Docker Setup
 
 **Files:**
@@ -128,12 +197,12 @@ git commit -m "feat: add Docker configuration"
 ```
 Django==5.1.4
 django-allauth==65.3.0
-django-htmx==1.21.0
-psycopg[binary]==3.2.3
-dj-database-url==2.3.0
-python-dotenv==1.0.1
-whitenoise==6.8.2
-Pillow==11.0.0
+django-htmx==1.27.0
+psycopg[binary]==3.3.2
+dj-database-url==3.0.1
+python-dotenv==1.2.1
+whitenoise==6.11.0
+Pillow==12.0.0
 httpx==0.28.1
 ```
 
@@ -2655,7 +2724,26 @@ git commit -m "feat: add GitHub webhook endpoint"
 **Files:**
 - Modify: `config/settings.py` (add test settings)
 
-**Step 1: Run initial migrations**
+**Step 1: Install dependencies in venv**
+
+```bash
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+**Step 2: Run initial migrations**
+
+**Option A: With Docker (PostgreSQL in container)**
+
+```bash
+docker-compose up -d db  # Start only PostgreSQL
+source .venv/bin/activate
+python manage.py makemigrations accounts clients projects tasks integrations
+python manage.py migrate
+python manage.py createsuperuser
+```
+
+**Option B: Full Docker setup**
 
 ```bash
 docker-compose build
@@ -2664,7 +2752,7 @@ docker-compose run web python manage.py migrate
 docker-compose run web python manage.py createsuperuser
 ```
 
-**Step 2: Add GITHUB_WEBHOOK_SECRET to settings**
+**Step 3: Add GITHUB_WEBHOOK_SECRET to settings**
 
 Add to `config/settings.py`:
 
@@ -2673,13 +2761,23 @@ Add to `config/settings.py`:
 GITHUB_WEBHOOK_SECRET = os.getenv('GITHUB_WEBHOOK_SECRET', '')
 ```
 
-**Step 3: Add to .env.example**
+**Step 4: Add to .env.example**
 
 ```
 GITHUB_WEBHOOK_SECRET=your-webhook-secret-here
 ```
 
-**Step 4: Verify the app runs**
+**Step 5: Verify the app runs**
+
+**Option A: Local development (venv + Docker PostgreSQL)**
+
+```bash
+docker-compose up -d db  # Start PostgreSQL
+source .venv/bin/activate
+python manage.py runserver
+```
+
+**Option B: Full Docker**
 
 ```bash
 docker-compose up
@@ -2693,7 +2791,7 @@ Visit http://localhost:8000 and:
 5. Test drag-drop
 6. Test task detail slide-over
 
-**Step 5: Commit**
+**Step 6: Commit**
 
 ```bash
 git add .
