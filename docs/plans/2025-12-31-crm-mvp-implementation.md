@@ -354,9 +354,9 @@ git commit -m "feat: add Django project structure"
 **Files:**
 - Create: `templates/base.html`
 - Create: `templates/components/sidebar.html`
-- Create: `static/css/custom.css`
+- Create: `static/css/custom.css` (minimal - only what Tailwind can't do)
 
-> **Design:** Linear-style dark theme with Lucide icons. See design doc for full color palette.
+> **Design Principle:** Use Tailwind utilities inline in templates. Keep custom.css minimal - only for scrollbars, HTMX states, and drag behaviors that can't be done with Tailwind classes.
 
 **Step 1: Create templates/base.html**
 
@@ -388,6 +388,15 @@ git commit -m "feat: add Django project structure"
                     },
                     fontFamily: {
                         sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+                    },
+                    keyframes: {
+                        'slide-in-right': {
+                            '0%': { transform: 'translateX(100%)' },
+                            '100%': { transform: 'translateX(0)' },
+                        }
+                    },
+                    animation: {
+                        'slide-in-right': 'slide-in-right 0.2s ease-out',
                     }
                 }
             }
@@ -398,7 +407,7 @@ git commit -m "feat: add Django project structure"
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="{% static 'css/custom.css' %}">
 </head>
-<body class="h-full bg-dark-bg text-neutral-100" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<body class="h-full bg-dark-bg text-neutral-100 selection:bg-accent/30" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     {% if user.is_authenticated %}
     <div class="min-h-full flex">
         {% include "components/sidebar.html" %}
@@ -515,12 +524,17 @@ git commit -m "feat: add Django project structure"
 </aside>
 ```
 
-**Step 3: Create static/css/custom.css**
+**Step 3: Create static/css/custom.css (minimal)**
 
 ```css
-/* Linear-style dark theme custom styles */
+/*
+ * Minimal custom CSS - only for things Tailwind can't handle inline:
+ * - Scrollbar styling (pseudo-elements)
+ * - HTMX dynamic states
+ * - Drag-and-drop states (added via JS)
+ */
 
-/* Custom scrollbar - dark themed */
+/* Dark scrollbar */
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -539,7 +553,13 @@ git commit -m "feat: add Django project structure"
     background: #525252;
 }
 
-/* HTMX loading indicator */
+/* Firefox scrollbar */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #404040 #171717;
+}
+
+/* HTMX loading states */
 .htmx-request .htmx-indicator {
     display: inline-block;
 }
@@ -548,165 +568,39 @@ git commit -m "feat: add Django project structure"
     display: none;
 }
 
-/* Slide-over panel */
-.slide-over-panel {
-    position: fixed;
-    top: 0;
-    right: 0;
-    width: 480px;
-    max-width: 100%;
-    height: 100vh;
-    background: #171717;
-    border-left: 1px solid #262626;
-    z-index: 50;
-    overflow-y: auto;
-    animation: slideIn 0.2s ease-out;
-}
-
-@keyframes slideIn {
-    from {
-        transform: translateX(100%);
-    }
-    to {
-        transform: translateX(0);
-    }
-}
-
-/* Backdrop for slide-over */
-.slide-over-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 40;
-}
-
-/* Kanban drag styles */
+/* Kanban drag states (toggled via JS) */
 .dragging {
     opacity: 0.5;
     transform: rotate(2deg);
 }
 
 .drag-over {
-    border: 2px dashed #8b5cf6;
-    background: rgba(139, 92, 246, 0.1);
-}
-
-/* Card hover effect */
-.card-hover {
-    transition: all 0.15s ease;
-}
-
-.card-hover:hover {
-    background: #262626;
-    border-color: #404040;
-}
-
-/* Button styles */
-.btn-primary {
-    background: #8b5cf6;
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 0.375rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    transition: all 0.15s ease;
-}
-
-.btn-primary:hover {
-    background: #a78bfa;
-}
-
-.btn-secondary {
-    background: transparent;
-    color: #a3a3a3;
-    padding: 0.5rem 1rem;
-    border-radius: 0.375rem;
-    border: 1px solid #262626;
-    font-size: 0.875rem;
-    font-weight: 500;
-    transition: all 0.15s ease;
-}
-
-.btn-secondary:hover {
-    background: #262626;
-    color: #fafafa;
-}
-
-.btn-ghost {
-    background: transparent;
-    color: #a3a3a3;
-    padding: 0.5rem 1rem;
-    border-radius: 0.375rem;
-    font-size: 0.875rem;
-    transition: all 0.15s ease;
-}
-
-.btn-ghost:hover {
-    background: #262626;
-    color: #fafafa;
-}
-
-/* Form inputs - dark themed */
-.input-dark {
-    background: #171717;
-    border: 1px solid #262626;
-    border-radius: 0.375rem;
-    padding: 0.5rem 0.75rem;
-    color: #fafafa;
-    font-size: 0.875rem;
-    width: 100%;
-    transition: all 0.15s ease;
-}
-
-.input-dark:focus {
-    outline: none;
-    border-color: #8b5cf6;
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
-}
-
-.input-dark::placeholder {
-    color: #737373;
-}
-
-/* Priority badges */
-.priority-urgent {
-    background: rgba(239, 68, 68, 0.2);
-    color: #ef4444;
-}
-
-.priority-high {
-    background: rgba(249, 115, 22, 0.2);
-    color: #f97316;
-}
-
-.priority-medium {
-    background: rgba(234, 179, 8, 0.2);
-    color: #eab308;
-}
-
-.priority-low {
-    background: rgba(115, 115, 115, 0.2);
-    color: #737373;
-}
-
-/* Status badges */
-.status-badge {
-    padding: 0.125rem 0.5rem;
-    border-radius: 0.25rem;
-    font-size: 0.75rem;
-    font-weight: 500;
-}
-
-/* Selection/focus styles */
-::selection {
-    background: rgba(139, 92, 246, 0.3);
-}
-
-/* Smooth transitions for all interactive elements */
-a, button, input, select, textarea {
-    transition: all 0.15s ease;
+    border: 2px dashed #8b5cf6 !important;
+    background: rgba(139, 92, 246, 0.1) !important;
 }
 ```
+
+> **Styling Reference - Use Tailwind inline:**
+>
+> **Buttons:**
+> - Primary: `bg-accent hover:bg-accent-hover text-white px-4 py-2 rounded-md text-sm font-medium transition-colors`
+> - Secondary: `bg-transparent border border-dark-border text-neutral-400 hover:bg-dark-hover hover:text-neutral-100 px-4 py-2 rounded-md text-sm font-medium transition-colors`
+> - Ghost: `text-neutral-400 hover:text-neutral-100 hover:bg-dark-hover px-4 py-2 rounded-md text-sm transition-colors`
+>
+> **Inputs:**
+> - `bg-dark-card border border-dark-border rounded-md px-3 py-2 text-neutral-100 text-sm placeholder:text-neutral-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 w-full transition-colors`
+>
+> **Cards:**
+> - `bg-dark-card border border-dark-border rounded-lg p-4 hover:bg-dark-hover hover:border-neutral-700 transition-colors`
+>
+> **Priority badges:**
+> - Urgent: `bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-xs font-medium`
+> - High: `bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded text-xs font-medium`
+> - Medium: `bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded text-xs font-medium`
+> - Low: `bg-neutral-500/20 text-neutral-400 px-2 py-0.5 rounded text-xs font-medium`
+>
+> **Slide-over panel:**
+> - `fixed top-0 right-0 w-[480px] max-w-full h-screen bg-dark-card border-l border-dark-border z-50 overflow-y-auto animate-slide-in-right`
 
 **Step 4: Commit**
 
