@@ -109,17 +109,13 @@ def client_create_project(request, pk):
         github_repo_url = request.POST.get('github_repo_url', '').strip()
 
         if name:
+            # Note: Default statuses are created automatically in Project.save()
             project = Project.objects.create(
                 client=client,
                 name=name,
                 description=description,
                 github_repo_url=github_repo_url,
             )
-            # Create default statuses for the project
-            from apps.projects.models import Status
-            default_statuses = ['Backlog', 'To Do', 'In Progress', 'Done']
-            for i, status_name in enumerate(default_statuses):
-                Status.objects.create(project=project, name=status_name, order=i)
 
             # Redirect to the new project board
             from django.urls import reverse
