@@ -49,8 +49,12 @@
                 }
             })
          "
-         id="kanban-board">
-        <div class="flex gap-3 p-4 h-full min-w-max">
+         id="kanban-board"
+         hx-get="{% url 'project_board' project.pk %}"
+         hx-trigger="taskStatusChanged from:body"
+         hx-target="#kanban-board-content"
+         hx-swap="innerHTML">
+        <div id="kanban-board-content" class="flex gap-3 p-4 h-full min-w-max">
             {% for status in project.statuses.all %}
             {% include "projects/partials/kanban_column.html" %}
             {% endfor %}

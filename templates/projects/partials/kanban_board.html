@@ -1,5 +1,3 @@
-<div class="flex gap-3 p-4 h-full min-w-max">
-    {% for status in project.statuses.all %}
-    {% include "projects/partials/kanban_column.html" %}
-    {% endfor %}
-</div>
+{% for status in project.statuses.all %}
+{% include "projects/partials/kanban_column.html" %}
+{% endfor %}

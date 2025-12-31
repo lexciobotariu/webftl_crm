@@ -44,6 +44,9 @@ def project_create(request):
 @login_required
 def project_board(request, pk):
     project = get_object_or_404(Project, pk=pk)
+    # Return just the board content for HTMX requests
+    if request.htmx:
+        return render(request, 'projects/partials/kanban_board.html', {'project': project})
     return render(request, 'projects/project_board.html', {'project': project})
 
 

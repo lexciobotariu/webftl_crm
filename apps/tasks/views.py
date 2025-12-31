@@ -111,7 +111,9 @@ def task_update_status(request, pk):
     status = get_object_or_404(Status, pk=status_id, project=task.project)
     task.status = status
     task.save()
-    return render(request, 'tasks/partials/status_dropdown.html', {'task': task})
+    response = render(request, 'tasks/partials/status_dropdown.html', {'task': task})
+    response['HX-Trigger'] = 'taskStatusChanged'
+    return response
 
 
 @login_required

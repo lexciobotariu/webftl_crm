@@ -1,0 +1,62 @@
+.drag-and-drop {
+  display: flex;
+  max-width: 760px;
+  padding: 20px;
+  margin: 0 auto;
+
+  &__container {
+    position: relative;
+    overflow: hidden;
+    width: 50%;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+  }
+
+  &__divider {
+    padding: 10px;
+    font-size: 20px;
+    align-self: center;
+  }
+
+  &__title {
+    padding: 15px 20px;
+    font-size: 20px;
+    background: #ddd;
+  }
+
+  &__items {
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    min-height: 150px;
+    margin: 0 -1px;
+    padding-bottom: 40px;
+    border-top: 1px solid #ccc;
+
+    &--adding {
+      background-color: #9AE6B4;
+    }
+
+    &--removing {
+      background-color: #FBD38D;
+    }
+  }
+
+  &__item {
+    padding: 15px 20px;
+    border: 1px solid #ccc;
+    border-top: 0;
+    line-height: 1;
+    cursor: move;
+    background-color: #fff;
+
+    &:hover {
+      background-color: #eee;
+    }
+
+    &--dragging {
+      color: #ccc !important;
+      background-color: #fff !important;
+    }
+  }
+}
