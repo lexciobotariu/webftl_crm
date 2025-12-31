@@ -100,7 +100,18 @@ def task_move(request):
     status = get_object_or_404(Status, pk=status_id, project=task.project)
     task.status = status
     task.save()
-    return render(request, 'projects/partials/task_card.html', {'task': task})
+    return HttpResponse(status=204)
+
+
+@login_required
+@require_POST
+def task_update_status(request, pk):
+    task = get_object_or_404(Task, pk=pk)
+    status_id = request.POST.get('status_id')
+    status = get_object_or_404(Status, pk=status_id, project=task.project)
+    task.status = status
+    task.save()
+    return render(request, 'tasks/partials/status_dropdown.html', {'task': task})
 
 
 @login_required

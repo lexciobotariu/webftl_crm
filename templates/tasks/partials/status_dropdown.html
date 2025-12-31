@@ -1,0 +1,25 @@
+<div class="relative" id="status-dropdown-{{ task.pk }}" x-data="{ open: false }">
+    <button @click="open = !open"
+            class="flex items-center gap-2 px-3 py-1.5 rounded-card bg-elevated border border-border-subtle text-sm text-zinc-300 hover:bg-hover-strong hover:border-border-strong transition-colors">
+        <span>{{ task.status.name }}</span>
+        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-zinc-500"></i>
+    </button>
+    <div x-show="open" @click.away="open = false"
+         x-transition:enter="transition ease-out duration-100"
+         x-transition:enter-start="opacity-0 scale-95"
+         x-transition:enter-end="opacity-100 scale-100"
+         x-transition:leave="transition ease-in duration-75"
+         x-transition:leave-start="opacity-100 scale-100"
+         x-transition:leave-end="opacity-0 scale-95"
+         class="absolute left-0 top-full mt-1 w-48 bg-elevated border border-border-subtle rounded-card shadow-lg z-10 py-1">
+        {% for status in task.project.statuses.all %}
+        <button hx-post="{% url 'task_update_status' task.pk %}"
+                hx-vals='{"status_id": "{{ status.pk }}"}'
+                hx-target="#status-dropdown-{{ task.pk }}"
+                hx-swap="outerHTML"
+                class="w-full text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors {% if status.pk == task.status.pk %}text-accent{% else %}text-zinc-300{% endif %}">
+            {{ status.name }}
+        </button>
+        {% endfor %}
+    </div>
+</div>

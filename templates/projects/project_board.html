@@ -34,7 +34,21 @@
 
     <!-- Kanban board - full height, horizontally scrollable -->
     <div class="flex-1 overflow-x-auto overflow-y-hidden"
-         x-data="{ dragging: null }"
+         x-data
+         x-init="
+            Alpine.store('kanban', {
+                moveTask(taskId, statusId) {
+                    fetch('/tasks/move/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        body: new URLSearchParams({ task_id: taskId, status_id: statusId })
+                    });
+                }
+            })
+         "
          id="kanban-board">
         <div class="flex gap-3 p-4 h-full min-w-max">
             {% for status in project.statuses.all %}

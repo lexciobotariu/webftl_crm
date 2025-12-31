@@ -1,8 +1,5 @@
 <div class="flex-shrink-0 w-64 h-full flex flex-col bg-card/50 rounded-panel border border-border-subtle"
-     id="column-{{ status.pk }}"
-     @dragover.prevent="$el.style.borderColor = 'rgba(139, 92, 246, 0.6)'; $el.style.backgroundColor = 'rgba(139, 92, 246, 0.06)'; $el.style.borderStyle = 'dashed';"
-     @dragleave="$el.style.borderColor = ''; $el.style.backgroundColor = ''; $el.style.borderStyle = '';"
-     @drop="$el.style.borderColor = ''; $el.style.backgroundColor = ''; $el.style.borderStyle = ''; htmx.ajax('POST', '{% url 'task_move' %}', {values: {task_id: dragging, status_id: {{ status.pk }}}})">
+     id="column-{{ status.pk }}">
     <!-- Column header - fixed -->
     <div class="flex-shrink-0 flex items-center justify-between px-3 py-2.5 border-b border-border-subtle">
         <h3 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-500">{{ status.name }}</h3>
@@ -10,8 +7,13 @@
             {{ status.task_count }}
         </span>
     </div>
-    <!-- Tasks container - scrollable -->
-    <div class="flex-1 overflow-y-auto p-2 space-y-2" id="column-{{ status.pk }}-tasks">
+    <!-- Tasks container - scrollable, sortable -->
+    <div class="flex-1 overflow-y-auto p-2 space-y-2"
+         id="column-{{ status.pk }}-tasks"
+         x-sort:group="kanban"
+         x-sort:config="{ animation: 150 }"
+         x-sort="$store.kanban.moveTask($item, {{ status.pk }})"
+         data-status-id="{{ status.pk }}">
         {% for task in status.tasks.all %}
         {% include "projects/partials/task_card.html" %}
         {% endfor %}

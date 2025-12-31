@@ -62,7 +62,8 @@
         }
     </script>
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-    <script defer src="https://unpkg.com/@alpinejs/csp@3.14.8/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/sort@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="{% static 'css/custom.css' %}">
 </head>
@@ -93,7 +94,7 @@
     {% endif %}
 
     <!-- Slide-over panel container -->
-    <div id="slide-over" class="fixed inset-y-0 right-0 w-full max-w-[480px] bg-panel border-l border-border-subtle z-50 overflow-y-auto hidden animate-slide-in-right"></div>
+    <div id="slide-over" class="fixed inset-y-0 right-0 w-full max-w-xl bg-panel border-l border-border-subtle z-50 overflow-y-auto hidden animate-slide-in-right"></div>
 
     <!-- Modal container -->
     <div id="modal" class="hidden"></div>
