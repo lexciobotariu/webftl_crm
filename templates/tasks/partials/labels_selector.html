@@ -1,0 +1,36 @@
+<div class="relative" x-data="{ open: false }">
+    <button @click="open = !open"
+            class="flex items-center gap-1 px-2 py-1 rounded-card text-sm hover:bg-elevated transition-colors">
+        {% if task.labels.exists %}
+        {% for label in task.labels.all %}
+        <span class="px-2 py-0.5 text-[10px] rounded-full border"
+              style="background: {{ label.color }}20; color: {{ label.color }}; border-color: {{ label.color }}40;">
+            {{ label.name }}
+        </span>
+        {% endfor %}
+        {% else %}
+        <span class="text-zinc-500 flex items-center gap-1">
+            <i data-lucide="plus" class="w-3 h-3"></i>
+            Add labels
+        </span>
+        {% endif %}
+    </button>
+    <div x-show="open" @click.away="open = false"
+         x-transition
+         class="absolute left-0 top-full mt-1 w-56 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 py-1 max-h-64 overflow-y-auto">
+        {% for label in project_labels %}
+        <button hx-post="{% url 'task_toggle_label' task.pk label.pk %}"
+                hx-target="#labels-value-{{ task.pk }}"
+                hx-swap="innerHTML"
+                class="w-full text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors flex items-center gap-2">
+            <span class="w-3 h-3 rounded" style="background-color: {{ label.color }}"></span>
+            <span class="{% if label in task.labels.all %}text-accent{% else %}text-zinc-300{% endif %}">{{ label.name }}</span>
+            {% if label in task.labels.all %}
+            <i data-lucide="check" class="w-3 h-3 text-accent ml-auto"></i>
+            {% endif %}
+        </button>
+        {% empty %}
+        <div class="px-3 py-2 text-sm text-zinc-500">No labels defined</div>
+        {% endfor %}
+    </div>
+</div>

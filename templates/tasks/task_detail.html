@@ -1,119 +1,81 @@
-<div class="slide-over-panel p-6">
-    <div class="flex justify-between items-start pb-4 border-b border-border-subtle">
-        <div class="flex-1">
-            <h2 class="text-xl font-semibold text-zinc-100">{{ task.title }}</h2>
-            <div class="flex flex-wrap items-center gap-2 text-xs text-zinc-500 mt-2">
-                {% include "tasks/partials/status_dropdown.html" %}
-                <span class="text-zinc-600">&middot;</span>
-                <span class="text-zinc-300">{{ task.project.name }}</span>
-            </div>
-        </div>
-        <div class="flex items-center gap-2">
-            <a href="{% url 'task_edit' task.pk %}" class="text-xs uppercase tracking-[0.2em] text-zinc-500 hover:text-zinc-300">Edit</a>
+<div class="flex flex-col h-full">
+    <!-- Header -->
+    <div class="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-border-subtle">
+        <div class="flex items-center gap-3">
             <button onclick="document.getElementById('slide-over').classList.add('hidden')"
-                    class="w-8 h-8 flex items-center justify-center rounded-card bg-panel border border-border-subtle text-zinc-400 hover:text-zinc-200 hover:border-border-strong">&times;</button>
+                    class="text-zinc-500 hover:text-zinc-300 transition-colors">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            </button>
+            <span class="text-xs text-zinc-500 bg-elevated px-2 py-0.5 rounded border border-border-subtle font-mono">
+                {{ task.project.name|slice:":4"|upper }}-{{ task.pk }}
+            </span>
+        </div>
+        <div class="flex items-center gap-1">
+            <a href="{% url 'task_full_page' task.project.pk task.pk %}"
+               class="text-zinc-500 hover:text-zinc-300 transition-colors p-1.5 hover:bg-elevated rounded-card"
+               title="Open full page">
+                <i data-lucide="maximize-2" class="w-4 h-4"></i>
+            </a>
+            <button onclick="document.getElementById('slide-over').classList.add('hidden')"
+                    class="text-zinc-500 hover:text-zinc-300 transition-colors p-1.5 hover:bg-elevated rounded-card">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
         </div>
     </div>
 
-    <div class="space-y-5 mt-5">
-        <div class="rounded-card border border-border-subtle bg-panel/60 p-4">
-            <div class="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                    <span class="text-[11px] uppercase tracking-[0.18em] text-zinc-500">Assignee</span>
-                    <div class="text-zinc-300 mt-1">{{ task.assignee.name|default:"Unassigned" }}</div>
-                </div>
-                <div>
-                    <span class="text-[11px] uppercase tracking-[0.18em] text-zinc-500">Priority</span>
-                    <div class="text-zinc-300 mt-1">{{ task.get_priority_display|default:"None" }}</div>
-                </div>
-                <div>
-                    <span class="text-[11px] uppercase tracking-[0.18em] text-zinc-500">Due Date</span>
-                    <div class="text-zinc-300 mt-1">{{ task.due_date|date:"M d, Y"|default:"None" }}</div>
-                </div>
-                <div>
-                    <span class="text-[11px] uppercase tracking-[0.18em] text-zinc-500">Estimate</span>
-                    <div class="text-zinc-300 mt-1">{% if task.time_estimate %}{{ task.time_estimate }}h{% else %}None{% endif %}</div>
-                </div>
-            </div>
+    <!-- Content -->
+    <div class="flex-1 overflow-y-auto p-4 space-y-6">
+        <!-- Title -->
+        <div>
+            <h2 class="text-lg font-semibold text-zinc-100">{{ task.title }}</h2>
         </div>
 
-        {% if task.labels.exists %}
-        <div class="rounded-card border border-border-subtle bg-panel/60 p-4">
-            <div class="text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Labels</div>
-            <div class="flex flex-wrap gap-2">
-                {% for label in task.labels.all %}
-                <span class="px-2 py-0.5 text-[11px] rounded-full border" style="background: {{ label.color }}20; color: {{ label.color }}; border-color: {{ label.color }}40;">
-                    {{ label.name }}
-                </span>
-                {% endfor %}
-            </div>
+        <!-- Description -->
+        <div id="task-description-{{ task.pk }}">
+            {% include "tasks/partials/description_display.html" %}
         </div>
-        {% endif %}
 
-        {% if task.description %}
-        <div class="rounded-card border border-border-subtle bg-panel/60 p-4">
-            <h3 class="text-sm font-semibold text-zinc-100 mb-2">Description</h3>
-            <div class="text-sm text-zinc-300">{{ task.description|linebreaks }}</div>
+        <!-- Properties -->
+        <div class="border-t border-border-subtle pt-4">
+            {% include "tasks/partials/properties_panel.html" %}
         </div>
-        {% endif %}
 
-        <div class="rounded-card border border-border-subtle bg-panel/60 p-4">
-            <h3 class="text-sm font-semibold text-zinc-100 mb-3">Subtasks {% if task.subtask_progress %}({{ task.subtask_progress }}){% endif %}</h3>
+        <!-- Subtasks -->
+        <div class="border-t border-border-subtle pt-4">
+            <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+                Subtasks {% if task.subtask_progress %}({{ task.subtask_progress }}){% endif %}
+            </h3>
             <div id="subtask-list" class="space-y-2 mb-3">
                 {% for subtask in task.subtasks.all %}
                 {% include "tasks/partials/subtask_item.html" %}
                 {% endfor %}
             </div>
-            <form hx-post="{% url 'subtask_create' task.pk %}" hx-target="#subtask-list" hx-swap="beforeend">
+            <form hx-post="{% url 'subtask_create' task.pk %}" hx-target="#subtask-list" hx-swap="beforeend"
+                  hx-on::after-request="if(event.detail.successful) this.reset()"
+                  class="flex items-center gap-2">
                 {% csrf_token %}
-                {{ subtask_form.title }}
+                <i data-lucide="plus" class="w-4 h-4 text-zinc-500"></i>
+                <input type="text" name="title" placeholder="Add subtask..."
+                       class="flex-1 bg-transparent text-sm text-zinc-300 placeholder-zinc-500 focus:outline-none">
             </form>
         </div>
 
-        <div class="rounded-card border border-border-subtle bg-panel/60 p-4">
-            <h3 class="text-sm font-semibold text-zinc-100 mb-3">Attachments</h3>
-            <div id="attachment-list" class="space-y-2 mb-3">
-                {% for attachment in task.attachments.all %}
-                {% include "tasks/partials/attachment_item.html" %}
-                {% endfor %}
-            </div>
-            <form hx-post="{% url 'attachment_upload' task.pk %}" hx-target="#attachment-list" hx-swap="beforeend" hx-encoding="multipart/form-data">
-                {% csrf_token %}
-                <input type="file" name="file" class="text-sm text-zinc-400">
-            </form>
+        <!-- Activity -->
+        <div class="border-t border-border-subtle pt-4">
+            {% include "tasks/partials/activity_panel.html" %}
         </div>
 
-        <div class="rounded-card border border-border-subtle bg-panel/60 p-4">
-            <h3 class="text-sm font-semibold text-zinc-100 mb-3">Comments</h3>
-            <div id="comment-list" class="space-y-4 mb-4">
-                {% for comment in task.comments.all %}
-                {% include "tasks/partials/comment_item.html" %}
-                {% endfor %}
-            </div>
-            <form hx-post="{% url 'comment_create' task.pk %}" hx-target="#comment-list" hx-swap="beforeend">
-                {% csrf_token %}
-                {{ comment_form.content }}
-                <button type="submit" class="mt-2 bg-accent text-white px-4 py-2 rounded-card text-sm hover:bg-accent/90 transition-colors">
-                    Add Comment
-                </button>
-            </form>
-        </div>
-
-        {% if task.github_issue_number %}
-        <div class="rounded-card border border-border-subtle bg-panel/60 p-4">
-            <h3 class="text-sm font-semibold text-zinc-100 mb-2">GitHub</h3>
-            <a href="{{ task.project.github_repo_url }}/issues/{{ task.github_issue_number }}" target="_blank" class="text-accent hover:text-accent/80 flex items-center gap-1">
-                <i data-lucide="github" class="w-4 h-4"></i>
-                Issue #{{ task.github_issue_number }}
-            </a>
-        </div>
-        {% endif %}
-
-        <div class="rounded-card border border-border-subtle bg-panel/60 p-4">
-            <button hx-post="{% url 'task_delete' task.pk %}" hx-confirm="Delete this task?" hx-target="#task-{{ task.pk }}" hx-swap="delete"
+        <!-- Danger zone -->
+        <div class="border-t border-border-subtle pt-4">
+            <button hx-post="{% url 'task_delete' task.pk %}"
+                    hx-confirm="Delete this task?"
+                    hx-target="#task-{{ task.pk }}"
+                    hx-swap="delete"
                     onclick="document.getElementById('slide-over').classList.add('hidden')"
-                    class="text-red-300 text-sm hover:text-red-200">Delete Task</button>
+                    class="text-red-400 text-sm hover:text-red-300 transition-colors">
+                Delete task
+            </button>
         </div>
     </div>
 </div>
-<script>document.getElementById('slide-over').classList.remove('hidden');</script>
+<script>document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();</script>

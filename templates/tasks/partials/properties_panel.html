@@ -1,0 +1,69 @@
+<div class="space-y-1">
+    <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Properties</h3>
+
+    <!-- Status -->
+    <div class="flex items-center py-2 hover:bg-hover rounded-card" id="prop-status-{{ task.pk }}">
+        <div class="flex items-center gap-2 w-28 text-zinc-500 text-sm">
+            <i data-lucide="circle" class="w-4 h-4"></i>
+            <span>State</span>
+        </div>
+        <div class="flex-1" id="status-value-{{ task.pk }}">
+            {% include "tasks/partials/status_dropdown.html" %}
+        </div>
+    </div>
+
+    <!-- Assignee -->
+    <div class="flex items-center py-2 hover:bg-hover rounded-card" id="prop-assignee-{{ task.pk }}">
+        <div class="flex items-center gap-2 w-28 text-zinc-500 text-sm">
+            <i data-lucide="user" class="w-4 h-4"></i>
+            <span>Assignee</span>
+        </div>
+        <div class="flex-1" id="assignee-value-{{ task.pk }}">
+            {% include "tasks/partials/assignee_dropdown.html" %}
+        </div>
+    </div>
+
+    <!-- Priority -->
+    <div class="flex items-center py-2 hover:bg-hover rounded-card" id="prop-priority-{{ task.pk }}">
+        <div class="flex items-center gap-2 w-28 text-zinc-500 text-sm">
+            <i data-lucide="signal" class="w-4 h-4"></i>
+            <span>Priority</span>
+        </div>
+        <div class="flex-1" id="priority-value-{{ task.pk }}">
+            {% include "tasks/partials/priority_dropdown.html" %}
+        </div>
+    </div>
+
+    <!-- Due Date -->
+    <div class="flex items-center py-2 hover:bg-hover rounded-card" id="prop-due-date-{{ task.pk }}">
+        <div class="flex items-center gap-2 w-28 text-zinc-500 text-sm">
+            <i data-lucide="calendar" class="w-4 h-4"></i>
+            <span>Due date</span>
+        </div>
+        <div class="flex-1" id="due-date-value-{{ task.pk }}">
+            {% include "tasks/partials/due_date_picker.html" %}
+        </div>
+    </div>
+
+    <!-- Time Estimate -->
+    <div class="flex items-center py-2 hover:bg-hover rounded-card" id="prop-estimate-{{ task.pk }}">
+        <div class="flex items-center gap-2 w-28 text-zinc-500 text-sm">
+            <i data-lucide="clock" class="w-4 h-4"></i>
+            <span>Estimate</span>
+        </div>
+        <div class="flex-1" id="estimate-value-{{ task.pk }}">
+            {% include "tasks/partials/estimate_input.html" %}
+        </div>
+    </div>
+
+    <!-- Labels -->
+    <div class="flex items-center py-2 hover:bg-hover rounded-card" id="prop-labels-{{ task.pk }}">
+        <div class="flex items-center gap-2 w-28 text-zinc-500 text-sm">
+            <i data-lucide="tag" class="w-4 h-4"></i>
+            <span>Labels</span>
+        </div>
+        <div class="flex-1" id="labels-value-{{ task.pk }}">
+            {% include "tasks/partials/labels_selector.html" %}
+        </div>
+    </div>
+</div>

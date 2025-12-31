@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}{{ task.title }} - {{ task.project.name }}{% endblock %}
+
+{% block full_content %}
+<div class="flex flex-col h-full">
+    <!-- Breadcrumb header -->
+    <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2 text-sm">
+                <a href="{% url 'project_list' %}" class="text-zinc-500 hover:text-zinc-300 transition-colors">Projects</a>
+                <i data-lucide="chevron-right" class="w-3 h-3 text-zinc-600"></i>
+                <a href="{% url 'project_board' task.project.pk %}" class="text-zinc-500 hover:text-zinc-300 transition-colors">{{ task.project.name }}</a>
+                <i data-lucide="chevron-right" class="w-3 h-3 text-zinc-600"></i>
+                <span class="text-zinc-300 font-mono">{{ task.project.name|slice:":4"|upper }}-{{ task.pk }}</span>
+            </div>
+            <div class="flex items-center gap-1">
+                <button class="text-zinc-500 hover:text-zinc-300 p-1.5 hover:bg-elevated rounded-card" title="Copy link">
+                    <i data-lucide="link" class="w-4 h-4"></i>
+                </button>
+                <button hx-post="{% url 'task_delete' task.pk %}"
+                        hx-confirm="Delete this task?"
+                        class="text-zinc-500 hover:text-red-400 p-1.5 hover:bg-elevated rounded-card" title="Delete">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main content with sidebar -->
+    <div class="flex-1 flex overflow-hidden">
+        <!-- Main content area -->
+        <div class="flex-1 overflow-y-auto p-6">
+            <div class="max-w-3xl">
+                <!-- Task ID -->
+                <div class="text-xs text-zinc-500 font-mono mb-2">
+                    {{ task.project.name|slice:":4"|upper }}-{{ task.pk }}
+                </div>
+
+                <!-- Title -->
+                <h1 class="text-2xl font-semibold text-zinc-100 mb-4">{{ task.title }}</h1>
+
+                <!-- Description -->
+                <div class="mb-6 min-h-[60px]" id="task-description-{{ task.pk }}">
+                    {% include "tasks/partials/description_display.html" %}
+                </div>
+
+                <!-- Subtasks -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold text-zinc-300 mb-3">
+                        Subtasks {% if task.subtask_progress %}({{ task.subtask_progress }}){% endif %}
+                    </h3>
+                    <div id="subtask-list" class="space-y-2 mb-3">
+                        {% for subtask in task.subtasks.all %}
+                        {% include "tasks/partials/subtask_item.html" %}
+                        {% endfor %}
+                    </div>
+                    <form hx-post="{% url 'subtask_create' task.pk %}" hx-target="#subtask-list" hx-swap="beforeend"
+                          hx-on::after-request="if(event.detail.successful) this.reset()"
+                          class="flex items-center gap-2 text-zinc-500 hover:text-zinc-300">
+                        {% csrf_token %}
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <input type="text" name="title" placeholder="Add subtask..."
+                               class="flex-1 bg-transparent text-sm placeholder-zinc-500 focus:outline-none">
+                    </form>
+                </div>
+
+                <!-- Activity -->
+                <div class="border-t border-border-subtle pt-6">
+                    {% include "tasks/partials/activity_panel.html" %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Properties sidebar -->
+        <div class="w-72 flex-shrink-0 border-l border-border-subtle bg-card/50 p-4 overflow-y-auto">
+            {% include "tasks/partials/properties_panel.html" %}
+        </div>
+    </div>
+</div>
+{% endblock %}

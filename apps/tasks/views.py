@@ -3,9 +3,11 @@ from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.decorators.http import require_POST
 
+from apps.accounts.models import User
 from apps.projects.models import Project, Status
-from .forms import TaskForm, SubtaskForm, CommentForm
-from .models import Task, Subtask, Attachment
+from apps.tasks.models import Label
+from .forms import TaskForm, SubtaskForm
+from .models import Task, Subtask, Attachment, TaskActivity
 
 
 @login_required
@@ -53,15 +55,19 @@ def task_create(request, project_pk):
 def task_detail(request, pk):
     task = get_object_or_404(
         Task.objects.select_related('project', 'status', 'assignee')
-        .prefetch_related('subtasks', 'comments__author', 'attachments', 'labels'),
+        .prefetch_related('subtasks', 'activities__user', 'attachments', 'labels', 'project__labels'),
         pk=pk
     )
     subtask_form = SubtaskForm()
-    comment_form = CommentForm()
+    team_members = User.objects.all()
+    project_labels = task.project.labels.all()
+    priority_choices = Task.PRIORITY_CHOICES
     return render(request, 'tasks/task_detail.html', {
         'task': task,
         'subtask_form': subtask_form,
-        'comment_form': comment_form,
+        'team_members': team_members,
+        'project_labels': project_labels,
+        'priority_choices': priority_choices,
     })
 
 
@@ -151,13 +157,15 @@ def subtask_delete(request, pk, subtask_pk):
 @require_POST
 def comment_create(request, pk):
     task = get_object_or_404(Task, pk=pk)
-    form = CommentForm(request.POST)
-    if form.is_valid():
-        comment = form.save(commit=False)
-        comment.task = task
-        comment.author = request.user
-        comment.save()
-        return render(request, 'tasks/partials/comment_item.html', {'comment': comment})
+    content = request.POST.get('content', '').strip()
+    if content:
+        activity = TaskActivity.objects.create(
+            task=task,
+            user=request.user,
+            activity_type='comment',
+            content=content
+        )
+        return render(request, 'tasks/partials/activity_item.html', {'activity': activity})
     return HttpResponse(status=400)
 
 
@@ -175,3 +183,96 @@ def attachment_upload(request, pk):
         )
         return render(request, 'tasks/partials/attachment_item.html', {'attachment': attachment})
     return HttpResponse(status=400)
+
+
+@login_required
+def task_full_page(request, project_pk, task_pk):
+    """Full page task view with properties sidebar."""
+    task = get_object_or_404(
+        Task.objects.select_related('project', 'status', 'assignee')
+        .prefetch_related('subtasks', 'activities__user', 'labels', 'project__labels'),
+        pk=task_pk, project_id=project_pk
+    )
+    team_members = User.objects.all()
+    project_labels = task.project.labels.all()
+    priority_choices = Task.PRIORITY_CHOICES
+    return render(request, 'tasks/task_full_page.html', {
+        'task': task,
+        'team_members': team_members,
+        'project_labels': project_labels,
+        'priority_choices': priority_choices,
+    })
+
+
+@login_required
+@require_POST
+def task_update_assignee(request, pk):
+    task = get_object_or_404(Task, pk=pk)
+    assignee_id = request.POST.get('assignee_id')
+    task.assignee = User.objects.get(pk=assignee_id) if assignee_id else None
+    task._changed_by = request.user
+    task.save()
+    team_members = User.objects.all()
+    return render(request, 'tasks/partials/assignee_dropdown.html', {
+        'task': task, 'team_members': team_members
+    })
+
+
+@login_required
+@require_POST
+def task_update_priority(request, pk):
+    task = get_object_or_404(Task, pk=pk)
+    task.priority = request.POST.get('priority') or ''
+    task._changed_by = request.user
+    task.save()
+    return render(request, 'tasks/partials/priority_dropdown.html', {
+        'task': task, 'priority_choices': Task.PRIORITY_CHOICES
+    })
+
+
+@login_required
+@require_POST
+def task_update_due_date(request, pk):
+    task = get_object_or_404(Task, pk=pk)
+    due_date = request.POST.get('due_date')
+    task.due_date = due_date if due_date else None
+    task._changed_by = request.user
+    task.save()
+    return render(request, 'tasks/partials/due_date_picker.html', {'task': task})
+
+
+@login_required
+@require_POST
+def task_update_estimate(request, pk):
+    task = get_object_or_404(Task, pk=pk)
+    estimate = request.POST.get('time_estimate')
+    task.time_estimate = int(estimate) if estimate else None
+    task._changed_by = request.user
+    task.save()
+    return render(request, 'tasks/partials/estimate_input.html', {'task': task})
+
+
+@login_required
+@require_POST
+def task_toggle_label(request, pk, label_pk):
+    task = get_object_or_404(Task, pk=pk)
+    label = get_object_or_404(Label, pk=label_pk, project=task.project)
+    if label in task.labels.all():
+        task.labels.remove(label)
+    else:
+        task.labels.add(label)
+    project_labels = task.project.labels.all()
+    return render(request, 'tasks/partials/labels_selector.html', {
+        'task': task, 'project_labels': project_labels
+    })
+
+
+@login_required
+def task_edit_description(request, pk):
+    task = get_object_or_404(Task, pk=pk)
+    if request.method == 'POST':
+        task.description = request.POST.get('description', '')
+        task._changed_by = request.user
+        task.save()
+        return render(request, 'tasks/partials/description_display.html', {'task': task})
+    return render(request, 'tasks/partials/description_edit.html', {'task': task})

@@ -90,6 +90,40 @@ class Comment(models.Model):
         return f"Comment by {self.author} on {self.task}"
 
 
+class TaskActivity(models.Model):
+    """Tracks activity on tasks - comments, status changes, etc."""
+    ACTIVITY_TYPES = [
+        ('comment', 'Comment'),
+        ('status_change', 'Status Changed'),
+        ('assignee_change', 'Assignee Changed'),
+        ('priority_change', 'Priority Changed'),
+        ('created', 'Created'),
+        ('due_date_change', 'Due Date Changed'),
+        ('label_added', 'Label Added'),
+        ('label_removed', 'Label Removed'),
+    ]
+
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='activities')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+    activity_type = models.CharField(max_length=20, choices=ACTIVITY_TYPES)
+    content = models.TextField(blank=True)  # For comments or description of change
+    old_value = models.CharField(max_length=255, blank=True)
+    new_value = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name_plural = 'Task activities'
+
+    def __str__(self):
+        return f"{self.get_activity_type_display()} on {self.task}"
+
+
 class Attachment(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='attachments')
     file = models.FileField(upload_to='attachments/%Y/%m/')

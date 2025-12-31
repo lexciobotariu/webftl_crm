@@ -1,0 +1,14 @@
+<div hx-get="{% url 'task_edit_description' task.pk %}"
+     hx-target="#task-description-{{ task.pk }}"
+     hx-swap="innerHTML"
+     class="cursor-pointer group">
+    {% if task.description %}
+    <div class="text-sm text-zinc-300 prose prose-invert prose-sm max-w-none">
+        {{ task.description|linebreaks }}
+    </div>
+    {% else %}
+    <div class="text-sm text-zinc-500 italic group-hover:text-zinc-400 transition-colors">
+        Click to add description...
+    </div>
+    {% endif %}
+</div>

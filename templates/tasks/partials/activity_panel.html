@@ -1,0 +1,27 @@
+<div class="space-y-1">
+    <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Activity</h3>
+
+    <div id="activity-list-{{ task.pk }}" class="divide-y divide-border-subtle">
+        {% for activity in task.activities.all %}
+        {% include "tasks/partials/activity_item.html" %}
+        {% empty %}
+        <p class="text-sm text-zinc-500 py-3">No activity yet.</p>
+        {% endfor %}
+    </div>
+
+    <!-- Comment input -->
+    <form hx-post="{% url 'comment_create' task.pk %}"
+          hx-target="#activity-list-{{ task.pk }}"
+          hx-swap="afterbegin"
+          hx-on::after-request="if(event.detail.successful) this.reset()"
+          class="mt-4">
+        {% csrf_token %}
+        <textarea name="content" rows="2" placeholder="Add a comment..."
+                  class="w-full bg-panel border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-accent focus:outline-none resize-none"></textarea>
+        <div class="flex justify-end mt-2">
+            <button type="submit" class="bg-accent text-white px-3 py-1.5 rounded-card text-xs font-medium hover:bg-accent-hover transition-colors">
+                Comment
+            </button>
+        </div>
+    </form>
+</div>

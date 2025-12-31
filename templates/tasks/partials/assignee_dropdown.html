@@ -1,0 +1,38 @@
+<div class="relative" x-data="{ open: false }">
+    <button @click="open = !open"
+            class="flex items-center gap-2 px-2 py-1 rounded-card text-sm text-zinc-300 hover:bg-elevated transition-colors">
+        {% if task.assignee %}
+        <span class="w-5 h-5 rounded-full bg-accent/30 flex items-center justify-center text-[10px] text-accent">
+            {{ task.assignee.name|slice:":1"|upper }}
+        </span>
+        <span>{{ task.assignee.name }}</span>
+        {% else %}
+        <span class="text-zinc-500">Add assignee</span>
+        {% endif %}
+    </button>
+    <div x-show="open" @click.away="open = false"
+         x-transition
+         class="absolute left-0 top-full mt-1 w-56 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 py-1">
+        <button hx-post="{% url 'task_update_assignee' task.pk %}"
+                hx-vals='{"assignee_id": ""}'
+                hx-target="#assignee-value-{{ task.pk }}"
+                hx-swap="innerHTML"
+                @click="open = false"
+                class="w-full text-left px-3 py-2 text-sm text-zinc-400 hover:bg-hover-strong transition-colors">
+            Unassigned
+        </button>
+        {% for user in team_members %}
+        <button hx-post="{% url 'task_update_assignee' task.pk %}"
+                hx-vals='{"assignee_id": "{{ user.pk }}"}'
+                hx-target="#assignee-value-{{ task.pk }}"
+                hx-swap="innerHTML"
+                @click="open = false"
+                class="w-full text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors flex items-center gap-2 {% if user.pk == task.assignee_id %}text-accent{% else %}text-zinc-300{% endif %}">
+            <span class="w-5 h-5 rounded-full bg-accent/30 flex items-center justify-center text-[10px] text-accent">
+                {{ user.name|slice:":1"|upper }}
+            </span>
+            {{ user.name }}
+        </button>
+        {% endfor %}
+    </div>
+</div>
