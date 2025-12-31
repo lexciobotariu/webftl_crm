@@ -1,0 +1,48 @@
+<!-- Contact Information -->
+<div class="border border-border-subtle rounded-card overflow-hidden">
+    <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center gap-3">
+            <i data-lucide="contact" class="w-4 h-4 text-zinc-500"></i>
+            <h2 class="text-sm font-medium text-zinc-100">Contact Information</h2>
+        </div>
+    </div>
+    <div class="p-4">
+        <dl class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div>
+                <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Email</dt>
+                <dd class="text-zinc-300">
+                    {% if client.email %}
+                    <a href="mailto:{{ client.email }}" class="hover:text-accent transition-colors">{{ client.email }}</a>
+                    {% else %}
+                    <span class="text-zinc-600">—</span>
+                    {% endif %}
+                </dd>
+            </div>
+            <div>
+                <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Phone</dt>
+                <dd class="text-zinc-300">
+                    {% if client.phone %}
+                    <a href="tel:{{ client.phone }}" class="hover:text-accent transition-colors">{{ client.phone }}</a>
+                    {% else %}
+                    <span class="text-zinc-600">—</span>
+                    {% endif %}
+                </dd>
+            </div>
+            <div class="md:col-span-2">
+                <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Address</dt>
+                <dd class="text-zinc-300">
+                    {% if client.address %}
+                    {{ client.address|linebreaks }}
+                    {% else %}
+                    <span class="text-zinc-600">—</span>
+                    {% endif %}
+                </dd>
+            </div>
+        </dl>
+    </div>
+</div>
+
+<!-- Notes -->
+<div class="border border-border-subtle rounded-card overflow-hidden mt-6" id="notes-section">
+    {% include "clients/partials/notes_display.html" %}
+</div>

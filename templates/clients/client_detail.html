@@ -12,14 +12,17 @@
                     <i data-lucide="arrow-left" class="w-4 h-4"></i>
                 </a>
                 <i data-lucide="building-2" class="w-4 h-4 text-zinc-500"></i>
-                <h1 class="text-sm font-medium text-zinc-100">{{ client.name }}</h1>
+                <h1 class="text-sm font-medium text-zinc-100" id="client-name">{{ client.name }}</h1>
             </div>
             <div class="flex items-center gap-2">
-                <a href="{% url 'client_edit' client.pk %}"
-                   class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-300 hover:bg-hover transition-colors">
+                <button hx-get="{% url 'client_edit_drawer' client.pk %}"
+                        hx-target="#slide-over"
+                        hx-swap="innerHTML"
+                        hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+                        class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-300 hover:bg-hover transition-colors">
                     <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                     Edit
-                </a>
+                </button>
                 {% if request.user.is_admin %}
                 <button hx-post="{% url 'client_delete' client.pk %}"
                         hx-confirm="Delete {{ client.name|escapejs }}? This will also delete all projects and tasks."
@@ -39,67 +42,8 @@
         <div class="flex-1 overflow-y-auto p-6">
             <!-- Profile Section -->
             <div x-show="activeTab === 'profile'" x-cloak class="h-full">
-                <div class="space-y-6">
-                    <!-- Contact Information -->
-                    <div class="border border-border-subtle rounded-card overflow-hidden">
-                        <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
-                            <div class="flex items-center gap-3">
-                                <i data-lucide="contact" class="w-4 h-4 text-zinc-500"></i>
-                                <h2 class="text-sm font-medium text-zinc-100">Contact Information</h2>
-                            </div>
-                        </div>
-                        <div class="p-4">
-                            <dl class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                <div>
-                                    <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Email</dt>
-                                    <dd class="text-zinc-300">
-                                        {% if client.email %}
-                                        <a href="mailto:{{ client.email }}" class="hover:text-accent transition-colors">{{ client.email }}</a>
-                                        {% else %}
-                                        <span class="text-zinc-600">—</span>
-                                        {% endif %}
-                                    </dd>
-                                </div>
-                                <div>
-                                    <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Phone</dt>
-                                    <dd class="text-zinc-300">
-                                        {% if client.phone %}
-                                        <a href="tel:{{ client.phone }}" class="hover:text-accent transition-colors">{{ client.phone }}</a>
-                                        {% else %}
-                                        <span class="text-zinc-600">—</span>
-                                        {% endif %}
-                                    </dd>
-                                </div>
-                                <div class="md:col-span-2">
-                                    <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Address</dt>
-                                    <dd class="text-zinc-300">
-                                        {% if client.address %}
-                                        {{ client.address|linebreaks }}
-                                        {% else %}
-                                        <span class="text-zinc-600">—</span>
-                                        {% endif %}
-                                    </dd>
-                                </div>
-                            </dl>
-                        </div>
-                    </div>
-
-                    <!-- Notes -->
-                    <div class="border border-border-subtle rounded-card overflow-hidden">
-                        <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
-                            <div class="flex items-center gap-3">
-                                <i data-lucide="file-text" class="w-4 h-4 text-zinc-500"></i>
-                                <h2 class="text-sm font-medium text-zinc-100">Notes</h2>
-                            </div>
-                        </div>
-                        <div class="p-4">
-                            {% if client.notes %}
-                            <div class="text-sm text-zinc-300 whitespace-pre-wrap">{{ client.notes }}</div>
-                            {% else %}
-                            <div class="text-sm text-zinc-600">No notes added yet.</div>
-                            {% endif %}
-                        </div>
-                    </div>
+                <div class="space-y-6" id="profile-content">
+                    {% include "clients/partials/profile_content.html" %}
                 </div>
             </div>
 
@@ -201,4 +145,12 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Listen for client name update from drawer
+    document.body.addEventListener('updateClientName', () => {
+        // The profile content has been updated, refresh the page title if needed
+        htmx.ajax('GET', window.location.href, {target: '#client-name', select: '#client-name'});
+    });
+</script>
 {% endblock %}

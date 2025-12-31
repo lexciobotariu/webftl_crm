@@ -1,0 +1,28 @@
+<div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
+    <div class="flex items-center gap-3">
+        <i data-lucide="file-text" class="w-4 h-4 text-zinc-500"></i>
+        <h2 class="text-sm font-medium text-zinc-100">Notes</h2>
+    </div>
+</div>
+<form hx-post="{% url 'client_edit_notes' client.pk %}"
+      hx-target="#notes-section"
+      hx-swap="innerHTML"
+      class="p-4">
+    {% csrf_token %}
+    <textarea name="notes" rows="6"
+              class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none resize-none"
+              placeholder="Add notes about this client...">{{ client.notes|default:'' }}</textarea>
+    <div class="flex gap-2 mt-3">
+        <button type="submit"
+                class="bg-accent text-white px-3 py-1.5 rounded-card text-xs font-medium hover:bg-accent-hover transition-colors">
+            Save
+        </button>
+        <button type="button"
+                hx-get="{% url 'client_notes_display' client.pk %}"
+                hx-target="#notes-section"
+                hx-swap="innerHTML"
+                class="px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-300 transition-colors">
+            Cancel
+        </button>
+    </div>
+</form>

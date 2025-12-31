@@ -57,6 +57,46 @@ def client_edit(request, pk):
 
 
 @login_required
+def client_edit_drawer(request, pk):
+    """Edit client profile via drawer (HTMX)."""
+    client = get_object_or_404(Client, pk=pk)
+
+    if request.method == 'POST':
+        client.name = request.POST.get('name', client.name)
+        client.email = request.POST.get('email', '') or None
+        client.phone = request.POST.get('phone', '') or None
+        client.address = request.POST.get('address', '') or None
+        client.save()
+
+        # Return updated profile content and close drawer
+        response = render(request, 'clients/partials/profile_content.html', {'client': client})
+        response['HX-Trigger'] = 'closeSlideOver, updateClientName'
+        return response
+
+    return render(request, 'clients/partials/edit_drawer.html', {'client': client})
+
+
+@login_required
+def client_edit_notes(request, pk):
+    """Edit client notes inline (HTMX)."""
+    client = get_object_or_404(Client, pk=pk)
+
+    if request.method == 'POST':
+        client.notes = request.POST.get('notes', '') or None
+        client.save()
+        return render(request, 'clients/partials/notes_display.html', {'client': client})
+
+    return render(request, 'clients/partials/notes_edit.html', {'client': client})
+
+
+@login_required
+def client_notes_display(request, pk):
+    """Return notes display partial (for cancel action)."""
+    client = get_object_or_404(Client, pk=pk)
+    return render(request, 'clients/partials/notes_display.html', {'client': client})
+
+
+@login_required
 @require_POST
 def client_delete(request, pk):
     if not request.user.is_admin:
