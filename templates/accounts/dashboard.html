@@ -2,60 +2,113 @@
 
 {% block title %}Dashboard - WebFTL CRM{% endblock %}
 
-{% block content %}
-<div class="flex flex-col gap-6 mb-8">
-    <div class="flex items-center justify-between">
-        <div>
-            <div class="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Overview</div>
-            <h1 class="text-2xl font-semibold text-zinc-100">Dashboard</h1>
+{% block full_content %}
+<div class="flex flex-col h-full">
+    <!-- Compact header -->
+    <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center gap-3">
+            <i data-lucide="layout-dashboard" class="w-4 h-4 text-zinc-500"></i>
+            <h1 class="text-sm font-medium text-zinc-100">Dashboard</h1>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="bg-card/90 rounded-card border border-border-subtle p-4 animate-fade-up">
-            <div class="flex items-center justify-between">
-                <div class="text-xs uppercase tracking-wide text-zinc-500">Clients</div>
-                <div class="w-7 h-7 rounded-full bg-elevated border border-border-subtle flex items-center justify-center">
-                    <i data-lucide="building-2" class="w-4 h-4 text-accent"></i>
+    <!-- Content -->
+    <div class="flex-1 overflow-auto p-4">
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <a href="{% url 'client_list' %}" class="bg-card/90 rounded-card border border-border-subtle p-4 hover:border-border-strong hover:bg-elevated/50 transition-all">
+                <div class="flex items-center justify-between">
+                    <div class="text-xs uppercase tracking-wide text-zinc-500">Clients</div>
+                    <div class="w-7 h-7 rounded-full bg-elevated border border-border-subtle flex items-center justify-center">
+                        <i data-lucide="building-2" class="w-4 h-4 text-accent"></i>
+                    </div>
                 </div>
-            </div>
-            <div class="text-2xl font-semibold text-zinc-100 mt-2">{{ client_count }}</div>
-        </div>
-        <div class="bg-card/90 rounded-card border border-border-subtle p-4 animate-fade-up">
-            <div class="flex items-center justify-between">
-                <div class="text-xs uppercase tracking-wide text-zinc-500">Projects</div>
-                <div class="w-7 h-7 rounded-full bg-elevated border border-border-subtle flex items-center justify-center">
-                    <i data-lucide="folder-kanban" class="w-4 h-4 text-emerald-400"></i>
+                <div class="text-2xl font-semibold text-zinc-100 mt-2">{{ client_count }}</div>
+            </a>
+            <a href="{% url 'project_list' %}" class="bg-card/90 rounded-card border border-border-subtle p-4 hover:border-border-strong hover:bg-elevated/50 transition-all">
+                <div class="flex items-center justify-between">
+                    <div class="text-xs uppercase tracking-wide text-zinc-500">Projects</div>
+                    <div class="w-7 h-7 rounded-full bg-elevated border border-border-subtle flex items-center justify-center">
+                        <i data-lucide="folder-kanban" class="w-4 h-4 text-emerald-400"></i>
+                    </div>
                 </div>
-            </div>
-            <div class="text-2xl font-semibold text-zinc-100 mt-2">{{ project_count }}</div>
-        </div>
-        <div class="bg-card/90 rounded-card border border-border-subtle p-4 animate-fade-up">
-            <div class="flex items-center justify-between">
-                <div class="text-xs uppercase tracking-wide text-zinc-500">My Active Tasks</div>
-                <div class="w-7 h-7 rounded-full bg-elevated border border-border-subtle flex items-center justify-center">
-                    <i data-lucide="check-square" class="w-4 h-4 text-amber-400"></i>
+                <div class="text-2xl font-semibold text-zinc-100 mt-2">{{ project_count }}</div>
+            </a>
+            <a href="{% url 'my_tasks' %}" class="bg-card/90 rounded-card border border-border-subtle p-4 hover:border-border-strong hover:bg-elevated/50 transition-all">
+                <div class="flex items-center justify-between">
+                    <div class="text-xs uppercase tracking-wide text-zinc-500">My Active Tasks</div>
+                    <div class="w-7 h-7 rounded-full bg-elevated border border-border-subtle flex items-center justify-center">
+                        <i data-lucide="check-square" class="w-4 h-4 text-amber-400"></i>
+                    </div>
                 </div>
-            </div>
-            <div class="text-2xl font-semibold text-zinc-100 mt-2">{{ my_task_count }}</div>
+                <div class="text-2xl font-semibold text-zinc-100 mt-2">{{ my_task_count }}</div>
+            </a>
         </div>
-    </div>
-</div>
 
-<div class="bg-panel/80 rounded-panel border border-border-subtle overflow-hidden">
-    <div class="px-5 py-4 border-b border-border-subtle">
-        <h2 class="text-[11px] font-semibold text-zinc-400 uppercase tracking-[0.2em]">My Recent Tasks</h2>
-    </div>
-    <div class="divide-y divide-border-subtle">
-        {% for task in recent_tasks %}
-        <a href="{% url 'project_board' task.project.pk %}?task={{ task.pk }}"
-           class="block px-5 py-3 hover:bg-hover transition-colors">
-            <div class="text-sm text-zinc-200">{{ task.title }}</div>
-            <div class="text-xs text-zinc-500 mt-1">{{ task.project.name }} · {{ task.status.name }}</div>
-        </a>
-        {% empty %}
-        <div class="px-5 py-4 text-zinc-500 text-sm">No tasks assigned yet.</div>
-        {% endfor %}
+        <!-- Recent Tasks Section -->
+        <div class="border border-border-subtle rounded-card overflow-hidden">
+            <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="clock" class="w-4 h-4 text-zinc-500"></i>
+                        <h2 class="text-sm font-medium text-zinc-100">My Recent Tasks</h2>
+                        <span class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ recent_tasks|length }}</span>
+                    </div>
+                    <a href="{% url 'my_tasks' %}" class="text-xs text-accent hover:text-accent-hover transition-colors">
+                        View all
+                    </a>
+                </div>
+            </div>
+            {% if recent_tasks %}
+            <table class="w-full">
+                <thead class="bg-panel border-b border-border-subtle">
+                    <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
+                        <th class="px-4 py-2 font-medium">Task</th>
+                        <th class="px-4 py-2 font-medium">Project</th>
+                        <th class="px-4 py-2 font-medium">Status</th>
+                        <th class="px-4 py-2 font-medium w-10">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-border-subtle">
+                    {% for task in recent_tasks %}
+                    <tr class="hover:bg-elevated/50 transition-colors cursor-pointer"
+                        hx-get="{% url 'task_detail' task.pk %}" hx-target="#slide-over" hx-swap="innerHTML">
+                        <td class="px-4 py-3">
+                            <span class="font-medium text-sm text-zinc-100">{{ task.title }}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <a href="{% url 'project_board' task.project.pk %}"
+                               class="text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+                               onclick="event.stopPropagation()">
+                                {{ task.project.name }}
+                            </a>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-0.5 text-xs rounded-full border border-border-subtle bg-elevated text-zinc-300">
+                                {{ task.status.name }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center justify-end gap-1">
+                                <a href="{% url 'task_full_page' task.project.pk task.pk %}"
+                                   class="p-1.5 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded transition-colors"
+                                   title="View Full Page"
+                                   onclick="event.stopPropagation()">
+                                    <i data-lucide="external-link" class="w-4 h-4"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="flex flex-col items-center justify-center py-12 text-zinc-500">
+                <i data-lucide="check-square" class="w-10 h-10 mb-3 opacity-30"></i>
+                <p class="text-sm">No tasks assigned yet</p>
+            </div>
+            {% endif %}
+        </div>
     </div>
 </div>
 {% endblock %}
