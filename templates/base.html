@@ -11,65 +11,103 @@
             theme: {
                 extend: {
                     colors: {
-                        dark: {
-                            bg: '#0d0d0d',
-                            sidebar: '#0a0a0a',
-                            card: '#171717',
-                            hover: '#262626',
-                            border: '#262626',
-                        },
-                        accent: {
+                        // Linear-inspired neutrals
+                        'bg': '#0A0A0A',
+                        'sidebar': '#0A0A0A',
+                        'panel': '#0E0F0F',
+                        'card': '#1B1C20',
+                        'elevated': '#1E1F22',
+                        // Borders - very subtle
+                        'border': 'rgba(255, 255, 255, 0.08)',
+                        'border-subtle': 'rgba(255, 255, 255, 0.05)',
+                        'border-strong': 'rgba(255, 255, 255, 0.12)',
+                        // Interactive states
+                        'hover': 'rgba(255, 255, 255, 0.05)',
+                        'hover-strong': 'rgba(255, 255, 255, 0.08)',
+                        // Accent
+                        'accent': {
                             DEFAULT: '#8b5cf6',
                             hover: '#a78bfa',
+                            muted: 'rgba(139, 92, 246, 0.16)',
                         }
                     },
                     fontFamily: {
                         sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
                     },
+                    borderRadius: {
+                        'card': '4px',
+                        'panel': '6px',
+                    },
                     keyframes: {
                         'slide-in-right': {
                             '0%': { transform: 'translateX(100%)' },
                             '100%': { transform: 'translateX(0)' },
-                        }
+                        },
+                        'fade-up': {
+                            '0%': { opacity: '0', transform: 'translateY(8px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        'soft-pulse': {
+                            '0%, 100%': { opacity: '0.6' },
+                            '50%': { opacity: '1' },
+                        },
                     },
                     animation: {
                         'slide-in-right': 'slide-in-right 0.2s ease-out',
+                        'fade-up': 'fade-up 0.35s ease-out',
+                        'soft-pulse': 'soft-pulse 2.2s ease-in-out infinite',
                     }
                 }
             }
         }
     </script>
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-    <script defer src="https://unpkg.com/alpinejs@3.14.8/dist/cdn.min.js"></script>
+    <script defer src="https://unpkg.com/@alpinejs/csp@3.14.8/dist/cdn.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="{% static 'css/custom.css' %}">
 </head>
-<body class="h-full bg-dark-bg text-neutral-100 selection:bg-accent/30" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<body class="h-full bg-bg text-zinc-100 antialiased selection:bg-accent/30" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     {% if user.is_authenticated %}
     <div class="min-h-full flex">
         {% include "components/sidebar.html" %}
-        <main class="flex-1 p-8 overflow-auto">
-            {% block content %}{% endblock %}
+        <main class="flex-1 flex flex-col overflow-hidden">
+            {% block full_content %}
+            <div class="flex-1 p-4 overflow-auto">
+                <div class="min-h-full rounded-panel border border-border-subtle bg-panel overflow-hidden">
+                    <div class="p-4">
+                        {% block content %}{% endblock %}
+                    </div>
+                </div>
+            </div>
+            {% endblock %}
         </main>
     </div>
     {% else %}
-    <main class="min-h-full flex items-center justify-center bg-dark-bg">
-        {% block auth_content %}{% endblock %}
+    <main class="min-h-full flex items-center justify-center bg-bg">
+        <div class="w-full max-w-lg mx-auto px-6">
+            <div class="bg-panel border border-border-subtle rounded-panel px-8 py-10">
+                {% block auth_content %}{% endblock %}
+            </div>
+        </div>
     </main>
     {% endif %}
 
     <!-- Slide-over panel container -->
-    <div id="slide-over" class="hidden"></div>
+    <div id="slide-over" class="fixed inset-y-0 right-0 w-full max-w-[480px] bg-panel border-l border-border-subtle z-50 overflow-y-auto hidden animate-slide-in-right"></div>
 
     <!-- Modal container -->
     <div id="modal" class="hidden"></div>
 
-    <!-- Initialize Lucide icons -->
+    <!-- Initialize Lucide icons and event handlers -->
     <script>
         lucide.createIcons();
         // Re-init icons after HTMX swaps
         document.body.addEventListener('htmx:afterSwap', () => {
             lucide.createIcons();
+        });
+        // Close slide-over on custom event
+        document.body.addEventListener('closeSlideOver', () => {
+            document.getElementById('slide-over').classList.add('hidden');
         });
     </script>
 </body>

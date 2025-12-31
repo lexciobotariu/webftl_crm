@@ -3,45 +3,58 @@
 {% block title %}Dashboard - WebFTL CRM{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-semibold text-zinc-50 mb-8">Dashboard</h1>
+<div class="flex flex-col gap-6 mb-8">
+    <div class="flex items-center justify-between">
+        <div>
+            <div class="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Overview</div>
+            <h1 class="text-2xl font-semibold text-zinc-100">Dashboard</h1>
+        </div>
+    </div>
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-    <div class="bg-card rounded-lg border border-border p-6">
-        <div class="flex items-center gap-3 mb-2">
-            <i data-lucide="building-2" class="w-5 h-5 text-accent"></i>
-            <span class="text-zinc-400 text-sm">Clients</span>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-card/90 rounded-card border border-border-subtle p-4 animate-fade-up">
+            <div class="flex items-center justify-between">
+                <div class="text-xs uppercase tracking-wide text-zinc-500">Clients</div>
+                <div class="w-7 h-7 rounded-full bg-elevated border border-border-subtle flex items-center justify-center">
+                    <i data-lucide="building-2" class="w-4 h-4 text-accent"></i>
+                </div>
+            </div>
+            <div class="text-2xl font-semibold text-zinc-100 mt-2">{{ client_count }}</div>
         </div>
-        <div class="text-3xl font-bold text-zinc-50">{{ client_count }}</div>
-    </div>
-    <div class="bg-card rounded-lg border border-border p-6">
-        <div class="flex items-center gap-3 mb-2">
-            <i data-lucide="folder-kanban" class="w-5 h-5 text-green-500"></i>
-            <span class="text-zinc-400 text-sm">Projects</span>
+        <div class="bg-card/90 rounded-card border border-border-subtle p-4 animate-fade-up">
+            <div class="flex items-center justify-between">
+                <div class="text-xs uppercase tracking-wide text-zinc-500">Projects</div>
+                <div class="w-7 h-7 rounded-full bg-elevated border border-border-subtle flex items-center justify-center">
+                    <i data-lucide="folder-kanban" class="w-4 h-4 text-emerald-400"></i>
+                </div>
+            </div>
+            <div class="text-2xl font-semibold text-zinc-100 mt-2">{{ project_count }}</div>
         </div>
-        <div class="text-3xl font-bold text-zinc-50">{{ project_count }}</div>
-    </div>
-    <div class="bg-card rounded-lg border border-border p-6">
-        <div class="flex items-center gap-3 mb-2">
-            <i data-lucide="check-square" class="w-5 h-5 text-orange-500"></i>
-            <span class="text-zinc-400 text-sm">My Active Tasks</span>
+        <div class="bg-card/90 rounded-card border border-border-subtle p-4 animate-fade-up">
+            <div class="flex items-center justify-between">
+                <div class="text-xs uppercase tracking-wide text-zinc-500">My Active Tasks</div>
+                <div class="w-7 h-7 rounded-full bg-elevated border border-border-subtle flex items-center justify-center">
+                    <i data-lucide="check-square" class="w-4 h-4 text-amber-400"></i>
+                </div>
+            </div>
+            <div class="text-2xl font-semibold text-zinc-100 mt-2">{{ my_task_count }}</div>
         </div>
-        <div class="text-3xl font-bold text-zinc-50">{{ my_task_count }}</div>
     </div>
 </div>
 
-<div class="bg-card rounded-lg border border-border">
-    <div class="p-4 border-b border-border">
-        <h2 class="text-lg font-semibold text-zinc-50">My Recent Tasks</h2>
+<div class="bg-panel/80 rounded-panel border border-border-subtle overflow-hidden">
+    <div class="px-5 py-4 border-b border-border-subtle">
+        <h2 class="text-[11px] font-semibold text-zinc-400 uppercase tracking-[0.2em]">My Recent Tasks</h2>
     </div>
-    <div class="divide-y divide-border">
+    <div class="divide-y divide-border-subtle">
         {% for task in recent_tasks %}
         <a href="{% url 'project_board' task.project.pk %}?task={{ task.pk }}"
-           class="block p-4 hover:bg-hover transition-colors">
-            <div class="font-medium text-zinc-50">{{ task.title }}</div>
-            <div class="text-sm text-zinc-500">{{ task.project.name }} · {{ task.status.name }}</div>
+           class="block px-5 py-3 hover:bg-hover transition-colors">
+            <div class="text-sm text-zinc-200">{{ task.title }}</div>
+            <div class="text-xs text-zinc-500 mt-1">{{ task.project.name }} · {{ task.status.name }}</div>
         </a>
         {% empty %}
-        <div class="p-4 text-zinc-500">No tasks assigned yet.</div>
+        <div class="px-5 py-4 text-zinc-500 text-sm">No tasks assigned yet.</div>
         {% endfor %}
     </div>
 </div>

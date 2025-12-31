@@ -3,7 +3,7 @@ from django import forms
 from apps.accounts.models import User
 from .models import Task, Subtask, Comment, Label
 
-INPUT_CLASSES = 'w-full bg-card border border-border rounded-md px-3 py-2 text-zinc-50 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none'
+INPUT_CLASSES = 'w-full bg-panel border border-border-subtle rounded-card px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none transition-colors'
 
 
 class TaskForm(forms.ModelForm):

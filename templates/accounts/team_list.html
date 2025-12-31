@@ -3,25 +3,30 @@
 {% block title %}Team - WebFTL CRM{% endblock %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-8">
-    <h1 class="text-2xl font-semibold text-zinc-50">Team</h1>
-    <a href="{% url 'account_signup' %}" class="bg-accent text-white px-4 py-2 rounded-md hover:bg-accent/90 transition-colors flex items-center gap-2">
-        <i data-lucide="plus" class="w-4 h-4"></i>
-        Invite Member
-    </a>
+<div class="flex flex-col gap-4 mb-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <div class="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Team</div>
+            <h1 class="text-2xl font-semibold text-zinc-100">Team</h1>
+        </div>
+        <a href="{% url 'account_signup' %}" class="inline-flex items-center gap-2 bg-accent text-white px-4 py-2 rounded-card hover:bg-accent/90 transition-colors">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            Invite Member
+        </a>
+    </div>
 </div>
 
-<div class="bg-card rounded-lg border border-border overflow-hidden">
+<div class="bg-panel/80 rounded-panel border border-border-subtle overflow-hidden">
     <table class="w-full">
-        <thead class="bg-sidebar border-b border-border">
+        <thead class="bg-elevated/80 border-b border-border-subtle">
             <tr>
-                <th class="px-6 py-3 text-left text-sm font-semibold text-zinc-300">Name</th>
-                <th class="px-6 py-3 text-left text-sm font-semibold text-zinc-300">Email</th>
-                <th class="px-6 py-3 text-left text-sm font-semibold text-zinc-300">Role</th>
-                <th class="px-6 py-3 text-left text-sm font-semibold text-zinc-300">Actions</th>
+                <th class="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Name</th>
+                <th class="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Email</th>
+                <th class="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Role</th>
+                <th class="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Actions</th>
             </tr>
         </thead>
-        <tbody class="divide-y divide-border">
+        <tbody class="divide-y divide-border-subtle">
             {% for member in users %}
             {% include "accounts/partials/user_row.html" with user=member %}
             {% endfor %}

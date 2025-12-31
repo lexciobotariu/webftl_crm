@@ -1,20 +1,20 @@
-<div class="bg-card rounded-lg border border-border p-4 cursor-move hover:border-zinc-600 transition-colors"
+<div class="group bg-card/90 rounded-card border border-border-subtle p-3 cursor-move transition-all duration-150 hover:bg-elevated/90 hover:border-border-strong"
      id="task-{{ task.pk }}"
      draggable="true"
-     @dragstart="dragging = {{ task.pk }}; $el.classList.add('dragging')"
-     @dragend="$el.classList.remove('dragging')"
+     @dragstart="dragging = {{ task.pk }}; $el.style.opacity = '0.6'; $el.style.transform = 'rotate(2deg)';"
+     @dragend="$el.style.opacity = ''; $el.style.transform = '';"
      hx-get="{% url 'task_detail' task.pk %}"
      hx-target="#slide-over"
      hx-swap="innerHTML"
      hx-trigger="click">
-    <div class="font-medium text-zinc-50 mb-2">{{ task.title }}</div>
-    <div class="flex items-center gap-2 text-sm text-zinc-400">
+    <div class="text-sm font-medium text-zinc-100 mb-1.5">{{ task.title }}</div>
+    <div class="flex flex-wrap items-center gap-2 text-[11px] text-zinc-500">
         {% if task.priority %}
-        <span class="px-2 py-0.5 rounded text-xs
-            {% if task.priority == 'urgent' %}bg-red-500/20 text-red-400
-            {% elif task.priority == 'high' %}bg-orange-500/20 text-orange-400
-            {% elif task.priority == 'medium' %}bg-yellow-500/20 text-yellow-400
-            {% else %}bg-zinc-700 text-zinc-400{% endif %}">
+        <span class="px-2 py-0.5 rounded-full text-[10px] border
+            {% if task.priority == 'urgent' %}bg-red-500/15 text-red-300 border-red-500/30
+            {% elif task.priority == 'high' %}bg-orange-500/15 text-orange-300 border-orange-500/30
+            {% elif task.priority == 'medium' %}bg-yellow-500/15 text-yellow-300 border-yellow-500/30
+            {% else %}bg-elevated text-zinc-400 border-border-subtle{% endif %}">
             {{ task.get_priority_display }}
         </span>
         {% endif %}
@@ -34,7 +34,7 @@
     {% if task.labels.exists %}
     <div class="flex flex-wrap gap-1 mt-2">
         {% for label in task.labels.all %}
-        <span class="px-2 py-0.5 text-xs rounded" style="background: {{ label.color }}20; color: {{ label.color }}">
+        <span class="px-2 py-0.5 text-[10px] rounded-full border" style="background: {{ label.color }}20; color: {{ label.color }}; border-color: {{ label.color }}40;">
             {{ label.name }}
         </span>
         {% endfor %}

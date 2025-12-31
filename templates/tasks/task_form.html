@@ -4,14 +4,15 @@
 
 {% block content %}
 <div class="max-w-2xl">
-    <h1 class="text-2xl font-semibold text-zinc-50 mb-8">{% if task %}Edit Task{% else %}New Task{% endif %}</h1>
+    <div class="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Tasks</div>
+    <h1 class="text-2xl font-semibold text-zinc-100 mb-6">{% if task %}Edit Task{% else %}New Task{% endif %}</h1>
 
-    <form method="post" class="bg-card rounded-lg border border-border p-6 space-y-6">
+    <form method="post" class="bg-panel/80 rounded-panel border border-border-subtle p-6 space-y-6">
         {% csrf_token %}
         {% include "tasks/task_form_fields.html" %}
 
         <div class="flex gap-4 pt-4">
-            <button type="submit" class="bg-accent text-white px-4 py-2 rounded-md hover:bg-accent/90 transition-colors">
+            <button type="submit" class="bg-accent text-white px-4 py-2 rounded-card hover:bg-accent/90 transition-colors">
                 {% if task %}Save{% else %}Create{% endif %}
             </button>
             <a href="{% url 'project_board' project.pk %}" class="px-4 py-2 text-zinc-400 hover:text-zinc-300 transition-colors">Cancel</a>

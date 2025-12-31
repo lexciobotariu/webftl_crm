@@ -1,8 +1,8 @@
 <tr id="user-{{ user.pk }}" class="hover:bg-hover transition-colors">
-    <td class="px-6 py-4 text-zinc-50">{{ user.name }}</td>
-    <td class="px-6 py-4 text-zinc-400">{{ user.email }}</td>
+    <td class="px-6 py-4 text-sm text-zinc-100">{{ user.name }}</td>
+    <td class="px-6 py-4 text-sm text-zinc-400">{{ user.email }}</td>
     <td class="px-6 py-4">
-        <span class="px-2 py-1 text-xs rounded {% if user.role == 'admin' %}bg-accent/20 text-accent{% else %}bg-zinc-700 text-zinc-300{% endif %}">
+        <span class="px-2 py-0.5 text-[11px] rounded-full border {% if user.role == 'admin' %}bg-accent-muted text-accent border-accent/30{% else %}bg-elevated text-zinc-300 border-border-subtle{% endif %}">
             {{ user.get_role_display }}
         </span>
     </td>

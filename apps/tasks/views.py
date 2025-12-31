@@ -34,10 +34,18 @@ def task_create(request, project_pk):
             task.save()
             form.save_m2m()
             if request.htmx:
-                return render(request, 'projects/partials/task_card.html', {'task': task})
+                # Re-render the entire kanban board after task creation
+                statuses = project.statuses.prefetch_related('tasks')
+                response = render(request, 'projects/partials/kanban_board.html', {'project': project})
+                response['HX-Trigger'] = 'closeSlideOver'
+                return response
             return redirect('project_board', pk=project.pk)
     else:
         form = TaskForm(project)
+
+    # Return slide-over for HTMX, full page otherwise
+    if request.htmx:
+        return render(request, 'tasks/task_create_slideover.html', {'form': form, 'project': project})
     return render(request, 'tasks/task_form.html', {'form': form, 'project': project})
 
 

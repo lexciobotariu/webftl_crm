@@ -1,6 +1,6 @@
 {% for field in form %}
-<div>
-    <label class="block text-sm font-medium text-zinc-300 mb-2">{{ field.label }}</label>
+<div class="space-y-1">
+    <label class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500">{{ field.label }}</label>
     {{ field }}
     {% if field.errors %}
     <p class="text-red-500 text-sm mt-1">{{ field.errors.0 }}</p>

@@ -2,33 +2,45 @@
 
 {% block title %}{{ project.name }} - WebFTL CRM{% endblock %}
 
-{% block content %}
-<div class="flex justify-between items-start mb-6">
-    <div>
-        <a href="{% url 'project_list' %}" class="text-accent hover:text-accent/80 text-sm">&larr; All Projects</a>
-        <h1 class="text-2xl font-semibold text-zinc-50">{{ project.name }}</h1>
-        <div class="text-zinc-400">{{ project.client.name }}</div>
+{% block full_content %}
+<div class="flex flex-col h-full overflow-hidden">
+    <!-- Fixed compact header -->
+    <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <a href="{% url 'project_list' %}" class="text-zinc-500 hover:text-zinc-300 transition-colors">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                </a>
+                <div class="flex items-center gap-3">
+                    <h1 class="text-sm font-medium text-zinc-100">{{ project.name }}</h1>
+                    <span class="text-xs text-zinc-500">{{ project.client.name }}</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button hx-get="{% url 'task_create' project.pk %}"
+                        hx-target="#slide-over"
+                        hx-swap="innerHTML"
+                        class="inline-flex items-center gap-1.5 bg-accent text-white px-3 py-1.5 rounded-card text-xs font-medium hover:bg-accent-hover transition-colors">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                    Add Task
+                </button>
+                <a href="{% url 'project_edit' project.pk %}" class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
+                    <i data-lucide="settings" class="w-3.5 h-3.5"></i>
+                    Settings
+                </a>
+            </div>
+        </div>
     </div>
-    <div class="flex gap-2">
-        <button hx-get="{% url 'task_create' project.pk %}"
-                hx-target="#slide-over"
-                hx-swap="innerHTML"
-                class="bg-accent text-white px-4 py-2 rounded-md hover:bg-accent/90 transition-colors flex items-center gap-2">
-            <i data-lucide="plus" class="w-4 h-4"></i>
-            Add Task
-        </button>
-        <a href="{% url 'project_edit' project.pk %}" class="bg-card border border-border px-4 py-2 rounded-md text-zinc-300 hover:bg-hover transition-colors flex items-center gap-2">
-            <i data-lucide="settings" class="w-4 h-4"></i>
-            Settings
-        </a>
-    </div>
-</div>
 
-<div class="flex gap-4 overflow-x-auto pb-4"
-     x-data="{ dragging: null }"
-     id="kanban-board">
-    {% for status in project.statuses.all %}
-    {% include "projects/partials/kanban_column.html" %}
-    {% endfor %}
+    <!-- Kanban board - full height, horizontally scrollable -->
+    <div class="flex-1 overflow-x-auto overflow-y-hidden"
+         x-data="{ dragging: null }"
+         id="kanban-board">
+        <div class="flex gap-3 p-4 h-full min-w-max">
+            {% for status in project.statuses.all %}
+            {% include "projects/partials/kanban_column.html" %}
+            {% endfor %}
+        </div>
+    </div>
 </div>
 {% endblock %}

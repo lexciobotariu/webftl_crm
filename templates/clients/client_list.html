@@ -3,15 +3,20 @@
 {% block title %}Clients - WebFTL CRM{% endblock %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-8">
-    <h1 class="text-2xl font-semibold text-zinc-50">Clients</h1>
-    <a href="{% url 'client_create' %}" class="bg-accent text-white px-4 py-2 rounded-md hover:bg-accent/90 transition-colors flex items-center gap-2">
-        <i data-lucide="plus" class="w-4 h-4"></i>
-        Add Client
-    </a>
+<div class="flex flex-col gap-4 mb-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <div class="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Clients</div>
+            <h1 class="text-2xl font-semibold text-zinc-100">Clients</h1>
+        </div>
+        <a href="{% url 'client_create' %}" class="inline-flex items-center gap-2 bg-accent text-white px-4 py-2 rounded-card hover:bg-accent/90 transition-colors">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            Add Client
+        </a>
+    </div>
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="client-grid">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="client-grid">
     {% for client in clients %}
     {% include "clients/partials/client_card.html" %}
     {% empty %}

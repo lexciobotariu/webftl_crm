@@ -2,8 +2,8 @@
     <input type="checkbox" {% if subtask.completed %}checked{% endif %}
            hx-post="{% url 'subtask_toggle' subtask.task.pk subtask.pk %}"
            hx-target="#subtask-{{ subtask.pk }}" hx-swap="outerHTML"
-           class="rounded bg-card border-border text-accent focus:ring-accent">
-    <span class="flex-1 text-zinc-300 {% if subtask.completed %}line-through text-zinc-500{% endif %}">{{ subtask.title }}</span>
+           class="rounded bg-panel border-border-subtle text-accent focus:ring-accent">
+    <span class="flex-1 text-sm text-zinc-300 {% if subtask.completed %}line-through text-zinc-500{% endif %}">{{ subtask.title }}</span>
     <button hx-post="{% url 'subtask_delete' subtask.task.pk subtask.pk %}" hx-target="#subtask-{{ subtask.pk }}" hx-swap="delete"
-            class="text-zinc-500 hover:text-red-500">&times;</button>
+            class="text-zinc-500 hover:text-red-400">&times;</button>
 </div>

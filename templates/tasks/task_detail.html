@@ -1,59 +1,68 @@
 <div class="slide-over-panel p-6" x-data="{ editing: false }">
-    <div class="flex justify-between items-start mb-6">
+    <div class="flex justify-between items-start pb-4 border-b border-border-subtle">
         <div class="flex-1">
-            <h2 class="text-xl font-semibold text-zinc-50" x-show="!editing">{{ task.title }}</h2>
-            <div class="text-sm text-zinc-500 mt-1">
-                {{ task.project.name }} · {{ task.status.name }}
+            <h2 class="text-xl font-semibold text-zinc-100" x-show="!editing">{{ task.title }}</h2>
+            <div class="flex flex-wrap items-center gap-2 text-xs text-zinc-500 mt-2">
+                <span class="px-2 py-0.5 rounded-full bg-elevated border border-border-subtle text-[10px] uppercase tracking-wide text-zinc-400">
+                    {{ task.status.name }}
+                </span>
+                <span class="text-zinc-600">&middot;</span>
+                <span class="text-zinc-300">{{ task.project.name }}</span>
             </div>
         </div>
-        <div class="flex gap-2">
-            <button @click="editing = !editing" class="text-zinc-400 hover:text-zinc-300 text-sm">
+        <div class="flex items-center gap-2">
+            <button @click="editing = !editing" class="text-xs uppercase tracking-[0.2em] text-zinc-500 hover:text-zinc-300">
                 <span x-text="editing ? 'Cancel' : 'Edit'"></span>
             </button>
             <button onclick="document.getElementById('slide-over').classList.add('hidden')"
-                    class="text-zinc-400 hover:text-zinc-300 text-xl">&times;</button>
+                    class="w-8 h-8 flex items-center justify-center rounded-card bg-panel border border-border-subtle text-zinc-400 hover:text-zinc-200 hover:border-border-strong">&times;</button>
         </div>
     </div>
 
-    <div x-show="!editing" class="space-y-6">
-        <div class="grid grid-cols-2 gap-4 text-sm">
-            <div>
-                <span class="text-zinc-500">Assignee</span>
-                <div class="text-zinc-300">{{ task.assignee.name|default:"Unassigned" }}</div>
-            </div>
-            <div>
-                <span class="text-zinc-500">Priority</span>
-                <div class="text-zinc-300">{{ task.get_priority_display|default:"None" }}</div>
-            </div>
-            <div>
-                <span class="text-zinc-500">Due Date</span>
-                <div class="text-zinc-300">{{ task.due_date|date:"M d, Y"|default:"None" }}</div>
-            </div>
-            <div>
-                <span class="text-zinc-500">Estimate</span>
-                <div class="text-zinc-300">{% if task.time_estimate %}{{ task.time_estimate }}h{% else %}None{% endif %}</div>
+    <div x-show="!editing" class="space-y-5 mt-5">
+        <div class="rounded-card border border-border-subtle bg-panel/60 p-4">
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                    <span class="text-[11px] uppercase tracking-[0.18em] text-zinc-500">Assignee</span>
+                    <div class="text-zinc-300 mt-1">{{ task.assignee.name|default:"Unassigned" }}</div>
+                </div>
+                <div>
+                    <span class="text-[11px] uppercase tracking-[0.18em] text-zinc-500">Priority</span>
+                    <div class="text-zinc-300 mt-1">{{ task.get_priority_display|default:"None" }}</div>
+                </div>
+                <div>
+                    <span class="text-[11px] uppercase tracking-[0.18em] text-zinc-500">Due Date</span>
+                    <div class="text-zinc-300 mt-1">{{ task.due_date|date:"M d, Y"|default:"None" }}</div>
+                </div>
+                <div>
+                    <span class="text-[11px] uppercase tracking-[0.18em] text-zinc-500">Estimate</span>
+                    <div class="text-zinc-300 mt-1">{% if task.time_estimate %}{{ task.time_estimate }}h{% else %}None{% endif %}</div>
+                </div>
             </div>
         </div>
 
         {% if task.labels.exists %}
-        <div class="flex flex-wrap gap-1">
-            {% for label in task.labels.all %}
-            <span class="px-2 py-1 text-sm rounded" style="background: {{ label.color }}20; color: {{ label.color }}">
-                {{ label.name }}
-            </span>
-            {% endfor %}
+        <div class="rounded-card border border-border-subtle bg-panel/60 p-4">
+            <div class="text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Labels</div>
+            <div class="flex flex-wrap gap-2">
+                {% for label in task.labels.all %}
+                <span class="px-2 py-0.5 text-[11px] rounded-full border" style="background: {{ label.color }}20; color: {{ label.color }}; border-color: {{ label.color }}40;">
+                    {{ label.name }}
+                </span>
+                {% endfor %}
+            </div>
         </div>
         {% endif %}
 
         {% if task.description %}
-        <div>
-            <h3 class="font-semibold text-zinc-50 mb-2">Description</h3>
+        <div class="rounded-card border border-border-subtle bg-panel/60 p-4">
+            <h3 class="text-sm font-semibold text-zinc-100 mb-2">Description</h3>
             <div class="text-sm text-zinc-300">{{ task.description|linebreaks }}</div>
         </div>
         {% endif %}
 
-        <div>
-            <h3 class="font-semibold text-zinc-50 mb-2">Subtasks {% if task.subtask_progress %}({{ task.subtask_progress }}){% endif %}</h3>
+        <div class="rounded-card border border-border-subtle bg-panel/60 p-4">
+            <h3 class="text-sm font-semibold text-zinc-100 mb-3">Subtasks {% if task.subtask_progress %}({{ task.subtask_progress }}){% endif %}</h3>
             <div id="subtask-list" class="space-y-2 mb-3">
                 {% for subtask in task.subtasks.all %}
                 {% include "tasks/partials/subtask_item.html" %}
@@ -65,8 +74,8 @@
             </form>
         </div>
 
-        <div>
-            <h3 class="font-semibold text-zinc-50 mb-2">Attachments</h3>
+        <div class="rounded-card border border-border-subtle bg-panel/60 p-4">
+            <h3 class="text-sm font-semibold text-zinc-100 mb-3">Attachments</h3>
             <div id="attachment-list" class="space-y-2 mb-3">
                 {% for attachment in task.attachments.all %}
                 {% include "tasks/partials/attachment_item.html" %}
@@ -78,8 +87,8 @@
             </form>
         </div>
 
-        <div>
-            <h3 class="font-semibold text-zinc-50 mb-2">Comments</h3>
+        <div class="rounded-card border border-border-subtle bg-panel/60 p-4">
+            <h3 class="text-sm font-semibold text-zinc-100 mb-3">Comments</h3>
             <div id="comment-list" class="space-y-4 mb-4">
                 {% for comment in task.comments.all %}
                 {% include "tasks/partials/comment_item.html" %}
@@ -88,15 +97,15 @@
             <form hx-post="{% url 'comment_create' task.pk %}" hx-target="#comment-list" hx-swap="beforeend">
                 {% csrf_token %}
                 {{ comment_form.content }}
-                <button type="submit" class="mt-2 bg-accent text-white px-4 py-2 rounded-md text-sm hover:bg-accent/90 transition-colors">
+                <button type="submit" class="mt-2 bg-accent text-white px-4 py-2 rounded-card text-sm hover:bg-accent/90 transition-colors">
                     Add Comment
                 </button>
             </form>
         </div>
 
         {% if task.github_issue_number %}
-        <div class="border-t border-border pt-4">
-            <h3 class="font-semibold text-zinc-50 mb-2">GitHub</h3>
+        <div class="rounded-card border border-border-subtle bg-panel/60 p-4">
+            <h3 class="text-sm font-semibold text-zinc-100 mb-2">GitHub</h3>
             <a href="{{ task.project.github_repo_url }}/issues/{{ task.github_issue_number }}" target="_blank" class="text-accent hover:text-accent/80 flex items-center gap-1">
                 <i data-lucide="github" class="w-4 h-4"></i>
                 Issue #{{ task.github_issue_number }}
@@ -104,18 +113,18 @@
         </div>
         {% endif %}
 
-        <div class="border-t border-border pt-4">
+        <div class="rounded-card border border-border-subtle bg-panel/60 p-4">
             <button hx-post="{% url 'task_delete' task.pk %}" hx-confirm="Delete this task?" hx-target="#task-{{ task.pk }}" hx-swap="delete"
                     @click="document.getElementById('slide-over').classList.add('hidden')"
-                    class="text-red-500 text-sm hover:text-red-400">Delete Task</button>
+                    class="text-red-300 text-sm hover:text-red-200">Delete Task</button>
         </div>
     </div>
 
     <div x-show="editing" x-cloak>
-        <form hx-post="{% url 'task_edit' task.pk %}" hx-target="#slide-over" hx-swap="innerHTML">
+        <form hx-post="{% url 'task_edit' task.pk %}" hx-target="#slide-over" hx-swap="innerHTML" class="space-y-5 mt-5">
             {% csrf_token %}
             {% include "tasks/task_form_fields.html" %}
-            <button type="submit" class="bg-accent text-white px-4 py-2 rounded-md mt-4 hover:bg-accent/90 transition-colors">Save</button>
+            <button type="submit" class="bg-accent text-white px-4 py-2 rounded-card mt-4 hover:bg-accent/90 transition-colors">Save</button>
         </form>
     </div>
 </div>

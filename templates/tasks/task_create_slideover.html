@@ -1,0 +1,28 @@
+<div class="slide-over-panel p-6">
+    <div class="flex justify-between items-start pb-4 border-b border-border-subtle">
+        <div>
+            <h2 class="text-xl font-semibold text-zinc-100">New Task</h2>
+            <p class="text-xs uppercase tracking-[0.2em] text-zinc-500 mt-2">{{ project.name }}</p>
+        </div>
+        <button onclick="document.getElementById('slide-over').classList.add('hidden')"
+                class="w-8 h-8 flex items-center justify-center rounded-card bg-panel border border-border-subtle text-zinc-400 hover:text-zinc-200 hover:border-border-strong">&times;</button>
+    </div>
+
+    <form method="post" hx-post="{% url 'task_create' project.pk %}"
+          hx-target="#kanban-board" hx-swap="innerHTML"
+          class="space-y-5 mt-5">
+        {% csrf_token %}
+        {% include "tasks/task_form_fields.html" %}
+
+        <div class="flex gap-3 pt-2">
+            <button type="submit" class="bg-accent text-white px-4 py-2 rounded-card text-sm hover:bg-accent-hover transition-colors">
+                Create Task
+            </button>
+            <button type="button" onclick="document.getElementById('slide-over').classList.add('hidden')"
+                    class="px-4 py-2 text-zinc-400 hover:text-zinc-300 text-sm transition-colors">
+                Cancel
+            </button>
+        </div>
+    </form>
+</div>
+<script>document.getElementById('slide-over').classList.remove('hidden');</script>
