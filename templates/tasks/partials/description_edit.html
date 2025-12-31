@@ -17,11 +17,21 @@
                 <span x-show="saving">Saving...</span>
             </button>
             <button type="button"
-                    hx-get="{% url 'task_detail' task.pk %}"
-                    hx-target="#slide-over-content"
+                    hx-get="{% url 'task_edit_description' task.pk %}?cancel=1"
+                    hx-target="#task-description-{{ task.pk }}"
+                    hx-swap="innerHTML"
                     class="text-zinc-500 hover:text-zinc-300 px-3 py-1.5 text-xs transition-colors">
                 Cancel
             </button>
         </div>
     </form>
 </div>
+<script>
+// Cancel on Escape
+document.querySelector('#task-description-{{ task.pk }} textarea').addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        htmx.ajax('GET', '{% url 'task_edit_description' task.pk %}?cancel=1', {target: '#task-description-{{ task.pk }}', swap: 'innerHTML'});
+        e.preventDefault();
+    }
+});
+</script>

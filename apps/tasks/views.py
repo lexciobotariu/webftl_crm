@@ -280,6 +280,9 @@ def task_toggle_label(request, pk, label_pk):
 @login_required
 def task_edit_description(request, pk):
     task = get_object_or_404(Task, pk=pk)
+    # Return display template if cancel=1
+    if request.GET.get('cancel') == '1':
+        return render(request, 'tasks/partials/description_display.html', {'task': task})
     if request.method == 'POST':
         task.description = request.POST.get('description', '')
         task._changed_by = request.user
