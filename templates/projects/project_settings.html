@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl">
+    <div class="flex items-center gap-4 mb-6">
+        <a href="{% url 'project_board' project.pk %}" class="text-zinc-500 hover:text-zinc-300 transition-colors">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        </a>
+        <div>
+            <div class="text-[11px] uppercase tracking-[0.2em] text-zinc-500">{{ project.name }}</div>
+            <h1 class="text-xl font-semibold text-zinc-100">Project Settings</h1>
+        </div>
+    </div>
+
+    <div class="space-y-6">
+        <!-- General Settings -->
+        <div class="bg-card/90 rounded-panel border border-border-subtle overflow-hidden">
+            <div class="px-5 py-3 border-b border-border-subtle">
+                <h2 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">General</h2>
+            </div>
+            <div class="p-5">
+                <form method="post" action="{% url 'project_edit' project.pk %}" class="space-y-4">
+                    {% csrf_token %}
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Name</label>
+                            <input type="text" name="name" value="{{ project.name }}" required
+                                   class="w-full bg-panel border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Client</label>
+                            <input type="text" value="{{ project.client.name }}" disabled
+                                   class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-400">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">GitHub Repository</label>
+                        <input type="url" name="github_repo_url" value="{{ project.github_repo_url }}" placeholder="https://github.com/org/repo"
+                               class="w-full bg-panel border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Statuses -->
+        <div class="bg-card/90 rounded-panel border border-border-subtle overflow-hidden">
+            <div class="px-5 py-3 border-b border-border-subtle">
+                <h2 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Statuses</h2>
+            </div>
+            <div class="p-5">
+                <div class="space-y-2 mb-4" id="status-list">
+                    {% for status in project.statuses.all %}
+                    <div class="flex items-center justify-between p-3 bg-panel/70 rounded-card border border-border-subtle">
+                        <span class="text-sm text-zinc-300">{{ status.name }}</span>
+                        <span class="text-xs text-zinc-500">{{ status.task_count }} tasks</span>
+                    </div>
+                    {% empty %}
+                    <div class="text-zinc-500 text-sm">No statuses defined.</div>
+                    {% endfor %}
+                </div>
+                <form method="post" action="{% url 'manage_statuses' project.pk %}"
+                      hx-post="{% url 'manage_statuses' project.pk %}"
+                      hx-target="#status-list"
+                      hx-swap="beforeend"
+                      class="flex gap-3">
+                    {% csrf_token %}
+                    <input type="text" name="name" required placeholder="New status name"
+                           class="flex-1 bg-panel border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                    <button type="submit" class="bg-accent text-white px-4 py-2 rounded-card text-sm hover:bg-accent-hover transition-colors">
+                        Add Status
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Labels -->
+        <div class="bg-card/90 rounded-panel border border-border-subtle overflow-hidden">
+            <div class="px-5 py-3 border-b border-border-subtle">
+                <h2 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Labels</h2>
+            </div>
+            <div class="p-5">
+                <div class="space-y-2 mb-4" id="label-list">
+                    {% for label in project.labels.all %}
+                    {% include "projects/partials/label_item.html" %}
+                    {% empty %}
+                    <div class="text-zinc-500 text-sm" id="no-labels">No labels defined. Add labels to categorize tasks.</div>
+                    {% endfor %}
+                </div>
+                <form hx-post="{% url 'label_create' project.pk %}"
+                      hx-target="#label-list"
+                      hx-swap="beforeend"
+                      hx-on::after-request="if(event.detail.successful) { this.reset(); document.getElementById('no-labels')?.remove(); }"
+                      class="flex gap-3 items-end">
+                    {% csrf_token %}
+                    <div class="flex-1">
+                        <input type="text" name="name" required placeholder="Label name"
+                               class="w-full bg-panel border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                    </div>
+                    <div>
+                        <input type="color" name="color" value="#8b5cf6"
+                               class="w-12 h-9 bg-panel border border-border-subtle rounded-card cursor-pointer">
+                    </div>
+                    <button type="submit" class="bg-accent text-white px-4 py-2 rounded-card text-sm hover:bg-accent-hover transition-colors">
+                        Add Label
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="bg-card/90 rounded-panel border border-red-500/20 overflow-hidden">
+            <div class="px-5 py-3 border-b border-red-500/20">
+                <h2 class="text-xs font-semibold text-red-400 uppercase tracking-wider">Danger Zone</h2>
+            </div>
+            <div class="p-5">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-sm text-zinc-300">Delete this project</div>
+                        <div class="text-xs text-zinc-500">Once deleted, this project and all its tasks cannot be recovered.</div>
+                    </div>
+                    <button hx-post="{% url 'project_delete' project.pk %}"
+                            hx-confirm="Are you sure you want to delete this project? This action cannot be undone."
+                            class="bg-red-500/20 text-red-400 px-4 py-2 rounded-card text-sm hover:bg-red-500/30 border border-red-500/30 transition-colors">
+                        Delete Project
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

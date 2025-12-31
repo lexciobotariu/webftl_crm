@@ -5,9 +5,10 @@ from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.decorators.http import require_POST
 
-from .forms import ProjectForm, StatusForm
+from .forms import ProjectForm, StatusForm, LabelForm
 from .models import Project, Status
 from apps.clients.models import Client
+from apps.tasks.models import Label
 
 
 @login_required
@@ -95,3 +96,38 @@ def reorder_statuses(request, pk):
     for i, status_id in enumerate(order):
         Status.objects.filter(pk=status_id, project=project).update(order=i)
     return HttpResponse(status=204)
+
+
+@login_required
+def project_settings(request, pk):
+    """Unified project settings page with statuses and labels."""
+    project = get_object_or_404(Project, pk=pk)
+    status_form = StatusForm()
+    label_form = LabelForm()
+    return render(request, 'projects/project_settings.html', {
+        'project': project,
+        'status_form': status_form,
+        'label_form': label_form,
+    })
+
+
+@login_required
+@require_POST
+def label_create(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+    form = LabelForm(request.POST)
+    if form.is_valid():
+        label = form.save(commit=False)
+        label.project = project
+        label.save()
+        return render(request, 'projects/partials/label_item.html', {'label': label, 'project': project})
+    return HttpResponse(status=400)
+
+
+@login_required
+@require_POST
+def label_delete(request, pk, label_pk):
+    project = get_object_or_404(Project, pk=pk)
+    label = get_object_or_404(Label, pk=label_pk, project=project)
+    label.delete()
+    return HttpResponse('')

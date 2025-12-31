@@ -1,8 +1,10 @@
 from django import forms
 
 from .models import Project, Status
+from apps.tasks.models import Label
 
 INPUT_CLASSES = 'w-full bg-panel border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none'
+
 
 class ProjectForm(forms.ModelForm):
     class Meta:
@@ -22,4 +24,20 @@ class StatusForm(forms.ModelForm):
         fields = ['name']
         widgets = {
             'name': forms.TextInput(attrs={'class': INPUT_CLASSES}),
+        }
+
+
+class LabelForm(forms.ModelForm):
+    class Meta:
+        model = Label
+        fields = ['name', 'color']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'flex-1 bg-panel border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none',
+                'placeholder': 'Label name',
+            }),
+            'color': forms.TextInput(attrs={
+                'class': 'w-20 bg-panel border border-border-subtle rounded-card px-2 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none',
+                'type': 'color',
+            }),
         }
