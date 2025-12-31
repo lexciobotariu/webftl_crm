@@ -1,7 +1,7 @@
-<div class="slide-over-panel p-6" x-data="{ editing: false }">
+<div class="slide-over-panel p-6">
     <div class="flex justify-between items-start pb-4 border-b border-border-subtle">
         <div class="flex-1">
-            <h2 class="text-xl font-semibold text-zinc-100" x-show="!editing">{{ task.title }}</h2>
+            <h2 class="text-xl font-semibold text-zinc-100">{{ task.title }}</h2>
             <div class="flex flex-wrap items-center gap-2 text-xs text-zinc-500 mt-2">
                 <span class="px-2 py-0.5 rounded-full bg-elevated border border-border-subtle text-[10px] uppercase tracking-wide text-zinc-400">
                     {{ task.status.name }}
@@ -11,15 +11,13 @@
             </div>
         </div>
         <div class="flex items-center gap-2">
-            <button @click="editing = !editing" class="text-xs uppercase tracking-[0.2em] text-zinc-500 hover:text-zinc-300">
-                <span x-text="editing ? 'Cancel' : 'Edit'"></span>
-            </button>
+            <a href="{% url 'task_edit' task.pk %}" class="text-xs uppercase tracking-[0.2em] text-zinc-500 hover:text-zinc-300">Edit</a>
             <button onclick="document.getElementById('slide-over').classList.add('hidden')"
                     class="w-8 h-8 flex items-center justify-center rounded-card bg-panel border border-border-subtle text-zinc-400 hover:text-zinc-200 hover:border-border-strong">&times;</button>
         </div>
     </div>
 
-    <div x-show="!editing" class="space-y-5 mt-5">
+    <div class="space-y-5 mt-5">
         <div class="rounded-card border border-border-subtle bg-panel/60 p-4">
             <div class="grid grid-cols-2 gap-4 text-sm">
                 <div>
@@ -115,17 +113,9 @@
 
         <div class="rounded-card border border-border-subtle bg-panel/60 p-4">
             <button hx-post="{% url 'task_delete' task.pk %}" hx-confirm="Delete this task?" hx-target="#task-{{ task.pk }}" hx-swap="delete"
-                    @click="document.getElementById('slide-over').classList.add('hidden')"
+                    onclick="document.getElementById('slide-over').classList.add('hidden')"
                     class="text-red-300 text-sm hover:text-red-200">Delete Task</button>
         </div>
-    </div>
-
-    <div x-show="editing" x-cloak>
-        <form hx-post="{% url 'task_edit' task.pk %}" hx-target="#slide-over" hx-swap="innerHTML" class="space-y-5 mt-5">
-            {% csrf_token %}
-            {% include "tasks/task_form_fields.html" %}
-            <button type="submit" class="bg-accent text-white px-4 py-2 rounded-card mt-4 hover:bg-accent/90 transition-colors">Save</button>
-        </form>
     </div>
 </div>
 <script>document.getElementById('slide-over').classList.remove('hidden');</script>
