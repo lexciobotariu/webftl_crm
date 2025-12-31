@@ -131,3 +131,31 @@ def label_delete(request, pk, label_pk):
     label = get_object_or_404(Label, pk=label_pk, project=project)
     label.delete()
     return HttpResponse('')
+
+
+@login_required
+@require_POST
+def status_create(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+    form = StatusForm(request.POST)
+    if form.is_valid():
+        status = form.save(commit=False)
+        status.project = project
+        status.order = project.statuses.count()
+        status.save()
+        return render(request, 'projects/partials/status_item.html', {'status': status, 'project': project})
+    return HttpResponse(status=400)
+
+
+@login_required
+@require_POST
+def status_delete(request, pk, status_pk):
+    project = get_object_or_404(Project, pk=pk)
+    status = get_object_or_404(Status, pk=status_pk, project=project)
+
+    # Prevent deleting status with tasks
+    if status.task_count > 0:
+        return HttpResponse('Cannot delete status with tasks', status=400)
+
+    status.delete()
+    return HttpResponse('')

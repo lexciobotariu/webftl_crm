@@ -52,18 +52,15 @@
             <div class="p-5">
                 <div class="space-y-2 mb-4" id="status-list">
                     {% for status in project.statuses.all %}
-                    <div class="flex items-center justify-between p-3 bg-panel/70 rounded-card border border-border-subtle">
-                        <span class="text-sm text-zinc-300">{{ status.name }}</span>
-                        <span class="text-xs text-zinc-500">{{ status.task_count }} tasks</span>
-                    </div>
+                    {% include "projects/partials/status_item.html" %}
                     {% empty %}
-                    <div class="text-zinc-500 text-sm">No statuses defined.</div>
+                    <div class="text-zinc-500 text-sm" id="no-statuses">No statuses defined.</div>
                     {% endfor %}
                 </div>
-                <form method="post" action="{% url 'manage_statuses' project.pk %}"
-                      hx-post="{% url 'manage_statuses' project.pk %}"
+                <form hx-post="{% url 'status_create' project.pk %}"
                       hx-target="#status-list"
                       hx-swap="beforeend"
+                      hx-on::after-request="if(event.detail.successful) { this.reset(); document.getElementById('no-statuses')?.remove(); }"
                       class="flex gap-3">
                     {% csrf_token %}
                     <input type="text" name="name" required placeholder="New status name"
