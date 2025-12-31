@@ -105,8 +105,8 @@ def client_create_project(request, pk):
 
     if request.method == 'POST':
         name = request.POST.get('name', '').strip()
-        description = request.POST.get('description', '').strip() or None
-        github_repo_url = request.POST.get('github_repo_url', '').strip() or None
+        description = request.POST.get('description', '').strip()
+        github_repo_url = request.POST.get('github_repo_url', '').strip()
 
         if name:
             project = Project.objects.create(
