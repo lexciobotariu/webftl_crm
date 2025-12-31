@@ -286,3 +286,23 @@ def task_edit_description(request, pk):
         task.save()
         return render(request, 'tasks/partials/description_display.html', {'task': task})
     return render(request, 'tasks/partials/description_edit.html', {'task': task})
+
+
+@login_required
+def task_edit_title(request, pk):
+    task = get_object_or_404(Task, pk=pk)
+    is_full = request.GET.get('full') == '1' or request.POST.get('full') == '1'
+    # Return display template if cancel=1
+    if request.GET.get('cancel') == '1':
+        template = 'tasks/partials/title_display_full.html' if is_full else 'tasks/partials/title_display.html'
+        return render(request, template, {'task': task})
+    if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        if title:
+            task.title = title
+            task._changed_by = request.user
+            task.save()
+        template = 'tasks/partials/title_display_full.html' if is_full else 'tasks/partials/title_display.html'
+        return render(request, template, {'task': task})
+    template = 'tasks/partials/title_edit_full.html' if is_full else 'tasks/partials/title_edit.html'
+    return render(request, template, {'task': task})

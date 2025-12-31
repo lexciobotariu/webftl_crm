@@ -1,0 +1,7 @@
+<h2 hx-get="{% url 'task_edit_title' task.pk %}"
+    hx-target="#task-title-{{ task.pk }}"
+    hx-swap="innerHTML"
+    class="text-lg font-semibold text-zinc-100 cursor-pointer hover:text-zinc-50 transition-colors group">
+    {{ task.title }}
+    <i data-lucide="pencil" class="w-3.5 h-3.5 inline-block ml-1 opacity-0 group-hover:opacity-50 transition-opacity"></i>
+</h2>

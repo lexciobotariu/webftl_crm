@@ -1,0 +1,29 @@
+<form hx-post="{% url 'task_edit_title' task.pk %}"
+      hx-target="#task-title-{{ task.pk }}"
+      hx-swap="innerHTML"
+      class="flex items-center gap-2">
+    {% csrf_token %}
+    <input type="text" name="title" value="{{ task.title }}"
+           class="flex-1 text-lg font-semibold bg-panel border border-border-subtle rounded-card px-2 py-1 text-zinc-100 focus:border-accent focus:outline-none"
+           autofocus>
+    <button type="submit" class="text-accent hover:text-accent-hover p-1">
+        <i data-lucide="check" class="w-4 h-4"></i>
+    </button>
+    <button type="button"
+            hx-get="{% url 'task_edit_title' task.pk %}?cancel=1"
+            hx-target="#task-title-{{ task.pk }}"
+            hx-swap="innerHTML"
+            class="text-zinc-500 hover:text-zinc-300 p-1">
+        <i data-lucide="x" class="w-4 h-4"></i>
+    </button>
+</form>
+<script>
+// Cancel on Escape
+document.querySelector('#task-title-{{ task.pk }} input[name="title"]').addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        htmx.ajax('GET', '{% url 'task_edit_title' task.pk %}?cancel=1', {target: '#task-title-{{ task.pk }}', swap: 'innerHTML'});
+        e.preventDefault();
+    }
+});
+lucide.createIcons();
+</script>
