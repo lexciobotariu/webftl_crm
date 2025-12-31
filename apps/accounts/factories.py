@@ -11,6 +11,7 @@ class UserFactory(factory.django.DjangoModelFactory):
     email = factory.Sequence(lambda n: f'user{n}@example.com')
     name = factory.Faker('name')
     role = 'member'
+    github_token = ''
     is_active = True
 
     @classmethod
