@@ -2,35 +2,54 @@
 
 {% block title %}Team - WebFTL CRM{% endblock %}
 
-{% block content %}
-<div class="flex flex-col gap-4 mb-6">
-    <div class="flex items-center justify-between">
-        <div>
-            <div class="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Team</div>
-            <h1 class="text-2xl font-semibold text-zinc-100">Team</h1>
+{% block full_content %}
+<div class="flex flex-col h-full">
+    <!-- Compact header -->
+    <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <i data-lucide="users" class="w-4 h-4 text-zinc-500"></i>
+                <h1 class="text-sm font-medium text-zinc-100">Team</h1>
+                <span class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ total_count }}</span>
+            </div>
+            <a href="{% url 'account_signup' %}"
+               class="inline-flex items-center gap-1.5 bg-accent text-white px-3 py-1.5 rounded-card text-xs font-medium hover:bg-accent-hover transition-colors">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                Invite Member
+            </a>
         </div>
-        <a href="{% url 'account_signup' %}" class="inline-flex items-center gap-2 bg-accent text-white px-4 py-2 rounded-card hover:bg-accent/90 transition-colors">
-            <i data-lucide="plus" class="w-4 h-4"></i>
-            Invite Member
-        </a>
     </div>
-</div>
 
-<div class="bg-panel/80 rounded-panel border border-border-subtle overflow-hidden">
-    <table class="w-full">
-        <thead class="bg-elevated/80 border-b border-border-subtle">
-            <tr>
-                <th class="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Name</th>
-                <th class="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Email</th>
-                <th class="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Role</th>
-                <th class="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Actions</th>
-            </tr>
-        </thead>
-        <tbody class="divide-y divide-border-subtle">
-            {% for member in users %}
-            {% include "accounts/partials/user_row.html" with user=member %}
-            {% endfor %}
-        </tbody>
-    </table>
+    <!-- Table content -->
+    <div class="flex-1 overflow-auto">
+        {% if users %}
+        <table class="w-full">
+            <thead class="sticky top-0 bg-panel border-b border-border-subtle">
+                <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
+                    <th class="px-4 py-3 font-medium">Name</th>
+                    <th class="px-4 py-3 font-medium">Email</th>
+                    <th class="px-4 py-3 font-medium">Role</th>
+                    <th class="px-4 py-3 font-medium w-10">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="team-list" class="divide-y divide-border-subtle">
+                {% for member in users %}
+                {% include "accounts/partials/user_row.html" with user=member %}
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="flex flex-col items-center justify-center py-16 text-zinc-500">
+            <i data-lucide="users" class="w-12 h-12 mb-4 opacity-30"></i>
+            <p class="mb-2">No team members yet</p>
+            <a href="{% url 'account_signup' %}" class="text-accent hover:text-accent-hover text-sm">
+                Invite your first team member
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Pagination -->
+    {% include "components/pagination.html" %}
 </div>
 {% endblock %}

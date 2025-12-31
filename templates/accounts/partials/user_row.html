@@ -1,19 +1,26 @@
-<tr id="user-{{ user.pk }}" class="hover:bg-hover transition-colors">
-    <td class="px-6 py-4 text-sm text-zinc-100">{{ user.name }}</td>
-    <td class="px-6 py-4 text-sm text-zinc-400">{{ user.email }}</td>
-    <td class="px-6 py-4">
-        <span class="px-2 py-0.5 text-[11px] rounded-full border {% if user.role == 'admin' %}bg-accent-muted text-accent border-accent/30{% else %}bg-elevated text-zinc-300 border-border-subtle{% endif %}">
+<tr id="user-{{ user.pk }}" class="hover:bg-elevated/50 transition-colors">
+    <td class="px-4 py-3">
+        <span class="font-medium text-sm text-zinc-100">{{ user.name }}</span>
+    </td>
+    <td class="px-4 py-3">
+        <span class="text-sm text-zinc-400">{{ user.email }}</span>
+    </td>
+    <td class="px-4 py-3">
+        <span class="px-2 py-0.5 text-xs rounded-full border {% if user.role == 'admin' %}bg-accent/15 text-accent border-accent/30{% else %}bg-elevated text-zinc-300 border-border-subtle{% endif %}">
             {{ user.get_role_display }}
         </span>
     </td>
-    <td class="px-6 py-4">
-        {% if user != request.user %}
-        <button hx-post="{% url 'toggle_role' user.pk %}"
-                hx-target="#user-{{ user.pk }}"
-                hx-swap="outerHTML"
-                class="text-accent hover:text-accent/80 text-sm transition-colors">
-            Make {% if user.role == 'admin' %}Member{% else %}Admin{% endif %}
-        </button>
-        {% endif %}
+    <td class="px-4 py-3">
+        <div class="flex items-center justify-end gap-1">
+            {% if user != request.user %}
+            <button hx-post="{% url 'toggle_role' user.pk %}"
+                    hx-target="#user-{{ user.pk }}"
+                    hx-swap="outerHTML"
+                    class="p-1.5 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded transition-colors"
+                    title="Make {% if user.role == 'admin' %}Member{% else %}Admin{% endif %}">
+                <i data-lucide="{% if user.role == 'admin' %}user-minus{% else %}user-plus{% endif %}" class="w-4 h-4"></i>
+            </button>
+            {% endif %}
+        </div>
     </td>
 </tr>

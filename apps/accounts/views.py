@@ -1,9 +1,12 @@
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.http import HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_POST
 
 from .models import User
+
+TEAM_MEMBERS_PER_PAGE = 20
 
 
 @login_required
@@ -39,8 +42,17 @@ def dashboard(request):
 def team_list(request):
     if not request.user.is_admin:
         return HttpResponseForbidden("Admin access required")
-    users = User.objects.all().order_by('name')
-    return render(request, 'accounts/team_list.html', {'users': users})
+    users_qs = User.objects.all().order_by('name')
+
+    paginator = Paginator(users_qs, TEAM_MEMBERS_PER_PAGE)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, 'accounts/team_list.html', {
+        'users': page_obj,
+        'page_obj': page_obj,
+        'total_count': paginator.count,
+    })
 
 
 @login_required
