@@ -33,7 +33,7 @@
     </td>
     <td class="px-4 py-3">
         <div class="flex items-center justify-end gap-1">
-            <a href="{% url 'task_full_page' task.pk %}"
+            <a href="{% url 'task_full_page' task.project.pk task.pk %}"
                class="p-1.5 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded transition-colors"
                title="View Full Page"
                onclick="event.stopPropagation()">
