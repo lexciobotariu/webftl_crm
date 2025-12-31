@@ -97,6 +97,38 @@ def client_notes_display(request, pk):
 
 
 @login_required
+def client_create_project(request, pk):
+    """Create a new project for this client via drawer (HTMX)."""
+    from apps.projects.models import Project
+
+    client = get_object_or_404(Client, pk=pk)
+
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        description = request.POST.get('description', '').strip() or None
+        github_repo_url = request.POST.get('github_repo_url', '').strip() or None
+
+        if name:
+            project = Project.objects.create(
+                client=client,
+                name=name,
+                description=description,
+                github_repo_url=github_repo_url,
+            )
+            # Create default statuses for the project
+            from apps.projects.models import Status
+            default_statuses = ['Backlog', 'To Do', 'In Progress', 'Done']
+            for i, status_name in enumerate(default_statuses):
+                Status.objects.create(project=project, name=status_name, order=i)
+
+            response = render(request, 'clients/partials/projects_content.html', {'client': client})
+            response['HX-Trigger'] = 'closeSlideOver, updateProjectCount'
+            return response
+
+    return render(request, 'clients/partials/project_create_drawer.html', {'client': client})
+
+
+@login_required
 @require_POST
 def client_delete(request, pk):
     if not request.user.is_admin:

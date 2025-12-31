@@ -10,5 +10,6 @@ urlpatterns = [
     path('<int:pk>/edit/drawer/', views.client_edit_drawer, name='client_edit_drawer'),
     path('<int:pk>/notes/', views.client_notes_display, name='client_notes_display'),
     path('<int:pk>/notes/edit/', views.client_edit_notes, name='client_edit_notes'),
+    path('<int:pk>/projects/create/', views.client_create_project, name='client_create_project'),
     path('<int:pk>/delete/', views.client_delete, name='client_delete'),
 ]

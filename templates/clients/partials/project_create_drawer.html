@@ -1,0 +1,67 @@
+<div class="flex flex-col h-full">
+    <!-- Drawer header -->
+    <div class="flex-shrink-0 px-4 py-3 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <i data-lucide="folder-plus" class="w-4 h-4 text-zinc-500"></i>
+                <h2 class="text-sm font-medium text-zinc-100">New Project</h2>
+            </div>
+            <button onclick="document.getElementById('slide-over').classList.add('hidden')"
+                    class="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <form hx-post="{% url 'client_create_project' client.pk %}"
+          hx-target="#projects-content"
+          hx-swap="innerHTML"
+          class="flex-1 overflow-y-auto p-4">
+        {% csrf_token %}
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Project Name</label>
+                <input type="text" name="name"
+                       class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+                       placeholder="Enter project name"
+                       required>
+            </div>
+
+            <div>
+                <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Description</label>
+                <textarea name="description" rows="4"
+                          class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none resize-none"
+                          placeholder="Describe the project..."></textarea>
+            </div>
+
+            <div>
+                <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">GitHub Repository</label>
+                <input type="url" name="github_repo_url"
+                       class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+                       placeholder="https://github.com/org/repo">
+            </div>
+
+            <div class="text-xs text-zinc-500 bg-elevated/50 rounded-card p-3 border border-border-subtle">
+                <div class="flex items-center gap-2 mb-1">
+                    <i data-lucide="info" class="w-3.5 h-3.5"></i>
+                    <span class="font-medium">Client</span>
+                </div>
+                <span class="text-zinc-400">{{ client.name }}</span>
+            </div>
+        </div>
+
+        <div class="flex gap-3 mt-6 pt-4 border-t border-border-subtle">
+            <button type="submit"
+                    class="flex-1 bg-accent text-white px-4 py-2 rounded-card text-sm font-medium hover:bg-accent-hover transition-colors">
+                Create Project
+            </button>
+            <button type="button"
+                    onclick="document.getElementById('slide-over').classList.add('hidden')"
+                    class="px-4 py-2 text-zinc-400 hover:text-zinc-300 text-sm transition-colors">
+                Cancel
+            </button>
+        </div>
+    </form>
+</div>
