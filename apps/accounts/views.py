@@ -1,6 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404
+from django.views.decorators.http import require_POST
 
 from .models import User
 
@@ -18,18 +19,18 @@ def dashboard(request):
     try:
         from apps.clients.models import Client
         context['client_count'] = Client.objects.count()
-    except:
+    except (ImportError, Exception):
         pass
     try:
         from apps.projects.models import Project
         context['project_count'] = Project.objects.count()
-    except:
+    except (ImportError, Exception):
         pass
     try:
         from apps.tasks.models import Task
         context['my_task_count'] = Task.objects.filter(assignee=request.user).exclude(status__name='Done').count()
-        context['recent_tasks'] = Task.objects.filter(assignee=request.user).order_by('-updated_at')[:5]
-    except:
+        context['recent_tasks'] = Task.objects.filter(assignee=request.user).select_related('project', 'status').order_by('-updated_at')[:5]
+    except (ImportError, Exception):
         pass
     return render(request, 'accounts/dashboard.html', context)
 
@@ -43,6 +44,7 @@ def team_list(request):
 
 
 @login_required
+@require_POST
 def toggle_role(request, pk):
     if not request.user.is_admin:
         return HttpResponseForbidden("Admin access required")
