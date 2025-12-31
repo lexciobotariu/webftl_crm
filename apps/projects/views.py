@@ -1,6 +1,7 @@
 import json
 
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.decorators.http import require_POST
@@ -10,16 +11,25 @@ from .models import Project, Status
 from apps.clients.models import Client
 from apps.tasks.models import Label
 
+PROJECTS_PER_PAGE = 20
+
 
 @login_required
 def project_list(request):
-    projects = Project.objects.select_related('client').all()
+    projects_qs = Project.objects.select_related('client').all().order_by('name')
     client_filter = request.GET.get('client')
     if client_filter:
-        projects = projects.filter(client_id=client_filter)
-    clients = Client.objects.all()
+        projects_qs = projects_qs.filter(client_id=client_filter)
+
+    paginator = Paginator(projects_qs, PROJECTS_PER_PAGE)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+
+    clients = Client.objects.all().order_by('name')
     return render(request, 'projects/project_list.html', {
-        'projects': projects,
+        'projects': page_obj,
+        'page_obj': page_obj,
+        'total_count': paginator.count,
         'clients': clients,
         'client_filter': client_filter,
     })
