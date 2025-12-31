@@ -25,6 +25,9 @@ def client_list(request):
 
 @login_required
 def client_create(request):
+    if not request.user.is_admin:
+        return HttpResponseForbidden("Admin access required to create clients")
+
     if request.method == 'POST':
         form = ClientForm(request.POST)
         if form.is_valid():
@@ -45,6 +48,9 @@ def client_detail(request, pk):
 
 @login_required
 def client_edit(request, pk):
+    if not request.user.is_admin:
+        return HttpResponseForbidden("Admin access required to edit clients")
+
     client = get_object_or_404(Client, pk=pk)
     if request.method == 'POST':
         form = ClientForm(request.POST, instance=client)
@@ -59,19 +65,21 @@ def client_edit(request, pk):
 @login_required
 def client_edit_drawer(request, pk):
     """Edit client profile via drawer (HTMX)."""
+    if not request.user.is_admin:
+        return HttpResponseForbidden("Admin access required to edit clients")
+
     client = get_object_or_404(Client, pk=pk)
 
     if request.method == 'POST':
-        client.name = request.POST.get('name', client.name)
-        client.email = request.POST.get('email', '') or None
-        client.phone = request.POST.get('phone', '') or None
-        client.address = request.POST.get('address', '') or None
-        client.save()
-
-        # Return updated profile content and close drawer
-        response = render(request, 'clients/partials/profile_content.html', {'client': client})
-        response['HX-Trigger'] = 'closeSlideOver, updateClientName'
-        return response
+        form = ClientForm(request.POST, instance=client)
+        if form.is_valid():
+            form.save()
+            # Return updated profile content and close drawer
+            response = render(request, 'clients/partials/profile_content.html', {'client': client})
+            response['HX-Trigger'] = 'closeSlideOver, updateClientName'
+            return response
+        # If form invalid, re-render drawer with errors
+        return render(request, 'clients/partials/edit_drawer.html', {'client': client, 'form': form})
 
     return render(request, 'clients/partials/edit_drawer.html', {'client': client})
 
@@ -79,10 +87,15 @@ def client_edit_drawer(request, pk):
 @login_required
 def client_edit_notes(request, pk):
     """Edit client notes inline (HTMX)."""
+    if not request.user.is_admin:
+        return HttpResponseForbidden("Admin access required to edit clients")
+
     client = get_object_or_404(Client, pk=pk)
 
     if request.method == 'POST':
-        client.notes = request.POST.get('notes', '') or None
+        # Limit notes length and use empty string instead of None
+        notes = request.POST.get('notes', '')[:10000].strip()
+        client.notes = notes if notes else ''
         client.save()
         return render(request, 'clients/partials/notes_display.html', {'client': client})
 
@@ -99,6 +112,9 @@ def client_notes_display(request, pk):
 @login_required
 def client_create_project(request, pk):
     """Create a new project for this client via drawer (HTMX)."""
+    if not request.user.is_admin:
+        return HttpResponseForbidden("Admin access required to create projects")
+
     from apps.projects.models import Project
 
     client = get_object_or_404(Client, pk=pk)

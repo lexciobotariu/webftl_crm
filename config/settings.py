@@ -10,6 +10,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key')
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
+
+# Fernet encryption key for sensitive fields (GitHub tokens)
+# Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+FERNET_KEYS = [os.getenv('FERNET_KEY', 'tFtN0secrpzD-AkKITH3lqBf6KlP39SOXaz6jLLwhp0=')]
 ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [

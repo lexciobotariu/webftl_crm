@@ -1,10 +1,17 @@
+import os
+
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
+from django.utils.text import get_valid_filename
 from django.views.decorators.http import require_POST
 
 TASKS_PER_PAGE = 20
+
+# File upload security settings
+ALLOWED_EXTENSIONS = {'.pdf', '.doc', '.docx', '.xls', '.xlsx', '.png', '.jpg', '.jpeg', '.gif', '.txt', '.csv', '.zip'}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
 from apps.accounts.models import User
 from apps.projects.models import Project, Status
@@ -207,16 +214,30 @@ def comment_create(request, pk):
 @require_POST
 def attachment_upload(request, pk):
     task = get_object_or_404(Task, pk=pk)
-    if request.FILES.get('file'):
-        file = request.FILES['file']
-        attachment = Attachment.objects.create(
-            task=task,
-            file=file,
-            filename=file.name,
-            uploaded_by=request.user
-        )
-        return render(request, 'tasks/partials/attachment_item.html', {'attachment': attachment})
-    return HttpResponse(status=400)
+    file = request.FILES.get('file')
+
+    if not file:
+        return HttpResponse('No file provided', status=400)
+
+    # Validate file extension
+    ext = os.path.splitext(file.name)[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        return HttpResponse(f'File type not allowed. Allowed: {", ".join(sorted(ALLOWED_EXTENSIONS))}', status=400)
+
+    # Validate file size
+    if file.size > MAX_FILE_SIZE:
+        return HttpResponse('File too large. Maximum size is 10MB.', status=400)
+
+    # Sanitize filename to prevent path traversal
+    safe_filename = get_valid_filename(file.name)
+
+    attachment = Attachment.objects.create(
+        task=task,
+        file=file,
+        filename=safe_filename,
+        uploaded_by=request.user
+    )
+    return render(request, 'tasks/partials/attachment_item.html', {'attachment': attachment})
 
 
 @login_required

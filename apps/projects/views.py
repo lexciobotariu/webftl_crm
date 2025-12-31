@@ -105,7 +105,16 @@ def manage_statuses(request, pk):
 @require_POST
 def reorder_statuses(request, pk):
     project = get_object_or_404(Project, pk=pk)
-    order = json.loads(request.body).get('order', [])
+
+    try:
+        data = json.loads(request.body)
+        order = data.get('order', [])
+    except json.JSONDecodeError:
+        return HttpResponse('Invalid JSON', status=400)
+
+    if not isinstance(order, list):
+        return HttpResponse('order must be a list', status=400)
+
     for i, status_id in enumerate(order):
         Status.objects.filter(pk=status_id, project=project).update(order=i)
     return HttpResponse(status=204)

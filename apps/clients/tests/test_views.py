@@ -33,9 +33,16 @@ class TestClientCreate:
         response = client.post(reverse('client_create'), {'name': 'New Client'})
         assert response.status_code == 302
 
-    def test_client_create_with_valid_data(self, client):
+    def test_client_create_requires_admin(self, client):
+        """Non-admin users cannot create clients."""
         user = UserFactory()
         client.force_login(user)
+        response = client.post(reverse('client_create'), {'name': 'New Client'})
+        assert response.status_code == 403
+
+    def test_client_create_with_valid_data(self, client):
+        admin = AdminUserFactory()
+        client.force_login(admin)
         response = client.post(reverse('client_create'), {
             'name': 'New Client',
             'email': 'new@client.com',
@@ -48,8 +55,8 @@ class TestClientCreate:
         assert Client.objects.filter(name='New Client').exists()
 
     def test_client_create_with_invalid_data(self, client):
-        user = UserFactory()
-        client.force_login(user)
+        admin = AdminUserFactory()
+        client.force_login(admin)
         response = client.post(reverse('client_create'), {
             'name': '',
         })
