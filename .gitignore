@@ -29,3 +29,10 @@ staticfiles/
 # OS
 .DS_Store
 Thumbs.db
+
+# Auto Claude data directory
+.auto-claude/
+
+# Test coverage
+.coverage
+htmlcov/
