@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Clients - WebFTL CRM{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-8">
+    <h1 class="text-2xl font-semibold text-zinc-50">Clients</h1>
+    <a href="{% url 'client_create' %}" class="bg-accent text-white px-4 py-2 rounded-md hover:bg-accent/90 transition-colors flex items-center gap-2">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        Add Client
+    </a>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="client-grid">
+    {% for client in clients %}
+    {% include "clients/partials/client_card.html" %}
+    {% empty %}
+    <div class="col-span-full text-center py-12 text-zinc-500">
+        No clients yet. <a href="{% url 'client_create' %}" class="text-accent hover:text-accent/80">Add your first client</a>.
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
