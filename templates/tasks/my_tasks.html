@@ -2,64 +2,57 @@
 
 {% block title %}My Tasks - WebFTL CRM{% endblock %}
 
-{% block content %}
-<div class="flex flex-col gap-4 mb-6">
-    <div>
-        <div class="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Tasks</div>
-        <h1 class="text-2xl font-semibold text-zinc-100">My Tasks</h1>
+{% block full_content %}
+<div class="flex flex-col h-full">
+    <!-- Compact header -->
+    <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <i data-lucide="check-square" class="w-4 h-4 text-zinc-500"></i>
+                <h1 class="text-sm font-medium text-zinc-100">My Tasks</h1>
+                <span class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ total_count }}</span>
+                <!-- Priority filter -->
+                <select onchange="window.location.href='?priority=' + this.value"
+                        class="ml-4 bg-elevated border border-border-subtle rounded px-2 py-1 text-xs text-zinc-400 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                    <option value="">All Priorities</option>
+                    <option value="urgent" {% if priority_filter == "urgent" %}selected{% endif %}>Urgent</option>
+                    <option value="high" {% if priority_filter == "high" %}selected{% endif %}>High</option>
+                    <option value="medium" {% if priority_filter == "medium" %}selected{% endif %}>Medium</option>
+                    <option value="low" {% if priority_filter == "low" %}selected{% endif %}>Low</option>
+                </select>
+            </div>
+        </div>
     </div>
 
-    <div class="flex flex-wrap items-center gap-3">
-        <select onchange="window.location.href='?priority=' + this.value"
-                class="bg-panel border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
-            <option value="">All Priorities</option>
-            <option value="urgent" {% if request.GET.priority == "urgent" %}selected{% endif %}>Urgent</option>
-            <option value="high" {% if request.GET.priority == "high" %}selected{% endif %}>High</option>
-            <option value="medium" {% if request.GET.priority == "medium" %}selected{% endif %}>Medium</option>
-            <option value="low" {% if request.GET.priority == "low" %}selected{% endif %}>Low</option>
-        </select>
+    <!-- Table content -->
+    <div class="flex-1 overflow-auto">
+        {% if tasks %}
+        <table class="w-full">
+            <thead class="sticky top-0 bg-panel border-b border-border-subtle">
+                <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
+                    <th class="px-4 py-3 font-medium">Task</th>
+                    <th class="px-4 py-3 font-medium">Project</th>
+                    <th class="px-4 py-3 font-medium">Status</th>
+                    <th class="px-4 py-3 font-medium">Priority</th>
+                    <th class="px-4 py-3 font-medium">Due</th>
+                    <th class="px-4 py-3 font-medium w-10">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="my-tasks-list" class="divide-y divide-border-subtle">
+                {% for task in tasks %}
+                {% include "tasks/partials/my_task_row.html" %}
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="flex flex-col items-center justify-center py-16 text-zinc-500">
+            <i data-lucide="check-square" class="w-12 h-12 mb-4 opacity-30"></i>
+            <p class="mb-2">No tasks assigned to you yet</p>
+        </div>
+        {% endif %}
     </div>
-</div>
 
-<div class="bg-panel/80 rounded-panel border border-border-subtle overflow-hidden">
-    <table class="w-full">
-        <thead class="bg-elevated/80 border-b border-border-subtle">
-            <tr>
-                <th class="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Task</th>
-                <th class="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Project</th>
-                <th class="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Status</th>
-                <th class="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Priority</th>
-                <th class="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Due</th>
-            </tr>
-        </thead>
-        <tbody class="divide-y divide-border-subtle">
-            {% for task in tasks %}
-            <tr class="hover:bg-hover cursor-pointer transition-colors"
-                hx-get="{% url 'task_detail' task.pk %}" hx-target="#slide-over" hx-swap="innerHTML">
-                <td class="px-6 py-4 text-sm text-zinc-100">{{ task.title }}</td>
-                <td class="px-6 py-4 text-sm text-zinc-400">{{ task.project.name }}</td>
-                <td class="px-6 py-4">
-                    <span class="px-2 py-0.5 text-[11px] rounded-full border border-border-subtle bg-elevated text-zinc-300">{{ task.status.name }}</span>
-                </td>
-                <td class="px-6 py-4">
-                    {% if task.priority %}
-                    <span class="px-2 py-0.5 text-[11px] rounded-full border
-                        {% if task.priority == 'urgent' %}bg-red-500/15 text-red-300 border-red-500/30
-                        {% elif task.priority == 'high' %}bg-orange-500/15 text-orange-300 border-orange-500/30
-                        {% elif task.priority == 'medium' %}bg-yellow-500/15 text-yellow-300 border-yellow-500/30
-                        {% else %}bg-elevated text-zinc-400 border-border-subtle{% endif %}">
-                        {{ task.get_priority_display }}
-                    </span>
-                    {% endif %}
-                </td>
-                <td class="px-6 py-4 text-sm text-zinc-500">{{ task.due_date|date:"M d"|default:"-" }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="5" class="px-6 py-12 text-center text-zinc-500">No tasks assigned to you yet.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <!-- Pagination -->
+    {% include "components/pagination.html" %}
 </div>
 {% endblock %}

@@ -1,7 +1,10 @@
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.decorators.http import require_POST
+
+TASKS_PER_PAGE = 20
 
 from apps.accounts.models import User
 from apps.projects.models import Project, Status
@@ -12,14 +15,25 @@ from .models import Task, Subtask, Attachment, TaskActivity
 
 @login_required
 def my_tasks(request):
-    tasks = Task.objects.filter(assignee=request.user).select_related('project', 'status')
+    tasks_qs = Task.objects.filter(assignee=request.user).select_related('project', 'status').order_by('-created_at')
     priority = request.GET.get('priority')
     if priority:
-        tasks = tasks.filter(priority=priority)
+        tasks_qs = tasks_qs.filter(priority=priority)
     status_filter = request.GET.get('status')
     if status_filter:
-        tasks = tasks.filter(status__name=status_filter)
-    return render(request, 'tasks/my_tasks.html', {'tasks': tasks})
+        tasks_qs = tasks_qs.filter(status__name=status_filter)
+
+    paginator = Paginator(tasks_qs, TASKS_PER_PAGE)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, 'tasks/my_tasks.html', {
+        'tasks': page_obj,
+        'page_obj': page_obj,
+        'total_count': paginator.count,
+        'priority_filter': priority,
+        'status_filter': status_filter,
+    })
 
 
 @login_required

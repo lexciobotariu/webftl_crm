@@ -1,0 +1,44 @@
+<tr class="hover:bg-elevated/50 transition-colors cursor-pointer" id="my-task-{{ task.pk }}"
+    hx-get="{% url 'task_detail' task.pk %}" hx-target="#slide-over" hx-swap="innerHTML">
+    <td class="px-4 py-3">
+        <span class="font-medium text-sm text-zinc-100">{{ task.title }}</span>
+    </td>
+    <td class="px-4 py-3">
+        <a href="{% url 'project_board' task.project.pk %}"
+           class="text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+           onclick="event.stopPropagation()">
+            {{ task.project.name }}
+        </a>
+    </td>
+    <td class="px-4 py-3">
+        <span class="px-2 py-0.5 text-xs rounded-full border border-border-subtle bg-elevated text-zinc-300">
+            {{ task.status.name }}
+        </span>
+    </td>
+    <td class="px-4 py-3">
+        {% if task.priority %}
+        <span class="px-2 py-0.5 text-xs rounded-full border
+            {% if task.priority == 'urgent' %}bg-red-500/15 text-red-300 border-red-500/30
+            {% elif task.priority == 'high' %}bg-orange-500/15 text-orange-300 border-orange-500/30
+            {% elif task.priority == 'medium' %}bg-yellow-500/15 text-yellow-300 border-yellow-500/30
+            {% else %}bg-elevated text-zinc-400 border-border-subtle{% endif %}">
+            {{ task.get_priority_display }}
+        </span>
+        {% else %}
+        <span class="text-sm text-zinc-600">—</span>
+        {% endif %}
+    </td>
+    <td class="px-4 py-3">
+        <span class="text-sm text-zinc-500">{{ task.due_date|date:"M d"|default:"—" }}</span>
+    </td>
+    <td class="px-4 py-3">
+        <div class="flex items-center justify-end gap-1">
+            <a href="{% url 'task_full_page' task.pk %}"
+               class="p-1.5 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded transition-colors"
+               title="View Full Page"
+               onclick="event.stopPropagation()">
+                <i data-lucide="external-link" class="w-4 h-4"></i>
+            </a>
+        </div>
+    </td>
+</tr>
