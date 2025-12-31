@@ -29,6 +29,12 @@ class Project(models.Model):
         for i, name in enumerate(defaults):
             Status.objects.create(project=self, name=name, order=i)
 
+    @property
+    def task_count(self):
+        """Return total number of tasks across all statuses."""
+        from apps.tasks.models import Task
+        return Task.objects.filter(project=self).count()
+
 
 class Status(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='statuses')
