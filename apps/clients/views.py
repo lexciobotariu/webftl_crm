@@ -1,4 +1,5 @@
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.decorators.http import require_POST
@@ -6,11 +7,20 @@ from django.views.decorators.http import require_POST
 from .forms import ClientForm
 from .models import Client
 
+CLIENTS_PER_PAGE = 20
+
 
 @login_required
 def client_list(request):
-    clients = Client.objects.all()
-    return render(request, 'clients/client_list.html', {'clients': clients})
+    clients_qs = Client.objects.all().order_by('name')
+    paginator = Paginator(clients_qs, CLIENTS_PER_PAGE)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'clients/client_list.html', {
+        'clients': page_obj,
+        'page_obj': page_obj,
+        'total_count': paginator.count,
+    })
 
 
 @login_required
