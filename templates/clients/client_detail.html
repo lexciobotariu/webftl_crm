@@ -15,7 +15,7 @@
         </a>
         {% if request.user.is_admin %}
         <button hx-post="{% url 'client_delete' client.pk %}"
-                hx-confirm="Delete {{ client.name }}? This will also delete all projects and tasks."
+                hx-confirm="Delete {{ client.name|escapejs }}? This will also delete all projects and tasks."
                 hx-target="body"
                 class="bg-red-500/10 border border-red-500/20 text-red-500 px-4 py-2 rounded-md hover:bg-red-500/20 transition-colors flex items-center gap-2">
             <i data-lucide="trash-2" class="w-4 h-4"></i>

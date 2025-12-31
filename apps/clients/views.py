@@ -54,5 +54,7 @@ def client_delete(request, pk):
     client = get_object_or_404(Client, pk=pk)
     client.delete()
     if request.htmx:
-        return HttpResponse('')
+        response = HttpResponse('')
+        response['HX-Redirect'] = '/clients/'
+        return response
     return redirect('client_list')
