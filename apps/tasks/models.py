@@ -117,7 +117,7 @@ class TaskActivity(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['created_at']  # Chronological order (oldest first)
         verbose_name_plural = 'Task activities'
 
     def __str__(self):

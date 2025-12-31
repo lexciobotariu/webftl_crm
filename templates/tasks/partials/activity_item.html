@@ -1,30 +1,45 @@
-<div class="flex gap-3 py-3">
-    <div class="flex-shrink-0">
+<div class="relative flex gap-3 py-2">
+    <!-- Timeline icon -->
+    <div class="relative z-10 flex-shrink-0 w-6 h-6 rounded-full bg-panel border border-border-subtle flex items-center justify-center">
         {% if activity.activity_type == 'comment' %}
-        <span class="w-6 h-6 rounded-full bg-accent/30 flex items-center justify-center text-[10px] text-accent">
-            {{ activity.user.name|slice:":1"|upper|default:"?" }}
-        </span>
+        <i data-lucide="message-square" class="w-3 h-3 text-zinc-500"></i>
+        {% elif activity.activity_type == 'created' %}
+        <i data-lucide="circle-dot" class="w-3 h-3 text-zinc-500"></i>
+        {% elif activity.activity_type == 'status_change' %}
+        <i data-lucide="circle" class="w-3 h-3 text-zinc-500"></i>
+        {% elif activity.activity_type == 'assignee_change' %}
+        <i data-lucide="user" class="w-3 h-3 text-zinc-500"></i>
+        {% elif activity.activity_type == 'priority_change' %}
+        <i data-lucide="signal" class="w-3 h-3 text-zinc-500"></i>
+        {% elif activity.activity_type == 'due_date_change' %}
+        <i data-lucide="calendar" class="w-3 h-3 text-zinc-500"></i>
+        {% elif activity.activity_type == 'label_added' or activity.activity_type == 'label_removed' %}
+        <i data-lucide="tag" class="w-3 h-3 text-zinc-500"></i>
         {% else %}
-        <span class="w-6 h-6 rounded-full bg-elevated flex items-center justify-center">
-            <i data-lucide="{% if activity.activity_type == 'status_change' %}circle{% elif activity.activity_type == 'assignee_change' %}user{% elif activity.activity_type == 'priority_change' %}signal{% elif activity.activity_type == 'created' %}plus{% elif activity.activity_type == 'due_date_change' %}calendar{% else %}edit{% endif %}"
-               class="w-3 h-3 text-zinc-500"></i>
-        </span>
+        <i data-lucide="edit-3" class="w-3 h-3 text-zinc-500"></i>
         {% endif %}
     </div>
-    <div class="flex-1 min-w-0">
+
+    <!-- Content -->
+    <div class="flex-1 min-w-0 pt-0.5">
         {% if activity.activity_type == 'comment' %}
-        <div class="flex items-center gap-2 mb-1">
-            <span class="text-sm font-medium text-zinc-200">{{ activity.user.name|default:"Unknown" }}</span>
-            <span class="text-xs text-zinc-500">{{ activity.created_at|timesince }} ago</span>
+        <!-- Comment card -->
+        <div class="bg-elevated/50 border border-border-subtle rounded-card p-3">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="w-5 h-5 rounded-full bg-accent/30 flex items-center justify-center text-[10px] text-accent font-medium">
+                    {{ activity.user.name|slice:":1"|upper|default:"?" }}
+                </span>
+                <span class="text-sm font-medium text-zinc-200">{{ activity.user.name|default:"Unknown" }}</span>
+                <span class="text-xs text-zinc-500">commented {{ activity.created_at|timesince }} ago</span>
+            </div>
+            <div class="text-sm text-zinc-300">{{ activity.content|linebreaks }}</div>
         </div>
-        <div class="text-sm text-zinc-300">{{ activity.content|linebreaks }}</div>
         {% else %}
-        <div class="flex items-center gap-2 flex-wrap">
-            <span class="text-sm text-zinc-400">
-                <span class="text-zinc-300">{{ activity.user.name|default:"System" }}</span>
-                {{ activity.content }}
-            </span>
-            <span class="text-xs text-zinc-500">{{ activity.created_at|timesince }} ago</span>
+        <!-- Activity text -->
+        <div class="flex items-center gap-1.5 flex-wrap text-sm">
+            <span class="font-medium text-zinc-200">{{ activity.user.name|default:"System" }}</span>
+            <span class="text-zinc-400">{{ activity.content }}</span>
+            <span class="text-zinc-500 text-xs">{{ activity.created_at|timesince }} ago</span>
         </div>
         {% endif %}
     </div>

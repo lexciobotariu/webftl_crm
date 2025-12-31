@@ -1,25 +1,47 @@
-<div class="space-y-1">
-    <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Activity</h3>
-
-    <div id="activity-list-{{ task.pk }}" class="divide-y divide-border-subtle">
-        {% for activity in task.activities.all %}
-        {% include "tasks/partials/activity_item.html" %}
-        {% empty %}
-        <p class="text-sm text-zinc-500 py-3">No activity yet.</p>
-        {% endfor %}
+<div x-data="{ sortAsc: true }">
+    <!-- Header with sort toggle -->
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-semibold text-zinc-300">Activity</h3>
+        <div class="flex items-center gap-1">
+            <button @click="sortAsc = true"
+                    :class="sortAsc ? 'text-zinc-200 bg-elevated' : 'text-zinc-500 hover:text-zinc-300'"
+                    class="p-1.5 rounded-card transition-colors" title="Oldest first">
+                <i data-lucide="arrow-up-narrow-wide" class="w-4 h-4"></i>
+            </button>
+            <button @click="sortAsc = false"
+                    :class="!sortAsc ? 'text-zinc-200 bg-elevated' : 'text-zinc-500 hover:text-zinc-300'"
+                    class="p-1.5 rounded-card transition-colors" title="Newest first">
+                <i data-lucide="arrow-down-wide-narrow" class="w-4 h-4"></i>
+            </button>
+        </div>
     </div>
 
-    <!-- Comment input -->
+    <!-- Timeline -->
+    <div id="activity-list-{{ task.pk }}" class="relative">
+        <!-- Vertical timeline line -->
+        <div class="absolute left-[11px] top-2 bottom-2 w-px bg-border-subtle"></div>
+
+        <!-- Activities (sorted by Alpine.js) -->
+        <div class="space-y-0" x-ref="activityList">
+            {% for activity in task.activities.all %}
+            {% include "tasks/partials/activity_item.html" %}
+            {% empty %}
+            <p class="text-sm text-zinc-500 py-3 pl-8">No activity yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Comment input (Plane.so style) -->
     <form hx-post="{% url 'comment_create' task.pk %}"
-          hx-target="#activity-list-{{ task.pk }}"
-          hx-swap="afterbegin"
+          hx-target="#activity-list-{{ task.pk }} .space-y-0"
+          hx-swap="beforeend"
           hx-on::after-request="if(event.detail.successful) this.reset()"
-          class="mt-4">
-        {% csrf_token %}
-        <textarea name="content" rows="2" placeholder="Add a comment..."
-                  class="w-full bg-panel border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-accent focus:outline-none resize-none"></textarea>
-        <div class="flex justify-end mt-2">
-            <button type="submit" class="bg-accent text-white px-3 py-1.5 rounded-card text-xs font-medium hover:bg-accent-hover transition-colors">
+          class="mt-4 border border-border-subtle rounded-card overflow-hidden">
+        <textarea name="content" rows="2" placeholder="Add comment..."
+                  class="w-full bg-transparent px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none border-b border-border-subtle"></textarea>
+        <div class="flex items-center justify-end px-3 py-2 bg-elevated/50">
+            <button type="submit"
+                    class="bg-zinc-700 text-zinc-300 px-3 py-1 rounded text-xs font-medium hover:bg-zinc-600 transition-colors disabled:opacity-50">
                 Comment
             </button>
         </div>
