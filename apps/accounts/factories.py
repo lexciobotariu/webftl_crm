@@ -16,10 +16,8 @@ class UserFactory(factory.django.DjangoModelFactory):
     @classmethod
     def _create(cls, model_class, *args, **kwargs):
         password = kwargs.pop('password', 'testpass123')
-        user = super()._create(model_class, *args, **kwargs)
-        user.set_password(password)
-        user.save()
-        return user
+        manager = cls._get_manager(model_class)
+        return manager.create_user(**kwargs, password=password)
 
 
 class AdminUserFactory(UserFactory):

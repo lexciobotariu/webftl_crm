@@ -1,5 +1,5 @@
 import factory
-from apps.tasks.models import Task, Subtask, Label, Comment, TaskActivity, Attachment
+from apps.tasks.models import Task, Subtask, Label, Comment, TaskActivity
 from apps.projects.factories import ProjectFactory, StatusFactory
 from apps.accounts.factories import UserFactory
 
@@ -18,10 +18,10 @@ class TaskFactory(factory.django.DjangoModelFactory):
         model = Task
 
     project = factory.SubFactory(ProjectFactory)
-    status = factory.LazyAttribute(lambda o: o.project.statuses.first() or StatusFactory(project=o.project))
+    status = factory.LazyAttribute(lambda o: o.project.statuses.first())
     title = factory.Faker('sentence', nb_words=5)
     description = factory.Faker('paragraph')
-    priority = factory.Iterator(['low', 'medium', 'high', 'urgent', ''])
+    priority = factory.Iterator(['low', 'medium', 'high', 'urgent'])
     order = factory.Sequence(lambda n: n)
 
 
