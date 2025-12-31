@@ -38,8 +38,8 @@
         <!-- Main content area -->
         <div class="flex-1 overflow-y-auto p-6">
             <!-- Profile Section -->
-            <div x-show="activeTab === 'profile'" x-cloak>
-                <div class="max-w-3xl space-y-6">
+            <div x-show="activeTab === 'profile'" x-cloak class="h-full">
+                <div class="space-y-6">
                     <!-- Contact Information -->
                     <div class="border border-border-subtle rounded-card overflow-hidden">
                         <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
@@ -104,8 +104,8 @@
             </div>
 
             <!-- Projects Section -->
-            <div x-show="activeTab === 'projects'" x-cloak>
-                <div class="max-w-4xl">
+            <div x-show="activeTab === 'projects'" x-cloak class="h-full">
+                <div>
                     <div class="border border-border-subtle rounded-card overflow-hidden">
                         <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
                             <div class="flex items-center justify-between">
