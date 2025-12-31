@@ -48,13 +48,13 @@
                 <!-- Subtasks -->
                 <div class="mb-5">
                     <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
-                        Sub-issues {% if task.subtask_progress %}({{ task.subtask_progress }}){% endif %}
+                        Sub-tasks <span id="subtask-counter-{{ task.pk }}">{% if task.subtask_progress %}({{ task.subtask_progress }}){% endif %}</span>
                     </h3>
                     <div id="subtask-list" class="space-y-1 mb-3">
                         {% for subtask in task.subtasks.all %}
                         {% include "tasks/partials/subtask_item.html" %}
                         {% empty %}
-                        <p class="text-sm text-zinc-500 py-1">No sub-issues yet.</p>
+                        <p class="text-sm text-zinc-500 py-1">No sub-tasks yet.</p>
                         {% endfor %}
                     </div>
                 </div>
@@ -64,7 +64,7 @@
                     <button onclick="document.getElementById('subtask-form-full').classList.toggle('hidden'); document.getElementById('subtask-form-full').querySelector('input').focus();"
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-zinc-400 bg-elevated border border-border-subtle rounded-full hover:text-zinc-200 hover:border-zinc-600 transition-colors">
                         <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                        Add sub-issue
+                        Add sub-task
                     </button>
                     <label class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-zinc-400 bg-elevated border border-border-subtle rounded-full hover:text-zinc-200 hover:border-zinc-600 transition-colors cursor-pointer">
                         <i data-lucide="paperclip" class="w-3.5 h-3.5"></i>
@@ -86,7 +86,7 @@
                       id="subtask-form-full">
                     {% csrf_token %}
                     <i data-lucide="corner-down-right" class="w-4 h-4 text-zinc-500"></i>
-                    <input type="text" name="title" placeholder="Sub-issue title..."
+                    <input type="text" name="title" placeholder="Sub-task title..."
                            class="flex-1 bg-transparent text-sm text-zinc-300 placeholder-zinc-500 focus:outline-none">
                     <button type="submit" class="text-accent hover:text-accent-hover text-sm font-medium">Add</button>
                     <button type="button" onclick="this.closest('form').classList.add('hidden')" class="text-zinc-500 hover:text-zinc-300">

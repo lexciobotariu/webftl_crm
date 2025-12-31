@@ -132,7 +132,10 @@ def subtask_create(request, pk):
         subtask.task = task
         subtask.order = task.subtasks.count()
         subtask.save()
-        return render(request, 'tasks/partials/subtask_item.html', {'subtask': subtask})
+        # Return both subtask item and updated counter (OOB swap)
+        html = render(request, 'tasks/partials/subtask_item.html', {'subtask': subtask}).content.decode()
+        counter_html = render(request, 'tasks/partials/subtask_counter.html', {'task': task}).content.decode()
+        return HttpResponse(html + counter_html)
     return HttpResponse(status=400)
 
 
@@ -142,15 +145,22 @@ def subtask_toggle(request, pk, subtask_pk):
     subtask = get_object_or_404(Subtask, pk=subtask_pk, task_id=pk)
     subtask.completed = not subtask.completed
     subtask.save()
-    return render(request, 'tasks/partials/subtask_item.html', {'subtask': subtask})
+    # Return both subtask item and updated counter (OOB swap)
+    task = subtask.task
+    html = render(request, 'tasks/partials/subtask_item.html', {'subtask': subtask}).content.decode()
+    counter_html = render(request, 'tasks/partials/subtask_counter.html', {'task': task}).content.decode()
+    return HttpResponse(html + counter_html)
 
 
 @login_required
 @require_POST
 def subtask_delete(request, pk, subtask_pk):
     subtask = get_object_or_404(Subtask, pk=subtask_pk, task_id=pk)
+    task = subtask.task
     subtask.delete()
-    return HttpResponse('')
+    # Return updated counter (OOB swap)
+    counter_html = render(request, 'tasks/partials/subtask_counter.html', {'task': task}).content.decode()
+    return HttpResponse(counter_html)
 
 
 @login_required
