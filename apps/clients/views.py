@@ -121,8 +121,10 @@ def client_create_project(request, pk):
             for i, status_name in enumerate(default_statuses):
                 Status.objects.create(project=project, name=status_name, order=i)
 
-            response = render(request, 'clients/partials/projects_content.html', {'client': client})
-            response['HX-Trigger'] = 'closeSlideOver, updateProjectCount'
+            # Redirect to the new project board
+            from django.urls import reverse
+            response = HttpResponse('')
+            response['HX-Redirect'] = reverse('project_board', args=[project.pk])
             return response
 
     return render(request, 'clients/partials/project_create_drawer.html', {'client': client})
