@@ -46,24 +46,53 @@
                 </div>
 
                 <!-- Subtasks -->
-                <div class="mb-6">
-                    <h3 class="text-sm font-semibold text-zinc-300 mb-3">
-                        Subtasks {% if task.subtask_progress %}({{ task.subtask_progress }}){% endif %}
+                <div class="mb-5">
+                    <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+                        Sub-issues {% if task.subtask_progress %}({{ task.subtask_progress }}){% endif %}
                     </h3>
-                    <div id="subtask-list" class="space-y-2 mb-3">
+                    <div id="subtask-list" class="space-y-1 mb-3">
                         {% for subtask in task.subtasks.all %}
                         {% include "tasks/partials/subtask_item.html" %}
+                        {% empty %}
+                        <p class="text-sm text-zinc-500 py-1">No sub-issues yet.</p>
                         {% endfor %}
                     </div>
-                    <form hx-post="{% url 'subtask_create' task.pk %}" hx-target="#subtask-list" hx-swap="beforeend"
-                          hx-on::after-request="if(event.detail.successful) this.reset()"
-                          class="flex items-center gap-2 text-zinc-500 hover:text-zinc-300">
-                        {% csrf_token %}
-                        <i data-lucide="plus" class="w-4 h-4"></i>
-                        <input type="text" name="title" placeholder="Add subtask..."
-                               class="flex-1 bg-transparent text-sm placeholder-zinc-500 focus:outline-none">
-                    </form>
                 </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-wrap items-center gap-2 mb-6">
+                    <button onclick="document.getElementById('subtask-form-full').classList.toggle('hidden'); document.getElementById('subtask-form-full').querySelector('input').focus();"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-zinc-400 bg-elevated border border-border-subtle rounded-full hover:text-zinc-200 hover:border-zinc-600 transition-colors">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                        Add sub-issue
+                    </button>
+                    <label class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-zinc-400 bg-elevated border border-border-subtle rounded-full hover:text-zinc-200 hover:border-zinc-600 transition-colors cursor-pointer">
+                        <i data-lucide="paperclip" class="w-3.5 h-3.5"></i>
+                        Attach
+                        <input type="file" class="hidden"
+                               hx-post="{% url 'attachment_upload' task.pk %}"
+                               hx-trigger="change"
+                               hx-target="#attachment-list"
+                               hx-swap="beforeend"
+                               hx-encoding="multipart/form-data"
+                               name="file">
+                    </label>
+                </div>
+
+                <!-- Inline subtask form -->
+                <form hx-post="{% url 'subtask_create' task.pk %}" hx-target="#subtask-list" hx-swap="beforeend"
+                      hx-on::after-request="if(event.detail.successful) { this.reset(); this.classList.add('hidden'); }"
+                      class="hidden flex items-center gap-2 bg-elevated border border-border-subtle rounded-card px-3 py-2 mb-6"
+                      id="subtask-form-full">
+                    {% csrf_token %}
+                    <i data-lucide="corner-down-right" class="w-4 h-4 text-zinc-500"></i>
+                    <input type="text" name="title" placeholder="Sub-issue title..."
+                           class="flex-1 bg-transparent text-sm text-zinc-300 placeholder-zinc-500 focus:outline-none">
+                    <button type="submit" class="text-accent hover:text-accent-hover text-sm font-medium">Add</button>
+                    <button type="button" onclick="this.closest('form').classList.add('hidden')" class="text-zinc-500 hover:text-zinc-300">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </form>
 
                 <!-- Activity -->
                 <div class="border-t border-border-subtle pt-6">
