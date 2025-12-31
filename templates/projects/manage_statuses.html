@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Statuses - {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+    <a href="{% url 'project_board' project.pk %}" class="text-accent hover:text-accent/80 text-sm">&larr; Back to Board</a>
+    <h1 class="text-2xl font-semibold text-zinc-50 mt-2 mb-8">Manage Statuses</h1>
+
+    <div class="bg-card rounded-lg border border-border p-6 mb-6">
+        <h2 class="font-semibold text-zinc-50 mb-4">Current Statuses</h2>
+        <div class="space-y-2" id="status-list">
+            {% for status in project.statuses.all %}
+            <div class="flex items-center justify-between p-3 bg-sidebar rounded-md border border-border">
+                <span class="text-zinc-300">{{ status.name }}</span>
+                <span class="text-sm text-zinc-500">{{ status.task_count }} tasks</span>
+            </div>
+            {% empty %}
+            <div class="text-zinc-500">No statuses defined.</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="bg-card rounded-lg border border-border p-6">
+        <h2 class="font-semibold text-zinc-50 mb-4">Add New Status</h2>
+        <form method="post" hx-post="{% url 'manage_statuses' project.pk %}" hx-target="#status-list" hx-swap="beforeend">
+            {% csrf_token %}
+            <div class="flex gap-4">
+                <input type="text" name="name" required placeholder="Status name"
+                       class="flex-1 bg-card border border-border rounded-md px-3 py-2 text-zinc-50 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                <button type="submit" class="bg-accent text-white px-4 py-2 rounded-md hover:bg-accent/90 transition-colors">
+                    Add Status
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
