@@ -1,0 +1,15 @@
+<div class="flex-shrink-0 w-80 bg-sidebar rounded-lg p-4"
+     id="column-{{ status.pk }}"
+     @dragover.prevent="$el.classList.add('drag-over')"
+     @dragleave="$el.classList.remove('drag-over')"
+     @drop="$el.classList.remove('drag-over'); htmx.ajax('POST', '{% url 'task_move' %}', {values: {task_id: dragging, status_id: {{ status.pk }}}})">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="font-semibold text-zinc-50">{{ status.name }}</h3>
+        <span class="text-sm text-zinc-500">{{ status.task_count }}</span>
+    </div>
+    <div class="space-y-3" id="column-{{ status.pk }}-tasks">
+        {% for task in status.tasks.all %}
+        {% include "projects/partials/task_card.html" %}
+        {% endfor %}
+    </div>
+</div>

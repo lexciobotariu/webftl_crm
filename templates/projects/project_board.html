@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} - WebFTL CRM{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-start mb-6">
+    <div>
+        <a href="{% url 'project_list' %}" class="text-accent hover:text-accent/80 text-sm">&larr; All Projects</a>
+        <h1 class="text-2xl font-semibold text-zinc-50">{{ project.name }}</h1>
+        <div class="text-zinc-400">{{ project.client.name }}</div>
+    </div>
+    <div class="flex gap-2">
+        <button hx-get="{% url 'task_create' project.pk %}"
+                hx-target="#slide-over"
+                hx-swap="innerHTML"
+                class="bg-accent text-white px-4 py-2 rounded-md hover:bg-accent/90 transition-colors flex items-center gap-2">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            Add Task
+        </button>
+        <a href="{% url 'project_edit' project.pk %}" class="bg-card border border-border px-4 py-2 rounded-md text-zinc-300 hover:bg-hover transition-colors flex items-center gap-2">
+            <i data-lucide="settings" class="w-4 h-4"></i>
+            Settings
+        </a>
+    </div>
+</div>
+
+<div class="flex gap-4 overflow-x-auto pb-4"
+     x-data="{ dragging: null }"
+     id="kanban-board">
+    {% for status in project.statuses.all %}
+    {% include "projects/partials/kanban_column.html" %}
+    {% endfor %}
+</div>
+{% endblock %}

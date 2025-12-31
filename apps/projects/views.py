@@ -1,0 +1,97 @@
+import json
+
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse, HttpResponseForbidden
+from django.shortcuts import render, get_object_or_404, redirect
+from django.views.decorators.http import require_POST
+
+from .forms import ProjectForm, StatusForm
+from .models import Project, Status
+from apps.clients.models import Client
+
+
+@login_required
+def project_list(request):
+    projects = Project.objects.select_related('client').all()
+    client_filter = request.GET.get('client')
+    if client_filter:
+        projects = projects.filter(client_id=client_filter)
+    clients = Client.objects.all()
+    return render(request, 'projects/project_list.html', {
+        'projects': projects,
+        'clients': clients,
+        'client_filter': client_filter,
+    })
+
+
+@login_required
+def project_create(request):
+    initial = {}
+    if request.GET.get('client'):
+        initial['client'] = request.GET.get('client')
+
+    if request.method == 'POST':
+        form = ProjectForm(request.POST)
+        if form.is_valid():
+            project = form.save()
+            return redirect('project_board', pk=project.pk)
+    else:
+        form = ProjectForm(initial=initial)
+    return render(request, 'projects/project_form.html', {'form': form})
+
+
+@login_required
+def project_board(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+    return render(request, 'projects/project_board.html', {'project': project})
+
+
+@login_required
+def project_edit(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+    if request.method == 'POST':
+        form = ProjectForm(request.POST, instance=project)
+        if form.is_valid():
+            form.save()
+            return redirect('project_board', pk=project.pk)
+    else:
+        form = ProjectForm(instance=project)
+    return render(request, 'projects/project_form.html', {'form': form, 'project': project})
+
+
+@login_required
+@require_POST
+def project_delete(request, pk):
+    if not request.user.is_admin:
+        return HttpResponseForbidden("Admin access required")
+    project = get_object_or_404(Project, pk=pk)
+    project.delete()
+    if request.htmx:
+        response = HttpResponse('')
+        response['HX-Redirect'] = '/projects/'
+        return response
+    return redirect('project_list')
+
+
+@login_required
+def manage_statuses(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+    if request.method == 'POST':
+        form = StatusForm(request.POST)
+        if form.is_valid():
+            status = form.save(commit=False)
+            status.project = project
+            status.order = project.statuses.count()
+            status.save()
+            return render(request, 'projects/partials/kanban_column.html', {'status': status, 'project': project})
+    return render(request, 'projects/manage_statuses.html', {'project': project})
+
+
+@login_required
+@require_POST
+def reorder_statuses(request, pk):
+    project = get_object_or_404(Project, pk=pk)
+    order = json.loads(request.body).get('order', [])
+    for i, status_id in enumerate(order):
+        Status.objects.filter(pk=status_id, project=project).update(order=i)
+    return HttpResponse(status=204)

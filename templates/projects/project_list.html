@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Projects - WebFTL CRM{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-8">
+    <h1 class="text-2xl font-semibold text-zinc-50">Projects</h1>
+    <a href="{% url 'project_create' %}" class="bg-accent text-white px-4 py-2 rounded-md hover:bg-accent/90 transition-colors flex items-center gap-2">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        New Project
+    </a>
+</div>
+
+<div class="mb-6">
+    <select onchange="window.location.href='?client=' + this.value"
+            class="bg-card border border-border rounded-md px-3 py-2 text-zinc-50 focus:border-accent focus:outline-none">
+        <option value="">All Clients</option>
+        {% for client in clients %}
+        <option value="{{ client.pk }}" {% if client_filter == client.pk|stringformat:"s" %}selected{% endif %}>
+            {{ client.name }}
+        </option>
+        {% endfor %}
+    </select>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for project in projects %}
+    <a href="{% url 'project_board' project.pk %}" class="bg-card rounded-lg border border-border p-6 hover:border-zinc-600 transition-colors">
+        <h3 class="font-semibold text-lg text-zinc-50 mb-1">{{ project.name }}</h3>
+        <div class="text-sm text-zinc-400 mb-3">{{ project.client.name }}</div>
+        {% if project.description %}
+        <p class="text-sm text-zinc-500 line-clamp-2">{{ project.description }}</p>
+        {% endif %}
+    </a>
+    {% empty %}
+    <div class="col-span-full text-center py-12 text-zinc-500">
+        No projects yet. <a href="{% url 'project_create' %}" class="text-accent hover:text-accent/80">Create your first project</a>.
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

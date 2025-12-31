@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}{% if project %}Edit{% else %}New{% endif %} Project - WebFTL CRM{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+    <h1 class="text-2xl font-semibold text-zinc-50 mb-8">{% if project %}Edit {{ project.name }}{% else %}New Project{% endif %}</h1>
+
+    <form method="post" class="bg-card rounded-lg border border-border p-6 space-y-6">
+        {% csrf_token %}
+
+        {% for field in form %}
+        <div>
+            <label class="block text-sm font-medium text-zinc-300 mb-2">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+            <p class="text-red-500 text-sm mt-1">{{ field.errors.0 }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <div class="flex gap-4 pt-4">
+            <button type="submit" class="bg-accent text-white px-4 py-2 rounded-md hover:bg-accent/90 transition-colors">
+                {% if project %}Save Changes{% else %}Create Project{% endif %}
+            </button>
+            <a href="{% if project %}{% url 'project_board' project.pk %}{% else %}{% url 'project_list' %}{% endif %}"
+               class="px-4 py-2 text-zinc-400 hover:text-zinc-300 transition-colors">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
