@@ -1,11 +1,20 @@
-<div class="flex-shrink-0 w-64 h-full flex flex-col bg-card/50 rounded-panel border border-border-subtle"
+<div class="flex-shrink-0 w-64 h-full flex flex-col bg-card/50 rounded-panel border border-border-subtle group/column"
      id="column-{{ status.pk }}">
     <!-- Column header - fixed -->
     <div class="flex-shrink-0 flex items-center justify-between px-3 py-2.5 border-b border-border-subtle">
         <h3 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-500">{{ status.name }}</h3>
-        <span class="text-[10px] text-zinc-500 bg-elevated border border-border-subtle rounded px-1.5 py-0.5 tabular-nums">
-            {{ status.task_count }}
-        </span>
+        <div class="flex items-center gap-2">
+            <button hx-get="{% url 'task_create' project.pk %}?status={{ status.pk }}"
+                    hx-target="#slide-over"
+                    hx-swap="innerHTML"
+                    class="p-1 text-zinc-600 hover:text-zinc-300 hover:bg-elevated rounded transition-all opacity-0 group-hover/column:opacity-100"
+                    title="Add task to {{ status.name }}">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+            </button>
+            <span class="text-[10px] text-zinc-500 bg-elevated border border-border-subtle rounded px-1.5 py-0.5 tabular-nums">
+                {{ status.task_count }}
+            </span>
+        </div>
     </div>
     <!-- Tasks container - scrollable, sortable -->
     <div class="flex-1 overflow-y-auto p-2 space-y-2"

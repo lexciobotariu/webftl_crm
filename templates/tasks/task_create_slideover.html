@@ -2,7 +2,13 @@
     <div class="flex justify-between items-start pb-4 border-b border-border-subtle">
         <div>
             <h2 class="text-xl font-semibold text-zinc-100">New Task</h2>
-            <p class="text-xs uppercase tracking-[0.2em] text-zinc-500 mt-2">{{ project.name }}</p>
+            <div class="flex items-center gap-2 mt-2">
+                <p class="text-xs uppercase tracking-[0.2em] text-zinc-500">{{ project.name }}</p>
+                {% if selected_status %}
+                <span class="text-xs text-zinc-600">/</span>
+                <span class="text-xs px-2 py-0.5 rounded-full bg-elevated border border-border-subtle text-zinc-400">{{ selected_status.name }}</span>
+                {% endif %}
+            </div>
         </div>
         <button onclick="document.getElementById('slide-over').classList.add('hidden')"
                 class="w-8 h-8 flex items-center justify-center rounded-card bg-panel border border-border-subtle text-zinc-400 hover:text-zinc-200 hover:border-border-strong">&times;</button>
@@ -12,6 +18,9 @@
           hx-target="#kanban-board" hx-swap="innerHTML"
           class="space-y-5 mt-5">
         {% csrf_token %}
+        {% if selected_status %}
+        <input type="hidden" name="status_id" value="{{ selected_status.pk }}">
+        {% endif %}
         {% include "tasks/task_form_fields.html" %}
 
         <div class="flex gap-3 pt-2">

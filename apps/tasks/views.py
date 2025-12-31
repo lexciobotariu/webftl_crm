@@ -39,7 +39,13 @@ def my_tasks(request):
 @login_required
 def task_create(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
-    status = project.statuses.first()
+
+    # Get status from query param or default to first status
+    status_pk = request.GET.get('status') or request.POST.get('status_id')
+    if status_pk:
+        status = get_object_or_404(Status, pk=status_pk, project=project)
+    else:
+        status = project.statuses.first()
 
     if request.method == 'POST':
         form = TaskForm(project, request.POST)
@@ -61,7 +67,11 @@ def task_create(request, project_pk):
 
     # Return slide-over for HTMX, full page otherwise
     if request.htmx:
-        return render(request, 'tasks/task_create_slideover.html', {'form': form, 'project': project})
+        return render(request, 'tasks/task_create_slideover.html', {
+            'form': form,
+            'project': project,
+            'selected_status': status,
+        })
     return render(request, 'tasks/task_form.html', {'form': form, 'project': project})
 
 
