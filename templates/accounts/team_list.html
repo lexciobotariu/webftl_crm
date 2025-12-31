@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Team - WebFTL CRM{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-8">
+    <h1 class="text-2xl font-semibold text-zinc-50">Team</h1>
+    <a href="{% url 'account_signup' %}" class="bg-accent text-white px-4 py-2 rounded-md hover:bg-accent/90 transition-colors flex items-center gap-2">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        Invite Member
+    </a>
+</div>
+
+<div class="bg-card rounded-lg border border-border overflow-hidden">
+    <table class="w-full">
+        <thead class="bg-sidebar border-b border-border">
+            <tr>
+                <th class="px-6 py-3 text-left text-sm font-semibold text-zinc-300">Name</th>
+                <th class="px-6 py-3 text-left text-sm font-semibold text-zinc-300">Email</th>
+                <th class="px-6 py-3 text-left text-sm font-semibold text-zinc-300">Role</th>
+                <th class="px-6 py-3 text-left text-sm font-semibold text-zinc-300">Actions</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-border">
+            {% for member in users %}
+            {% include "accounts/partials/user_row.html" with user=member %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,19 @@
+<tr id="user-{{ user.pk }}" class="hover:bg-hover transition-colors">
+    <td class="px-6 py-4 text-zinc-50">{{ user.name }}</td>
+    <td class="px-6 py-4 text-zinc-400">{{ user.email }}</td>
+    <td class="px-6 py-4">
+        <span class="px-2 py-1 text-xs rounded {% if user.role == 'admin' %}bg-accent/20 text-accent{% else %}bg-zinc-700 text-zinc-300{% endif %}">
+            {{ user.get_role_display }}
+        </span>
+    </td>
+    <td class="px-6 py-4">
+        {% if user != request.user %}
+        <button hx-post="{% url 'toggle_role' user.pk %}"
+                hx-target="#user-{{ user.pk }}"
+                hx-swap="outerHTML"
+                class="text-accent hover:text-accent/80 text-sm transition-colors">
+            Make {% if user.role == 'admin' %}Member{% else %}Admin{% endif %}
+        </button>
+        {% endif %}
+    </td>
+</tr>

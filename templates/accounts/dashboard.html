@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - WebFTL CRM{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-semibold text-zinc-50 mb-8">Dashboard</h1>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="bg-card rounded-lg border border-border p-6">
+        <div class="flex items-center gap-3 mb-2">
+            <i data-lucide="building-2" class="w-5 h-5 text-accent"></i>
+            <span class="text-zinc-400 text-sm">Clients</span>
+        </div>
+        <div class="text-3xl font-bold text-zinc-50">{{ client_count }}</div>
+    </div>
+    <div class="bg-card rounded-lg border border-border p-6">
+        <div class="flex items-center gap-3 mb-2">
+            <i data-lucide="folder-kanban" class="w-5 h-5 text-green-500"></i>
+            <span class="text-zinc-400 text-sm">Projects</span>
+        </div>
+        <div class="text-3xl font-bold text-zinc-50">{{ project_count }}</div>
+    </div>
+    <div class="bg-card rounded-lg border border-border p-6">
+        <div class="flex items-center gap-3 mb-2">
+            <i data-lucide="check-square" class="w-5 h-5 text-orange-500"></i>
+            <span class="text-zinc-400 text-sm">My Active Tasks</span>
+        </div>
+        <div class="text-3xl font-bold text-zinc-50">{{ my_task_count }}</div>
+    </div>
+</div>
+
+<div class="bg-card rounded-lg border border-border">
+    <div class="p-4 border-b border-border">
+        <h2 class="text-lg font-semibold text-zinc-50">My Recent Tasks</h2>
+    </div>
+    <div class="divide-y divide-border">
+        {% for task in recent_tasks %}
+        <a href="{% url 'project_board' task.project.pk %}?task={{ task.pk }}"
+           class="block p-4 hover:bg-hover transition-colors">
+            <div class="font-medium text-zinc-50">{{ task.title }}</div>
+            <div class="text-sm text-zinc-500">{{ task.project.name }} · {{ task.status.name }}</div>
+        </a>
+        {% empty %}
+        <div class="p-4 text-zinc-500">No tasks assigned yet.</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
