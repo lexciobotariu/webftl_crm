@@ -322,3 +322,22 @@ class TestComments:
             {'content': 'This is a comment'}
         )
         assert response.status_code == 403
+
+
+@pytest.mark.django_db
+class TestMyTasksTabs:
+    def test_my_tasks_default_tab_is_tasks(self, client):
+        """GET /tasks/my/ should set active_tab to 'tasks'"""
+        user = UserFactory()
+        client.force_login(user)
+        response = client.get(reverse('my_tasks'))
+        assert response.status_code == 200
+        assert response.context['active_tab'] == 'tasks'
+
+    def test_my_tasks_todos_tab(self, client):
+        """GET /tasks/my/todos/ should set active_tab to 'todos'"""
+        user = UserFactory()
+        client.force_login(user)
+        response = client.get(reverse('my_tasks_todos'))
+        assert response.status_code == 200
+        assert response.context['active_tab'] == 'todos'

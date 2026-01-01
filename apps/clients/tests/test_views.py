@@ -107,3 +107,33 @@ class TestClientDelete:
         client.force_login(admin)
         response = client.get(reverse('client_delete', args=[test_client.pk]))
         assert response.status_code == 405
+
+
+@pytest.mark.django_db
+class TestClientDetailTabs:
+    def test_client_detail_default_tab_is_profile(self, client):
+        """GET /clients/<pk>/ should set active_tab to 'profile'"""
+        user = UserFactory()
+        client_obj = ClientFactory()
+        client.force_login(user)
+        response = client.get(reverse('client_detail', args=[client_obj.pk]))
+        assert response.status_code == 200
+        assert response.context['active_tab'] == 'profile'
+
+    def test_client_detail_projects_tab(self, client):
+        """GET /clients/<pk>/projects/ should set active_tab to 'projects'"""
+        user = UserFactory()
+        client_obj = ClientFactory()
+        client.force_login(user)
+        response = client.get(reverse('client_detail_projects', args=[client_obj.pk]))
+        assert response.status_code == 200
+        assert response.context['active_tab'] == 'projects'
+
+    def test_client_detail_todos_tab(self, client):
+        """GET /clients/<pk>/todos/ should set active_tab to 'todos'"""
+        user = UserFactory()
+        client_obj = ClientFactory()
+        client.force_login(user)
+        response = client.get(reverse('client_detail_todos', args=[client_obj.pk]))
+        assert response.status_code == 200
+        assert response.context['active_tab'] == 'todos'
