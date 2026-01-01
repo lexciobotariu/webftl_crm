@@ -1,3 +1,5 @@
+import json
+
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404
@@ -7,6 +9,19 @@ from django.views.decorators.http import require_POST
 from apps.clients.models import Client
 from .forms import TodoForm
 from .models import Todo
+
+
+def _set_todo_triggers(response, *, has_client=False, close=False):
+    """
+    Attach HX-Trigger header so any page showing todos can refresh via HTMX.
+    """
+    triggers = {'refreshPersonalTodos': True}
+    if has_client:
+        triggers['refreshClientTodos'] = True
+    if close:
+        triggers['closeSlideOver'] = True
+    response['HX-Trigger'] = json.dumps(triggers)
+    return response
 
 
 @login_required
@@ -19,9 +34,10 @@ def todo_list(request):
     if not show_completed:
         todos_qs = todos_qs.filter(is_completed=False)
 
-    return render(request, 'todos/partials/todo_list.html', {
+    return render(request, 'todos/partials/todos_section.html', {
         'todos': todos_qs,
         'show_completed': show_completed,
+        'today': timezone.now().date(),
     })
 
 
@@ -34,10 +50,8 @@ def todo_create(request):
             todo = form.save(commit=False)
             todo.owner = request.user
             todo.save()
-            # Return the new todo item and close drawer
-            response = render(request, 'todos/partials/todo_item.html', {'todo': todo})
-            response['HX-Trigger'] = 'closeSlideOver'
-            return response
+            response = HttpResponse('')
+            return _set_todo_triggers(response, has_client=bool(todo.client_id), close=True)
         # If form invalid, re-render drawer with errors
         return render(request, 'todos/partials/todo_create_drawer.html', {'form': form})
 
@@ -63,11 +77,16 @@ def todo_edit(request, pk):
     todo = get_object_or_404(Todo, pk=pk, owner=request.user)
     form = TodoForm(request.POST, instance=todo)
     if form.is_valid():
-        form.save()
-        # Return updated todo item and close drawer
-        response = render(request, 'todos/partials/todo_item.html', {'todo': todo})
-        response['HX-Trigger'] = 'closeSlideOver'
-        return response
+        todo_obj = form.save(commit=False)
+        is_completed = request.POST.get('is_completed') is not None
+        todo_obj.is_completed = is_completed
+        if is_completed:
+            todo_obj.completed_at = todo_obj.completed_at or timezone.now()
+        else:
+            todo_obj.completed_at = None
+        todo_obj.save()
+        response = HttpResponse('')
+        return _set_todo_triggers(response, has_client=bool(todo_obj.client_id), close=True)
     # If form invalid, re-render drawer with errors
     return render(request, 'todos/partials/todo_detail_drawer.html', {
         'todo': todo,
@@ -83,7 +102,11 @@ def todo_toggle(request, pk):
     todo.is_completed = not todo.is_completed
     todo.completed_at = timezone.now() if todo.is_completed else None
     todo.save()
-    return render(request, 'todos/partials/todo_item.html', {'todo': todo})
+    response = render(request, 'todos/partials/todo_item.html', {
+        'todo': todo,
+        'today': timezone.now().date(),
+    })
+    return _set_todo_triggers(response, has_client=bool(todo.client_id))
 
 
 @login_required
@@ -91,8 +114,10 @@ def todo_toggle(request, pk):
 def todo_delete(request, pk):
     """Delete to-do. Returns HTMX response."""
     todo = get_object_or_404(Todo, pk=pk, owner=request.user)
+    has_client = bool(todo.client_id)
     todo.delete()
-    return HttpResponse('')
+    response = HttpResponse('')
+    return _set_todo_triggers(response, has_client=has_client, close=True)
 
 
 @login_required
@@ -106,10 +131,11 @@ def client_todo_list(request, pk):
     if not show_completed:
         todos_qs = todos_qs.filter(is_completed=False)
 
-    return render(request, 'todos/partials/todo_list.html', {
+    return render(request, 'todos/partials/todos_section.html', {
         'todos': todos_qs,
         'client': client,
         'show_completed': show_completed,
+        'today': timezone.now().date(),
     })
 
 
@@ -125,10 +151,8 @@ def client_todo_create(request, pk):
             todo.owner = request.user
             todo.client = client
             todo.save()
-            # Return the new todo item and close drawer
-            response = render(request, 'todos/partials/todo_item.html', {'todo': todo})
-            response['HX-Trigger'] = 'closeSlideOver'
-            return response
+            response = HttpResponse('')
+            return _set_todo_triggers(response, has_client=True, close=True)
         # If form invalid, re-render drawer with errors
         return render(request, 'todos/partials/todo_create_drawer.html', {
             'form': form,

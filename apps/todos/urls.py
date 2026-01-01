@@ -10,4 +10,6 @@ urlpatterns = [
     path('<int:pk>/edit/', views.todo_edit, name='todo_edit'),
     path('<int:pk>/toggle/', views.todo_toggle, name='todo_toggle'),
     path('<int:pk>/delete/', views.todo_delete, name='todo_delete'),
+    
+    # Client todos (handled in main urls.py to avoid namespace conflicts)
 ]
