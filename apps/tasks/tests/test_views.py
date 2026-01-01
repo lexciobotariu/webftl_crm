@@ -80,6 +80,32 @@ class TestTaskCreate:
 
 
 @pytest.mark.django_db
+class TestTaskEdit:
+    def test_task_edit_records_activity_with_user(self, client):
+        """Editing a task via form records activity with the editing user."""
+        from apps.tasks.models import TaskActivity
+
+        user = UserFactory()
+        project = ProjectFactory()
+        ProjectMemberFactory(project=project, user=user, role='editor')
+        status = StatusFactory(project=project, name='Backlog')
+        task = TaskFactory(project=project, status=status, priority='low')
+        client.force_login(user)
+
+        # Clear existing activities
+        TaskActivity.objects.filter(task=task).delete()
+
+        response = client.post(
+            reverse('task_edit', args=[task.pk]),
+            {'title': 'Updated Title', 'description': 'Updated', 'priority': 'high'}
+        )
+
+        activity = TaskActivity.objects.filter(task=task, activity_type='priority_change').first()
+        assert activity is not None
+        assert activity.user == user
+
+
+@pytest.mark.django_db
 class TestTaskMove:
     def test_move_task_to_new_status(self, client):
         user = UserFactory()

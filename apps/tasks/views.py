@@ -117,6 +117,7 @@ def task_edit(request, pk):
     if request.method == 'POST':
         form = TaskForm(task.project, request.POST, instance=task)
         if form.is_valid():
+            task._changed_by = request.user
             form.save()
             if request.htmx:
                 return render(request, 'tasks/task_detail.html', {'task': task, 'subtask_form': SubtaskForm(), 'comment_form': CommentForm()})
