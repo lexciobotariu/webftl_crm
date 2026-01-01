@@ -11,7 +11,8 @@ urlpatterns = [
     path('', include('apps.accounts.urls')),
     path('clients/', include('apps.clients.urls')),
     path('clients/<int:pk>/todos/', include([
-        path('', todo_views.client_todo_list, name='client_todo_list'),
+        # Use a sub-path to avoid colliding with the client detail "todos" tab route.
+        path('list/', todo_views.client_todo_list, name='client_todo_list'),
         path('create/', todo_views.client_todo_create, name='client_todo_create'),
     ])),
     path('projects/', include('apps.projects.urls')),
