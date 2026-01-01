@@ -3,7 +3,7 @@
 {% block title %}My Tasks - WebFTL CRM{% endblock %}
 
 {% block full_content %}
-<div class="flex flex-col h-full" x-data="{ activeTab: 'tasks' }">
+<div class="flex flex-col h-full">
     <!-- Compact header -->
     <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80">
         <div class="flex items-center justify-between">
@@ -12,28 +12,27 @@
                 <h1 class="text-sm font-medium text-zinc-100">My Tasks</h1>
             </div>
         </div>
-        
+
         <!-- Tabs -->
         <div class="flex items-center gap-6 mt-3">
-            <button @click="activeTab = 'tasks'"
-                    :class="activeTab === 'tasks' ? 'text-zinc-100 border-b-2 border-accent' : 'text-zinc-400 hover:text-zinc-200'"
-                    class="pb-2 px-1 text-sm font-medium transition-colors">
+            <a href="{% url 'my_tasks' %}"
+               class="pb-2 px-1 text-sm font-medium transition-colors {% if active_tab == 'tasks' %}text-zinc-100 border-b-2 border-accent{% else %}text-zinc-400 hover:text-zinc-200{% endif %}">
                 Assigned Tasks
                 <span class="ml-2 text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ total_count }}</span>
-            </button>
-            <button @click="activeTab = 'todos'"
-                    :class="activeTab === 'todos' ? 'text-zinc-100 border-b-2 border-accent' : 'text-zinc-400 hover:text-zinc-200'"
-                    class="pb-2 px-1 text-sm font-medium transition-colors">
+            </a>
+            <a href="{% url 'my_tasks_todos' %}"
+               class="pb-2 px-1 text-sm font-medium transition-colors {% if active_tab == 'todos' %}text-zinc-100 border-b-2 border-accent{% else %}text-zinc-400 hover:text-zinc-200{% endif %}">
                 To-Dos
                 <span class="ml-2 text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ todo_count }}</span>
-            </button>
+            </a>
         </div>
     </div>
 
     <!-- Content -->
     <div class="flex-1 overflow-hidden">
+        {% if active_tab == 'tasks' %}
         <!-- Assigned Tasks Tab -->
-        <div x-show="activeTab === 'tasks'" x-cloak class="h-full flex flex-col">
+        <div class="h-full flex flex-col">
             <!-- Filters -->
             <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/40">
                 <div class="flex items-center gap-4">
@@ -47,7 +46,7 @@
                     </select>
                 </div>
             </div>
-            
+
             <!-- Table content -->
             <div class="flex-1 overflow-auto">
                 {% if tasks %}
@@ -81,11 +80,12 @@
                 {% include "components/pagination.html" %}
             </div>
         </div>
-
+        {% else %}
         <!-- To-Dos Tab -->
-        <div x-show="activeTab === 'todos'" x-cloak class="h-full">
+        <div class="h-full">
             {% include 'todos/partials/todos_section.html' %}
         </div>
+        {% endif %}
     </div>
 </div>
 
