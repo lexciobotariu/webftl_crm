@@ -14,12 +14,22 @@
             </div>
             <div class="flex items-center gap-3">
                 <!-- Show completed toggle -->
-                <button hx-get="{% if client %}{% url 'client_todo_list' client.id %}{% else %}{% url 'todo_list' %}{% endif %}?show_completed={{ show_completed|yesno:'false,true' }}"
+                <button data-show-completed="{{ show_completed|yesno:'true,false' }}"
+                        hx-get="{% if client %}{% url 'client_todo_list' client.id %}{% else %}{% url 'todo_list' %}{% endif %}"
                         hx-target="#todos-list-container"
                         hx-swap="innerHTML"
+                        hx-on::config-request="
+                            const next = (this.dataset.showCompleted === 'true') ? 'false' : 'true';
+                            this.dataset.showCompleted = next;
+                            const list = document.getElementById('todos-list-container');
+                            if (list) list.dataset.showCompleted = next;
+                            const label = this.querySelector('[data-show-completed-label]');
+                            if (label) label.textContent = (next === 'true') ? 'Hide completed' : 'Show completed';
+                            event.detail.parameters['show_completed'] = next;
+                        "
                         class="flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-hover rounded-lg transition-colors">
                     <i data-lucide="eye" class="w-3.5 h-3.5"></i>
-                    {% if show_completed %}Hide{% else %}Show{% endif %} completed
+                    <span data-show-completed-label>{% if show_completed %}Hide{% else %}Show{% endif %} completed</span>
                 </button>
                 <!-- Add todo button -->
                 <button hx-get="{% if client %}{% url 'client_todo_create' client.id %}{% else %}{% url 'todo_create' %}{% endif %}"
@@ -36,7 +46,9 @@
 
     <!-- Todo list container (HTMX target) -->
     <div id="todos-list-container"
-         hx-get="{% if client %}{% url 'client_todo_list' client.id %}{% else %}{% url 'todo_list' %}{% endif %}{% if show_completed %}?show_completed=true{% endif %}"
+         data-show-completed="{{ show_completed|yesno:'true,false' }}"
+         hx-get="{% if client %}{% url 'client_todo_list' client.id %}{% else %}{% url 'todo_list' %}{% endif %}"
+         hx-vals="js:{show_completed: this.dataset.showCompleted}"
          hx-trigger="{% if client %}refreshClientTodos from:body{% else %}refreshPersonalTodos from:body{% endif %}"
          hx-target="#todos-list-container"
          hx-swap="innerHTML">
