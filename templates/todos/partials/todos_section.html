@@ -22,10 +22,15 @@
                             const next = (this.dataset.showCompleted === 'true') ? 'false' : 'true';
                             this.dataset.showCompleted = next;
                             const list = document.getElementById('todos-list-container');
-                            if (list) list.dataset.showCompleted = next;
+                            const endpoint = (this.getAttribute('hx-get') || '').split('?')[0];
+                            const url = (next === 'true') ? `${endpoint}?show_completed=true` : endpoint;
+                            if (list) {
+                                list.dataset.showCompleted = next;
+                                list.setAttribute('hx-get', url);
+                            }
                             const label = this.querySelector('[data-show-completed-label]');
                             if (label) label.textContent = (next === 'true') ? 'Hide completed' : 'Show completed';
-                            event.detail.parameters['show_completed'] = next;
+                            event.detail.path = url;
                         "
                         class="flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-hover rounded-lg transition-colors">
                     <i data-lucide="eye" class="w-3.5 h-3.5"></i>
@@ -48,7 +53,6 @@
     <div id="todos-list-container"
          data-show-completed="{{ show_completed|yesno:'true,false' }}"
          hx-get="{% if client %}{% url 'client_todo_list' client.id %}{% else %}{% url 'todo_list' %}{% endif %}"
-         hx-vals="js:{show_completed: this.dataset.showCompleted}"
          hx-trigger="{% if client %}refreshClientTodos from:body{% else %}refreshPersonalTodos from:body{% endif %}"
          hx-target="#todos-list-container"
          hx-swap="innerHTML">
