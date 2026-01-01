@@ -3,7 +3,7 @@
 {% block title %}{{ project.name }} - WebFTL CRM{% endblock %}
 
 {% block full_content %}
-<div class="flex flex-col h-full" x-data="{ activeTab: 'overview' }">
+<div class="flex flex-col h-full">
     <!-- Compact header -->
     <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80">
         <div class="flex items-center justify-between">
@@ -48,19 +48,17 @@
     <div class="flex-1 flex overflow-hidden">
         <!-- Main content area -->
         <div class="flex-1 overflow-y-auto p-6 pb-12">
+            {% if active_tab == 'overview' %}
             <!-- Overview Section -->
-            <div x-show="activeTab === 'overview'" x-cloak>
-                <div class="space-y-6 pb-6" id="overview-content">
-                    {% include "projects/partials/overview_content.html" %}
-                </div>
+            <div class="space-y-6 pb-6" id="overview-content">
+                {% include "projects/partials/overview_content.html" %}
             </div>
-
+            {% elif active_tab == 'tasks' %}
             <!-- Tasks Section -->
-            <div x-show="activeTab === 'tasks'" x-cloak>
-                <div class="pb-6" id="tasks-content">
-                    {% include "projects/partials/tasks_content.html" %}
-                </div>
+            <div class="pb-6" id="tasks-content">
+                {% include "projects/partials/tasks_content.html" %}
             </div>
+            {% endif %}
         </div>
 
         <!-- Right sidebar navigation -->
@@ -68,21 +66,19 @@
             <div class="p-3">
                 <div class="text-[10px] uppercase tracking-wider text-zinc-600 px-2 mb-2">Navigation</div>
                 <nav class="space-y-1">
-                    <button @click="activeTab = 'overview'"
-                            :class="activeTab === 'overview' ? 'bg-elevated text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50'"
-                            class="w-full flex items-center gap-3 px-3 py-2 rounded-card text-sm transition-colors text-left">
+                    <a href="{% url 'project_detail' project.pk %}"
+                       class="w-full flex items-center gap-3 px-3 py-2 rounded-card text-sm transition-colors text-left {% if active_tab == 'overview' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
                         <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
                         Overview
-                    </button>
-                    <button @click="activeTab = 'tasks'"
-                            :class="activeTab === 'tasks' ? 'bg-elevated text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50'"
-                            class="w-full flex items-center justify-between px-3 py-2 rounded-card text-sm transition-colors text-left">
+                    </a>
+                    <a href="{% url 'project_detail_tasks' project.pk %}"
+                       class="w-full flex items-center justify-between px-3 py-2 rounded-card text-sm transition-colors text-left {% if active_tab == 'tasks' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
                         <span class="flex items-center gap-3">
                             <i data-lucide="check-square" class="w-4 h-4"></i>
                             Tasks
                         </span>
                         <span class="text-xs text-zinc-500 bg-panel px-1.5 py-0.5 rounded">{{ total_tasks }}</span>
-                    </button>
+                    </a>
                 </nav>
 
                 <!-- Coming Soon placeholders -->
