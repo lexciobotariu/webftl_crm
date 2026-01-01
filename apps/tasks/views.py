@@ -25,6 +25,9 @@ from .models import Task, Subtask, Attachment, TaskActivity
 
 @login_required
 def my_tasks(request):
+    # Determine active tab from URL
+    active_tab = 'todos' if request.resolver_match.url_name == 'my_tasks_todos' else 'tasks'
+
     tasks_qs = Task.objects.filter(assignee=request.user).select_related('project', 'status').order_by('-created_at')
     priority = request.GET.get('priority')
     if priority:
@@ -55,6 +58,7 @@ def my_tasks(request):
         'show_completed': show_completed_todos,
         'todo_count': todo_count,
         'today': timezone.now().date(),
+        'active_tab': active_tab,
     })
 
 
