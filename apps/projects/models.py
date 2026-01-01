@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 from apps.clients.models import Client
@@ -51,3 +52,48 @@ class Status(models.Model):
     @property
     def task_count(self):
         return self.tasks.count()
+
+
+class ProjectMember(models.Model):
+    """
+    Tracks user membership and roles within projects.
+    Admins bypass this check and have access to all projects.
+    """
+    ROLE_CHOICES = [
+        ('viewer', 'Viewer'),      # Can view project and tasks
+        ('editor', 'Editor'),      # Can edit tasks, create subtasks
+        ('manager', 'Manager'),    # Can manage project settings, statuses, labels
+    ]
+
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='members')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='project_memberships')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='viewer')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['project', 'user']
+        ordering = ['project', 'user__name']
+
+    def __str__(self):
+        return f"{self.user.name} - {self.project.name} ({self.role})"
+
+
+def can_access_project(user, project, required_role='viewer'):
+    """
+    Check if user has access to a project with at least the required role.
+
+    Admins always have full access.
+    Role hierarchy: viewer < editor < manager
+    """
+    if user.is_admin:
+        return True
+
+    role_levels = {'viewer': 0, 'editor': 1, 'manager': 2}
+    required_level = role_levels.get(required_role, 0)
+
+    try:
+        membership = ProjectMember.objects.get(project=project, user=user)
+        user_level = role_levels.get(membership.role, 0)
+        return user_level >= required_level
+    except ProjectMember.DoesNotExist:
+        return False

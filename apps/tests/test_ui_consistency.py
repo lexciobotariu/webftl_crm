@@ -6,7 +6,7 @@ import pytest
 from django.urls import reverse
 from apps.accounts.factories import UserFactory, AdminUserFactory
 from apps.clients.factories import ClientFactory
-from apps.projects.factories import ProjectFactory
+from apps.projects.factories import ProjectFactory, ProjectMemberFactory
 
 
 @pytest.mark.django_db
@@ -81,6 +81,7 @@ class TestHTMXSupport:
     def test_project_board_htmx(self, client):
         user = UserFactory()
         project = ProjectFactory()
+        ProjectMemberFactory(project=project, user=user, role='viewer')
         client.force_login(user)
         response = client.get(
             reverse('project_board', args=[project.pk]),
@@ -94,6 +95,7 @@ class TestHTMXSupport:
     def test_task_create_htmx(self, client):
         user = UserFactory()
         project = ProjectFactory()
+        ProjectMemberFactory(project=project, user=user, role='editor')
         client.force_login(user)
         response = client.get(
             reverse('task_create', args=[project.pk]),

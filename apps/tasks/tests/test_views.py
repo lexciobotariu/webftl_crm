@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
 from apps.accounts.factories import UserFactory
 from apps.tasks.factories import TaskFactory, SubtaskFactory
-from apps.projects.factories import ProjectFactory
+from apps.projects.factories import ProjectFactory, ProjectMemberFactory
 
 
 @pytest.mark.django_db
@@ -33,9 +33,22 @@ class TestTaskCreate:
         response = client.get(reverse('task_create', args=[project.pk]))
         assert response.status_code == 302
 
+    def test_task_create_requires_editor_role(self, client):
+        """Viewers cannot create tasks."""
+        user = UserFactory()
+        project = ProjectFactory()
+        ProjectMemberFactory(project=project, user=user, role='viewer')
+        client.force_login(user)
+        response = client.post(
+            reverse('task_create', args=[project.pk]),
+            {'title': 'New Task', 'description': 'Description'}
+        )
+        assert response.status_code == 403
+
     def test_task_create_with_valid_data(self, client):
         user = UserFactory()
         project = ProjectFactory()
+        ProjectMemberFactory(project=project, user=user, role='editor')
         client.force_login(user)
         response = client.post(
             reverse('task_create', args=[project.pk]),
@@ -51,6 +64,7 @@ class TestTaskMove:
     def test_move_task_to_new_status(self, client):
         user = UserFactory()
         project = ProjectFactory()
+        ProjectMemberFactory(project=project, user=user, role='editor')
         status1 = project.statuses.first()
         status2 = project.statuses.last()
         task = TaskFactory(project=project, status=status1)
@@ -63,10 +77,26 @@ class TestTaskMove:
         task.refresh_from_db()
         assert task.status == status2
 
+    def test_move_task_requires_editor(self, client):
+        """Viewers cannot move tasks."""
+        user = UserFactory()
+        project = ProjectFactory()
+        ProjectMemberFactory(project=project, user=user, role='viewer')
+        status1 = project.statuses.first()
+        status2 = project.statuses.last()
+        task = TaskFactory(project=project, status=status1)
+        client.force_login(user)
+        response = client.post(
+            reverse('task_move'),
+            {'task_id': task.pk, 'status_id': status2.pk}
+        )
+        assert response.status_code == 403
+
     def test_move_task_invalid_status(self, client):
         user = UserFactory()
         project1 = ProjectFactory()
         project2 = ProjectFactory()
+        ProjectMemberFactory(project=project1, user=user, role='editor')
         task = TaskFactory(project=project1, status=project1.statuses.first())
         other_status = project2.statuses.first()
         client.force_login(user)
@@ -82,6 +112,7 @@ class TestSubtasks:
     def test_create_subtask(self, client):
         user = UserFactory()
         task = TaskFactory()
+        ProjectMemberFactory(project=task.project, user=user, role='editor')
         client.force_login(user)
         response = client.post(
             reverse('subtask_create', args=[task.pk]),
@@ -93,6 +124,7 @@ class TestSubtasks:
     def test_toggle_subtask(self, client):
         user = UserFactory()
         task = TaskFactory()
+        ProjectMemberFactory(project=task.project, user=user, role='editor')
         subtask = SubtaskFactory(task=task, completed=False)
         client.force_login(user)
         response = client.post(
@@ -105,6 +137,7 @@ class TestSubtasks:
     def test_delete_subtask(self, client):
         user = UserFactory()
         task = TaskFactory()
+        ProjectMemberFactory(project=task.project, user=user, role='editor')
         subtask = SubtaskFactory(task=task)
         client.force_login(user)
         response = client.post(
@@ -120,6 +153,7 @@ class TestAttachmentUpload:
     def test_upload_valid_file(self, client):
         user = UserFactory()
         task = TaskFactory()
+        ProjectMemberFactory(project=task.project, user=user, role='editor')
         file = SimpleUploadedFile('test.txt', b'file content', content_type='text/plain')
         client.force_login(user)
         response = client.post(
@@ -132,6 +166,7 @@ class TestAttachmentUpload:
     def test_upload_no_file(self, client):
         user = UserFactory()
         task = TaskFactory()
+        ProjectMemberFactory(project=task.project, user=user, role='editor')
         client.force_login(user)
         response = client.post(
             reverse('attachment_upload', args=[task.pk]),
@@ -139,12 +174,27 @@ class TestAttachmentUpload:
         )
         assert response.status_code == 400
 
+    def test_upload_requires_editor(self, client):
+        """Viewers cannot upload attachments."""
+        user = UserFactory()
+        task = TaskFactory()
+        ProjectMemberFactory(project=task.project, user=user, role='viewer')
+        file = SimpleUploadedFile('test.txt', b'file content', content_type='text/plain')
+        client.force_login(user)
+        response = client.post(
+            reverse('attachment_upload', args=[task.pk]),
+            {'file': file}
+        )
+        assert response.status_code == 403
+
 
 @pytest.mark.django_db
 class TestComments:
     def test_create_comment(self, client):
+        """Viewers can create comments."""
         user = UserFactory()
         task = TaskFactory()
+        ProjectMemberFactory(project=task.project, user=user, role='viewer')
         client.force_login(user)
         response = client.post(
             reverse('comment_create', args=[task.pk]),
@@ -156,9 +206,22 @@ class TestComments:
     def test_empty_comment_rejected(self, client):
         user = UserFactory()
         task = TaskFactory()
+        ProjectMemberFactory(project=task.project, user=user, role='viewer')
         client.force_login(user)
         response = client.post(
             reverse('comment_create', args=[task.pk]),
             {'content': '   '}
         )
         assert response.status_code == 400
+
+    def test_comment_requires_access(self, client):
+        """Users without project access cannot comment."""
+        user = UserFactory()
+        task = TaskFactory()
+        # No membership created
+        client.force_login(user)
+        response = client.post(
+            reverse('comment_create', args=[task.pk]),
+            {'content': 'This is a comment'}
+        )
+        assert response.status_code == 403

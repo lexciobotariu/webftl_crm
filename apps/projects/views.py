@@ -7,7 +7,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.views.decorators.http import require_POST
 
 from .forms import ProjectForm, StatusForm, LabelForm
-from .models import Project, Status
+from .models import Project, Status, can_access_project
 from apps.clients.models import Client
 from apps.tasks.models import Label
 
@@ -16,7 +16,15 @@ PROJECTS_PER_PAGE = 20
 
 @login_required
 def project_list(request):
-    projects_qs = Project.objects.select_related('client').all().order_by('name')
+    # Admins see all projects, others see only their memberships
+    if request.user.is_admin:
+        projects_qs = Project.objects.select_related('client').all()
+    else:
+        projects_qs = Project.objects.select_related('client').filter(
+            members__user=request.user
+        ).distinct()
+
+    projects_qs = projects_qs.order_by('name')
     client_filter = request.GET.get('client')
     if client_filter:
         projects_qs = projects_qs.filter(client_id=client_filter)
@@ -37,6 +45,9 @@ def project_list(request):
 
 @login_required
 def project_create(request):
+    if not request.user.is_admin:
+        return HttpResponseForbidden("Admin access required to create projects")
+
     initial = {}
     if request.GET.get('client'):
         initial['client'] = request.GET.get('client')
@@ -54,6 +65,9 @@ def project_create(request):
 @login_required
 def project_board(request, pk):
     project = get_object_or_404(Project, pk=pk)
+    if not can_access_project(request.user, project, 'viewer'):
+        return HttpResponseForbidden("You don't have access to this project")
+
     # Return just the board content for HTMX requests
     if request.htmx:
         return render(request, 'projects/partials/kanban_board.html', {'project': project})
@@ -63,6 +77,9 @@ def project_board(request, pk):
 @login_required
 def project_edit(request, pk):
     project = get_object_or_404(Project, pk=pk)
+    if not can_access_project(request.user, project, 'manager'):
+        return HttpResponseForbidden("Manager access required to edit projects")
+
     if request.method == 'POST':
         form = ProjectForm(request.POST, instance=project)
         if form.is_valid():
@@ -90,6 +107,9 @@ def project_delete(request, pk):
 @login_required
 def manage_statuses(request, pk):
     project = get_object_or_404(Project, pk=pk)
+    if not can_access_project(request.user, project, 'manager'):
+        return HttpResponseForbidden("Manager access required")
+
     if request.method == 'POST':
         form = StatusForm(request.POST)
         if form.is_valid():
@@ -105,6 +125,8 @@ def manage_statuses(request, pk):
 @require_POST
 def reorder_statuses(request, pk):
     project = get_object_or_404(Project, pk=pk)
+    if not can_access_project(request.user, project, 'manager'):
+        return HttpResponseForbidden("Manager access required")
 
     try:
         data = json.loads(request.body)
@@ -124,6 +146,9 @@ def reorder_statuses(request, pk):
 def project_settings(request, pk):
     """Unified project settings page with statuses and labels."""
     project = get_object_or_404(Project, pk=pk)
+    if not can_access_project(request.user, project, 'manager'):
+        return HttpResponseForbidden("Manager access required")
+
     status_form = StatusForm()
     label_form = LabelForm()
     return render(request, 'projects/project_settings.html', {
@@ -137,6 +162,9 @@ def project_settings(request, pk):
 @require_POST
 def label_create(request, pk):
     project = get_object_or_404(Project, pk=pk)
+    if not can_access_project(request.user, project, 'manager'):
+        return HttpResponseForbidden("Manager access required")
+
     form = LabelForm(request.POST)
     if form.is_valid():
         label = form.save(commit=False)
@@ -150,6 +178,9 @@ def label_create(request, pk):
 @require_POST
 def label_delete(request, pk, label_pk):
     project = get_object_or_404(Project, pk=pk)
+    if not can_access_project(request.user, project, 'manager'):
+        return HttpResponseForbidden("Manager access required")
+
     label = get_object_or_404(Label, pk=label_pk, project=project)
     label.delete()
     return HttpResponse('')
@@ -159,6 +190,9 @@ def label_delete(request, pk, label_pk):
 @require_POST
 def status_create(request, pk):
     project = get_object_or_404(Project, pk=pk)
+    if not can_access_project(request.user, project, 'manager'):
+        return HttpResponseForbidden("Manager access required")
+
     form = StatusForm(request.POST)
     if form.is_valid():
         status = form.save(commit=False)
@@ -173,6 +207,9 @@ def status_create(request, pk):
 @require_POST
 def status_delete(request, pk, status_pk):
     project = get_object_or_404(Project, pk=pk)
+    if not can_access_project(request.user, project, 'manager'):
+        return HttpResponseForbidden("Manager access required")
+
     status = get_object_or_404(Status, pk=status_pk, project=project)
 
     # Prevent deleting status with tasks
