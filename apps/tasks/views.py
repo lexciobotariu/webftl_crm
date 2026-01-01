@@ -6,6 +6,7 @@ from django.db import transaction
 from django.db.models import Max
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404, redirect
+from django.utils import timezone
 from django.utils.text import get_valid_filename
 from django.views.decorators.http import require_POST
 
@@ -36,12 +37,24 @@ def my_tasks(request):
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
 
+    # Get user's todos
+    from apps.todos.models import Todo
+    show_completed_todos = request.GET.get('show_completed_todos', '').lower() == 'true'
+    todos_qs = Todo.objects.filter(owner=request.user).select_related('client')
+    todo_count = todos_qs.filter(is_completed=False).count()
+    if not show_completed_todos:
+        todos_qs = todos_qs.filter(is_completed=False)
+
     return render(request, 'tasks/my_tasks.html', {
         'tasks': page_obj,
         'page_obj': page_obj,
         'total_count': paginator.count,
         'priority_filter': priority,
         'status_filter': status_filter,
+        'todos': todos_qs,
+        'show_completed': show_completed_todos,
+        'todo_count': todo_count,
+        'today': timezone.now().date(),
     })
 
 

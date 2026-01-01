@@ -53,6 +53,13 @@
                     {% include "clients/partials/projects_content.html" %}
                 </div>
             </div>
+
+            <!-- To-Dos Section -->
+            <div x-show="activeTab === 'todos'" x-cloak class="h-full">
+                <div id="todos-content">
+                    {% include "clients/partials/todos_content.html" %}
+                </div>
+            </div>
         </div>
 
         <!-- Right sidebar navigation -->
@@ -74,6 +81,15 @@
                             Projects
                         </span>
                         <span class="text-xs text-zinc-500 bg-panel px-1.5 py-0.5 rounded">{{ client.projects.count }}</span>
+                    </button>
+                    <button @click="activeTab = 'todos'"
+                            :class="activeTab === 'todos' ? 'bg-elevated text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50'"
+                            class="w-full flex items-center justify-between px-3 py-2 rounded-card text-sm transition-colors text-left">
+                        <span class="flex items-center gap-3">
+                            <i data-lucide="check-square" class="w-4 h-4"></i>
+                            To-Dos
+                        </span>
+                        <span class="text-xs text-zinc-500 bg-panel px-1.5 py-0.5 rounded">{{ todo_count }}</span>
                     </button>
                 </nav>
             </div>

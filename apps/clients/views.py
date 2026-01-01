@@ -2,6 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404, redirect
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .forms import ClientForm
@@ -63,7 +64,16 @@ def client_create_drawer(request):
 @login_required
 def client_detail(request, pk):
     client = get_object_or_404(Client, pk=pk)
-    return render(request, 'clients/client_detail.html', {'client': client})
+    from apps.todos.models import Todo
+    todos_qs = Todo.objects.filter(owner=request.user, client=client, is_completed=False).select_related('client')
+    todo_count = todos_qs.count()
+    return render(request, 'clients/client_detail.html', {
+        'client': client,
+        'todo_count': todo_count,
+        'todos': todos_qs,
+        'show_completed': False,
+        'today': timezone.now().date(),
+    })
 
 
 @login_required
