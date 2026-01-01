@@ -1,107 +1,79 @@
-{% load i18n %}
-
-<!-- Drawer Overlay -->
-<div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity z-40"
-     onclick="document.getElementById('drawer-container').innerHTML = ''"></div>
-
-<!-- Drawer Panel -->
-<div class="fixed inset-y-0 right-0 max-w-2xl w-full bg-white shadow-xl z-50 overflow-hidden flex flex-col">
+<div class="flex flex-col h-full">
     <!-- Header -->
-    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-        <div class="flex items-start justify-between">
-            <h2 class="text-xl font-semibold text-gray-900">
-                {% if parent_type == 'client' %}
-                    {% trans "New Client Note" %}
-                {% else %}
-                    {% trans "New Project Note" %}
-                {% endif %}
-            </h2>
-            <button
-                onclick="document.getElementById('drawer-container').innerHTML = ''"
-                class="text-gray-400 hover:text-gray-500"
-            >
-                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
+    <div class="flex-shrink-0 px-4 py-3 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <h2 class="text-sm font-medium text-zinc-100">Create Note</h2>
+            </div>
+            <button onclick="document.getElementById('slide-over').classList.add('hidden')"
+                    class="text-zinc-400 hover:text-zinc-100">
+                <i data-lucide="x" class="w-4 h-4"></i>
             </button>
         </div>
     </div>
 
     <!-- Form -->
-    <form
-        {% if parent_type == 'client' %}
-            hx-post="{% url 'client_note_create_drawer' parent_pk %}"
-        {% else %}
-            hx-post="{% url 'project_note_create_drawer' parent_pk %}"
-        {% endif %}
-        hx-target="#notes-list-container"
-        hx-swap="outerHTML"
-        class="flex-1 overflow-y-auto flex flex-col"
-    >
+    <form hx-post="{% url parent_type|add:'_note_create_drawer' parent.pk %}"
+          hx-target="#notes-list"
+          hx-swap="innerHTML"
+          class="flex-1 flex flex-col overflow-hidden">
         {% csrf_token %}
 
-        <div class="flex-1 px-6 py-6 space-y-6">
-            <!-- Title Field -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-4">
+            <!-- Title -->
             <div>
-                <label for="id_title" class="block text-sm font-medium text-gray-700 mb-1">
-                    {% trans "Title" %} <span class="text-red-500">*</span>
+                <label for="title" class="text-xs text-zinc-500 uppercase tracking-wide mb-2 block">
+                    Title <span class="text-red-400">*</span>
                 </label>
-                {{ form.title }}
-                {% if form.title.errors %}
-                    <p class="mt-1 text-sm text-red-600">{{ form.title.errors.0 }}</p>
-                {% endif %}
+                <input type="text"
+                       id="title"
+                       name="title"
+                       required
+                       class="w-full px-3 py-2 bg-elevated border border-border-subtle rounded-card text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                       placeholder="Enter note title">
             </div>
 
-            <!-- Content Field -->
+            <!-- Description -->
             <div>
-                <label for="id_content" class="block text-sm font-medium text-gray-700 mb-1">
-                    {% trans "Content" %} <span class="text-red-500">*</span>
+                <label for="description" class="text-xs text-zinc-500 uppercase tracking-wide mb-2 block">
+                    Description
                 </label>
-                {{ form.content }}
-                {% if form.content.errors %}
-                    <p class="mt-1 text-sm text-red-600">{{ form.content.errors.0 }}</p>
-                {% endif %}
+                <textarea id="description"
+                          name="description"
+                          rows="8"
+                          class="w-full px-3 py-2 bg-elevated border border-border-subtle rounded-card text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+                          placeholder="Enter note description..."></textarea>
             </div>
 
-            <!-- Visibility Field -->
-            <div>
-                <label for="id_visibility" class="block text-sm font-medium text-gray-700 mb-1">
-                    {% trans "Visibility" %}
+            <!-- Privacy Toggle -->
+            <div class="flex items-center gap-3 p-3 bg-elevated/50 rounded-card border border-border-subtle">
+                <input type="checkbox"
+                       id="is_private"
+                       name="is_private"
+                       class="w-4 h-4 bg-elevated border-border-subtle rounded text-purple-600 focus:ring-2 focus:ring-purple-500">
+                <label for="is_private" class="text-sm text-zinc-300 flex items-center gap-2">
+                    <i data-lucide="lock" class="w-4 h-4"></i>
+                    Make this note private
+                    <span class="text-xs text-zinc-500">(Only you and admins can view)</span>
                 </label>
-                {{ form.visibility }}
-                {% if form.visibility.errors %}
-                    <p class="mt-1 text-sm text-red-600">{{ form.visibility.errors.0 }}</p>
-                {% endif %}
-                <p class="mt-1 text-xs text-gray-500">
-                    {% trans "Private: Only you | Internal: Team members | Public: Everyone" %}
-                </p>
             </div>
         </div>
 
         <!-- Footer Actions -->
-        <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-2">
-            <button
-                type="button"
-                onclick="document.getElementById('drawer-container').innerHTML = ''"
-                class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-            >
-                {% trans "Cancel" %}
-            </button>
-            <button
-                type="submit"
-                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-            >
-                {% trans "Create Note" %}
-            </button>
+        <div class="flex-shrink-0 px-4 py-3 border-t border-border-subtle bg-panel/80">
+            <div class="flex gap-3">
+                <button type="submit"
+                        class="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-card text-sm transition-colors">
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    Create Note
+                </button>
+                <button type="button"
+                        onclick="document.getElementById('slide-over').classList.add('hidden')"
+                        class="px-4 py-2 bg-elevated hover:bg-elevated/80 text-zinc-300 rounded-card text-sm transition-colors">
+                    Cancel
+                </button>
+            </div>
         </div>
     </form>
 </div>
-
-<script>
-    // Close drawer on successful form submission
-    document.body.addEventListener('htmx:afterSwap', function(event) {
-        if (event.detail.target.id === 'notes-list-container') {
-            document.getElementById('drawer-container').innerHTML = '';
-        }
-    });
-</script>
