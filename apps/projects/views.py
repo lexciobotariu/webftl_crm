@@ -6,12 +6,13 @@ from django.db import transaction
 from django.db.models import Max
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404, redirect
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .forms import ProjectForm, StatusForm, LabelForm
 from .models import Project, Status, can_access_project
 from apps.clients.models import Client
-from apps.tasks.models import Label
+from apps.tasks.models import Label, Task, TaskActivity
 
 PROJECTS_PER_PAGE = 20
 
@@ -62,6 +63,46 @@ def project_create(request):
     else:
         form = ProjectForm(initial=initial)
     return render(request, 'projects/project_form.html', {'form': form})
+
+
+@login_required
+def project_detail(request, pk):
+    """Project detail page with overview and tasks tabs."""
+    project = get_object_or_404(Project, pk=pk)
+    if not can_access_project(request.user, project, 'viewer'):
+        return HttpResponseForbidden("You don't have access to this project")
+
+    # Calculate stats
+    tasks = Task.objects.filter(project=project).select_related('status', 'assignee')
+    total_tasks = tasks.count()
+
+    # Get "Done" status for completed count
+    done_status = project.statuses.filter(name__iexact='done').first()
+    completed_tasks = tasks.filter(status=done_status).count() if done_status else 0
+
+    # In Progress status
+    in_progress_status = project.statuses.filter(name__iexact='in progress').first()
+    in_progress_tasks = tasks.filter(status=in_progress_status).count() if in_progress_status else 0
+
+    # Overdue tasks
+    today = timezone.now().date()
+    overdue_tasks = tasks.filter(due_date__lt=today).exclude(status=done_status).count() if done_status else tasks.filter(due_date__lt=today).count()
+
+    # Recent activity (last 5 across all project tasks)
+    recent_activities = TaskActivity.objects.filter(
+        task__project=project
+    ).select_related('user', 'task').order_by('-created_at')[:5]
+
+    return render(request, 'projects/project_detail.html', {
+        'project': project,
+        'tasks': tasks,
+        'total_tasks': total_tasks,
+        'completed_tasks': completed_tasks,
+        'in_progress_tasks': in_progress_tasks,
+        'overdue_tasks': overdue_tasks,
+        'recent_activities': recent_activities,
+        'now_date': today,
+    })
 
 
 @login_required

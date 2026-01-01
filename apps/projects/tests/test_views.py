@@ -168,3 +168,42 @@ class TestReorderStatuses:
         assert response.status_code == 204
         reordered = list(project.statuses.all())
         assert reordered[0].pk == new_order[0]
+
+
+@pytest.mark.django_db
+class TestProjectDetail:
+    def test_project_detail_requires_login(self, client):
+        project = ProjectFactory()
+        response = client.get(reverse('project_detail', args=[project.pk]))
+        assert response.status_code == 302
+
+    def test_project_detail_shows_project_info(self, client):
+        user = UserFactory()
+        project = ProjectFactory(name='Test Project', description='Test description')
+        ProjectMemberFactory(project=project, user=user, role='viewer')
+        client.force_login(user)
+        response = client.get(reverse('project_detail', args=[project.pk]))
+        assert response.status_code == 200
+        assert 'Test Project' in response.content.decode()
+
+    def test_project_detail_denied_without_membership(self, client):
+        user = UserFactory()
+        project = ProjectFactory()
+        client.force_login(user)
+        response = client.get(reverse('project_detail', args=[project.pk]))
+        assert response.status_code == 403
+
+    def test_project_detail_shows_task_count(self, client):
+        user = UserFactory()
+        project = ProjectFactory()
+        ProjectMemberFactory(project=project, user=user, role='viewer')
+        from apps.tasks.factories import TaskFactory
+        status = project.statuses.first()
+        TaskFactory(project=project, status=status)
+        TaskFactory(project=project, status=status)
+        client.force_login(user)
+        response = client.get(reverse('project_detail', args=[project.pk]))
+        assert response.status_code == 200
+        content = response.content.decode()
+        # Should show task count in stats
+        assert '2' in content
