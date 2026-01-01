@@ -10,6 +10,7 @@ urlpatterns = [
     path('clients/', include('apps.clients.urls')),
     path('projects/', include('apps.projects.urls')),
     path('tasks/', include('apps.tasks.urls')),
+    path('todos/', include('apps.todos.urls')),
     path('integrations/', include('apps.integrations.urls')),
 ]
 
