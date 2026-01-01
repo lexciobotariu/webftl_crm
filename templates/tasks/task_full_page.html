@@ -15,7 +15,10 @@
                 <span class="text-zinc-300 font-mono">{{ task.project.name|slice:":4"|upper }}-{{ task.pk }}</span>
             </div>
             <div class="flex items-center gap-1">
-                <button class="text-zinc-500 hover:text-zinc-300 p-1.5 hover:bg-elevated rounded-card" title="Copy link">
+                <button x-data="{ copied: false }"
+                        @click="navigator.clipboard.writeText(window.location.origin + '{% url 'task_full_page' task.project.pk task.pk %}'); copied = true; setTimeout(() => copied = false, 2000)"
+                        :title="copied ? 'Copied!' : 'Copy link'"
+                        class="text-zinc-500 hover:text-zinc-300 p-1.5 hover:bg-elevated rounded-card">
                     <i data-lucide="link" class="w-4 h-4"></i>
                 </button>
                 <button hx-post="{% url 'task_delete' task.pk %}"
