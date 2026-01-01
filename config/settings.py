@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'apps.clients',
     'apps.projects',
     'apps.tasks',
+    'apps.todos',
     'apps.integrations',
 ]
 
