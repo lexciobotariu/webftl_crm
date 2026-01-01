@@ -171,6 +171,29 @@ class TestReorderStatuses:
 
 
 @pytest.mark.django_db
+class TestProjectDetailTabs:
+    def test_project_detail_default_tab_is_overview(self, client):
+        """GET /projects/<pk>/detail/ should set active_tab to 'overview'"""
+        user = AdminUserFactory()
+        project = ProjectFactory()
+        client.force_login(user)
+
+        response = client.get(reverse('project_detail', args=[project.pk]))
+        assert response.status_code == 200
+        assert response.context['active_tab'] == 'overview'
+
+    def test_project_detail_tasks_tab(self, client):
+        """GET /projects/<pk>/detail/tasks/ should set active_tab to 'tasks'"""
+        user = AdminUserFactory()
+        project = ProjectFactory()
+        client.force_login(user)
+
+        response = client.get(reverse('project_detail_tasks', args=[project.pk]))
+        assert response.status_code == 200
+        assert response.context['active_tab'] == 'tasks'
+
+
+@pytest.mark.django_db
 class TestProjectDetail:
     def test_project_detail_requires_login(self, client):
         project = ProjectFactory()
