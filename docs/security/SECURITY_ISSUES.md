@@ -1,9 +1,9 @@
 # Security Issues Summary - WebFTL CRM
 
 **Last Updated:** 2026-01-01
-**Total Issues:** 15 (~~4 Critical~~ **0 Critical**, 3 High, 6 Medium, 2 Low)
+**Total Issues:** 15 (~~4 Critical~~ **0 Critical**, ~~3 High~~ **0 High**, ~~6 Medium~~ **0 Medium**, 2 Low)
 
-> **Status:** All 4 critical issues have been fixed. See commit `c4c5b90`.
+> **Status:** All critical, high, and medium priority issues have been fixed.
 
 ---
 
@@ -15,14 +15,14 @@
 | ~~CRITICAL~~ | ~~File upload no validation~~ | ~~tasks/views.py:206~~ | ~~RCE, XSS~~ | ✅ FIXED |
 | ~~CRITICAL~~ | ~~No client authorization~~ | ~~clients/views.py~~ | ~~Data exposure~~ | ✅ FIXED |
 | ~~CRITICAL~~ | ~~JSON parsing crash~~ | ~~projects/views.py:106~~ | ~~DoS~~ | ✅ FIXED |
-| HIGH | No project authorization | projects/views.py | Data exposure | Medium |
-| HIGH | No task authorization | tasks/views.py | Data exposure | Medium |
-| MEDIUM | Optional webhook secret | integrations/views.py:39 | Data injection | Low |
-| MEDIUM | Loose URL matching | integrations/views.py:53 | Wrong project update | Low |
-| MEDIUM | Status order race condition | projects/views.py:151 | Data corruption | Low |
-| MEDIUM | Task move race condition | tasks/views.py:124 | Lost updates | Low |
-| MEDIUM | Subtask order race condition | tasks/views.py:149 | Data corruption | Low |
-| MEDIUM | Direct POST without validation | clients/views.py:60 | Invalid data | Low |
+| ~~HIGH~~ | ~~No project authorization~~ | ~~projects/views.py~~ | ~~Data exposure~~ | ✅ FIXED |
+| ~~HIGH~~ | ~~No task authorization~~ | ~~tasks/views.py~~ | ~~Data exposure~~ | ✅ FIXED |
+| ~~MEDIUM~~ | ~~Optional webhook secret~~ | ~~integrations/views.py~~ | ~~Data injection~~ | ✅ FIXED |
+| ~~MEDIUM~~ | ~~Loose URL matching~~ | ~~integrations/views.py~~ | ~~Wrong project update~~ | ✅ FIXED |
+| ~~MEDIUM~~ | ~~Status order race condition~~ | ~~projects/views.py~~ | ~~Data corruption~~ | ✅ FIXED |
+| ~~MEDIUM~~ | ~~Task move race condition~~ | ~~tasks/views.py~~ | ~~Lost updates~~ | ✅ FIXED |
+| ~~MEDIUM~~ | ~~Subtask order race condition~~ | ~~tasks/views.py~~ | ~~Data corruption~~ | ✅ FIXED |
+| ~~MEDIUM~~ | ~~Direct POST without validation~~ | ~~clients/views.py~~ | ~~Invalid data~~ | ✅ FIXED (earlier) |
 | LOW | No rate limiting | accounts/views.py:58 | Abuse | Low |
 | LOW | Broad exception handling | accounts/views.py:22 | Hidden errors | Low |
 
@@ -197,146 +197,89 @@ def reorder_statuses(request, pk):
 
 ---
 
-## High Priority Issues
+## High Priority Issues (All Fixed)
 
-### 5. No Authorization on Project Operations
+### 5. ~~No Authorization on Project Operations~~ ✅ FIXED
 
-**Location:** `apps/projects/views.py:38-73`
+**Location:** `apps/projects/views.py`
 
-**Impact:**
-- Any user can view, edit, delete any project
-- Project settings (GitHub integration, labels) exposed
-- No multi-tenant isolation
+**Status:** Fixed - Implemented `ProjectMember` model with role-based access control (viewer/editor/manager).
 
-**Fix:** Implement ProjectMember model
-```python
-class ProjectMember(models.Model):
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='members')
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    role = models.CharField(max_length=20, choices=[
-        ('viewer', 'Viewer'),
-        ('editor', 'Editor'),
-        ('admin', 'Admin'),
-    ])
-
-    class Meta:
-        unique_together = ['project', 'user']
-
-# Helper function
-def can_access_project(user, project, required_role='viewer'):
-    if user.is_admin:
-        return True
-    try:
-        member = ProjectMember.objects.get(project=project, user=user)
-        roles = {'viewer': 0, 'editor': 1, 'admin': 2}
-        return roles.get(member.role, 0) >= roles.get(required_role, 0)
-    except ProjectMember.DoesNotExist:
-        return False
-```
+**Implementation:**
+- Created `ProjectMember` model with unique constraint on project+user
+- Added `can_access_project()` helper function with role hierarchy
+- Added authorization checks to all project views:
+  - `project_list`: Filters to user's memberships (admins see all)
+  - `project_board`: Requires viewer role
+  - `project_edit`, `manage_statuses`, `project_settings`: Requires manager role
+  - `project_create`, `project_delete`: Requires admin
 
 ---
 
-### 6. No Authorization on Task Operations
+### 6. ~~No Authorization on Task Operations~~ ✅ FIXED
 
-**Location:** `apps/tasks/views.py` (multiple views)
+**Location:** `apps/tasks/views.py`
 
-**Impact:**
-- Any user can edit/delete any task across all projects
-- Task assignments can be changed by anyone
-- Comments and attachments accessible to all
+**Status:** Fixed - All task views now require project membership with appropriate role.
 
-**Fix:** Add project membership check to all task views
-```python
-def task_edit(request, pk):
-    task = get_object_or_404(Task, pk=pk)
-    if not can_access_project(request.user, task.project, required_role='editor'):
-        return HttpResponseForbidden("Access denied")
-    # ... existing code
-```
+**Implementation:**
+- `task_detail`, `task_full_page`, `comment_create`: Requires viewer role
+- `task_create`, `task_edit`, `task_delete`, `task_move`, subtask operations, attachment upload, property updates: Requires editor role
 
 ---
 
-## Medium Priority Issues
+## Medium Priority Issues (All Fixed)
 
-### 7. Optional Webhook Secret
+### 7. ~~Optional Webhook Secret~~ ✅ FIXED
 
-**Location:** `apps/integrations/views.py:39-42`
+**Location:** `apps/integrations/views.py`
 
-**Impact:** Without secret configured, anyone can send fake GitHub webhooks
+**Status:** Fixed - Webhook secret is now required in production (non-DEBUG mode).
 
-**Fix:**
-```python
-webhook_secret = getattr(settings, 'GITHUB_WEBHOOK_SECRET', '')
-
-if not webhook_secret:
-    if not settings.DEBUG:
-        return HttpResponse('Webhook secret not configured', status=500)
-elif not verify_signature(request.body, signature, webhook_secret):
-    return HttpResponse('Invalid signature', status=401)
-```
+**Implementation:**
+- In DEBUG mode, webhook secret check is skipped for development
+- In production, returns 500 error if secret is not configured
+- Valid signature required when secret is configured
 
 ---
 
-### 8. Loose Repository URL Matching
+### 8. ~~Loose Repository URL Matching~~ ✅ FIXED
 
-**Location:** `apps/integrations/views.py:53-59`
+**Location:** `apps/integrations/views.py`
 
-**Impact:** `acme/app` matches `acme/app-admin` due to `icontains`
+**Status:** Fixed - Uses exact matching with URL normalization.
 
-**Fix:** Use exact matching after normalization
-```python
-def normalize_github_url(url):
-    return url.lower().rstrip('/').replace('https://github.com/', '').replace('http://github.com/', '')
-
-normalized_repo = normalize_github_url(repo_url)
-project = Project.objects.filter(
-    github_sync_enabled=True
-).annotate(
-    normalized_url=Lower(Replace(F('github_repo_url'), Value('https://github.com/'), Value('')))
-).filter(normalized_url=normalized_repo).first()
-```
+**Implementation:**
+- Added `normalize_github_url()` function that:
+  - Lowercases the URL
+  - Removes protocol prefix (http/https)
+  - Removes github.com prefix
+  - Removes .git suffix
+- Compares normalized URLs for exact match
 
 ---
 
-### 9-11. Race Conditions in Ordering
+### 9-11. ~~Race Conditions in Ordering~~ ✅ FIXED
 
 **Locations:**
-- Status creation: `apps/projects/views.py:151`
-- Subtask creation: `apps/tasks/views.py:149`
-- Task move: `apps/tasks/views.py:124`
+- `apps/projects/views.py:status_create`
+- `apps/tasks/views.py:subtask_create`
+- `apps/tasks/views.py:task_move`
 
-**Impact:** Concurrent requests get duplicate order values, causing UI sorting issues
+**Status:** Fixed - All ordering operations now use atomic transactions with row locking.
 
-**Fix:** Use `select_for_update()` or `Max()` aggregation
-```python
-from django.db.models import Max
-from django.db import transaction
-
-@transaction.atomic
-def status_create(request, pk):
-    project = Project.objects.select_for_update().get(pk=pk)
-    max_order = project.statuses.aggregate(Max('order'))['order__max'] or -1
-    status.order = max_order + 1
-    status.save()
-```
+**Implementation:**
+- Added `@transaction.atomic` decorator
+- Use `select_for_update()` on parent object
+- Use `Max()` aggregation to safely get next order value
 
 ---
 
-### 12. Direct POST Without Form Validation
+### 12. ~~Direct POST Without Form Validation~~ ✅ FIXED (earlier)
 
-**Location:** `apps/clients/views.py:60-76`
+**Location:** `apps/clients/views.py`
 
-**Impact:** Bypasses email format validation, allows malformed data
-
-**Fix:** Use ClientForm for all updates
-```python
-def client_edit_drawer(request, pk):
-    client = get_object_or_404(Client, pk=pk)
-    if request.method == 'POST':
-        form = ClientForm(request.POST, instance=client)
-        if form.is_valid():
-            form.save()
-```
+**Status:** Fixed in earlier commit - Client edit now uses ClientForm for validation.
 
 ---
 

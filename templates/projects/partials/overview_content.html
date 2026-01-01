@@ -1,0 +1,158 @@
+<!-- Project Information -->
+<div class="border border-border-subtle rounded-card overflow-hidden">
+    <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center gap-3">
+            <i data-lucide="info" class="w-4 h-4 text-zinc-500"></i>
+            <h2 class="text-sm font-medium text-zinc-100">Project Information</h2>
+        </div>
+    </div>
+    <div class="p-4">
+        <dl class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div class="md:col-span-2">
+                <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Description</dt>
+                <dd class="text-zinc-300">
+                    {% if project.description %}
+                    {{ project.description|linebreaks }}
+                    {% else %}
+                    <span class="text-zinc-600">No description provided</span>
+                    {% endif %}
+                </dd>
+            </div>
+            <div>
+                <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Client</dt>
+                <dd class="text-zinc-300">
+                    <a href="{% url 'client_detail' project.client.pk %}" class="hover:text-accent transition-colors">
+                        {{ project.client.name }}
+                    </a>
+                </dd>
+            </div>
+            <div>
+                <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Created</dt>
+                <dd class="text-zinc-300">{{ project.created_at|date:"M d, Y" }}</dd>
+            </div>
+            <div>
+                <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">GitHub Repository</dt>
+                <dd class="text-zinc-300">
+                    {% if project.github_repo_url %}
+                    <a href="{{ project.github_repo_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 hover:text-accent transition-colors">
+                        <i data-lucide="github" class="w-3.5 h-3.5"></i>
+                        {{ project.github_repo_url|truncatechars:40 }}
+                        <i data-lucide="external-link" class="w-3 h-3"></i>
+                    </a>
+                    {% else %}
+                    <span class="text-zinc-600">Not connected</span>
+                    {% endif %}
+                </dd>
+            </div>
+            <div>
+                <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">GitHub Sync</dt>
+                <dd class="text-zinc-300">
+                    {% if project.github_sync_enabled %}
+                    <span class="inline-flex items-center gap-1.5 text-green-400">
+                        <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                        Enabled
+                    </span>
+                    {% else %}
+                    <span class="text-zinc-600">Disabled</span>
+                    {% endif %}
+                </dd>
+            </div>
+        </dl>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="border border-border-subtle rounded-card p-4 bg-panel/50">
+        <div class="flex items-center gap-3 mb-2">
+            <div class="p-2 rounded-card bg-blue-500/10">
+                <i data-lucide="list-todo" class="w-4 h-4 text-blue-400"></i>
+            </div>
+        </div>
+        <div class="text-2xl font-semibold text-zinc-100">{{ total_tasks }}</div>
+        <div class="text-xs text-zinc-500 uppercase tracking-wide">Total Tasks</div>
+    </div>
+
+    <div class="border border-border-subtle rounded-card p-4 bg-panel/50">
+        <div class="flex items-center gap-3 mb-2">
+            <div class="p-2 rounded-card bg-green-500/10">
+                <i data-lucide="check-circle" class="w-4 h-4 text-green-400"></i>
+            </div>
+        </div>
+        <div class="text-2xl font-semibold text-zinc-100">{{ completed_tasks }}</div>
+        <div class="text-xs text-zinc-500 uppercase tracking-wide">Completed</div>
+    </div>
+
+    <div class="border border-border-subtle rounded-card p-4 bg-panel/50">
+        <div class="flex items-center gap-3 mb-2">
+            <div class="p-2 rounded-card bg-yellow-500/10">
+                <i data-lucide="loader" class="w-4 h-4 text-yellow-400"></i>
+            </div>
+        </div>
+        <div class="text-2xl font-semibold text-zinc-100">{{ in_progress_tasks }}</div>
+        <div class="text-xs text-zinc-500 uppercase tracking-wide">In Progress</div>
+    </div>
+
+    <div class="border border-border-subtle rounded-card p-4 bg-panel/50">
+        <div class="flex items-center gap-3 mb-2">
+            <div class="p-2 rounded-card bg-red-500/10">
+                <i data-lucide="alert-circle" class="w-4 h-4 text-red-400"></i>
+            </div>
+        </div>
+        <div class="text-2xl font-semibold text-zinc-100">{{ overdue_tasks }}</div>
+        <div class="text-xs text-zinc-500 uppercase tracking-wide">Overdue</div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="border border-border-subtle rounded-card overflow-hidden">
+    <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center gap-3">
+            <i data-lucide="activity" class="w-4 h-4 text-zinc-500"></i>
+            <h2 class="text-sm font-medium text-zinc-100">Recent Activity</h2>
+        </div>
+    </div>
+    <div class="divide-y divide-border-subtle">
+        {% if recent_activities %}
+            {% for activity in recent_activities %}
+            <div class="px-4 py-3 hover:bg-elevated/30 transition-colors">
+                <div class="flex items-start gap-3">
+                    <div class="flex-shrink-0 mt-0.5">
+                        {% if activity.activity_type == 'comment' %}
+                        <i data-lucide="message-square" class="w-4 h-4 text-blue-400"></i>
+                        {% elif activity.activity_type == 'status_change' %}
+                        <i data-lucide="arrow-right-circle" class="w-4 h-4 text-purple-400"></i>
+                        {% elif activity.activity_type == 'created' %}
+                        <i data-lucide="plus-circle" class="w-4 h-4 text-green-400"></i>
+                        {% elif activity.activity_type == 'assignee_change' %}
+                        <i data-lucide="user-check" class="w-4 h-4 text-yellow-400"></i>
+                        {% else %}
+                        <i data-lucide="edit" class="w-4 h-4 text-zinc-400"></i>
+                        {% endif %}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm text-zinc-300">{{ activity.user.name|default:"System" }}</span>
+                            <span class="text-xs text-zinc-600">{{ activity.get_activity_type_display }}</span>
+                        </div>
+                        <div class="text-sm text-zinc-400 truncate">
+                            on <a href="{% url 'task_full_page' activity.task.project.pk activity.task.pk %}" class="text-zinc-300 hover:text-accent transition-colors">{{ activity.task.title }}</a>
+                        </div>
+                        {% if activity.content %}
+                        <div class="text-xs text-zinc-500 mt-1 truncate">{{ activity.content|truncatechars:100 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="flex-shrink-0 text-xs text-zinc-600">
+                        {{ activity.created_at|timesince }} ago
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="flex flex-col items-center justify-center py-8 text-zinc-500">
+            <i data-lucide="activity" class="w-8 h-8 mb-2 opacity-30"></i>
+            <p class="text-sm">No recent activity</p>
+        </div>
+        {% endif %}
+    </div>
+</div>

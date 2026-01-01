@@ -60,34 +60,38 @@ class TestGitHubWebhook:
         assert response.status_code == 200
 
     def test_webhook_rejects_invalid_json(self, client):
-        response = client.post(
-            reverse('github_webhook'),
-            'not json',
-            content_type='application/json',
-            HTTP_X_GITHUB_EVENT='push'
-        )
+        # Use DEBUG=True to skip webhook secret requirement for this test
+        with override_settings(DEBUG=True):
+            response = client.post(
+                reverse('github_webhook'),
+                'not json',
+                content_type='application/json',
+                HTTP_X_GITHUB_EVENT='push'
+            )
         assert response.status_code == 400
 
     def test_webhook_requires_repository_url(self, client):
         payload = json.dumps({'repository': {}}).encode()
-        response = client.post(
-            reverse('github_webhook'),
-            payload,
-            content_type='application/json',
-            HTTP_X_GITHUB_EVENT='push'
-        )
+        with override_settings(DEBUG=True):
+            response = client.post(
+                reverse('github_webhook'),
+                payload,
+                content_type='application/json',
+                HTTP_X_GITHUB_EVENT='push'
+            )
         assert response.status_code == 400
 
     def test_webhook_404_for_unknown_repo(self, client):
         payload = json.dumps({
             'repository': {'html_url': 'https://github.com/unknown/repo'}
         }).encode()
-        response = client.post(
-            reverse('github_webhook'),
-            payload,
-            content_type='application/json',
-            HTTP_X_GITHUB_EVENT='push'
-        )
+        with override_settings(DEBUG=True):
+            response = client.post(
+                reverse('github_webhook'),
+                payload,
+                content_type='application/json',
+                HTTP_X_GITHUB_EVENT='push'
+            )
         assert response.status_code == 404
 
     def test_webhook_404_for_disabled_sync(self, client):
@@ -98,13 +102,26 @@ class TestGitHubWebhook:
         payload = json.dumps({
             'repository': {'html_url': 'https://github.com/test/repo'}
         }).encode()
-        response = client.post(
-            reverse('github_webhook'),
-            payload,
-            content_type='application/json',
-            HTTP_X_GITHUB_EVENT='push'
-        )
+        with override_settings(DEBUG=True):
+            response = client.post(
+                reverse('github_webhook'),
+                payload,
+                content_type='application/json',
+                HTTP_X_GITHUB_EVENT='push'
+            )
         assert response.status_code == 404
+
+    def test_webhook_requires_secret_in_production(self, client):
+        """In production (DEBUG=False), webhook secret must be configured."""
+        with override_settings(DEBUG=False, GITHUB_WEBHOOK_SECRET=''):
+            response = client.post(
+                reverse('github_webhook'),
+                '{}',
+                content_type='application/json',
+                HTTP_X_GITHUB_EVENT='push'
+            )
+        assert response.status_code == 500
+        assert 'secret not configured' in response.content.decode().lower()
 
 
 @pytest.mark.django_db

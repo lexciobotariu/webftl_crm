@@ -1,0 +1,37 @@
+{% load static %}
+
+<!-- Todo List Table -->
+<div id="todo-list">
+    {% if todos %}
+    <table class="w-full">
+        <thead class="sticky top-0 bg-panel border-b border-border-subtle">
+            <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
+                <th class="px-4 py-3 font-medium w-8"></th>
+                <th class="px-4 py-3 font-medium">Title</th>
+                <th class="px-4 py-3 font-medium">Client</th>
+                <th class="px-4 py-3 font-medium">Due Date</th>
+                <th class="px-4 py-3 font-medium">Status</th>
+                <th class="px-4 py-3 font-medium w-10"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-border-subtle">
+            {% for todo in todos %}
+                {% include 'todos/partials/todo_item.html' %}
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="flex flex-col items-center justify-center py-16 text-zinc-500">
+        <i data-lucide="check-square" class="w-12 h-12 mb-4 opacity-30"></i>
+        <p class="text-sm">No to-dos yet</p>
+        <p class="text-xs mt-1">Add your first to-do to get started</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    // Re-initialize Lucide icons for dynamic content
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+</script>

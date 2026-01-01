@@ -1,0 +1,5 @@
+{% for activity in task.activities.all %}
+{% include "tasks/partials/activity_item.html" %}
+{% empty %}
+<p class="text-sm text-zinc-500 py-3 pl-8">No activity yet.</p>
+{% endfor %}

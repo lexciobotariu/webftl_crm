@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} - WebFTL CRM{% endblock %}
+
+{% block full_content %}
+<div class="flex flex-col h-full">
+    <!-- Compact header -->
+    <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="{% url 'project_list' %}" class="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors" title="Back to Projects">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                </a>
+                <i data-lucide="folder-kanban" class="w-4 h-4 text-zinc-500"></i>
+                <h1 class="text-sm font-medium text-zinc-100" id="project-name">{{ project.name }}</h1>
+                <span class="text-xs text-zinc-500">{{ project.client.name }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="{% url 'project_board' project.pk %}"
+                   class="inline-flex items-center gap-1.5 bg-accent text-white px-3 py-1.5 rounded-card text-xs font-medium hover:bg-accent-hover transition-colors">
+                    <i data-lucide="kanban" class="w-3.5 h-3.5"></i>
+                    Open Board
+                </a>
+                <a href="{% url 'project_edit' project.pk %}"
+                   class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-300 hover:bg-hover transition-colors">
+                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                    Edit
+                </a>
+                <a href="{% url 'project_settings' project.pk %}"
+                   class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
+                    <i data-lucide="settings" class="w-3.5 h-3.5"></i>
+                    Settings
+                </a>
+                {% if request.user.is_admin %}
+                <button hx-post="{% url 'project_delete' project.pk %}"
+                        hx-confirm="Delete {{ project.name|escapejs }}? This will also delete all tasks."
+                        hx-target="body"
+                        class="inline-flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 text-red-300 px-3 py-1.5 rounded-card text-xs hover:bg-red-500/20 transition-colors">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    Delete
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Main content with right sidebar -->
+    <div class="flex-1 flex overflow-hidden">
+        <!-- Main content area -->
+        <div class="flex-1 overflow-y-auto p-6 pb-12">
+            {% if active_tab == 'overview' %}
+            <!-- Overview Section -->
+            <div class="space-y-6 pb-6" id="overview-content">
+                {% include "projects/partials/overview_content.html" %}
+            </div>
+            {% elif active_tab == 'tasks' %}
+            <!-- Tasks Section -->
+            <div class="pb-6" id="tasks-content">
+                {% include "projects/partials/tasks_content.html" %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right sidebar navigation -->
+        <div class="w-56 flex-shrink-0 border-l border-border-subtle bg-panel/50 overflow-hidden">
+            <div class="p-3">
+                <div class="text-[10px] uppercase tracking-wider text-zinc-600 px-2 mb-2">Navigation</div>
+                <nav class="space-y-1">
+                    <a href="{% url 'project_detail' project.pk %}"
+                       class="w-full flex items-center gap-3 px-3 py-2 rounded-card text-sm transition-colors text-left {% if active_tab == 'overview' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
+                        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                        Overview
+                    </a>
+                    <a href="{% url 'project_detail_tasks' project.pk %}"
+                       class="w-full flex items-center justify-between px-3 py-2 rounded-card text-sm transition-colors text-left {% if active_tab == 'tasks' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
+                        <span class="flex items-center gap-3">
+                            <i data-lucide="check-square" class="w-4 h-4"></i>
+                            Tasks
+                        </span>
+                        <span class="text-xs text-zinc-500 bg-panel px-1.5 py-0.5 rounded">{{ total_tasks }}</span>
+                    </a>
+                </nav>
+
+                <!-- Coming Soon placeholders -->
+                <div class="text-[10px] uppercase tracking-wider text-zinc-600 px-2 mb-2 mt-6">Coming Soon</div>
+                <nav class="space-y-1">
+                    <div class="w-full flex items-center gap-3 px-3 py-2 rounded-card text-sm text-zinc-600 cursor-not-allowed">
+                        <i data-lucide="users" class="w-4 h-4"></i>
+                        Team
+                    </div>
+                    <div class="w-full flex items-center gap-3 px-3 py-2 rounded-card text-sm text-zinc-600 cursor-not-allowed">
+                        <i data-lucide="file-text" class="w-4 h-4"></i>
+                        Documents
+                    </div>
+                    <div class="w-full flex items-center gap-3 px-3 py-2 rounded-card text-sm text-zinc-600 cursor-not-allowed">
+                        <i data-lucide="clock" class="w-4 h-4"></i>
+                        Time Tracking
+                    </div>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

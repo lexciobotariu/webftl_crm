@@ -10,49 +10,83 @@
             <div class="flex items-center gap-3">
                 <i data-lucide="check-square" class="w-4 h-4 text-zinc-500"></i>
                 <h1 class="text-sm font-medium text-zinc-100">My Tasks</h1>
-                <span class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ total_count }}</span>
-                <!-- Priority filter -->
-                <select onchange="window.location.href='?priority=' + this.value"
-                        class="ml-4 bg-elevated border border-border-subtle rounded px-2 py-1 text-xs text-zinc-400 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
-                    <option value="">All Priorities</option>
-                    <option value="urgent" {% if priority_filter == "urgent" %}selected{% endif %}>Urgent</option>
-                    <option value="high" {% if priority_filter == "high" %}selected{% endif %}>High</option>
-                    <option value="medium" {% if priority_filter == "medium" %}selected{% endif %}>Medium</option>
-                    <option value="low" {% if priority_filter == "low" %}selected{% endif %}>Low</option>
-                </select>
+                <a href="{% url 'my_tasks' %}"
+                   class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-card text-xs font-medium transition-colors {% if active_tab == 'tasks' %}bg-accent text-white{% else %}bg-elevated border border-border-subtle text-zinc-400 hover:text-zinc-200 hover:bg-hover{% endif %}">
+                    Assigned Tasks
+                    <span class="{% if active_tab == 'tasks' %}bg-white/20{% else %}bg-elevated{% endif %} text-xs px-1.5 py-0.5 rounded">{{ total_count }}</span>
+                </a>
+                <a href="{% url 'my_tasks_todos' %}"
+                   class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-card text-xs font-medium transition-colors {% if active_tab == 'todos' %}bg-accent text-white{% else %}bg-elevated border border-border-subtle text-zinc-400 hover:text-zinc-200 hover:bg-hover{% endif %}">
+                    To-Dos
+                    <span class="{% if active_tab == 'todos' %}bg-white/20{% else %}bg-elevated{% endif %} text-xs px-1.5 py-0.5 rounded">{{ todo_count }}</span>
+                </a>
             </div>
         </div>
     </div>
 
-    <!-- Table content -->
-    <div class="flex-1 overflow-auto">
-        {% if tasks %}
-        <table class="w-full">
-            <thead class="sticky top-0 bg-panel border-b border-border-subtle">
-                <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
-                    <th class="px-4 py-3 font-medium">Task</th>
-                    <th class="px-4 py-3 font-medium">Project</th>
-                    <th class="px-4 py-3 font-medium">Status</th>
-                    <th class="px-4 py-3 font-medium">Priority</th>
-                    <th class="px-4 py-3 font-medium">Due</th>
-                    <th class="px-4 py-3 font-medium w-10">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="my-tasks-list" class="divide-y divide-border-subtle">
-                {% for task in tasks %}
-                {% include "tasks/partials/my_task_row.html" %}
-                {% endfor %}
-            </tbody>
-        </table>
+    <!-- Content -->
+    <div class="flex-1 overflow-hidden">
+        {% if active_tab == 'tasks' %}
+        <!-- Assigned Tasks Tab -->
+        <div class="h-full flex flex-col">
+            <!-- Filters -->
+            <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/40">
+                <div class="flex items-center gap-4">
+                    <select onchange="window.location.href='?priority=' + this.value"
+                            class="bg-elevated border border-border-subtle rounded px-2 py-1 text-xs text-zinc-400 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                        <option value="">All Priorities</option>
+                        <option value="urgent" {% if priority_filter == "urgent" %}selected{% endif %}>Urgent</option>
+                        <option value="high" {% if priority_filter == "high" %}selected{% endif %}>High</option>
+                        <option value="medium" {% if priority_filter == "medium" %}selected{% endif %}>Medium</option>
+                        <option value="low" {% if priority_filter == "low" %}selected{% endif %}>Low</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Table content -->
+            <div class="flex-1 overflow-auto">
+                {% if tasks %}
+                <table class="w-full">
+                    <thead class="sticky top-0 bg-panel border-b border-border-subtle">
+                        <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
+                            <th class="px-4 py-3 font-medium">Task</th>
+                            <th class="px-4 py-3 font-medium">Project</th>
+                            <th class="px-4 py-3 font-medium">Status</th>
+                            <th class="px-4 py-3 font-medium">Priority</th>
+                            <th class="px-4 py-3 font-medium">Due</th>
+                            <th class="px-4 py-3 font-medium w-10">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="my-tasks-list" class="divide-y divide-border-subtle">
+                        {% for task in tasks %}
+                        {% include "tasks/partials/my_task_row.html" %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="flex flex-col items-center justify-center py-16 text-zinc-500">
+                    <i data-lucide="check-square" class="w-12 h-12 mb-4 opacity-30"></i>
+                    <p class="mb-2">No tasks assigned to you yet</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Pagination -->
+            <div class="flex-shrink-0">
+                {% include "components/pagination.html" %}
+            </div>
+        </div>
         {% else %}
-        <div class="flex flex-col items-center justify-center py-16 text-zinc-500">
-            <i data-lucide="check-square" class="w-12 h-12 mb-4 opacity-30"></i>
-            <p class="mb-2">No tasks assigned to you yet</p>
+        <!-- To-Dos Tab -->
+        <div class="h-full">
+            {% include 'todos/partials/todos_section.html' %}
         </div>
         {% endif %}
     </div>
-
-    <!-- Pagination -->
-    {% include "components/pagination.html" %}
 </div>
+
+<script>
+    // Initialize today's date for comparison
+    window.today = new Date().toISOString().split('T')[0];
+</script>
 {% endblock %}

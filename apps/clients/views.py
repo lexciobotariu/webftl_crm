@@ -2,6 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404, redirect
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .forms import ClientForm
@@ -41,9 +42,49 @@ def client_create(request):
 
 
 @login_required
+def client_create_drawer(request):
+    """Create client via drawer (HTMX)."""
+    if not request.user.is_admin:
+        return HttpResponseForbidden("Admin access required to create clients")
+
+    if request.method == 'POST':
+        form = ClientForm(request.POST)
+        if form.is_valid():
+            client = form.save()
+            # Return the new client row and close drawer
+            response = render(request, 'clients/partials/client_row.html', {'client': client})
+            response['HX-Trigger'] = 'closeSlideOver'
+            return response
+        # If form invalid, re-render drawer with errors
+        return render(request, 'clients/partials/create_drawer.html', {'form': form})
+
+    return render(request, 'clients/partials/create_drawer.html')
+
+
+@login_required
 def client_detail(request, pk):
     client = get_object_or_404(Client, pk=pk)
-    return render(request, 'clients/client_detail.html', {'client': client})
+
+    # Determine active tab from URL
+    url_name = request.resolver_match.url_name
+    if url_name == 'client_detail_todos':
+        active_tab = 'todos'
+    elif url_name == 'client_detail_projects':
+        active_tab = 'projects'
+    else:
+        active_tab = 'profile'
+
+    from apps.todos.models import Todo
+    todos_qs = Todo.objects.filter(owner=request.user, client=client, is_completed=False).select_related('client')
+    todo_count = todos_qs.count()
+    return render(request, 'clients/client_detail.html', {
+        'client': client,
+        'todo_count': todo_count,
+        'todos': todos_qs,
+        'show_completed': False,
+        'today': timezone.now().date(),
+        'active_tab': active_tab,
+    })
 
 
 @login_required

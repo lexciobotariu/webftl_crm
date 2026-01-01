@@ -1,6 +1,6 @@
 <tr class="hover:bg-elevated/50 transition-colors" id="project-{{ project.pk }}">
     <td class="px-4 py-3">
-        <a href="{% url 'project_board' project.pk %}" class="font-medium text-sm text-zinc-100 hover:text-accent transition-colors">
+        <a href="{% url 'project_detail' project.pk %}" class="font-medium text-sm text-zinc-100 hover:text-accent transition-colors">
             {{ project.name }}
         </a>
     </td>
