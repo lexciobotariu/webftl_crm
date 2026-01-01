@@ -10,7 +10,4 @@ urlpatterns = [
     path('<int:pk>/edit/', views.todo_edit, name='todo_edit'),
     path('<int:pk>/toggle/', views.todo_toggle, name='todo_toggle'),
     path('<int:pk>/delete/', views.todo_delete, name='todo_delete'),
-    # Client todos
-    path('clients/<int:pk>/', views.client_todo_list, name='client_todo_list'),
-    path('clients/<int:pk>/create/', views.client_todo_create, name='client_todo_create'),
 ]
