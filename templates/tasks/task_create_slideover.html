@@ -15,7 +15,7 @@
     </div>
 
     <form method="post" hx-post="{% url 'task_create' project.pk %}"
-          hx-target="#kanban-board" hx-swap="innerHTML"
+          hx-target="#kanban-board-content" hx-swap="innerHTML"
           class="space-y-5 mt-5">
         {% csrf_token %}
         {% if selected_status %}
