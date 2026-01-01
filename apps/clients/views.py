@@ -75,12 +75,19 @@ def client_detail(request, pk):
     active_tab = tab_mapping.get(url_name, 'profile')
 
     from apps.todos.models import Todo
+    from apps.notes.models import Note, can_view_note
     todos_qs = Todo.objects.filter(owner=request.user, client=client, is_completed=False).select_related('client')
     todo_count = todos_qs.count()
+
+    # Get notes count (only notes user can see)
+    notes_qs = client.note_objects.all()
+    notes_count = sum(1 for note in notes_qs if can_view_note(request.user, note))
+
     return render(request, 'clients/client_detail.html', {
         'client': client,
         'todo_count': todo_count,
         'todos': todos_qs,
+        'notes_count': notes_count,
         'show_completed': False,
         'today': timezone.now().date(),
         'active_tab': active_tab,

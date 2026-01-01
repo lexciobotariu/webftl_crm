@@ -100,9 +100,12 @@
                         <span class="text-xs text-zinc-500 bg-panel px-1.5 py-0.5 rounded">{{ todo_count }}</span>
                     </a>
                     <a href="{% url 'client_detail_notes' client.pk %}"
-                       class="w-full flex items-center gap-3 px-3 py-2 rounded-card text-sm transition-colors {% if active_tab == 'notes' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:bg-elevated/50{% endif %}">
-                        <i data-lucide="sticky-note" class="w-4 h-4"></i>
-                        Notes
+                       class="w-full flex items-center justify-between px-3 py-2 rounded-card text-sm transition-colors text-left {% if active_tab == 'notes' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
+                        <span class="flex items-center gap-3">
+                            <i data-lucide="sticky-note" class="w-4 h-4"></i>
+                            Notes
+                        </span>
+                        <span class="text-xs text-zinc-500 bg-panel px-1.5 py-0.5 rounded">{{ notes_count }}</span>
                     </a>
                 </nav>
             </div>
