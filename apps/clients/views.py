@@ -41,6 +41,26 @@ def client_create(request):
 
 
 @login_required
+def client_create_drawer(request):
+    """Create client via drawer (HTMX)."""
+    if not request.user.is_admin:
+        return HttpResponseForbidden("Admin access required to create clients")
+
+    if request.method == 'POST':
+        form = ClientForm(request.POST)
+        if form.is_valid():
+            client = form.save()
+            # Return the new client row and close drawer
+            response = render(request, 'clients/partials/client_row.html', {'client': client})
+            response['HX-Trigger'] = 'closeSlideOver'
+            return response
+        # If form invalid, re-render drawer with errors
+        return render(request, 'clients/partials/create_drawer.html', {'form': form})
+
+    return render(request, 'clients/partials/create_drawer.html')
+
+
+@login_required
 def client_detail(request, pk):
     client = get_object_or_404(Client, pk=pk)
     return render(request, 'clients/client_detail.html', {'client': client})
