@@ -177,6 +177,33 @@ class TestTaskMove:
         assert activity.user == user
 
 
+class TestTaskUpdateStatus:
+    @pytest.mark.django_db
+    def test_task_update_status_records_activity_with_user(self, client):
+        """Changing status via dropdown records activity with the user."""
+        from apps.tasks.models import TaskActivity
+
+        user = UserFactory()
+        project = ProjectFactory()
+        ProjectMemberFactory(project=project, user=user, role='editor')
+        status1 = StatusFactory(project=project, name='Backlog')
+        status2 = StatusFactory(project=project, name='In Progress')
+        task = TaskFactory(project=project, status=status1)
+        client.force_login(user)
+
+        # Clear existing activities
+        TaskActivity.objects.filter(task=task).delete()
+
+        response = client.post(
+            reverse('task_update_status', args=[task.pk]),
+            {'status_id': status2.pk}
+        )
+
+        activity = TaskActivity.objects.filter(task=task, activity_type='status_change').first()
+        assert activity is not None
+        assert activity.user == user
+
+
 @pytest.mark.django_db
 class TestSubtasks:
     def test_create_subtask(self, client):

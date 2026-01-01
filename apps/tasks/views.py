@@ -165,6 +165,7 @@ def task_update_status(request, pk):
     status_id = request.POST.get('status_id')
     status = get_object_or_404(Status, pk=status_id, project=task.project)
     task.status = status
+    task._changed_by = request.user
     task.save()
     response = render(request, 'tasks/partials/status_dropdown.html', {'task': task})
     response['HX-Trigger'] = 'taskStatusChanged'
