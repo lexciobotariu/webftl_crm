@@ -47,17 +47,17 @@
     <!-- Main content with right sidebar -->
     <div class="flex-1 flex overflow-hidden">
         <!-- Main content area -->
-        <div class="flex-1 overflow-y-auto p-6">
+        <div class="flex-1 overflow-y-auto p-6 pb-12">
             <!-- Overview Section -->
-            <div x-show="activeTab === 'overview'" x-cloak class="h-full">
-                <div class="space-y-6" id="overview-content">
+            <div x-show="activeTab === 'overview'" x-cloak>
+                <div class="space-y-6 pb-6" id="overview-content">
                     {% include "projects/partials/overview_content.html" %}
                 </div>
             </div>
 
             <!-- Tasks Section -->
-            <div x-show="activeTab === 'tasks'" x-cloak class="h-full">
-                <div id="tasks-content">
+            <div x-show="activeTab === 'tasks'" x-cloak>
+                <div class="pb-6" id="tasks-content">
                     {% include "projects/partials/tasks_content.html" %}
                 </div>
             </div>
