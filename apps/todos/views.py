@@ -34,10 +34,13 @@ def todo_list(request):
     if not show_completed:
         todos_qs = todos_qs.filter(is_completed=False)
 
-    return render(request, 'todos/partials/todos_section.html', {
+    todo_count = todos_qs.filter(is_completed=False).count()
+
+    return render(request, 'todos/partials/todos_section_inner.html', {
         'todos': todos_qs,
         'show_completed': show_completed,
         'today': timezone.now().date(),
+        'todo_count': todo_count,
     })
 
 
@@ -131,11 +134,14 @@ def client_todo_list(request, pk):
     if not show_completed:
         todos_qs = todos_qs.filter(is_completed=False)
 
-    return render(request, 'todos/partials/todos_section.html', {
+    todo_count = todos_qs.filter(is_completed=False).count()
+
+    return render(request, 'todos/partials/todos_section_inner.html', {
         'todos': todos_qs,
         'client': client,
         'show_completed': show_completed,
         'today': timezone.now().date(),
+        'todo_count': todo_count,
     })
 
 
