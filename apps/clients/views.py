@@ -64,6 +64,16 @@ def client_create_drawer(request):
 @login_required
 def client_detail(request, pk):
     client = get_object_or_404(Client, pk=pk)
+
+    # Determine active tab from URL
+    url_name = request.resolver_match.url_name
+    if url_name == 'client_detail_todos':
+        active_tab = 'todos'
+    elif url_name == 'client_detail_projects':
+        active_tab = 'projects'
+    else:
+        active_tab = 'profile'
+
     from apps.todos.models import Todo
     todos_qs = Todo.objects.filter(owner=request.user, client=client, is_completed=False).select_related('client')
     todo_count = todos_qs.count()
@@ -73,6 +83,7 @@ def client_detail(request, pk):
         'todos': todos_qs,
         'show_completed': False,
         'today': timezone.now().date(),
+        'active_tab': active_tab,
     })
 
 
