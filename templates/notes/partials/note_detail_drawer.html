@@ -12,7 +12,7 @@
             <div class="flex-1">
                 <h2 class="text-xl font-semibold text-gray-900">{{ note.title }}</h2>
                 <div class="flex items-center gap-3 mt-2 text-sm text-gray-500">
-                    <span>{{ note.created_by.get_full_name|default:note.created_by.email }}</span>
+                    <span>{{ note.created_by.name|default:note.created_by.email }}</span>
                     <span>•</span>
                     <span>{{ note.created_at|date:"M d, Y g:i A" }}</span>
                     {% if note.created_at != note.updated_at %}

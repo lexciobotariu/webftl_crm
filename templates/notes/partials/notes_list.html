@@ -40,13 +40,13 @@
                         {{ note.title }}
                     </td>
                     <td class="px-4 py-3 text-zinc-300">
-                        {{ note.created_by.get_full_name|default:note.created_by.username }}
+                        {{ note.created_by.name|default:note.created_by.email }}
                     </td>
                     <td class="px-4 py-3 text-zinc-400">
                         {{ note.updated_at|date:"M d, Y g:i A" }}
                     </td>
                     <td class="px-4 py-3 text-zinc-300">
-                        {{ note.modified_by.get_full_name|default:note.modified_by.username }}
+                        {{ note.modified_by.name|default:note.modified_by.email }}
                     </td>
                     <td class="px-4 py-3">
                         {% if note.is_private %}
