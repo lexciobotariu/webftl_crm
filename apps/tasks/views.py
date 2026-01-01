@@ -151,6 +151,7 @@ def task_move(request):
         return HttpResponseForbidden("Editor access required to move tasks")
     status = get_object_or_404(Status, pk=status_id, project=task.project)
     task.status = status
+    task._changed_by = request.user
     task.save()
     return HttpResponse(status=204)
 

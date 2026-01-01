@@ -152,6 +152,30 @@ class TestTaskMove:
         )
         assert response.status_code == 404
 
+    def test_task_move_records_activity_with_user(self, client):
+        """Moving a task (drag-drop) records activity with the user."""
+        from apps.tasks.models import TaskActivity
+
+        user = UserFactory()
+        project = ProjectFactory()
+        ProjectMemberFactory(project=project, user=user, role='editor')
+        status1 = StatusFactory(project=project, name='Backlog')
+        status2 = StatusFactory(project=project, name='Done')
+        task = TaskFactory(project=project, status=status1)
+        client.force_login(user)
+
+        # Clear existing activities
+        TaskActivity.objects.filter(task=task).delete()
+
+        response = client.post(
+            reverse('task_move'),
+            {'task_id': task.pk, 'status_id': status2.pk}
+        )
+
+        activity = TaskActivity.objects.filter(task=task, activity_type='status_change').first()
+        assert activity is not None
+        assert activity.user == user
+
 
 @pytest.mark.django_db
 class TestSubtasks:
