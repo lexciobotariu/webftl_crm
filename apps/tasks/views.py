@@ -64,6 +64,7 @@ def task_create(request, project_pk):
             task = form.save(commit=False)
             task.project = project
             task.status = status
+            task._changed_by = request.user
             task.save()
             form.save_m2m()
             if request.htmx:

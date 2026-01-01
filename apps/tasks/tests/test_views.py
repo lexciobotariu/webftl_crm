@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
 from apps.accounts.factories import UserFactory
 from apps.tasks.factories import TaskFactory, SubtaskFactory
-from apps.projects.factories import ProjectFactory, ProjectMemberFactory
+from apps.projects.factories import ProjectFactory, ProjectMemberFactory, StatusFactory
 
 
 @pytest.mark.django_db
@@ -57,6 +57,26 @@ class TestTaskCreate:
         assert response.status_code == 302
         from apps.tasks.models import Task
         assert Task.objects.filter(title='New Task').exists()
+
+    def test_task_create_records_activity_with_user(self, client):
+        """Creating a task records activity with the creating user."""
+        from apps.tasks.models import TaskActivity
+
+        user = UserFactory()
+        project = ProjectFactory()
+        ProjectMemberFactory(project=project, user=user, role='editor')
+        status = StatusFactory(project=project)
+        client.force_login(user)
+
+        response = client.post(
+            reverse('task_create', args=[project.pk]),
+            {'title': 'New Task', 'description': 'Test'}
+        )
+
+        task = project.tasks.first()
+        activity = TaskActivity.objects.filter(task=task, activity_type='created').first()
+        assert activity is not None
+        assert activity.user == user
 
 
 @pytest.mark.django_db
