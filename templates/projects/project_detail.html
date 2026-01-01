@@ -58,6 +58,15 @@
             <div class="pb-6" id="tasks-content">
                 {% include "projects/partials/tasks_content.html" %}
             </div>
+            {% elif active_tab == 'notes' %}
+            <div hx-get="{% url 'project_notes_list' project.pk %}"
+                 hx-trigger="load"
+                 hx-swap="innerHTML"
+                 class="h-full">
+                <div class="flex items-center justify-center h-full">
+                    <div class="text-zinc-500">Loading notes...</div>
+                </div>
+            </div>
             {% endif %}
         </div>
 
@@ -78,6 +87,11 @@
                             Tasks
                         </span>
                         <span class="text-xs text-zinc-500 bg-panel px-1.5 py-0.5 rounded">{{ total_tasks }}</span>
+                    </a>
+                    <a href="{% url 'project_detail_notes' project.pk %}"
+                       class="w-full flex items-center gap-3 px-3 py-2 rounded-card text-sm transition-colors {% if active_tab == 'notes' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:bg-elevated/50{% endif %}">
+                        <i data-lucide="sticky-note" class="w-4 h-4"></i>
+                        Notes
                     </a>
                 </nav>
 

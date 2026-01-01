@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'apps.projects',
     'apps.tasks',
     'apps.todos',
+    'apps.notes',
     'apps.integrations',
 ]
 

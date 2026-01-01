@@ -18,6 +18,7 @@ urlpatterns = [
     path('tasks/', include('apps.tasks.urls')),
     path('todos/', include('apps.todos.urls')),
     path('integrations/', include('apps.integrations.urls')),
+    path('notes/', include('apps.notes.urls')),
 ]
 
 if settings.DEBUG:

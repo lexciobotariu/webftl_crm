@@ -67,12 +67,12 @@ def client_detail(request, pk):
 
     # Determine active tab from URL
     url_name = request.resolver_match.url_name
-    if url_name == 'client_detail_todos':
-        active_tab = 'todos'
-    elif url_name == 'client_detail_projects':
-        active_tab = 'projects'
-    else:
-        active_tab = 'profile'
+    tab_mapping = {
+        'client_detail_todos': 'todos',
+        'client_detail_projects': 'projects',
+        'client_detail_notes': 'notes',
+    }
+    active_tab = tab_mapping.get(url_name, 'profile')
 
     from apps.todos.models import Todo
     todos_qs = Todo.objects.filter(owner=request.user, client=client, is_completed=False).select_related('client')

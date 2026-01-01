@@ -94,7 +94,12 @@ def project_detail(request, pk):
     ).select_related('user', 'task').order_by('-created_at')[:5]
 
     # Determine active tab based on URL
-    active_tab = 'tasks' if request.resolver_match.url_name == 'project_detail_tasks' else 'overview'
+    url_name = request.resolver_match.url_name
+    tab_mapping = {
+        'project_detail_tasks': 'tasks',
+        'project_detail_notes': 'notes',
+    }
+    active_tab = tab_mapping.get(url_name, 'overview')
 
     return render(request, 'projects/project_detail.html', {
         'project': project,
