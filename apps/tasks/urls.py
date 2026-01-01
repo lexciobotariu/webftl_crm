@@ -14,6 +14,7 @@ urlpatterns = [
     path('<int:pk>/subtasks/<int:subtask_pk>/toggle/', views.subtask_toggle, name='subtask_toggle'),
     path('<int:pk>/subtasks/<int:subtask_pk>/delete/', views.subtask_delete, name='subtask_delete'),
     path('<int:pk>/comments/', views.comment_create, name='comment_create'),
+    path('<int:pk>/activity/', views.task_activity_list, name='task_activity_list'),
     path('<int:pk>/attachments/', views.attachment_upload, name='attachment_upload'),
     # Full page task view
     path('project/<int:project_pk>/<int:task_pk>/', views.task_full_page, name='task_full_page'),

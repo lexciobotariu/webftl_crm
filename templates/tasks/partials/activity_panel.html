@@ -17,23 +17,23 @@
     </div>
 
     <!-- Timeline -->
-    <div id="activity-list-{{ task.pk }}" class="relative">
+    <div id="activity-list-{{ task.pk }}" class="relative"
+         hx-get="{% url 'task_activity_list' task.pk %}"
+         hx-trigger="activityUpdated from:body"
+         hx-target="#activity-items-{{ task.pk }}"
+         hx-swap="innerHTML">
         <!-- Vertical timeline line -->
         <div class="absolute left-[11px] top-2 bottom-2 w-px bg-border-subtle"></div>
 
         <!-- Activities (sorted by Alpine.js) -->
-        <div class="space-y-0" x-ref="activityList">
-            {% for activity in task.activities.all %}
-            {% include "tasks/partials/activity_item.html" %}
-            {% empty %}
-            <p class="text-sm text-zinc-500 py-3 pl-8">No activity yet.</p>
-            {% endfor %}
+        <div id="activity-items-{{ task.pk }}" class="space-y-0" x-ref="activityList">
+            {% include "tasks/partials/activity_list.html" %}
         </div>
     </div>
 
     <!-- Comment input (Plane.so style) -->
     <form hx-post="{% url 'comment_create' task.pk %}"
-          hx-target="#activity-list-{{ task.pk }} .space-y-0"
+          hx-target="#activity-items-{{ task.pk }}"
           hx-swap="beforeend"
           hx-on::after-request="if(event.detail.successful) this.reset()"
           class="mt-4 border border-border-subtle rounded-card overflow-hidden">

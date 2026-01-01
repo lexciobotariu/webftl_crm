@@ -168,7 +168,7 @@ def task_update_status(request, pk):
     task._changed_by = request.user
     task.save()
     response = render(request, 'tasks/partials/status_dropdown.html', {'task': task})
-    response['HX-Trigger'] = 'taskStatusChanged'
+    response['HX-Trigger'] = 'taskStatusChanged, activityUpdated'
     return response
 
 
@@ -241,6 +241,15 @@ def comment_create(request, pk):
 
 
 @login_required
+def task_activity_list(request, pk):
+    """Return just the activity list for a task (for HTMX refresh)."""
+    task = get_object_or_404(Task, pk=pk)
+    if not can_access_project(request.user, task.project, 'viewer'):
+        return HttpResponseForbidden("You don't have access to this task")
+    return render(request, 'tasks/partials/activity_list.html', {'task': task})
+
+
+@login_required
 @require_POST
 def attachment_upload(request, pk):
     task = get_object_or_404(Task, pk=pk)
@@ -304,9 +313,11 @@ def task_update_assignee(request, pk):
     task._changed_by = request.user
     task.save()
     team_members = User.objects.all()
-    return render(request, 'tasks/partials/assignee_dropdown.html', {
+    response = render(request, 'tasks/partials/assignee_dropdown.html', {
         'task': task, 'team_members': team_members
     })
+    response['HX-Trigger'] = 'activityUpdated'
+    return response
 
 
 @login_required
@@ -318,9 +329,11 @@ def task_update_priority(request, pk):
     task.priority = request.POST.get('priority') or ''
     task._changed_by = request.user
     task.save()
-    return render(request, 'tasks/partials/priority_dropdown.html', {
+    response = render(request, 'tasks/partials/priority_dropdown.html', {
         'task': task, 'priority_choices': Task.PRIORITY_CHOICES
     })
+    response['HX-Trigger'] = 'activityUpdated'
+    return response
 
 
 @login_required
@@ -333,7 +346,9 @@ def task_update_due_date(request, pk):
     task.due_date = due_date if due_date else None
     task._changed_by = request.user
     task.save()
-    return render(request, 'tasks/partials/due_date_picker.html', {'task': task})
+    response = render(request, 'tasks/partials/due_date_picker.html', {'task': task})
+    response['HX-Trigger'] = 'activityUpdated'
+    return response
 
 
 @login_required
