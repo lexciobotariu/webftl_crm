@@ -2,17 +2,21 @@
 
 <!-- Todos Section (toggle + list) -->
 <div id="todos-section"
-     class="flex flex-col h-full"
+     class="border border-border-subtle rounded-card overflow-hidden"
      hx-get="{% if client %}{% url 'client_todo_list' client.id %}{% else %}{% url 'todo_list' %}{% endif %}{% if show_completed %}?show_completed=true{% endif %}"
      hx-trigger="{% if client %}refreshClientTodos from:body{% else %}refreshPersonalTodos from:body{% endif %}"
      hx-target="#todos-section"
      hx-swap="outerHTML">
     <!-- Header with controls -->
-    <div class="flex-shrink-0 px-4 py-3 border-b border-border-subtle bg-panel/40">
+    <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
         <div class="flex items-center justify-between">
-            <h2 class="text-sm font-medium text-zinc-100">
-                {% if client %}{{ client.name }} To-Dos{% else %}Personal To-Dos{% endif %}
-            </h2>
+            <div class="flex items-center gap-3">
+                <i data-lucide="check-square" class="w-4 h-4 text-zinc-500"></i>
+                <h2 class="text-sm font-medium text-zinc-100">
+                    {% if client %}To-Dos{% else %}Personal To-Dos{% endif %}
+                </h2>
+                <span class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ todo_count|default:todos.count }}</span>
+            </div>
             <div class="flex items-center gap-3">
                 <!-- Show completed toggle -->
                 <button hx-get="{% if client %}{% url 'client_todo_list' client.id %}{% else %}{% url 'todo_list' %}{% endif %}?show_completed={{ show_completed|yesno:'false,true' }}"
@@ -36,9 +40,7 @@
     </div>
 
     <!-- Todo list -->
-    <div class="flex-1 overflow-auto">
-        {% include 'todos/partials/todo_list.html' %}
-    </div>
+    {% include 'todos/partials/todo_list.html' %}
 </div>
 
 <script>

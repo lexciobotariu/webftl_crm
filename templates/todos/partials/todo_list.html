@@ -1,33 +1,37 @@
 {% load static %}
 
 <!-- Todo List Table -->
-<div id="todo-list">
-    {% if todos %}
-    <table class="w-full">
-        <thead class="sticky top-0 bg-panel border-b border-border-subtle">
-            <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
-                <th class="px-4 py-3 font-medium w-8"></th>
-                <th class="px-4 py-3 font-medium">Title</th>
-                <th class="px-4 py-3 font-medium">Client</th>
-                <th class="px-4 py-3 font-medium">Due Date</th>
-                <th class="px-4 py-3 font-medium">Status</th>
-                <th class="px-4 py-3 font-medium w-10"></th>
-            </tr>
-        </thead>
-        <tbody class="divide-y divide-border-subtle">
-            {% for todo in todos %}
-                {% include 'todos/partials/todo_item.html' %}
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <div class="flex flex-col items-center justify-center py-16 text-zinc-500">
-        <i data-lucide="check-square" class="w-12 h-12 mb-4 opacity-30"></i>
-        <p class="text-sm">No to-dos yet</p>
-        <p class="text-xs mt-1">Add your first to-do to get started</p>
-    </div>
-    {% endif %}
+{% if todos %}
+<table class="w-full">
+    <thead class="bg-panel border-b border-border-subtle">
+        <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
+            <th class="px-4 py-2 font-medium w-8"></th>
+            <th class="px-4 py-2 font-medium">Title</th>
+            <th class="px-4 py-2 font-medium">Client</th>
+            <th class="px-4 py-2 font-medium">Due Date</th>
+            <th class="px-4 py-2 font-medium">Status</th>
+            <th class="px-4 py-2 font-medium w-10"></th>
+        </tr>
+    </thead>
+    <tbody class="divide-y divide-border-subtle">
+        {% for todo in todos %}
+            {% include 'todos/partials/todo_item.html' %}
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="flex flex-col items-center justify-center py-12 text-zinc-500">
+    <i data-lucide="check-square" class="w-10 h-10 mb-3 opacity-30"></i>
+    <p class="text-sm mb-2">No to-dos yet</p>
+    <button hx-get="{% if client %}{% url 'client_todo_create' client.id %}{% else %}{% url 'todo_create' %}{% endif %}"
+            hx-target="#slide-over"
+            hx-swap="innerHTML"
+            hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+            class="text-accent hover:text-accent-hover text-sm">
+        Create the first to-do
+    </button>
 </div>
+{% endif %}
 
 <script>
     // Re-initialize Lucide icons for dynamic content
