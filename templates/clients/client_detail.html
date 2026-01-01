@@ -3,7 +3,7 @@
 {% block title %}{{ client.name }} - WebFTL CRM{% endblock %}
 
 {% block full_content %}
-<div class="flex flex-col h-full" x-data="{ activeTab: 'profile' }">
+<div class="flex flex-col h-full">
     <!-- Compact header -->
     <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80">
         <div class="flex items-center justify-between">
@@ -40,26 +40,28 @@
     <div class="flex-1 flex overflow-hidden">
         <!-- Main content area -->
         <div class="flex-1 overflow-y-auto p-6">
+            {% if active_tab == 'profile' %}
             <!-- Profile Section -->
-            <div x-show="activeTab === 'profile'" x-cloak class="h-full">
+            <div class="h-full">
                 <div class="space-y-6" id="profile-content">
                     {% include "clients/partials/profile_content.html" %}
                 </div>
             </div>
-
+            {% elif active_tab == 'projects' %}
             <!-- Projects Section -->
-            <div x-show="activeTab === 'projects'" x-cloak class="h-full">
+            <div class="h-full">
                 <div id="projects-content">
                     {% include "clients/partials/projects_content.html" %}
                 </div>
             </div>
-
+            {% elif active_tab == 'todos' %}
             <!-- To-Dos Section -->
-            <div x-show="activeTab === 'todos'" x-cloak class="h-full">
+            <div class="h-full">
                 <div id="todos-content">
                     {% include "clients/partials/todos_content.html" %}
                 </div>
             </div>
+            {% endif %}
         </div>
 
         <!-- Right sidebar navigation -->
@@ -67,30 +69,27 @@
             <div class="p-3">
                 <div class="text-[10px] uppercase tracking-wider text-zinc-600 px-2 mb-2">Navigation</div>
                 <nav class="space-y-1">
-                    <button @click="activeTab = 'profile'"
-                            :class="activeTab === 'profile' ? 'bg-elevated text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50'"
-                            class="w-full flex items-center gap-3 px-3 py-2 rounded-card text-sm transition-colors text-left">
+                    <a href="{% url 'client_detail' client.pk %}"
+                       class="w-full flex items-center gap-3 px-3 py-2 rounded-card text-sm transition-colors text-left {% if active_tab == 'profile' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
                         <i data-lucide="user" class="w-4 h-4"></i>
                         Profile
-                    </button>
-                    <button @click="activeTab = 'projects'"
-                            :class="activeTab === 'projects' ? 'bg-elevated text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50'"
-                            class="w-full flex items-center justify-between px-3 py-2 rounded-card text-sm transition-colors text-left">
+                    </a>
+                    <a href="{% url 'client_detail_projects' client.pk %}"
+                       class="w-full flex items-center justify-between px-3 py-2 rounded-card text-sm transition-colors text-left {% if active_tab == 'projects' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
                         <span class="flex items-center gap-3">
                             <i data-lucide="folder-kanban" class="w-4 h-4"></i>
                             Projects
                         </span>
                         <span class="text-xs text-zinc-500 bg-panel px-1.5 py-0.5 rounded">{{ client.projects.count }}</span>
-                    </button>
-                    <button @click="activeTab = 'todos'"
-                            :class="activeTab === 'todos' ? 'bg-elevated text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50'"
-                            class="w-full flex items-center justify-between px-3 py-2 rounded-card text-sm transition-colors text-left">
+                    </a>
+                    <a href="{% url 'client_detail_todos' client.pk %}"
+                       class="w-full flex items-center justify-between px-3 py-2 rounded-card text-sm transition-colors text-left {% if active_tab == 'todos' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
                         <span class="flex items-center gap-3">
                             <i data-lucide="check-square" class="w-4 h-4"></i>
                             To-Dos
                         </span>
                         <span class="text-xs text-zinc-500 bg-panel px-1.5 py-0.5 rounded">{{ todo_count }}</span>
-                    </button>
+                    </a>
                 </nav>
             </div>
         </div>
