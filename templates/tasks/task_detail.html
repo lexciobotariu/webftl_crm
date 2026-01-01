@@ -51,6 +51,22 @@
             </div>
         </div>
 
+        <!-- Attachments -->
+        <div>
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                    Attachments
+                </h3>
+            </div>
+            <div id="attachment-list" class="space-y-1 mb-2">
+                {% for attachment in task.attachments.all %}
+                {% include "tasks/partials/attachment_item.html" %}
+                {% empty %}
+                <p class="text-sm text-zinc-500 py-1">No attachments yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+
         <!-- Action Buttons -->
         <div class="flex flex-wrap items-center gap-2">
             <button x-data="{ showForm: false }"
