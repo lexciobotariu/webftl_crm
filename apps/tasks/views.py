@@ -2,6 +2,8 @@ import os
 
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db import transaction
+from django.db.models import Max
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils.text import get_valid_filename
@@ -138,10 +140,11 @@ def task_delete(request, pk):
 
 @login_required
 @require_POST
+@transaction.atomic
 def task_move(request):
     task_id = request.POST.get('task_id')
     status_id = request.POST.get('status_id')
-    task = get_object_or_404(Task, pk=task_id)
+    task = get_object_or_404(Task.objects.select_for_update(), pk=task_id)
     if not can_access_project(request.user, task.project, 'editor'):
         return HttpResponseForbidden("Editor access required to move tasks")
     status = get_object_or_404(Status, pk=status_id, project=task.project)
@@ -167,15 +170,18 @@ def task_update_status(request, pk):
 
 @login_required
 @require_POST
+@transaction.atomic
 def subtask_create(request, pk):
-    task = get_object_or_404(Task, pk=pk)
+    task = get_object_or_404(Task.objects.select_for_update(), pk=pk)
     if not can_access_project(request.user, task.project, 'editor'):
         return HttpResponseForbidden("Editor access required to create subtasks")
     form = SubtaskForm(request.POST)
     if form.is_valid():
         subtask = form.save(commit=False)
         subtask.task = task
-        subtask.order = task.subtasks.count()
+        # Use Max to safely get the next order value
+        max_order = task.subtasks.aggregate(Max('order'))['order__max']
+        subtask.order = (max_order or -1) + 1
         subtask.save()
         # Return both subtask item and updated counter (OOB swap)
         html = render(request, 'tasks/partials/subtask_item.html', {'subtask': subtask}).content.decode()

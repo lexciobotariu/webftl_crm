@@ -29,6 +29,20 @@ def verify_signature(payload: bytes, signature: str, secret: str) -> bool:
     return hmac.compare_digest(expected, signature)
 
 
+def normalize_github_url(url: str) -> str:
+    """Normalize GitHub URL for comparison."""
+    url = url.lower().strip().rstrip('/')
+    # Remove protocol and github.com prefix
+    for prefix in ['https://github.com/', 'http://github.com/', 'github.com/']:
+        if url.startswith(prefix):
+            url = url[len(prefix):]
+            break
+    # Remove .git suffix if present
+    if url.endswith('.git'):
+        url = url[:-4]
+    return url
+
+
 @csrf_exempt
 @require_POST
 def github_webhook(request):
@@ -38,7 +52,11 @@ def github_webhook(request):
 
     webhook_secret = getattr(settings, 'GITHUB_WEBHOOK_SECRET', '')
 
-    if webhook_secret and not verify_signature(request.body, signature, webhook_secret):
+    # Require webhook secret in production
+    if not webhook_secret:
+        if not settings.DEBUG:
+            return HttpResponse('Webhook secret not configured', status=500)
+    elif not verify_signature(request.body, signature, webhook_secret):
         return HttpResponse('Invalid signature', status=401)
 
     try:
@@ -50,12 +68,17 @@ def github_webhook(request):
     if not repo_url:
         return HttpResponse('No repository URL', status=400)
 
-    try:
-        project = Project.objects.get(
-            github_repo_url__icontains=repo_url.replace('https://github.com/', ''),
-            github_sync_enabled=True
-        )
-    except Project.DoesNotExist:
+    # Normalize the incoming URL for exact matching
+    normalized_repo = normalize_github_url(repo_url)
+
+    # Find project with exact match on normalized URL
+    project = None
+    for p in Project.objects.filter(github_sync_enabled=True).exclude(github_repo_url=''):
+        if normalize_github_url(p.github_repo_url) == normalized_repo:
+            project = p
+            break
+
+    if not project:
         return HttpResponse('Project not found or sync disabled', status=404)
 
     if event == 'push':

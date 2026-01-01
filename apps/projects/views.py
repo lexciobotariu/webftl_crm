@@ -2,6 +2,8 @@ import json
 
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db import transaction
+from django.db.models import Max
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.decorators.http import require_POST
@@ -188,8 +190,9 @@ def label_delete(request, pk, label_pk):
 
 @login_required
 @require_POST
+@transaction.atomic
 def status_create(request, pk):
-    project = get_object_or_404(Project, pk=pk)
+    project = get_object_or_404(Project.objects.select_for_update(), pk=pk)
     if not can_access_project(request.user, project, 'manager'):
         return HttpResponseForbidden("Manager access required")
 
@@ -197,7 +200,9 @@ def status_create(request, pk):
     if form.is_valid():
         status = form.save(commit=False)
         status.project = project
-        status.order = project.statuses.count()
+        # Use Max to safely get the next order value
+        max_order = project.statuses.aggregate(Max('order'))['order__max']
+        status.order = (max_order or -1) + 1
         status.save()
         return render(request, 'projects/partials/status_item.html', {'status': status, 'project': project})
     return HttpResponse(status=400)
