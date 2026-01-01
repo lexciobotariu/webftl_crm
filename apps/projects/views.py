@@ -93,6 +93,9 @@ def project_detail(request, pk):
         task__project=project
     ).select_related('user', 'task').order_by('-created_at')[:5]
 
+    # Determine active tab based on URL
+    active_tab = 'tasks' if request.resolver_match.url_name == 'project_detail_tasks' else 'overview'
+
     return render(request, 'projects/project_detail.html', {
         'project': project,
         'tasks': tasks,
@@ -102,6 +105,7 @@ def project_detail(request, pk):
         'overdue_tasks': overdue_tasks,
         'recent_activities': recent_activities,
         'now_date': today,
+        'active_tab': active_tab,
     })
 
 
