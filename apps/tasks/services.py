@@ -59,3 +59,22 @@ def update_task_field(task, field, value, user):
     task._changed_by = user
     task.save()
     return task
+
+
+def move_task(task, new_status, user):
+    """
+    Move a task to a new status column.
+
+    Args:
+        task: Task instance to move
+        new_status: Status instance to move to
+        user: User performing the move (for permissions and activity log)
+
+    Raises:
+        TaskPermissionError: If user lacks editor access
+    """
+    require_access(user, task.project, 'editor')
+
+    task.status = new_status
+    task._changed_by = user
+    task.save()

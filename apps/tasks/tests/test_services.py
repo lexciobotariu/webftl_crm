@@ -3,7 +3,7 @@ import pytest
 from django.core.exceptions import PermissionDenied
 
 from apps.accounts.factories import UserFactory
-from apps.projects.factories import ProjectFactory, ProjectMemberFactory
+from apps.projects.factories import ProjectFactory, ProjectMemberFactory, StatusFactory
 from apps.tasks import services
 from apps.tasks.factories import TaskFactory
 from apps.tasks.models import TaskActivity
@@ -71,3 +71,45 @@ class TestUpdateTaskField:
 
         with pytest.raises(PermissionDenied):
             services.update_task_field(task, 'priority', 'high', user)
+
+
+@pytest.mark.django_db
+class TestMoveTask:
+    def test_move_task_changes_status(self):
+        user = UserFactory()
+        project = ProjectFactory()
+        status1 = StatusFactory(project=project, name='Backlog')
+        status2 = StatusFactory(project=project, name='Done')
+        task = TaskFactory(project=project, status=status1)
+        ProjectMemberFactory(project=project, user=user, role='editor')
+
+        services.move_task(task, status2, user)
+
+        task.refresh_from_db()
+        assert task.status == status2
+
+    def test_move_task_creates_activity(self):
+        user = UserFactory()
+        project = ProjectFactory()
+        status1 = StatusFactory(project=project, name='Backlog')
+        status2 = StatusFactory(project=project, name='Done')
+        task = TaskFactory(project=project, status=status1)
+        ProjectMemberFactory(project=project, user=user, role='editor')
+        TaskActivity.objects.filter(task=task).delete()
+
+        services.move_task(task, status2, user)
+
+        activity = TaskActivity.objects.filter(task=task, activity_type='status_change').first()
+        assert activity is not None
+        assert activity.user == user
+
+    def test_move_task_requires_editor(self):
+        user = UserFactory()
+        project = ProjectFactory()
+        status1 = StatusFactory(project=project, name='Backlog')
+        status2 = StatusFactory(project=project, name='Done')
+        task = TaskFactory(project=project, status=status1)
+        ProjectMemberFactory(project=project, user=user, role='viewer')
+
+        with pytest.raises(PermissionDenied):
+            services.move_task(task, status2, user)
