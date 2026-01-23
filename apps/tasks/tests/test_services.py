@@ -5,6 +5,8 @@ from django.core.exceptions import PermissionDenied
 from apps.accounts.factories import UserFactory
 from apps.projects.factories import ProjectFactory, ProjectMemberFactory
 from apps.tasks import services
+from apps.tasks.factories import TaskFactory
+from apps.tasks.models import TaskActivity
 
 
 @pytest.mark.django_db
@@ -35,3 +37,37 @@ class TestPermissions:
 
         # Should not raise
         services.require_access(admin, project, 'manager')
+
+
+@pytest.mark.django_db
+class TestUpdateTaskField:
+    def test_update_task_field_changes_value(self):
+        user = UserFactory()
+        task = TaskFactory(priority='low')
+        ProjectMemberFactory(project=task.project, user=user, role='editor')
+
+        result = services.update_task_field(task, 'priority', 'high', user)
+
+        task.refresh_from_db()
+        assert task.priority == 'high'
+        assert result == task
+
+    def test_update_task_field_creates_activity(self):
+        user = UserFactory()
+        task = TaskFactory(priority='low')
+        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        TaskActivity.objects.filter(task=task).delete()
+
+        services.update_task_field(task, 'priority', 'high', user)
+
+        activity = TaskActivity.objects.filter(task=task, activity_type='priority_change').first()
+        assert activity is not None
+        assert activity.user == user
+
+    def test_update_task_field_requires_editor(self):
+        user = UserFactory()
+        task = TaskFactory()
+        ProjectMemberFactory(project=task.project, user=user, role='viewer')
+
+        with pytest.raises(PermissionDenied):
+            services.update_task_field(task, 'priority', 'high', user)
