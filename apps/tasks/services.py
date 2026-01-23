@@ -17,7 +17,7 @@ from django.db.models import Max
 
 from apps.projects.models import can_access_project
 
-from .models import Subtask
+from .models import Subtask, TaskActivity
 
 
 class TaskPermissionError(PermissionDenied):
@@ -144,3 +144,31 @@ def delete_subtask(subtask, user):
     """
     require_access(user, subtask.task.project, 'editor')
     subtask.delete()
+
+
+def add_comment(task, content, user):
+    """
+    Add a comment to a task.
+
+    Comments are stored as TaskActivity with type 'comment'.
+    Viewers can add comments (lower permission than editing).
+
+    Args:
+        task: Task to comment on
+        content: Comment text
+        user: User making the comment
+
+    Returns:
+        The created TaskActivity instance
+
+    Raises:
+        TaskPermissionError: If user lacks viewer access
+    """
+    require_access(user, task.project, 'viewer')
+
+    return TaskActivity.objects.create(
+        task=task,
+        user=user,
+        activity_type='comment',
+        content=content
+    )

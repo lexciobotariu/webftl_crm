@@ -189,3 +189,26 @@ class TestSubtaskServices:
 
         with pytest.raises(PermissionDenied):
             services.delete_subtask(subtask, user)
+
+
+@pytest.mark.django_db
+class TestCommentService:
+    def test_add_comment(self):
+        user = UserFactory()
+        task = TaskFactory()
+        ProjectMemberFactory(project=task.project, user=user, role='viewer')
+
+        activity = services.add_comment(task, 'This is a comment', user)
+
+        assert activity.task == task
+        assert activity.user == user
+        assert activity.activity_type == 'comment'
+        assert activity.content == 'This is a comment'
+
+    def test_add_comment_requires_viewer(self):
+        user = UserFactory()
+        task = TaskFactory()
+        # No membership
+
+        with pytest.raises(PermissionDenied):
+            services.add_comment(task, 'Comment', user)
