@@ -87,14 +87,28 @@ def task_create(request, project_pk):
     else:
         form = TaskForm(project)
 
+    # Context for custom dropdown components
+    team_members = User.objects.filter(is_active=True)
+    project_labels = project.labels.all()
+    priority_choices = Task.PRIORITY_CHOICES
+
     # Return slide-over for HTMX, full page otherwise
     if request.htmx:
         return render(request, 'tasks/task_create_slideover.html', {
             'form': form,
             'project': project,
             'selected_status': status,
+            'team_members': team_members,
+            'project_labels': project_labels,
+            'priority_choices': priority_choices,
         })
-    return render(request, 'tasks/task_form.html', {'form': form, 'project': project})
+    return render(request, 'tasks/task_form.html', {
+        'form': form,
+        'project': project,
+        'team_members': team_members,
+        'project_labels': project_labels,
+        'priority_choices': priority_choices,
+    })
 
 
 @login_required
@@ -134,7 +148,18 @@ def task_edit(request, pk):
             return redirect('project_board', pk=task.project.pk)
     else:
         form = TaskForm(task.project, instance=task)
-    return render(request, 'tasks/task_form.html', {'form': form, 'task': task, 'project': task.project})
+
+    team_members = User.objects.filter(is_active=True)
+    project_labels = task.project.labels.all()
+    priority_choices = Task.PRIORITY_CHOICES
+    return render(request, 'tasks/task_form.html', {
+        'form': form,
+        'task': task,
+        'project': task.project,
+        'team_members': team_members,
+        'project_labels': project_labels,
+        'priority_choices': priority_choices,
+    })
 
 
 @login_required
@@ -305,7 +330,7 @@ def task_update_assignee(request, pk):
     response = render(request, 'tasks/partials/assignee_dropdown.html', {
         'task': task, 'team_members': team_members
     })
-    response['HX-Trigger'] = 'activityUpdated'
+    response['HX-Trigger'] = f'activityUpdated, taskUpdated-{pk}'
     return response
 
 
@@ -325,7 +350,7 @@ def task_update_priority(request, pk):
     response = render(request, 'tasks/partials/priority_dropdown.html', {
         'task': task, 'priority_choices': Task.PRIORITY_CHOICES
     })
-    response['HX-Trigger'] = 'activityUpdated'
+    response['HX-Trigger'] = f'activityUpdated, taskUpdated-{pk}'
     return response
 
 
@@ -344,7 +369,7 @@ def task_update_due_date(request, pk):
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
     response = render(request, 'tasks/partials/due_date_picker.html', {'task': task})
-    response['HX-Trigger'] = 'activityUpdated'
+    response['HX-Trigger'] = f'activityUpdated, taskUpdated-{pk}'
     return response
 
 
@@ -362,7 +387,9 @@ def task_update_estimate(request, pk):
         )
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
-    return render(request, 'tasks/partials/estimate_input.html', {'task': task})
+    response = render(request, 'tasks/partials/estimate_input.html', {'task': task})
+    response['HX-Trigger'] = f'taskUpdated-{pk}'
+    return response
 
 
 @login_required
@@ -376,9 +403,11 @@ def task_toggle_label(request, pk, label_pk):
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
     project_labels = task.project.labels.all()
-    return render(request, 'tasks/partials/labels_selector.html', {
+    response = render(request, 'tasks/partials/labels_selector.html', {
         'task': task, 'project_labels': project_labels
     })
+    response['HX-Trigger'] = f'taskUpdated-{pk}'
+    return response
 
 
 @login_required
@@ -414,6 +443,20 @@ def task_edit_title(request, pk):
             task._changed_by = request.user
             task.save()
         template = 'tasks/partials/title_display_full.html' if is_full else 'tasks/partials/title_display.html'
-        return render(request, template, {'task': task})
+        response = render(request, template, {'task': task})
+        response['HX-Trigger'] = f'taskUpdated-{pk}'
+        return response
     template = 'tasks/partials/title_edit_full.html' if is_full else 'tasks/partials/title_edit.html'
     return render(request, template, {'task': task})
+
+
+@login_required
+def task_card(request, pk):
+    """Return just the task card HTML for out-of-band swaps."""
+    task = get_object_or_404(
+        Task.objects.select_related('project', 'status', 'assignee').prefetch_related('labels'),
+        pk=pk
+    )
+    if not can_access_project(request.user, task.project, 'viewer'):
+        return HttpResponseForbidden("You don't have access to this task")
+    return render(request, 'projects/partials/task_card.html', {'task': task})

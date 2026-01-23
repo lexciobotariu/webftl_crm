@@ -1,0 +1,52 @@
+<div class="relative" x-data="{
+    open: false,
+    selectedLabels: [{% for label in form.labels.value %}{{ label }}{% if not forloop.last %},{% endif %}{% endfor %}],
+    toggleLabel(id) {
+        const idx = this.selectedLabels.indexOf(id);
+        if (idx > -1) {
+            this.selectedLabels.splice(idx, 1);
+        } else {
+            this.selectedLabels.push(id);
+        }
+    },
+    isSelected(id) {
+        return this.selectedLabels.includes(id);
+    }
+}">
+    <!-- Hidden inputs for form submission -->
+    <template x-for="labelId in selectedLabels" :key="labelId">
+        <input type="hidden" name="labels" :value="labelId">
+    </template>
+
+    <button type="button" @click="open = !open"
+            class="flex items-center gap-1 px-2 py-1.5 rounded-card text-sm hover:bg-elevated transition-colors w-full flex-wrap">
+        <template x-if="selectedLabels.length > 0">
+            <span class="flex flex-wrap gap-1">
+                {% for label in project_labels %}
+                <span x-show="isSelected({{ label.pk }})"
+                      class="px-2 py-0.5 text-[10px] rounded-full border"
+                      style="background: {{ label.color }}20; color: {{ label.color }}; border-color: {{ label.color }}40;">
+                    {{ label.name }}
+                </span>
+                {% endfor %}
+            </span>
+        </template>
+        <template x-if="selectedLabels.length === 0">
+            <span class="text-zinc-500">Add labels</span>
+        </template>
+    </button>
+    <div x-show="open" @click.away="open = false"
+         x-transition
+         class="absolute left-0 top-full mt-1 w-56 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 py-1 max-h-64 overflow-y-auto">
+        {% for label in project_labels %}
+        <button type="button" @click="toggleLabel({{ label.pk }})"
+                class="w-full text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors flex items-center gap-2">
+            <span class="w-3 h-3 rounded" style="background-color: {{ label.color }}"></span>
+            <span :class="isSelected({{ label.pk }}) ? 'text-accent' : 'text-zinc-300'">{{ label.name }}</span>
+            <i x-show="isSelected({{ label.pk }})" data-lucide="check" class="w-3 h-3 text-accent ml-auto"></i>
+        </button>
+        {% empty %}
+        <div class="px-3 py-2 text-sm text-zinc-500">No labels defined</div>
+        {% endfor %}
+    </div>
+</div>
