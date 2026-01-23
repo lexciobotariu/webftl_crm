@@ -149,10 +149,12 @@ def task_edit(request, pk):
 @require_POST
 def task_delete(request, pk):
     task = get_object_or_404(Task, pk=pk)
-    if not can_access_project(request.user, task.project, 'editor'):
-        return HttpResponseForbidden("Editor access required to delete tasks")
     project_pk = task.project.pk
-    task.delete()
+    try:
+        from apps.tasks import services
+        services.delete_task(task, request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
     if request.htmx:
         return HttpResponse('')
     return redirect('project_board', pk=project_pk)
@@ -375,13 +377,12 @@ def task_update_estimate(request, pk):
 @require_POST
 def task_toggle_label(request, pk, label_pk):
     task = get_object_or_404(Task, pk=pk)
-    if not can_access_project(request.user, task.project, 'editor'):
-        return HttpResponseForbidden("Editor access required to update tasks")
     label = get_object_or_404(Label, pk=label_pk, project=task.project)
-    if label in task.labels.all():
-        task.labels.remove(label)
-    else:
-        task.labels.add(label)
+    try:
+        from apps.tasks import services
+        services.toggle_label(task, label, request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
     project_labels = task.project.labels.all()
     return render(request, 'tasks/partials/labels_selector.html', {
         'task': task, 'project_labels': project_labels
