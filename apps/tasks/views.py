@@ -1,6 +1,7 @@
 import os
 
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Max
@@ -323,12 +324,13 @@ def task_full_page(request, project_pk, task_pk):
 @require_POST
 def task_update_assignee(request, pk):
     task = get_object_or_404(Task, pk=pk)
-    if not can_access_project(request.user, task.project, 'editor'):
-        return HttpResponseForbidden("Editor access required to update tasks")
-    assignee_id = request.POST.get('assignee_id')
-    task.assignee = User.objects.get(pk=assignee_id) if assignee_id else None
-    task._changed_by = request.user
-    task.save()
+    try:
+        from apps.tasks import services
+        assignee_id = request.POST.get('assignee_id')
+        assignee = User.objects.get(pk=assignee_id) if assignee_id else None
+        services.update_task_field(task, 'assignee', assignee, request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
     team_members = User.objects.all()
     response = render(request, 'tasks/partials/assignee_dropdown.html', {
         'task': task, 'team_members': team_members
@@ -341,11 +343,15 @@ def task_update_assignee(request, pk):
 @require_POST
 def task_update_priority(request, pk):
     task = get_object_or_404(Task, pk=pk)
-    if not can_access_project(request.user, task.project, 'editor'):
-        return HttpResponseForbidden("Editor access required to update tasks")
-    task.priority = request.POST.get('priority') or ''
-    task._changed_by = request.user
-    task.save()
+    try:
+        from apps.tasks import services
+        services.update_task_field(
+            task, 'priority',
+            request.POST.get('priority') or '',
+            request.user
+        )
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
     response = render(request, 'tasks/partials/priority_dropdown.html', {
         'task': task, 'priority_choices': Task.PRIORITY_CHOICES
     })
@@ -357,12 +363,16 @@ def task_update_priority(request, pk):
 @require_POST
 def task_update_due_date(request, pk):
     task = get_object_or_404(Task, pk=pk)
-    if not can_access_project(request.user, task.project, 'editor'):
-        return HttpResponseForbidden("Editor access required to update tasks")
-    due_date = request.POST.get('due_date')
-    task.due_date = due_date if due_date else None
-    task._changed_by = request.user
-    task.save()
+    try:
+        from apps.tasks import services
+        due_date = request.POST.get('due_date')
+        services.update_task_field(
+            task, 'due_date',
+            due_date if due_date else None,
+            request.user
+        )
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
     response = render(request, 'tasks/partials/due_date_picker.html', {'task': task})
     response['HX-Trigger'] = 'activityUpdated'
     return response
@@ -372,12 +382,16 @@ def task_update_due_date(request, pk):
 @require_POST
 def task_update_estimate(request, pk):
     task = get_object_or_404(Task, pk=pk)
-    if not can_access_project(request.user, task.project, 'editor'):
-        return HttpResponseForbidden("Editor access required to update tasks")
-    estimate = request.POST.get('time_estimate')
-    task.time_estimate = int(estimate) if estimate else None
-    task._changed_by = request.user
-    task.save()
+    try:
+        from apps.tasks import services
+        estimate = request.POST.get('time_estimate')
+        services.update_task_field(
+            task, 'time_estimate',
+            int(estimate) if estimate else None,
+            request.user
+        )
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
     return render(request, 'tasks/partials/estimate_input.html', {'task': task})
 
 
