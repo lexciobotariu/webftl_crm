@@ -7,7 +7,7 @@ from apps.accounts.factories import UserFactory
 from apps.projects.factories import ProjectFactory, ProjectMemberFactory, StatusFactory
 from apps.tasks import services
 from apps.tasks.factories import SubtaskFactory, TaskFactory
-from apps.tasks.models import Subtask, TaskActivity
+from apps.tasks.models import Subtask, Task, TaskActivity
 
 
 @pytest.mark.django_db
@@ -279,3 +279,24 @@ class TestAttachmentService:
             services.upload_attachment(task, file, user)
 
         assert 'not allowed' in str(exc_info.value)
+
+
+@pytest.mark.django_db
+class TestDeleteTask:
+    def test_delete_task(self):
+        user = UserFactory()
+        task = TaskFactory()
+        task_pk = task.pk
+        ProjectMemberFactory(project=task.project, user=user, role='editor')
+
+        services.delete_task(task, user)
+
+        assert not Task.objects.filter(pk=task_pk).exists()
+
+    def test_delete_task_requires_editor(self):
+        user = UserFactory()
+        task = TaskFactory()
+        ProjectMemberFactory(project=task.project, user=user, role='viewer')
+
+        with pytest.raises(PermissionDenied):
+            services.delete_task(task, user)

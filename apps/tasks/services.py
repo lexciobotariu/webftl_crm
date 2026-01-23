@@ -246,3 +246,18 @@ def upload_attachment(task, file, user):
         filename=get_valid_filename(file.name),
         uploaded_by=user
     )
+
+
+def delete_task(task, user):
+    """
+    Delete a task.
+
+    Args:
+        task: Task instance to delete
+        user: User performing the deletion (for permissions)
+
+    Raises:
+        TaskPermissionError: If user lacks editor access
+    """
+    require_access(user, task.project, 'editor')
+    task.delete()
