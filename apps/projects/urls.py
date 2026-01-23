@@ -12,6 +12,7 @@ urlpatterns = [
     path('<int:pk>/edit/', views.project_edit, name='project_edit'),
     path('<int:pk>/delete/', views.project_delete, name='project_delete'),
     path('<int:pk>/settings/', views.project_settings, name='project_settings'),
+    path('<int:pk>/settings/update/', views.project_settings_update, name='project_settings_update'),
     path('<int:pk>/statuses/', views.manage_statuses, name='manage_statuses'),
     path('<int:pk>/statuses/create/', views.status_create, name='status_create'),
     path('<int:pk>/statuses/<int:status_pk>/delete/', views.status_delete, name='status_delete'),

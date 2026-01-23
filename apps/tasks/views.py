@@ -1,26 +1,19 @@
-import os
-
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Max
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils import timezone
-from django.utils.text import get_valid_filename
 from django.views.decorators.http import require_POST
-
-TASKS_PER_PAGE = 20
-
-# File upload security settings
-ALLOWED_EXTENSIONS = {'.pdf', '.doc', '.docx', '.xls', '.xlsx', '.png', '.jpg', '.jpeg', '.gif', '.txt', '.csv', '.zip'}
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
 from apps.accounts.models import User
 from apps.projects.models import Project, Status, can_access_project
 from apps.tasks.models import Label
-from .forms import TaskForm, SubtaskForm
+from .forms import TaskForm, SubtaskForm, CommentForm
 from .models import Task, Subtask, Attachment, TaskActivity
+
+TASKS_PER_PAGE = 20
 
 
 @login_required
@@ -148,10 +141,12 @@ def task_edit(request, pk):
 @require_POST
 def task_delete(request, pk):
     task = get_object_or_404(Task, pk=pk)
-    if not can_access_project(request.user, task.project, 'editor'):
-        return HttpResponseForbidden("Editor access required to delete tasks")
     project_pk = task.project.pk
-    task.delete()
+    try:
+        from apps.tasks import services
+        services.delete_task(task, request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
     if request.htmx:
         return HttpResponse('')
     return redirect('project_board', pk=project_pk)
@@ -164,12 +159,12 @@ def task_move(request):
     task_id = request.POST.get('task_id')
     status_id = request.POST.get('status_id')
     task = get_object_or_404(Task.objects.select_for_update(), pk=task_id)
-    if not can_access_project(request.user, task.project, 'editor'):
-        return HttpResponseForbidden("Editor access required to move tasks")
     status = get_object_or_404(Status, pk=status_id, project=task.project)
-    task.status = status
-    task._changed_by = request.user
-    task.save()
+    try:
+        from apps.tasks import services
+        services.move_task(task, status, request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
     return HttpResponse(status=204)
 
 
@@ -177,13 +172,13 @@ def task_move(request):
 @require_POST
 def task_update_status(request, pk):
     task = get_object_or_404(Task, pk=pk)
-    if not can_access_project(request.user, task.project, 'editor'):
-        return HttpResponseForbidden("Editor access required to update tasks")
     status_id = request.POST.get('status_id')
     status = get_object_or_404(Status, pk=status_id, project=task.project)
-    task.status = status
-    task._changed_by = request.user
-    task.save()
+    try:
+        from apps.tasks import services
+        services.move_task(task, status, request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
     response = render(request, 'tasks/partials/status_dropdown.html', {'task': task})
     response['HX-Trigger'] = 'taskStatusChanged, activityUpdated'
     return response
@@ -194,32 +189,28 @@ def task_update_status(request, pk):
 @transaction.atomic
 def subtask_create(request, pk):
     task = get_object_or_404(Task.objects.select_for_update(), pk=pk)
-    if not can_access_project(request.user, task.project, 'editor'):
-        return HttpResponseForbidden("Editor access required to create subtasks")
     form = SubtaskForm(request.POST)
-    if form.is_valid():
-        subtask = form.save(commit=False)
-        subtask.task = task
-        # Use Max to safely get the next order value
-        max_order = task.subtasks.aggregate(Max('order'))['order__max']
-        subtask.order = (max_order or -1) + 1
-        subtask.save()
-        # Return both subtask item and updated counter (OOB swap)
-        html = render(request, 'tasks/partials/subtask_item.html', {'subtask': subtask}).content.decode()
-        counter_html = render(request, 'tasks/partials/subtask_counter.html', {'task': task}).content.decode()
-        return HttpResponse(html + counter_html)
-    return HttpResponse(status=400)
+    if not form.is_valid():
+        return HttpResponse(status=400)
+    try:
+        from apps.tasks import services
+        subtask = services.create_subtask(task, form.cleaned_data['title'], request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
+    html = render(request, 'tasks/partials/subtask_item.html', {'subtask': subtask}).content.decode()
+    counter_html = render(request, 'tasks/partials/subtask_counter.html', {'task': task}).content.decode()
+    return HttpResponse(html + counter_html)
 
 
 @login_required
 @require_POST
 def subtask_toggle(request, pk, subtask_pk):
     subtask = get_object_or_404(Subtask, pk=subtask_pk, task_id=pk)
-    if not can_access_project(request.user, subtask.task.project, 'editor'):
-        return HttpResponseForbidden("Editor access required to update subtasks")
-    subtask.completed = not subtask.completed
-    subtask.save()
-    # Return both subtask item and updated counter (OOB swap)
+    try:
+        from apps.tasks import services
+        services.toggle_subtask(subtask, request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
     task = subtask.task
     html = render(request, 'tasks/partials/subtask_item.html', {'subtask': subtask}).content.decode()
     counter_html = render(request, 'tasks/partials/subtask_counter.html', {'task': task}).content.decode()
@@ -230,11 +221,12 @@ def subtask_toggle(request, pk, subtask_pk):
 @require_POST
 def subtask_delete(request, pk, subtask_pk):
     subtask = get_object_or_404(Subtask, pk=subtask_pk, task_id=pk)
-    if not can_access_project(request.user, subtask.task.project, 'editor'):
-        return HttpResponseForbidden("Editor access required to delete subtasks")
     task = subtask.task
-    subtask.delete()
-    # Return updated counter (OOB swap)
+    try:
+        from apps.tasks import services
+        services.delete_subtask(subtask, request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
     counter_html = render(request, 'tasks/partials/subtask_counter.html', {'task': task}).content.decode()
     return HttpResponse(counter_html)
 
@@ -243,18 +235,15 @@ def subtask_delete(request, pk, subtask_pk):
 @require_POST
 def comment_create(request, pk):
     task = get_object_or_404(Task, pk=pk)
-    if not can_access_project(request.user, task.project, 'viewer'):
-        return HttpResponseForbidden("You don't have access to this task")
     content = request.POST.get('content', '').strip()
-    if content:
-        activity = TaskActivity.objects.create(
-            task=task,
-            user=request.user,
-            activity_type='comment',
-            content=content
-        )
-        return render(request, 'tasks/partials/activity_item.html', {'activity': activity})
-    return HttpResponse(status=400)
+    if not content:
+        return HttpResponse(status=400)
+    try:
+        from apps.tasks import services
+        activity = services.add_comment(task, content, request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
+    return render(request, 'tasks/partials/activity_item.html', {'activity': activity})
 
 
 @login_required
@@ -270,31 +259,13 @@ def task_activity_list(request, pk):
 @require_POST
 def attachment_upload(request, pk):
     task = get_object_or_404(Task, pk=pk)
-    if not can_access_project(request.user, task.project, 'editor'):
-        return HttpResponseForbidden("Editor access required to upload attachments")
-    file = request.FILES.get('file')
-
-    if not file:
-        return HttpResponse('No file provided', status=400)
-
-    # Validate file extension
-    ext = os.path.splitext(file.name)[1].lower()
-    if ext not in ALLOWED_EXTENSIONS:
-        return HttpResponse(f'File type not allowed. Allowed: {", ".join(sorted(ALLOWED_EXTENSIONS))}', status=400)
-
-    # Validate file size
-    if file.size > MAX_FILE_SIZE:
-        return HttpResponse('File too large. Maximum size is 10MB.', status=400)
-
-    # Sanitize filename to prevent path traversal
-    safe_filename = get_valid_filename(file.name)
-
-    attachment = Attachment.objects.create(
-        task=task,
-        file=file,
-        filename=safe_filename,
-        uploaded_by=request.user
-    )
+    try:
+        from apps.tasks import services
+        attachment = services.upload_attachment(task, request.FILES.get('file'), request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
+    except ValueError as e:
+        return HttpResponse(str(e), status=400)
     return render(request, 'tasks/partials/attachment_item.html', {'attachment': attachment})
 
 
@@ -323,12 +294,13 @@ def task_full_page(request, project_pk, task_pk):
 @require_POST
 def task_update_assignee(request, pk):
     task = get_object_or_404(Task, pk=pk)
-    if not can_access_project(request.user, task.project, 'editor'):
-        return HttpResponseForbidden("Editor access required to update tasks")
-    assignee_id = request.POST.get('assignee_id')
-    task.assignee = User.objects.get(pk=assignee_id) if assignee_id else None
-    task._changed_by = request.user
-    task.save()
+    try:
+        from apps.tasks import services
+        assignee_id = request.POST.get('assignee_id')
+        assignee = User.objects.get(pk=assignee_id) if assignee_id else None
+        services.update_task_field(task, 'assignee', assignee, request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
     team_members = User.objects.all()
     response = render(request, 'tasks/partials/assignee_dropdown.html', {
         'task': task, 'team_members': team_members
@@ -341,11 +313,15 @@ def task_update_assignee(request, pk):
 @require_POST
 def task_update_priority(request, pk):
     task = get_object_or_404(Task, pk=pk)
-    if not can_access_project(request.user, task.project, 'editor'):
-        return HttpResponseForbidden("Editor access required to update tasks")
-    task.priority = request.POST.get('priority') or ''
-    task._changed_by = request.user
-    task.save()
+    try:
+        from apps.tasks import services
+        services.update_task_field(
+            task, 'priority',
+            request.POST.get('priority') or '',
+            request.user
+        )
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
     response = render(request, 'tasks/partials/priority_dropdown.html', {
         'task': task, 'priority_choices': Task.PRIORITY_CHOICES
     })
@@ -357,12 +333,16 @@ def task_update_priority(request, pk):
 @require_POST
 def task_update_due_date(request, pk):
     task = get_object_or_404(Task, pk=pk)
-    if not can_access_project(request.user, task.project, 'editor'):
-        return HttpResponseForbidden("Editor access required to update tasks")
-    due_date = request.POST.get('due_date')
-    task.due_date = due_date if due_date else None
-    task._changed_by = request.user
-    task.save()
+    try:
+        from apps.tasks import services
+        due_date = request.POST.get('due_date')
+        services.update_task_field(
+            task, 'due_date',
+            due_date if due_date else None,
+            request.user
+        )
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
     response = render(request, 'tasks/partials/due_date_picker.html', {'task': task})
     response['HX-Trigger'] = 'activityUpdated'
     return response
@@ -372,12 +352,16 @@ def task_update_due_date(request, pk):
 @require_POST
 def task_update_estimate(request, pk):
     task = get_object_or_404(Task, pk=pk)
-    if not can_access_project(request.user, task.project, 'editor'):
-        return HttpResponseForbidden("Editor access required to update tasks")
-    estimate = request.POST.get('time_estimate')
-    task.time_estimate = int(estimate) if estimate else None
-    task._changed_by = request.user
-    task.save()
+    try:
+        from apps.tasks import services
+        estimate = request.POST.get('time_estimate')
+        services.update_task_field(
+            task, 'time_estimate',
+            int(estimate) if estimate else None,
+            request.user
+        )
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
     return render(request, 'tasks/partials/estimate_input.html', {'task': task})
 
 
@@ -385,13 +369,12 @@ def task_update_estimate(request, pk):
 @require_POST
 def task_toggle_label(request, pk, label_pk):
     task = get_object_or_404(Task, pk=pk)
-    if not can_access_project(request.user, task.project, 'editor'):
-        return HttpResponseForbidden("Editor access required to update tasks")
     label = get_object_or_404(Label, pk=label_pk, project=task.project)
-    if label in task.labels.all():
-        task.labels.remove(label)
-    else:
-        task.labels.add(label)
+    try:
+        from apps.tasks import services
+        services.toggle_label(task, label, request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
     project_labels = task.project.labels.all()
     return render(request, 'tasks/partials/labels_selector.html', {
         'task': task, 'project_labels': project_labels

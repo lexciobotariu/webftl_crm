@@ -128,18 +128,8 @@ def project_board(request, pk):
 
 @login_required
 def project_edit(request, pk):
-    project = get_object_or_404(Project, pk=pk)
-    if not can_access_project(request.user, project, 'manager'):
-        return HttpResponseForbidden("Manager access required to edit projects")
-
-    if request.method == 'POST':
-        form = ProjectForm(request.POST, instance=project)
-        if form.is_valid():
-            form.save()
-            return redirect('project_board', pk=project.pk)
-    else:
-        form = ProjectForm(instance=project)
-    return render(request, 'projects/project_form.html', {'form': form, 'project': project})
+    """Redirect to settings page - edit functionality has been consolidated."""
+    return redirect('project_settings', pk=pk)
 
 
 @login_required
@@ -201,12 +191,53 @@ def project_settings(request, pk):
     if not can_access_project(request.user, project, 'manager'):
         return HttpResponseForbidden("Manager access required")
 
+    # Determine back URL based on 'next' parameter
+    next_page = request.GET.get('next', 'board')
+    if next_page == 'detail':
+        back_url = 'project_detail'
+    else:
+        back_url = 'project_board'
+
     status_form = StatusForm()
     label_form = LabelForm()
     return render(request, 'projects/project_settings.html', {
         'project': project,
         'status_form': status_form,
         'label_form': label_form,
+        'back_url': back_url,
+    })
+
+
+@login_required
+@require_POST
+def project_settings_update(request, pk):
+    """Handle General settings form submission via HTMX."""
+    project = get_object_or_404(Project, pk=pk)
+    if not can_access_project(request.user, project, 'manager'):
+        return HttpResponseForbidden("Manager access required")
+
+    name = request.POST.get('name', '').strip()
+    description = request.POST.get('description', '').strip()
+    github_repo_url = request.POST.get('github_repo_url', '').strip()
+
+    errors = {}
+    if not name:
+        errors['name'] = 'Name is required.'
+
+    if errors:
+        return render(request, 'projects/partials/settings_general_form.html', {
+            'project': project,
+            'errors': errors,
+        })
+
+    project.name = name
+    project.description = description
+    project.github_repo_url = github_repo_url
+    project.save()
+
+    return render(request, 'projects/partials/settings_general_form.html', {
+        'project': project,
+        'success': True,
     })
 
 

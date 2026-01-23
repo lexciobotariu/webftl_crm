@@ -8,12 +8,20 @@
     <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80">
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <a href="{% url 'project_list' %}" class="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors" title="Back to Projects">
+                <a href="{% url 'client_detail' project.client.pk %}" class="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors" title="Back to Client">
                     <i data-lucide="arrow-left" class="w-4 h-4"></i>
                 </a>
-                <i data-lucide="folder-kanban" class="w-4 h-4 text-zinc-500"></i>
-                <h1 class="text-sm font-medium text-zinc-100" id="project-name">{{ project.name }}</h1>
-                <span class="text-xs text-zinc-500">{{ project.client.name }}</span>
+                <div class="flex items-center gap-2 text-sm">
+                    <a href="{% url 'client_detail' project.client.pk %}" class="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 transition-colors">
+                        <i data-lucide="building-2" class="w-3.5 h-3.5"></i>
+                        <span>{{ project.client.name }}</span>
+                    </a>
+                    <span class="text-zinc-600">/</span>
+                    <span class="flex items-center gap-1.5 text-zinc-100 font-medium" id="project-name">
+                        <i data-lucide="folder" class="w-3.5 h-3.5"></i>
+                        <span>{{ project.name }}</span>
+                    </span>
+                </div>
             </div>
             <div class="flex items-center gap-2">
                 <a href="{% url 'project_board' project.pk %}"
@@ -21,13 +29,8 @@
                     <i data-lucide="kanban" class="w-3.5 h-3.5"></i>
                     Open Board
                 </a>
-                <a href="{% url 'project_edit' project.pk %}"
+                <a href="{% url 'project_settings' project.pk %}?next=detail"
                    class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-300 hover:bg-hover transition-colors">
-                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                    Edit
-                </a>
-                <a href="{% url 'project_settings' project.pk %}"
-                   class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
                     <i data-lucide="settings" class="w-3.5 h-3.5"></i>
                     Settings
                 </a>

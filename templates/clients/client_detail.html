@@ -11,8 +11,17 @@
                 <a href="{% url 'client_list' %}" class="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors" title="Back to Clients">
                     <i data-lucide="arrow-left" class="w-4 h-4"></i>
                 </a>
-                <i data-lucide="building-2" class="w-4 h-4 text-zinc-500"></i>
-                <h1 class="text-sm font-medium text-zinc-100" id="client-name">{{ client.name }}</h1>
+                <div class="flex items-center gap-2 text-sm">
+                    <a href="{% url 'client_list' %}" class="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 transition-colors">
+                        <i data-lucide="users" class="w-3.5 h-3.5"></i>
+                        <span>Clients</span>
+                    </a>
+                    <span class="text-zinc-600">/</span>
+                    <span class="flex items-center gap-1.5 text-zinc-100 font-medium" id="client-name">
+                        <i data-lucide="building-2" class="w-3.5 h-3.5"></i>
+                        <span>{{ client.name }}</span>
+                    </span>
+                </div>
             </div>
             <div class="flex items-center gap-2">
                 <button hx-get="{% url 'client_edit_drawer' client.pk %}"
