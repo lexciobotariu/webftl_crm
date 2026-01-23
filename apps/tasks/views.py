@@ -1,27 +1,19 @@
-import os
-
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Max
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils import timezone
-from django.utils.text import get_valid_filename
 from django.views.decorators.http import require_POST
-
-TASKS_PER_PAGE = 20
-
-# File upload security settings
-ALLOWED_EXTENSIONS = {'.pdf', '.doc', '.docx', '.xls', '.xlsx', '.png', '.jpg', '.jpeg', '.gif', '.txt', '.csv', '.zip'}
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
 from apps.accounts.models import User
 from apps.projects.models import Project, Status, can_access_project
 from apps.tasks.models import Label
 from .forms import TaskForm, SubtaskForm
 from .models import Task, Subtask, Attachment, TaskActivity
+
+TASKS_PER_PAGE = 20
 
 
 @login_required
