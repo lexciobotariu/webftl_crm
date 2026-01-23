@@ -5,8 +5,8 @@ from django.core.exceptions import PermissionDenied
 from apps.accounts.factories import UserFactory
 from apps.projects.factories import ProjectFactory, ProjectMemberFactory, StatusFactory
 from apps.tasks import services
-from apps.tasks.factories import TaskFactory
-from apps.tasks.models import TaskActivity
+from apps.tasks.factories import SubtaskFactory, TaskFactory
+from apps.tasks.models import Subtask, TaskActivity
 
 
 @pytest.mark.django_db
@@ -113,3 +113,79 @@ class TestMoveTask:
 
         with pytest.raises(PermissionDenied):
             services.move_task(task, status2, user)
+
+
+@pytest.mark.django_db
+class TestSubtaskServices:
+    def test_create_subtask(self):
+        user = UserFactory()
+        task = TaskFactory()
+        ProjectMemberFactory(project=task.project, user=user, role='editor')
+
+        subtask = services.create_subtask(task, 'New subtask', user)
+
+        assert subtask.task == task
+        assert subtask.title == 'New subtask'
+        assert subtask.completed is False
+
+    def test_create_subtask_auto_orders(self):
+        user = UserFactory()
+        task = TaskFactory()
+        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        SubtaskFactory(task=task, order=0)
+        SubtaskFactory(task=task, order=1)
+
+        subtask = services.create_subtask(task, 'Third', user)
+
+        assert subtask.order == 2
+
+    def test_create_subtask_requires_editor(self):
+        user = UserFactory()
+        task = TaskFactory()
+        ProjectMemberFactory(project=task.project, user=user, role='viewer')
+
+        with pytest.raises(PermissionDenied):
+            services.create_subtask(task, 'Subtask', user)
+
+    def test_toggle_subtask(self):
+        user = UserFactory()
+        task = TaskFactory()
+        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        subtask = SubtaskFactory(task=task, completed=False)
+
+        result = services.toggle_subtask(subtask, user)
+
+        subtask.refresh_from_db()
+        assert subtask.completed is True
+        assert result == subtask
+
+    def test_toggle_subtask_again(self):
+        user = UserFactory()
+        task = TaskFactory()
+        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        subtask = SubtaskFactory(task=task, completed=True)
+
+        services.toggle_subtask(subtask, user)
+
+        subtask.refresh_from_db()
+        assert subtask.completed is False
+
+    def test_delete_subtask(self):
+        user = UserFactory()
+        task = TaskFactory()
+        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        subtask = SubtaskFactory(task=task)
+        subtask_pk = subtask.pk
+
+        services.delete_subtask(subtask, user)
+
+        assert not Subtask.objects.filter(pk=subtask_pk).exists()
+
+    def test_delete_subtask_requires_editor(self):
+        user = UserFactory()
+        task = TaskFactory()
+        ProjectMemberFactory(project=task.project, user=user, role='viewer')
+        subtask = SubtaskFactory(task=task)
+
+        with pytest.raises(PermissionDenied):
+            services.delete_subtask(subtask, user)

@@ -12,8 +12,12 @@ Key patterns:
 - Permission errors raise PermissionDenied (caught by views as 403)
 """
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
+from django.db.models import Max
 
 from apps.projects.models import can_access_project
+
+from .models import Subtask
 
 
 class TaskPermissionError(PermissionDenied):
@@ -78,3 +82,65 @@ def move_task(task, new_status, user):
     task.status = new_status
     task._changed_by = user
     task.save()
+
+
+@transaction.atomic
+def create_subtask(task, title, user):
+    """
+    Create a subtask with automatic ordering.
+
+    Args:
+        task: Parent task
+        title: Subtask title
+        user: User creating the subtask (for permissions)
+
+    Returns:
+        The created Subtask instance
+
+    Raises:
+        TaskPermissionError: If user lacks editor access
+    """
+    require_access(user, task.project, 'editor')
+
+    max_order = task.subtasks.aggregate(Max('order'))['order__max']
+    return Subtask.objects.create(
+        task=task,
+        title=title,
+        order=(max_order or -1) + 1
+    )
+
+
+def toggle_subtask(subtask, user):
+    """
+    Toggle a subtask's completion status.
+
+    Args:
+        subtask: Subtask instance to toggle
+        user: User performing the toggle (for permissions)
+
+    Returns:
+        The updated Subtask instance
+
+    Raises:
+        TaskPermissionError: If user lacks editor access
+    """
+    require_access(user, subtask.task.project, 'editor')
+
+    subtask.completed = not subtask.completed
+    subtask.save()
+    return subtask
+
+
+def delete_subtask(subtask, user):
+    """
+    Delete a subtask.
+
+    Args:
+        subtask: Subtask instance to delete
+        user: User performing the deletion (for permissions)
+
+    Raises:
+        TaskPermissionError: If user lacks editor access
+    """
+    require_access(user, subtask.task.project, 'editor')
+    subtask.delete()
