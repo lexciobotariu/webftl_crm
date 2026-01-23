@@ -195,32 +195,28 @@ def task_update_status(request, pk):
 @transaction.atomic
 def subtask_create(request, pk):
     task = get_object_or_404(Task.objects.select_for_update(), pk=pk)
-    if not can_access_project(request.user, task.project, 'editor'):
-        return HttpResponseForbidden("Editor access required to create subtasks")
     form = SubtaskForm(request.POST)
-    if form.is_valid():
-        subtask = form.save(commit=False)
-        subtask.task = task
-        # Use Max to safely get the next order value
-        max_order = task.subtasks.aggregate(Max('order'))['order__max']
-        subtask.order = (max_order or -1) + 1
-        subtask.save()
-        # Return both subtask item and updated counter (OOB swap)
-        html = render(request, 'tasks/partials/subtask_item.html', {'subtask': subtask}).content.decode()
-        counter_html = render(request, 'tasks/partials/subtask_counter.html', {'task': task}).content.decode()
-        return HttpResponse(html + counter_html)
-    return HttpResponse(status=400)
+    if not form.is_valid():
+        return HttpResponse(status=400)
+    try:
+        from apps.tasks import services
+        subtask = services.create_subtask(task, form.cleaned_data['title'], request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
+    html = render(request, 'tasks/partials/subtask_item.html', {'subtask': subtask}).content.decode()
+    counter_html = render(request, 'tasks/partials/subtask_counter.html', {'task': task}).content.decode()
+    return HttpResponse(html + counter_html)
 
 
 @login_required
 @require_POST
 def subtask_toggle(request, pk, subtask_pk):
     subtask = get_object_or_404(Subtask, pk=subtask_pk, task_id=pk)
-    if not can_access_project(request.user, subtask.task.project, 'editor'):
-        return HttpResponseForbidden("Editor access required to update subtasks")
-    subtask.completed = not subtask.completed
-    subtask.save()
-    # Return both subtask item and updated counter (OOB swap)
+    try:
+        from apps.tasks import services
+        services.toggle_subtask(subtask, request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
     task = subtask.task
     html = render(request, 'tasks/partials/subtask_item.html', {'subtask': subtask}).content.decode()
     counter_html = render(request, 'tasks/partials/subtask_counter.html', {'task': task}).content.decode()
@@ -231,11 +227,12 @@ def subtask_toggle(request, pk, subtask_pk):
 @require_POST
 def subtask_delete(request, pk, subtask_pk):
     subtask = get_object_or_404(Subtask, pk=subtask_pk, task_id=pk)
-    if not can_access_project(request.user, subtask.task.project, 'editor'):
-        return HttpResponseForbidden("Editor access required to delete subtasks")
     task = subtask.task
-    subtask.delete()
-    # Return updated counter (OOB swap)
+    try:
+        from apps.tasks import services
+        services.delete_subtask(subtask, request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
     counter_html = render(request, 'tasks/partials/subtask_counter.html', {'task': task}).content.decode()
     return HttpResponse(counter_html)
 
