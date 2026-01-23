@@ -165,12 +165,12 @@ def task_move(request):
     task_id = request.POST.get('task_id')
     status_id = request.POST.get('status_id')
     task = get_object_or_404(Task.objects.select_for_update(), pk=task_id)
-    if not can_access_project(request.user, task.project, 'editor'):
-        return HttpResponseForbidden("Editor access required to move tasks")
     status = get_object_or_404(Status, pk=status_id, project=task.project)
-    task.status = status
-    task._changed_by = request.user
-    task.save()
+    try:
+        from apps.tasks import services
+        services.move_task(task, status, request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
     return HttpResponse(status=204)
 
 
@@ -178,13 +178,13 @@ def task_move(request):
 @require_POST
 def task_update_status(request, pk):
     task = get_object_or_404(Task, pk=pk)
-    if not can_access_project(request.user, task.project, 'editor'):
-        return HttpResponseForbidden("Editor access required to update tasks")
     status_id = request.POST.get('status_id')
     status = get_object_or_404(Status, pk=status_id, project=task.project)
-    task.status = status
-    task._changed_by = request.user
-    task.save()
+    try:
+        from apps.tasks import services
+        services.move_task(task, status, request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
     response = render(request, 'tasks/partials/status_dropdown.html', {'task': task})
     response['HX-Trigger'] = 'taskStatusChanged, activityUpdated'
     return response
