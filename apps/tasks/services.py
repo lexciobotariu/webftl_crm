@@ -11,13 +11,32 @@ Key patterns:
   to trigger activity logging via signals
 - Permission errors raise PermissionDenied (caught by views as 403)
 """
+import os
+from dataclasses import dataclass
+
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Max
+from django.utils.text import get_valid_filename
 
 from apps.projects.models import can_access_project
 
-from .models import Subtask, TaskActivity
+from .models import Attachment, Subtask, TaskActivity
+
+
+# File upload security settings
+ALLOWED_EXTENSIONS = {
+    '.pdf', '.doc', '.docx', '.xls', '.xlsx',
+    '.png', '.jpg', '.jpeg', '.gif',
+    '.txt', '.csv', '.zip'
+}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
+
+@dataclass
+class FileValidationError:
+    """Returned when file validation fails."""
+    message: str
 
 
 class TaskPermissionError(PermissionDenied):
@@ -171,4 +190,59 @@ def add_comment(task, content, user):
         user=user,
         activity_type='comment',
         content=content
+    )
+
+
+def validate_upload(file):
+    """
+    Validate a file for upload.
+
+    Args:
+        file: UploadedFile instance
+
+    Returns:
+        FileValidationError if validation fails, None if valid
+    """
+    if not file:
+        return FileValidationError("No file provided")
+
+    ext = os.path.splitext(file.name)[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        return FileValidationError(
+            f"File type not allowed. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
+        )
+
+    if file.size > MAX_FILE_SIZE:
+        return FileValidationError("File too large. Maximum size is 10MB.")
+
+    return None
+
+
+def upload_attachment(task, file, user):
+    """
+    Upload an attachment to a task.
+
+    Args:
+        task: Task to attach file to
+        file: UploadedFile instance
+        user: User uploading the file
+
+    Returns:
+        The created Attachment instance
+
+    Raises:
+        TaskPermissionError: If user lacks editor access
+        ValueError: If file validation fails
+    """
+    require_access(user, task.project, 'editor')
+
+    error = validate_upload(file)
+    if error:
+        raise ValueError(error.message)
+
+    return Attachment.objects.create(
+        task=task,
+        file=file,
+        filename=get_valid_filename(file.name),
+        uploaded_by=user
     )

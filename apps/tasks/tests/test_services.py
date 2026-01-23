@@ -1,6 +1,7 @@
 # apps/tasks/tests/test_services.py
 import pytest
 from django.core.exceptions import PermissionDenied
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from apps.accounts.factories import UserFactory
 from apps.projects.factories import ProjectFactory, ProjectMemberFactory, StatusFactory
@@ -212,3 +213,69 @@ class TestCommentService:
 
         with pytest.raises(PermissionDenied):
             services.add_comment(task, 'Comment', user)
+
+
+@pytest.mark.django_db
+class TestAttachmentService:
+    def test_validate_upload_valid_file(self):
+        file = SimpleUploadedFile('test.pdf', b'content', content_type='application/pdf')
+
+        error = services.validate_upload(file)
+
+        assert error is None
+
+    def test_validate_upload_no_file(self):
+        error = services.validate_upload(None)
+
+        assert error is not None
+        assert 'No file provided' in error.message
+
+    def test_validate_upload_invalid_extension(self):
+        file = SimpleUploadedFile('test.exe', b'content')
+
+        error = services.validate_upload(file)
+
+        assert error is not None
+        assert 'not allowed' in error.message
+
+    def test_validate_upload_file_too_large(self):
+        # Create file larger than 10MB
+        large_content = b'x' * (11 * 1024 * 1024)
+        file = SimpleUploadedFile('test.txt', large_content)
+
+        error = services.validate_upload(file)
+
+        assert error is not None
+        assert 'too large' in error.message
+
+    def test_upload_attachment(self):
+        user = UserFactory()
+        task = TaskFactory()
+        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        file = SimpleUploadedFile('test.txt', b'content', content_type='text/plain')
+
+        attachment = services.upload_attachment(task, file, user)
+
+        assert attachment.task == task
+        assert attachment.uploaded_by == user
+        assert attachment.filename == 'test.txt'
+
+    def test_upload_attachment_requires_editor(self):
+        user = UserFactory()
+        task = TaskFactory()
+        ProjectMemberFactory(project=task.project, user=user, role='viewer')
+        file = SimpleUploadedFile('test.txt', b'content')
+
+        with pytest.raises(PermissionDenied):
+            services.upload_attachment(task, file, user)
+
+    def test_upload_attachment_validates_file(self):
+        user = UserFactory()
+        task = TaskFactory()
+        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        file = SimpleUploadedFile('test.exe', b'content')
+
+        with pytest.raises(ValueError) as exc_info:
+            services.upload_attachment(task, file, user)
+
+        assert 'not allowed' in str(exc_info.value)
