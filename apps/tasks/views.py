@@ -241,18 +241,15 @@ def subtask_delete(request, pk, subtask_pk):
 @require_POST
 def comment_create(request, pk):
     task = get_object_or_404(Task, pk=pk)
-    if not can_access_project(request.user, task.project, 'viewer'):
-        return HttpResponseForbidden("You don't have access to this task")
     content = request.POST.get('content', '').strip()
-    if content:
-        activity = TaskActivity.objects.create(
-            task=task,
-            user=request.user,
-            activity_type='comment',
-            content=content
-        )
-        return render(request, 'tasks/partials/activity_item.html', {'activity': activity})
-    return HttpResponse(status=400)
+    if not content:
+        return HttpResponse(status=400)
+    try:
+        from apps.tasks import services
+        activity = services.add_comment(task, content, request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
+    return render(request, 'tasks/partials/activity_item.html', {'activity': activity})
 
 
 @login_required
@@ -268,31 +265,13 @@ def task_activity_list(request, pk):
 @require_POST
 def attachment_upload(request, pk):
     task = get_object_or_404(Task, pk=pk)
-    if not can_access_project(request.user, task.project, 'editor'):
-        return HttpResponseForbidden("Editor access required to upload attachments")
-    file = request.FILES.get('file')
-
-    if not file:
-        return HttpResponse('No file provided', status=400)
-
-    # Validate file extension
-    ext = os.path.splitext(file.name)[1].lower()
-    if ext not in ALLOWED_EXTENSIONS:
-        return HttpResponse(f'File type not allowed. Allowed: {", ".join(sorted(ALLOWED_EXTENSIONS))}', status=400)
-
-    # Validate file size
-    if file.size > MAX_FILE_SIZE:
-        return HttpResponse('File too large. Maximum size is 10MB.', status=400)
-
-    # Sanitize filename to prevent path traversal
-    safe_filename = get_valid_filename(file.name)
-
-    attachment = Attachment.objects.create(
-        task=task,
-        file=file,
-        filename=safe_filename,
-        uploaded_by=request.user
-    )
+    try:
+        from apps.tasks import services
+        attachment = services.upload_attachment(task, request.FILES.get('file'), request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
+    except ValueError as e:
+        return HttpResponse(str(e), status=400)
     return render(request, 'tasks/partials/attachment_item.html', {'attachment': attachment})
 
 
