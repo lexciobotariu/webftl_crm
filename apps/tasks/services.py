@@ -261,3 +261,23 @@ def delete_task(task, user):
     """
     require_access(user, task.project, 'editor')
     task.delete()
+
+
+def toggle_label(task, label, user):
+    """
+    Toggle a label on a task (add if not present, remove if present).
+
+    Args:
+        task: Task instance
+        label: Label instance to toggle
+        user: User performing the action (for permissions)
+
+    Raises:
+        TaskPermissionError: If user lacks editor access
+    """
+    require_access(user, task.project, 'editor')
+
+    if label in task.labels.all():
+        task.labels.remove(label)
+    else:
+        task.labels.add(label)

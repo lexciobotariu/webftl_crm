@@ -6,7 +6,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from apps.accounts.factories import UserFactory
 from apps.projects.factories import ProjectFactory, ProjectMemberFactory, StatusFactory
 from apps.tasks import services
-from apps.tasks.factories import SubtaskFactory, TaskFactory
+from apps.tasks.factories import LabelFactory, SubtaskFactory, TaskFactory
 from apps.tasks.models import Subtask, Task, TaskActivity
 
 
@@ -300,3 +300,36 @@ class TestDeleteTask:
 
         with pytest.raises(PermissionDenied):
             services.delete_task(task, user)
+
+
+@pytest.mark.django_db
+class TestToggleLabel:
+    def test_toggle_label_adds_label(self):
+        user = UserFactory()
+        task = TaskFactory()
+        label = LabelFactory(project=task.project)
+        ProjectMemberFactory(project=task.project, user=user, role='editor')
+
+        services.toggle_label(task, label, user)
+
+        assert label in task.labels.all()
+
+    def test_toggle_label_removes_label(self):
+        user = UserFactory()
+        task = TaskFactory()
+        label = LabelFactory(project=task.project)
+        task.labels.add(label)
+        ProjectMemberFactory(project=task.project, user=user, role='editor')
+
+        services.toggle_label(task, label, user)
+
+        assert label not in task.labels.all()
+
+    def test_toggle_label_requires_editor(self):
+        user = UserFactory()
+        task = TaskFactory()
+        label = LabelFactory(project=task.project)
+        ProjectMemberFactory(project=task.project, user=user, role='viewer')
+
+        with pytest.raises(PermissionDenied):
+            services.toggle_label(task, label, user)
