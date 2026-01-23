@@ -28,10 +28,13 @@
                 Create Task
             </button>
             <button type="button" onclick="document.getElementById('slide-over').classList.add('hidden')"
-                    class="px-4 py-2 text-zinc-400 hover:text-zinc-300 text-sm transition-colors">
+                    class="bg-elevated border border-border-subtle px-4 py-2 rounded-card text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
                 Cancel
             </button>
         </div>
     </form>
 </div>
-<script>document.getElementById('slide-over').classList.remove('hidden');</script>
+<script>
+document.getElementById('slide-over').classList.remove('hidden');
+lucide.createIcons();
+</script>

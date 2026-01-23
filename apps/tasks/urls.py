@@ -27,4 +27,5 @@ urlpatterns = [
     path('<int:pk>/labels/<int:label_pk>/toggle/', views.task_toggle_label, name='task_toggle_label'),
     path('<int:pk>/description/', views.task_edit_description, name='task_edit_description'),
     path('<int:pk>/title/', views.task_edit_title, name='task_edit_title'),
+    path('<int:pk>/card/', views.task_card, name='task_card'),
 ]

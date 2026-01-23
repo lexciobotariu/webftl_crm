@@ -1,9 +1,79 @@
-{% for field in form %}
+<!-- Title -->
 <div class="space-y-1">
-    <label class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500">{{ field.label }}</label>
-    {{ field }}
-    {% if field.errors %}
-    <p class="text-red-500 text-sm mt-1">{{ field.errors.0 }}</p>
+    <label class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500">{{ form.title.label }}</label>
+    {{ form.title }}
+    {% if form.title.errors %}
+    <p class="text-red-500 text-sm mt-1">{{ form.title.errors.0 }}</p>
     {% endif %}
 </div>
-{% endfor %}
+
+<!-- Description -->
+<div class="space-y-1">
+    <label class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500">{{ form.description.label }}</label>
+    {{ form.description }}
+    {% if form.description.errors %}
+    <p class="text-red-500 text-sm mt-1">{{ form.description.errors.0 }}</p>
+    {% endif %}
+</div>
+
+<!-- Properties Section -->
+<div class="border-t border-border-subtle pt-4 mt-4">
+    <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Properties</h3>
+
+    <div class="space-y-1">
+        <!-- Priority -->
+        <div class="flex items-center py-2 px-2 hover:bg-hover rounded-card">
+            <div class="flex items-center gap-2 w-28 text-zinc-500 text-sm">
+                <i data-lucide="signal" class="w-4 h-4"></i>
+                <span>Priority</span>
+            </div>
+            <div class="flex-1">
+                {% include "tasks/partials/priority_dropdown_create.html" %}
+            </div>
+        </div>
+
+        <!-- Assignee -->
+        <div class="flex items-center py-2 px-2 hover:bg-hover rounded-card">
+            <div class="flex items-center gap-2 w-28 text-zinc-500 text-sm">
+                <i data-lucide="user" class="w-4 h-4"></i>
+                <span>Assignee</span>
+            </div>
+            <div class="flex-1">
+                {% include "tasks/partials/assignee_dropdown_create.html" %}
+            </div>
+        </div>
+
+        <!-- Due Date -->
+        <div class="flex items-center py-2 px-2 hover:bg-hover rounded-card">
+            <div class="flex items-center gap-2 w-28 text-zinc-500 text-sm">
+                <i data-lucide="calendar" class="w-4 h-4"></i>
+                <span>Due date</span>
+            </div>
+            <div class="flex-1">
+                {% include "tasks/partials/due_date_picker_create.html" %}
+            </div>
+        </div>
+
+        <!-- Time Estimate -->
+        <div class="flex items-center py-2 px-2 hover:bg-hover rounded-card">
+            <div class="flex items-center gap-2 w-28 text-zinc-500 text-sm">
+                <i data-lucide="clock" class="w-4 h-4"></i>
+                <span>Estimate</span>
+            </div>
+            <div class="flex-1">
+                {% include "tasks/partials/estimate_input_create.html" %}
+            </div>
+        </div>
+
+        <!-- Labels -->
+        <div class="flex items-center py-2 px-2 hover:bg-hover rounded-card">
+            <div class="flex items-center gap-2 w-28 text-zinc-500 text-sm">
+                <i data-lucide="tag" class="w-4 h-4"></i>
+                <span>Labels</span>
+            </div>
+            <div class="flex-1">
+                {% include "tasks/partials/labels_selector_create.html" %}
+            </div>
+        </div>
+    </div>
+</div>
