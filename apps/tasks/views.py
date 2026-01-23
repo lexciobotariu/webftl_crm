@@ -10,7 +10,7 @@ from django.views.decorators.http import require_POST
 from apps.accounts.models import User
 from apps.projects.models import Project, Status, can_access_project
 from apps.tasks.models import Label
-from .forms import TaskForm, SubtaskForm
+from .forms import TaskForm, SubtaskForm, CommentForm
 from .models import Task, Subtask, Attachment, TaskActivity
 
 TASKS_PER_PAGE = 20

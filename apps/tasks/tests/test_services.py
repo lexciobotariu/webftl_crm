@@ -140,6 +140,17 @@ class TestSubtaskServices:
 
         assert subtask.order == 2
 
+    def test_create_subtask_after_zero_order(self):
+        """Ensure new subtask gets order=1 when only subtask has order=0."""
+        user = UserFactory()
+        task = TaskFactory()
+        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        SubtaskFactory(task=task, order=0)  # Only one subtask with order=0
+
+        subtask = services.create_subtask(task, 'Second', user)
+
+        assert subtask.order == 1  # Should be 1, not 0
+
     def test_create_subtask_requires_editor(self):
         user = UserFactory()
         task = TaskFactory()

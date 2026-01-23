@@ -122,10 +122,11 @@ def create_subtask(task, title, user):
     require_access(user, task.project, 'editor')
 
     max_order = task.subtasks.aggregate(Max('order'))['order__max']
+    next_order = 0 if max_order is None else max_order + 1
     return Subtask.objects.create(
         task=task,
         title=title,
-        order=(max_order or -1) + 1
+        order=next_order
     )
 
 

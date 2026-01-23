@@ -7,13 +7,25 @@
     <!-- Fixed compact header -->
     <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80">
         <div class="flex items-center justify-between">
-            <div class="flex items-center gap-4">
-                <a href="{% url 'project_detail' project.pk %}" class="text-zinc-500 hover:text-zinc-300 transition-colors">
+            <div class="flex items-center gap-3">
+                <a href="{% url 'project_detail' project.pk %}" class="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors" title="Back to Project">
                     <i data-lucide="arrow-left" class="w-4 h-4"></i>
                 </a>
-                <div class="flex items-center gap-3">
-                    <h1 class="text-sm font-medium text-zinc-100">{{ project.name }}</h1>
-                    <span class="text-xs text-zinc-500">{{ project.client.name }}</span>
+                <div class="flex items-center gap-2 text-sm">
+                    <a href="{% url 'client_detail' project.client.pk %}" class="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 transition-colors">
+                        <i data-lucide="building-2" class="w-3.5 h-3.5"></i>
+                        <span>{{ project.client.name }}</span>
+                    </a>
+                    <span class="text-zinc-600">/</span>
+                    <a href="{% url 'project_detail' project.pk %}" class="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 transition-colors">
+                        <i data-lucide="folder" class="w-3.5 h-3.5"></i>
+                        <span>{{ project.name }}</span>
+                    </a>
+                    <span class="text-zinc-600">/</span>
+                    <span class="flex items-center gap-1.5 text-zinc-100 font-medium">
+                        <i data-lucide="kanban" class="w-3.5 h-3.5"></i>
+                        <span>Board</span>
+                    </span>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -24,7 +36,7 @@
                     <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                     Add Task
                 </button>
-                <a href="{% url 'project_settings' project.pk %}" class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
+                <a href="{% url 'project_settings' project.pk %}?next=board" class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
                     <i data-lucide="settings" class="w-3.5 h-3.5"></i>
                     Settings
                 </a>
