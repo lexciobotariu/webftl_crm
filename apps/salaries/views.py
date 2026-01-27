@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404
 from django.utils import timezone
 
-from .forms import EmployeeSalaryForm, SalaryMonthForm
+from .forms import EmployeeSalaryForm, SalaryMonthForm, PaymentForm
 from .models import EmployeeSalary
 
 
@@ -108,5 +108,25 @@ def month_create(request, pk):
 
 @login_required
 def payment_create(request, pk):
-    """Record payment drawer - placeholder."""
-    return HttpResponse('<div class="p-4 text-zinc-400">Record payment form coming soon</div>')
+    """Record payment drawer."""
+    employee_salary = get_object_or_404(
+        EmployeeSalary.objects.select_related('user'),
+        pk=pk
+    )
+
+    if request.method == 'POST':
+        form = PaymentForm(request.POST, employee_salary=employee_salary)
+        if form.is_valid():
+            form.save()
+            response = HttpResponse('')
+            return _set_salary_triggers(response, close=True)
+        return render(request, 'salaries/partials/create_payment_drawer.html', {
+            'form': form,
+            'employee_salary': employee_salary,
+        })
+
+    form = PaymentForm(employee_salary=employee_salary)
+    return render(request, 'salaries/partials/create_payment_drawer.html', {
+        'form': form,
+        'employee_salary': employee_salary,
+    })

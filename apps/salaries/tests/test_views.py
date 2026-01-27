@@ -157,3 +157,56 @@ class TestMonthCreateView:
             month=3
         ).count() == 1
         assert b'already exists' in response.content
+
+
+class TestPaymentCreateView:
+    def test_payment_create_get(self, client_logged_in, employee_salary):
+        """Test GET returns the payment create drawer."""
+        SalaryMonth.objects.create(
+            employee_salary=employee_salary,
+            year=2025,
+            month=1,
+            expected_amount=Decimal('5000.00')
+        )
+        response = client_logged_in.get(reverse('payment_create', args=[employee_salary.id]))
+        assert response.status_code == 200
+        assert b'Record Payment' in response.content
+
+    def test_payment_create_post_success(self, client_logged_in, employee_salary):
+        """Test POST creates a new payment."""
+        month = SalaryMonth.objects.create(
+            employee_salary=employee_salary,
+            year=2025,
+            month=1,
+            expected_amount=Decimal('5000.00')
+        )
+        response = client_logged_in.post(reverse('payment_create', args=[employee_salary.id]), {
+            'salary_month': month.id,
+            'amount': '2500.00',
+            'payment_date': '2025-01-15',
+            'payment_method': 'bank_transfer',
+            'notes': 'First payment',
+        })
+        assert response.status_code == 200
+        assert Payment.objects.filter(salary_month=month).exists()
+        payment = Payment.objects.get(salary_month=month)
+        assert payment.amount == Decimal('2500.00')
+
+    def test_payment_create_shows_existing_months(self, client_logged_in, employee_salary):
+        """Test form shows existing months for selection."""
+        SalaryMonth.objects.create(
+            employee_salary=employee_salary,
+            year=2025,
+            month=1,
+            expected_amount=Decimal('5000.00')
+        )
+        SalaryMonth.objects.create(
+            employee_salary=employee_salary,
+            year=2025,
+            month=2,
+            expected_amount=Decimal('5000.00')
+        )
+        response = client_logged_in.get(reverse('payment_create', args=[employee_salary.id]))
+        assert response.status_code == 200
+        assert b'January 2025' in response.content
+        assert b'February 2025' in response.content

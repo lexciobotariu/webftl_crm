@@ -108,3 +108,54 @@ class SalaryMonthForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+
+class PaymentForm(forms.ModelForm):
+    class Meta:
+        model = Payment
+        fields = ['salary_month', 'amount', 'payment_date', 'payment_method', 'notes']
+        widgets = {
+            'salary_month': forms.Select(attrs={'class': INPUT_CLASSES}),
+            'amount': forms.NumberInput(attrs={
+                'class': INPUT_CLASSES,
+                'placeholder': '0.00',
+                'step': '0.01',
+            }),
+            'payment_date': forms.DateInput(attrs={
+                'class': INPUT_CLASSES,
+                'type': 'date',
+            }),
+            'payment_method': forms.Select(attrs={'class': INPUT_CLASSES}),
+            'notes': forms.Textarea(attrs={
+                'class': INPUT_CLASSES,
+                'rows': 3,
+                'placeholder': 'Optional notes about this payment...',
+            }),
+        }
+
+    def __init__(self, *args, employee_salary=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.employee_salary = employee_salary
+
+        # Notes is optional
+        self.fields['notes'].required = False
+
+        # Default payment_date to today
+        if not self.data:
+            self.initial['payment_date'] = timezone.now().date()
+
+        # Filter salary_month queryset to only show months for this employee
+        if employee_salary:
+            months_qs = SalaryMonth.objects.filter(
+                employee_salary=employee_salary
+            ).order_by('-year', '-month')
+            self.fields['salary_month'].queryset = months_qs
+
+            # Customize labels to show "Month Year (remaining amount)"
+            self.fields['salary_month'].label_from_instance = self._format_month_label
+        else:
+            self.fields['salary_month'].queryset = SalaryMonth.objects.none()
+
+    def _format_month_label(self, month_obj):
+        """Format salary month label as 'Month Year (remaining amount)'."""
+        return f'{month_obj.month_name} {month_obj.year} ({month_obj.remaining} remaining)'
