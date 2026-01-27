@@ -41,10 +41,12 @@ def salary_list(request):
             'current_month': current_month_entry,
         })
 
-    # Check if there are users available (users without salary configs)
+    # Check if there are users available (non-staff users without salary configs)
+    # Staff users (admins) are not considered employees for salary purposes
     users_with_salary = EmployeeSalary.objects.values_list('user_id', flat=True)
-    has_available_users = User.objects.exclude(id__in=users_with_salary).exists()
-    has_any_users = User.objects.exists()
+    employee_users = User.objects.filter(is_staff=False)
+    has_available_users = employee_users.exclude(id__in=users_with_salary).exists()
+    has_any_users = employee_users.exists()
 
     return render(request, 'salaries/salary_list.html', {
         'salary_data': salary_data,
@@ -61,6 +63,9 @@ def salary_create(request):
     from django.contrib.auth import get_user_model
     User = get_user_model()
 
+    # Only non-staff users are considered employees
+    has_any_employees = User.objects.filter(is_staff=False).exists()
+
     if request.method == 'POST':
         form = EmployeeSalaryForm(request.POST)
         if form.is_valid():
@@ -69,13 +74,13 @@ def salary_create(request):
             return _set_salary_triggers(response, close=True)
         return render(request, 'salaries/partials/create_salary_drawer.html', {
             'form': form,
-            'has_any_users': User.objects.exists(),
+            'has_any_users': has_any_employees,
         })
 
     form = EmployeeSalaryForm()
     return render(request, 'salaries/partials/create_salary_drawer.html', {
         'form': form,
-        'has_any_users': User.objects.exists(),
+        'has_any_users': has_any_employees,
     })
 
 

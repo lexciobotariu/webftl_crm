@@ -40,9 +40,10 @@ class EmployeeSalaryForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Only show users who don't have a salary configuration yet
+        # Only show non-staff users who don't have a salary configuration yet
+        # Staff users (admins) are not considered employees for salary purposes
         users_with_salary = EmployeeSalary.objects.values_list('user_id', flat=True)
-        self.fields['user'].queryset = User.objects.exclude(id__in=users_with_salary)
+        self.fields['user'].queryset = User.objects.filter(is_staff=False).exclude(id__in=users_with_salary)
         self.fields['user'].label = 'Employee'
 
 
