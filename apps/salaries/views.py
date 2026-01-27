@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404
 from django.utils import timezone
 
-from .forms import EmployeeSalaryForm
+from .forms import EmployeeSalaryForm, SalaryMonthForm
 from .models import EmployeeSalary
 
 
@@ -82,8 +82,28 @@ def salary_detail(request, pk):
 
 @login_required
 def month_create(request, pk):
-    """Create month entry drawer - placeholder."""
-    return HttpResponse('<div class="p-4 text-zinc-400">Add month form coming soon</div>')
+    """Create month entry drawer."""
+    employee_salary = get_object_or_404(
+        EmployeeSalary.objects.select_related('user'),
+        pk=pk
+    )
+
+    if request.method == 'POST':
+        form = SalaryMonthForm(request.POST, employee_salary=employee_salary)
+        if form.is_valid():
+            form.save()
+            response = HttpResponse('')
+            return _set_salary_triggers(response, close=True)
+        return render(request, 'salaries/partials/create_month_drawer.html', {
+            'form': form,
+            'employee_salary': employee_salary,
+        })
+
+    form = SalaryMonthForm(employee_salary=employee_salary)
+    return render(request, 'salaries/partials/create_month_drawer.html', {
+        'form': form,
+        'employee_salary': employee_salary,
+    })
 
 
 @login_required

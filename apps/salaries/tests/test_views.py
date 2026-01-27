@@ -105,3 +105,55 @@ class TestSalaryCreateView:
         # employee_salary.user should not be in the form options
         assert b'Other User' in response.content
         # user (who has employee_salary) should not be in options
+
+
+class TestMonthCreateView:
+    def test_month_create_get(self, client_logged_in, employee_salary):
+        """Test GET returns the month create drawer."""
+        response = client_logged_in.get(reverse('month_create', args=[employee_salary.id]))
+        assert response.status_code == 200
+        assert b'Add Month' in response.content
+
+    def test_month_create_post_success(self, client_logged_in, employee_salary):
+        """Test POST creates a new month entry."""
+        response = client_logged_in.post(reverse('month_create', args=[employee_salary.id]), {
+            'year': 2025,
+            'month': 2,
+            'expected_amount': '5500.00',
+        })
+        assert response.status_code == 200
+        assert SalaryMonth.objects.filter(
+            employee_salary=employee_salary,
+            year=2025,
+            month=2
+        ).exists()
+
+    def test_month_create_prefills_base_salary(self, client_logged_in, employee_salary):
+        """Test form pre-fills expected amount with base salary."""
+        response = client_logged_in.get(reverse('month_create', args=[employee_salary.id]))
+        assert response.status_code == 200
+        assert b'5000' in response.content
+
+    def test_month_create_duplicate_validation(self, client_logged_in, employee_salary):
+        """Test validation prevents duplicate year/month for same employee."""
+        # Create existing month entry
+        SalaryMonth.objects.create(
+            employee_salary=employee_salary,
+            year=2025,
+            month=3,
+            expected_amount=Decimal('5000.00')
+        )
+        # Try to create duplicate
+        response = client_logged_in.post(reverse('month_create', args=[employee_salary.id]), {
+            'year': 2025,
+            'month': 3,
+            'expected_amount': '5500.00',
+        })
+        assert response.status_code == 200
+        # Should show error, not create duplicate
+        assert SalaryMonth.objects.filter(
+            employee_salary=employee_salary,
+            year=2025,
+            month=3
+        ).count() == 1
+        assert b'already exists' in response.content
