@@ -66,7 +66,7 @@
         <div class="flex-shrink-0 px-4 py-3 border-t border-border-subtle bg-panel/80">
             <div class="flex gap-3">
                 <button type="submit"
-                        class="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-card text-sm transition-colors">
+                        class="flex items-center justify-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover text-white rounded-card text-sm transition-colors">
                     <i data-lucide="check" class="w-4 h-4"></i>
                     Save Changes
                 </button>
@@ -74,7 +74,7 @@
                         hx-get="{% url 'note_detail_drawer' note.pk %}"
                         hx-target="#slide-over"
                         hx-swap="innerHTML"
-                        class="px-4 py-2 bg-elevated hover:bg-elevated/80 text-zinc-300 rounded-card text-sm transition-colors">
+                        class="bg-elevated border border-border-subtle px-4 py-2 rounded-card text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
                     Cancel
                 </button>
             </div>
