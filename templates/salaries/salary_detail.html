@@ -52,7 +52,12 @@
     </div>
 
     <!-- Months List -->
-    <div class="bg-elevated rounded-card border border-border-subtle overflow-hidden">
+    <div id="months-list-content"
+         hx-get="{% url 'salary_detail' salary.id %}"
+         hx-trigger="refreshSalaryList from:body"
+         hx-select="#months-list-content"
+         hx-swap="outerHTML"
+         class="bg-elevated rounded-card border border-border-subtle overflow-hidden">
         {% if months %}
         <div class="divide-y divide-border-subtle" x-data="{ expandedMonth: null }">
             {% for month in months %}

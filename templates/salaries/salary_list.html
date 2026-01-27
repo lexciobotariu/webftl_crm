@@ -21,6 +21,11 @@
     </div>
 
     <!-- Salary List -->
+    <div id="salary-list-content"
+         hx-get="{% url 'salary_list' %}"
+         hx-trigger="refreshSalaryList from:body"
+         hx-select="#salary-list-content"
+         hx-swap="outerHTML">
     {% if salary_data %}
     <div class="bg-elevated rounded-card border border-border-subtle overflow-hidden">
         <table class="w-full">
@@ -52,5 +57,6 @@
         </button>
     </div>
     {% endif %}
+    </div>
 </div>
 {% endblock %}
