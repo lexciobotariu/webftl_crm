@@ -1,18 +1,14 @@
-<tr class="hover:bg-hover transition-colors cursor-pointer"
-    hx-get="{% url 'salary_detail' item.salary.id %}"
-    hx-push-url="true"
-    hx-target="main"
-    hx-swap="innerHTML">
+<tr class="hover:bg-hover transition-colors">
     <td class="px-4 py-3">
-        <div class="flex items-center gap-3">
+        <a href="{% url 'salary_detail' item.salary.id %}" class="flex items-center gap-3">
             <div class="w-8 h-8 rounded-full bg-accent-muted flex items-center justify-center">
                 <span class="text-accent text-xs font-semibold">{{ item.salary.user.name|slice:":1"|upper }}</span>
             </div>
             <div>
-                <div class="text-sm font-medium text-zinc-100">{{ item.salary.user.name }}</div>
+                <div class="text-sm font-medium text-zinc-100 hover:text-accent transition-colors">{{ item.salary.user.name }}</div>
                 <div class="text-xs text-zinc-500">{{ item.salary.user.email }}</div>
             </div>
-        </div>
+        </a>
     </td>
     <td class="px-4 py-3">
         <span class="text-sm text-zinc-100">
