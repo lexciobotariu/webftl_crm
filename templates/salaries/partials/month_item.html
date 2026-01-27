@@ -65,6 +65,7 @@
     <!-- Expanded Payment List -->
     <div x-show="expandedMonth === {{ month.id }}"
          x-collapse
+         x-cloak
          class="border-t border-border-subtle bg-panel/50">
         {% if month.payments.all %}
         <div class="divide-y divide-border-subtle">
