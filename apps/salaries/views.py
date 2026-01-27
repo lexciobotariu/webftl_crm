@@ -48,16 +48,25 @@ def salary_list(request):
 @login_required
 def salary_create(request):
     """Create salary configuration for an employee."""
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+
     if request.method == 'POST':
         form = EmployeeSalaryForm(request.POST)
         if form.is_valid():
             form.save()
             response = HttpResponse('')
             return _set_salary_triggers(response, close=True)
-        return render(request, 'salaries/partials/create_salary_drawer.html', {'form': form})
+        return render(request, 'salaries/partials/create_salary_drawer.html', {
+            'form': form,
+            'has_any_users': User.objects.exists(),
+        })
 
     form = EmployeeSalaryForm()
-    return render(request, 'salaries/partials/create_salary_drawer.html', {'form': form})
+    return render(request, 'salaries/partials/create_salary_drawer.html', {
+        'form': form,
+        'has_any_users': User.objects.exists(),
+    })
 
 
 @login_required

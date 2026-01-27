@@ -90,8 +90,13 @@
         <!-- No employees available -->
         <div class="flex flex-col items-center justify-center py-12 text-center">
             <i data-lucide="users" class="w-12 h-12 text-zinc-600 mb-4"></i>
-            <p class="text-sm text-zinc-400 mb-2">All employees already have salary configurations</p>
-            <p class="text-xs text-zinc-500">Add new team members to configure their salaries.</p>
+            {% if has_any_users %}
+                <p class="text-sm text-zinc-400 mb-2">All employees already have salary configurations</p>
+                <p class="text-xs text-zinc-500">Add new team members to configure their salaries.</p>
+            {% else %}
+                <p class="text-sm text-zinc-400 mb-2">No team members found</p>
+                <p class="text-xs text-zinc-500">Add team members first to configure their salaries.</p>
+            {% endif %}
             <button type="button"
                     onclick="document.getElementById('slide-over').classList.add('hidden')"
                     class="mt-6 px-4 py-2 text-zinc-400 hover:text-zinc-300 text-sm transition-colors border border-border-subtle rounded-card">
