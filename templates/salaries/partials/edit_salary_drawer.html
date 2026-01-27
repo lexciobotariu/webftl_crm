@@ -1,0 +1,102 @@
+<div class="flex flex-col h-full">
+    <!-- Drawer header -->
+    <div class="flex-shrink-0 px-4 py-3 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <i data-lucide="pencil" class="w-4 h-4 text-zinc-500"></i>
+                <h2 class="text-sm font-medium text-zinc-100">Edit Salary Configuration</h2>
+            </div>
+            <button onclick="document.getElementById('slide-over').classList.add('hidden')"
+                    class="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <form hx-post="{% url 'salary_edit' salary.id %}"
+          hx-target="#slide-over"
+          hx-swap="innerHTML"
+          class="flex-1 overflow-y-auto p-4">
+        {% csrf_token %}
+
+        <!-- Non-field errors -->
+        {% if form.non_field_errors %}
+        <div class="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-card">
+            <p class="text-sm text-red-400">{{ form.non_field_errors.0 }}</p>
+        </div>
+        {% endif %}
+
+        <div class="space-y-4">
+            <!-- Employee (read-only display) -->
+            <div>
+                <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Employee</label>
+                <div class="w-full bg-panel border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-400">
+                    {{ salary.user.name }} ({{ salary.user.email }})
+                </div>
+                <input type="hidden" name="user" value="{{ salary.user.id }}">
+            </div>
+
+            <!-- Base Salary -->
+            <div>
+                <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Base Monthly Salary</label>
+                <input type="number"
+                       name="base_salary"
+                       step="0.01"
+                       min="0"
+                       required
+                       value="{{ form.base_salary.value|default:'' }}"
+                       class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+                       placeholder="0.00">
+                {% if form.base_salary.errors %}
+                    <p class="mt-1 text-xs text-red-400">{{ form.base_salary.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Currency -->
+            <div>
+                <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Currency</label>
+                <select name="currency"
+                        required
+                        class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                    {% for value, label in form.currency.field.choices %}
+                        <option value="{{ value }}" {% if form.currency.value == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+                {% if form.currency.errors %}
+                    <p class="mt-1 text-xs text-red-400">{{ form.currency.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="flex gap-3 mt-6 pt-4 border-t border-border-subtle">
+            <button type="submit"
+                    class="flex-1 bg-accent text-white px-4 py-2 rounded-card text-sm font-medium hover:bg-accent-hover transition-colors">
+                Save Changes
+            </button>
+            <button type="button"
+                    onclick="document.getElementById('slide-over').classList.add('hidden')"
+                    class="px-4 py-2 text-zinc-400 hover:text-zinc-300 text-sm transition-colors">
+                Cancel
+            </button>
+        </div>
+    </form>
+
+    <!-- Delete section -->
+    <div class="flex-shrink-0 px-4 py-3 border-t border-border-subtle bg-panel/50">
+        <button hx-post="{% url 'salary_delete' salary.id %}"
+                hx-confirm="Are you sure you want to delete this salary configuration? This will also delete all months and payments."
+                class="w-full flex items-center justify-center gap-2 px-4 py-2 text-red-400 hover:bg-red-500/10 rounded-card text-sm transition-colors">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+            Delete Salary Configuration
+        </button>
+    </div>
+</div>
+
+<script>
+if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+}
+</script>

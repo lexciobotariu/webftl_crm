@@ -56,6 +56,15 @@
             </div>
             <div class="flex items-center gap-2 text-zinc-500">
                 <span class="text-xs">{{ month.payment_count }} payment{{ month.payment_count|pluralize }}</span>
+                <button @click.stop
+                        hx-get="{% url 'month_edit' salary.id month.id %}"
+                        hx-target="#slide-over"
+                        hx-swap="innerHTML"
+                        hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+                        class="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors"
+                        title="Edit month">
+                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                </button>
                 <i data-lucide="chevron-down" class="w-4 h-4 transition-transform"
                    :class="{ 'rotate-180': expandedMonth === {{ month.id }} }"></i>
             </div>

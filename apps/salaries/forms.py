@@ -90,11 +90,16 @@ class SalaryMonthForm(forms.ModelForm):
             cleaned_data['month'] = month
 
             # Check if this year/month already exists for this employee
-            if SalaryMonth.objects.filter(
+            # Exclude the current instance when editing
+            qs = SalaryMonth.objects.filter(
                 employee_salary=self.employee_salary,
                 year=year,
                 month=month
-            ).exists():
+            )
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+
+            if qs.exists():
                 raise forms.ValidationError(
                     f'A salary entry for {MONTH_CHOICES[month - 1][1]} {year} already exists for this employee.'
                 )

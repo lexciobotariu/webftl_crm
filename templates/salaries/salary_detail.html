@@ -49,6 +49,14 @@
             <i data-lucide="calendar-plus" class="w-4 h-4"></i>
             Add Month
         </button>
+        <button hx-get="{% url 'salary_edit' salary.id %}"
+                hx-target="#slide-over"
+                hx-swap="innerHTML"
+                hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+                class="flex items-center gap-2 px-3 py-1.5 bg-elevated text-zinc-300 text-sm font-medium rounded-card border border-border-subtle hover:bg-hover transition-colors">
+            <i data-lucide="settings" class="w-4 h-4"></i>
+            Settings
+        </button>
     </div>
 
     <!-- Months List -->
