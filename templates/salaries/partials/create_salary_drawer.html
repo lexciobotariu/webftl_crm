@@ -14,77 +14,92 @@
     </div>
 
     <!-- Form -->
-    <form hx-post="{% url 'salary_create' %}"
-          hx-target="#slide-over"
-          hx-swap="innerHTML"
-          class="flex-1 overflow-y-auto p-4">
-        {% csrf_token %}
+    <div class="flex-1 overflow-y-auto p-4">
+        {% if form.user.field.queryset.exists %}
+        <form hx-post="{% url 'salary_create' %}"
+              hx-target="#slide-over"
+              hx-swap="innerHTML">
+            {% csrf_token %}
 
-        <div class="space-y-4">
-            <!-- Employee -->
-            <div>
-                <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Employee</label>
-                <select name="user"
-                        required
-                        class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
-                    <option value="">Select an employee</option>
-                    {% for user_choice in form.user.field.queryset %}
-                        <option value="{{ user_choice.id }}" {% if form.user.value == user_choice.id|stringformat:"s" %}selected{% endif %}>
-                            {{ user_choice.name }} ({{ user_choice.email }})
-                        </option>
-                    {% endfor %}
-                </select>
-                {% if form.user.errors %}
-                    <p class="mt-1 text-xs text-red-400">{{ form.user.errors.0 }}</p>
-                {% endif %}
+            <div class="space-y-4">
+                <!-- Employee -->
+                <div>
+                    <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Employee</label>
+                    <select name="user"
+                            required
+                            class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                        <option value="">Select an employee</option>
+                        {% for user_choice in form.user.field.queryset %}
+                            <option value="{{ user_choice.id }}" {% if form.user.value == user_choice.id|stringformat:"s" %}selected{% endif %}>
+                                {{ user_choice.name }} ({{ user_choice.email }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                    {% if form.user.errors %}
+                        <p class="mt-1 text-xs text-red-400">{{ form.user.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Base Salary -->
+                <div>
+                    <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Base Monthly Salary</label>
+                    <input type="number"
+                           name="base_salary"
+                           step="0.01"
+                           min="0"
+                           required
+                           value="{{ form.base_salary.value|default:'' }}"
+                           class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+                           placeholder="0.00">
+                    {% if form.base_salary.errors %}
+                        <p class="mt-1 text-xs text-red-400">{{ form.base_salary.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Currency -->
+                <div>
+                    <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Currency</label>
+                    <select name="currency"
+                            required
+                            class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                        {% for value, label in form.currency.field.choices %}
+                            <option value="{{ value }}" {% if form.currency.value == value or value == 'EUR' and not form.currency.value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    {% if form.currency.errors %}
+                        <p class="mt-1 text-xs text-red-400">{{ form.currency.errors.0 }}</p>
+                    {% endif %}
+                </div>
             </div>
 
-            <!-- Base Salary -->
-            <div>
-                <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Base Monthly Salary</label>
-                <input type="number"
-                       name="base_salary"
-                       step="0.01"
-                       min="0"
-                       required
-                       value="{{ form.base_salary.value|default:'' }}"
-                       class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
-                       placeholder="0.00">
-                {% if form.base_salary.errors %}
-                    <p class="mt-1 text-xs text-red-400">{{ form.base_salary.errors.0 }}</p>
-                {% endif %}
+            <div class="flex gap-3 mt-6 pt-4 border-t border-border-subtle">
+                <button type="submit"
+                        class="flex-1 bg-accent text-white px-4 py-2 rounded-card text-sm font-medium hover:bg-accent-hover transition-colors">
+                    Add Employee
+                </button>
+                <button type="button"
+                        onclick="document.getElementById('slide-over').classList.add('hidden')"
+                        class="px-4 py-2 text-zinc-400 hover:text-zinc-300 text-sm transition-colors">
+                    Cancel
+                </button>
             </div>
-
-            <!-- Currency -->
-            <div>
-                <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Currency</label>
-                <select name="currency"
-                        required
-                        class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
-                    {% for value, label in form.currency.field.choices %}
-                        <option value="{{ value }}" {% if form.currency.value == value or value == 'EUR' and not form.currency.value %}selected{% endif %}>
-                            {{ label }}
-                        </option>
-                    {% endfor %}
-                </select>
-                {% if form.currency.errors %}
-                    <p class="mt-1 text-xs text-red-400">{{ form.currency.errors.0 }}</p>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="flex gap-3 mt-6 pt-4 border-t border-border-subtle">
-            <button type="submit"
-                    class="flex-1 bg-accent text-white px-4 py-2 rounded-card text-sm font-medium hover:bg-accent-hover transition-colors">
-                Add Employee
-            </button>
+        </form>
+        {% else %}
+        <!-- No employees available -->
+        <div class="flex flex-col items-center justify-center py-12 text-center">
+            <i data-lucide="users" class="w-12 h-12 text-zinc-600 mb-4"></i>
+            <p class="text-sm text-zinc-400 mb-2">All employees already have salary configurations</p>
+            <p class="text-xs text-zinc-500">Add new team members to configure their salaries.</p>
             <button type="button"
                     onclick="document.getElementById('slide-over').classList.add('hidden')"
-                    class="px-4 py-2 text-zinc-400 hover:text-zinc-300 text-sm transition-colors">
-                Cancel
+                    class="mt-6 px-4 py-2 text-zinc-400 hover:text-zinc-300 text-sm transition-colors border border-border-subtle rounded-card">
+                Close
             </button>
         </div>
-    </form>
+        {% endif %}
+    </div>
 </div>
 
 <script>
