@@ -10,6 +10,7 @@
             <h1 class="text-lg font-semibold text-zinc-100">Salaries</h1>
             <p class="text-sm text-zinc-500 mt-0.5">Manage employee salary payments</p>
         </div>
+        {% if has_available_users %}
         <button hx-get="{% url 'salary_create' %}"
                 hx-target="#slide-over"
                 hx-swap="innerHTML"
@@ -18,6 +19,14 @@
             <i data-lucide="plus" class="w-4 h-4"></i>
             Add Employee
         </button>
+        {% else %}
+        <button disabled
+                class="flex items-center gap-2 px-3 py-1.5 bg-zinc-700 text-zinc-500 text-sm font-medium rounded-card cursor-not-allowed"
+                title="{% if has_any_users %}All employees already have salary configurations{% else %}No team members available{% endif %}">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            Add Employee
+        </button>
+        {% endif %}
     </div>
 
     <!-- Salary List -->
@@ -46,15 +55,23 @@
     </div>
     {% else %}
     <div class="flex flex-col items-center justify-center py-16 text-zinc-500">
-        <i data-lucide="wallet" class="w-12 h-12 mb-4 opacity-30"></i>
-        <p class="text-sm mb-2">No salaries configured yet</p>
-        <button hx-get="{% url 'salary_create' %}"
-                hx-target="#slide-over"
-                hx-swap="innerHTML"
-                hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
-                class="text-accent hover:text-accent-hover text-sm">
-            Configure first employee salary
-        </button>
+        <i data-lucide="{% if has_any_users %}wallet{% else %}users{% endif %}" class="w-12 h-12 mb-4 opacity-30"></i>
+        {% if has_available_users %}
+            <p class="text-sm mb-2">No salaries configured yet</p>
+            <button hx-get="{% url 'salary_create' %}"
+                    hx-target="#slide-over"
+                    hx-swap="innerHTML"
+                    hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+                    class="text-accent hover:text-accent-hover text-sm">
+                Configure first employee salary
+            </button>
+        {% elif has_any_users %}
+            <p class="text-sm mb-2">All employees already have salary configurations</p>
+            <p class="text-xs text-zinc-600">Add new team members to configure their salaries.</p>
+        {% else %}
+            <p class="text-sm mb-2">No team members found</p>
+            <p class="text-xs text-zinc-600">Add team members first to configure their salaries.</p>
+        {% endif %}
     </div>
     {% endif %}
     </div>

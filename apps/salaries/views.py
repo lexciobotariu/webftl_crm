@@ -22,6 +22,9 @@ def _set_salary_triggers(response, *, close=False):
 @login_required
 def salary_list(request):
     """List all employee salary configurations."""
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+
     salaries = EmployeeSalary.objects.select_related('user').prefetch_related('months').all()
 
     now = timezone.now()
@@ -38,10 +41,17 @@ def salary_list(request):
             'current_month': current_month_entry,
         })
 
+    # Check if there are users available (users without salary configs)
+    users_with_salary = EmployeeSalary.objects.values_list('user_id', flat=True)
+    has_available_users = User.objects.exclude(id__in=users_with_salary).exists()
+    has_any_users = User.objects.exists()
+
     return render(request, 'salaries/salary_list.html', {
         'salary_data': salary_data,
         'current_year': current_year,
         'current_month': current_month,
+        'has_available_users': has_available_users,
+        'has_any_users': has_any_users,
     })
 
 
