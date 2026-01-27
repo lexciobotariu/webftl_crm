@@ -1,0 +1,42 @@
+<tr class="hover:bg-hover transition-colors">
+    <td class="px-4 py-3">
+        <a href="{% url 'salary_detail' item.salary.id %}" class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-accent-muted flex items-center justify-center">
+                <span class="text-accent text-xs font-semibold">{{ item.salary.user.name|slice:":1"|upper }}</span>
+            </div>
+            <div>
+                <div class="text-sm font-medium text-zinc-100 hover:text-accent transition-colors">{{ item.salary.user.name }}</div>
+                <div class="text-xs text-zinc-500">{{ item.salary.user.email }}</div>
+            </div>
+        </a>
+    </td>
+    <td class="px-4 py-3">
+        <span class="text-sm text-zinc-100">
+            {% if item.salary.currency == 'EUR' %}€{% elif item.salary.currency == 'GBP' %}£{% else %}${% endif %}{{ item.salary.base_salary|floatformat:2 }}
+        </span>
+        <span class="text-xs text-zinc-500">/month</span>
+    </td>
+    <td class="px-4 py-3">
+        {% if item.current_month %}
+            {% with status=item.current_month.status %}
+            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium
+                {% if status == 'unpaid' %}bg-red-500/10 text-red-400
+                {% elif status == 'partial' %}bg-yellow-500/10 text-yellow-400
+                {% elif status == 'paid' %}bg-green-500/10 text-green-400
+                {% elif status == 'bonus' %}bg-purple-500/10 text-purple-400
+                {% endif %}">
+                {% if status == 'unpaid' %}<i data-lucide="circle" class="w-3 h-3"></i>Unpaid
+                {% elif status == 'partial' %}<i data-lucide="circle-dot" class="w-3 h-3"></i>Partial
+                {% elif status == 'paid' %}<i data-lucide="check-circle" class="w-3 h-3"></i>Paid
+                {% elif status == 'bonus' %}<i data-lucide="gift" class="w-3 h-3"></i>Bonus
+                {% endif %}
+            </span>
+            {% endwith %}
+        {% else %}
+            <span class="text-xs text-zinc-500">No entry</span>
+        {% endif %}
+    </td>
+    <td class="px-4 py-3">
+        <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-600"></i>
+    </td>
+</tr>

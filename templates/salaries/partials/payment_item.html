@@ -1,0 +1,38 @@
+<div class="flex items-center justify-between px-4 py-2.5 pl-8 group hover:bg-elevated/50 transition-colors">
+    <div class="flex items-center gap-4">
+        <div class="w-8 h-8 rounded bg-elevated flex items-center justify-center">
+            {% if payment.payment_method == 'cash' %}
+                <i data-lucide="banknote" class="w-4 h-4 text-green-400"></i>
+            {% elif payment.payment_method == 'bank_transfer' %}
+                <i data-lucide="building-2" class="w-4 h-4 text-blue-400"></i>
+            {% elif payment.payment_method == 'check' %}
+                <i data-lucide="file-text" class="w-4 h-4 text-orange-400"></i>
+            {% else %}
+                <i data-lucide="circle" class="w-4 h-4 text-zinc-400"></i>
+            {% endif %}
+        </div>
+        <div>
+            <div class="text-sm text-zinc-100">
+                {% if salary.currency == 'EUR' %}€{% elif salary.currency == 'GBP' %}£{% else %}${% endif %}{{ payment.amount|floatformat:2 }}
+            </div>
+            <div class="text-xs text-zinc-500">
+                {{ payment.get_payment_method_display }} &middot; {{ payment.payment_date|date:"d/m/Y" }}
+            </div>
+        </div>
+    </div>
+    <div class="flex items-center gap-3">
+        {% if payment.notes %}
+        <div class="text-xs text-zinc-500 max-w-[200px] truncate" title="{{ payment.notes }}">
+            {{ payment.notes }}
+        </div>
+        {% endif %}
+        <button hx-get="{% url 'payment_edit' salary.id payment.id %}"
+                hx-target="#slide-over"
+                hx-swap="innerHTML"
+                hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+                class="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors opacity-0 group-hover:opacity-100"
+                title="Edit payment">
+            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+        </button>
+    </div>
+</div>

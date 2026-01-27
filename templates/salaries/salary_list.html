@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Salaries - WebFTL CRM{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-lg font-semibold text-zinc-100">Salaries</h1>
+            <p class="text-sm text-zinc-500 mt-0.5">Manage employee salary payments</p>
+        </div>
+        {% if has_available_users %}
+        <button hx-get="{% url 'salary_create' %}"
+                hx-target="#slide-over"
+                hx-swap="innerHTML"
+                hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+                class="flex items-center gap-2 px-3 py-1.5 bg-accent text-white text-sm font-medium rounded-card hover:bg-accent-hover transition-colors">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            Add Employee
+        </button>
+        {% else %}
+        <button disabled
+                class="flex items-center gap-2 px-3 py-1.5 bg-zinc-700 text-zinc-500 text-sm font-medium rounded-card cursor-not-allowed"
+                title="{% if has_any_users %}All employees already have salary configurations{% else %}No team members available{% endif %}">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            Add Employee
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- Salary List -->
+    <div id="salary-list-content"
+         hx-get="{% url 'salary_list' %}"
+         hx-trigger="refreshSalaryList from:body"
+         hx-select="#salary-list-content"
+         hx-swap="outerHTML">
+    {% if salary_data %}
+    <div class="bg-elevated rounded-card border border-border-subtle overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-panel border-b border-border-subtle">
+                <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
+                    <th class="px-4 py-3 font-medium">Employee</th>
+                    <th class="px-4 py-3 font-medium">Base Salary</th>
+                    <th class="px-4 py-3 font-medium">Current Month Status</th>
+                    <th class="px-4 py-3 font-medium w-10"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-border-subtle">
+                {% for item in salary_data %}
+                    {% include 'salaries/partials/salary_row.html' with item=item %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="flex flex-col items-center justify-center py-16 text-zinc-500">
+        <i data-lucide="{% if has_any_users %}wallet{% else %}users{% endif %}" class="w-12 h-12 mb-4 opacity-30"></i>
+        {% if has_available_users %}
+            <p class="text-sm mb-2">No salaries configured yet</p>
+            <button hx-get="{% url 'salary_create' %}"
+                    hx-target="#slide-over"
+                    hx-swap="innerHTML"
+                    hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+                    class="text-accent hover:text-accent-hover text-sm">
+                Configure first employee salary
+            </button>
+        {% elif has_any_users %}
+            <p class="text-sm mb-2">All employees already have salary configurations</p>
+            <p class="text-xs text-zinc-600">Add new team members to configure their salaries.</p>
+        {% else %}
+            <p class="text-sm mb-2">No team members found</p>
+            <p class="text-xs text-zinc-600">Add team members first to configure their salaries.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+    </div>
+</div>
+{% endblock %}
