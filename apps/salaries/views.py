@@ -61,5 +61,32 @@ def salary_create(request):
 
 @login_required
 def salary_detail(request, pk):
-    """Employee salary detail page - placeholder."""
-    return HttpResponse('<div class="p-4 text-zinc-400">Detail page coming soon</div>')
+    """Employee salary detail with month list."""
+    salary = get_object_or_404(
+        EmployeeSalary.objects.select_related('user'),
+        pk=pk
+    )
+    months = salary.months.prefetch_related('payments').all()
+
+    now = timezone.now()
+    current_year = now.year
+    current_month = now.month
+
+    return render(request, 'salaries/salary_detail.html', {
+        'salary': salary,
+        'months': months,
+        'current_year': current_year,
+        'current_month': current_month,
+    })
+
+
+@login_required
+def month_create(request, pk):
+    """Create month entry drawer - placeholder."""
+    return HttpResponse('<div class="p-4 text-zinc-400">Add month form coming soon</div>')
+
+
+@login_required
+def payment_create(request, pk):
+    """Record payment drawer - placeholder."""
+    return HttpResponse('<div class="p-4 text-zinc-400">Record payment form coming soon</div>')

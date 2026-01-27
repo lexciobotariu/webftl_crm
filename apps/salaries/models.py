@@ -55,8 +55,12 @@ class SalaryMonth(models.Model):
         ordering = ['-year', '-month']
 
     def __str__(self):
-        month_name = self.MONTH_NAMES[self.month]
-        return f'{self.employee_salary.user.name} - {month_name} {self.year}'
+        return f'{self.employee_salary.user.name} - {self.month_name} {self.year}'
+
+    @property
+    def month_name(self):
+        """Return the month name (e.g., 'January')."""
+        return self.MONTH_NAMES[self.month]
 
     @property
     def total_paid(self):

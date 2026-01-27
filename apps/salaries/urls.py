@@ -6,4 +6,6 @@ urlpatterns = [
     path('', views.salary_list, name='salary_list'),
     path('create/', views.salary_create, name='salary_create'),
     path('<int:pk>/', views.salary_detail, name='salary_detail'),
+    path('<int:pk>/months/create/', views.month_create, name='month_create'),
+    path('<int:pk>/payments/create/', views.payment_create, name='payment_create'),
 ]

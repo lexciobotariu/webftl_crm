@@ -8,6 +8,37 @@ from apps.salaries.models import EmployeeSalary, SalaryMonth, Payment
 User = get_user_model()
 
 
+class TestSalaryDetailView:
+    def test_salary_detail_requires_login(self, client, employee_salary):
+        """Test that salary detail requires authentication."""
+        response = client.get(reverse('salary_detail', args=[employee_salary.id]))
+        assert response.status_code == 302
+
+    def test_salary_detail_displays_info(self, client_logged_in, employee_salary):
+        """Test salary detail shows employee info and base salary."""
+        response = client_logged_in.get(reverse('salary_detail', args=[employee_salary.id]))
+        assert response.status_code == 200
+        assert b'Test User' in response.content
+        assert b'5000' in response.content or b'5,000' in response.content
+
+    def test_salary_detail_shows_months(self, client_logged_in, employee_salary):
+        """Test salary detail shows month entries."""
+        SalaryMonth.objects.create(
+            employee_salary=employee_salary,
+            year=2025,
+            month=1,
+            expected_amount=Decimal('5000.00')
+        )
+        response = client_logged_in.get(reverse('salary_detail', args=[employee_salary.id]))
+        assert response.status_code == 200
+        assert b'January 2025' in response.content
+
+    def test_salary_detail_404_for_invalid(self, client_logged_in):
+        """Test 404 for non-existent salary."""
+        response = client_logged_in.get(reverse('salary_detail', args=[99999]))
+        assert response.status_code == 404
+
+
 @pytest.fixture
 def employee_salary(user):
     return EmployeeSalary.objects.create(
