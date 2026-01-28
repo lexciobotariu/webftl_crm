@@ -1,4 +1,5 @@
 import pytest
+from datetime import date
 from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -37,6 +38,17 @@ def salary_month(employee_salary):
     )
 
 
+@pytest.fixture
+def payment(salary_month):
+    return Payment.objects.create(
+        salary_month=salary_month,
+        amount=Decimal('2500.00'),
+        payment_date=date(2024, 6, 15),
+        payment_method='bank_transfer',
+        notes='Test payment'
+    )
+
+
 @pytest.mark.django_db
 class TestSalaryMonthFormInitialization:
     """Tests for SalaryMonthForm initialization behavior."""
@@ -72,3 +84,29 @@ class TestSalaryMonthFormInitialization:
 
         # Should preserve 5500.00, NOT override with base salary 5000.00
         assert form['expected_amount'].value() == Decimal('5500.00')
+
+
+@pytest.mark.django_db
+class TestPaymentFormInitialization:
+    """Tests for PaymentForm initialization behavior."""
+
+    def test_create_form_prefills_today(self, employee_salary, salary_month):
+        """Test that create form prefills payment_date with today."""
+        form = PaymentForm(employee_salary=employee_salary)
+
+        assert form.initial['payment_date'] == timezone.now().date()
+
+    def test_edit_form_preserves_payment_date(self, employee_salary, payment):
+        """Test that edit form preserves the instance's payment_date."""
+        form = PaymentForm(instance=payment, employee_salary=employee_salary)
+
+        # Should preserve 2024-06-15, NOT override with today
+        assert form['payment_date'].value() == date(2024, 6, 15)
+
+    def test_edit_form_preserves_all_values(self, employee_salary, payment):
+        """Test that edit form preserves all instance values."""
+        form = PaymentForm(instance=payment, employee_salary=employee_salary)
+
+        assert form['amount'].value() == Decimal('2500.00')
+        assert form['payment_method'].value() == 'bank_transfer'
+        assert form['notes'].value() == 'Test payment'
