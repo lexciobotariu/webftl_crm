@@ -70,15 +70,18 @@ class SalaryMonthForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.employee_salary = employee_salary
 
-        # Pre-fill with current date
-        now = timezone.now()
-        if not self.data:
+        # Only pre-fill defaults for NEW records (not when editing)
+        is_new = not self.instance.pk
+
+        if is_new and not self.data:
+            # Pre-fill with current date for new records
+            now = timezone.now()
             self.initial['year'] = now.year
             self.initial['month'] = now.month
 
-        # Pre-fill expected_amount with base salary
-        if employee_salary and not self.data:
-            self.initial['expected_amount'] = employee_salary.base_salary
+            # Pre-fill expected_amount with base salary for new records
+            if employee_salary:
+                self.initial['expected_amount'] = employee_salary.base_salary
 
     def clean(self):
         cleaned_data = super().clean()
