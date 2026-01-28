@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2026-01-29
+
+### Fixed
+- Preserve instance values when editing salary month forms (empty drawer bug)
+- Make PaymentForm initialization explicit for new records only
+- Resolve HTMX/Alpine.js conflict in edit buttons using htmx.ajax() workaround
+
+### Changed
+- Add service layer structure for salaries app
+- Refactor views to use service layer (thin controllers pattern)
+- Add comprehensive service layer tests
+
 ## [0.1.1] - 2026-01-27
 
 ### Changed
