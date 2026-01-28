@@ -26,10 +26,7 @@
             {{ payment.notes }}
         </div>
         {% endif %}
-        <button hx-get="{% url 'payment_edit' salary.id payment.id %}"
-                hx-target="#slide-over"
-                hx-swap="innerHTML"
-                hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+        <button onclick="htmx.ajax('GET', '{% url 'payment_edit' salary.id payment.id %}', {target:'#slide-over', swap:'innerHTML'}).then(function() { document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons(); })"
                 class="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors opacity-0 group-hover:opacity-100"
                 title="Edit payment">
             <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
