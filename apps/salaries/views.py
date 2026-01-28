@@ -1,53 +1,19 @@
-import json
-
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
-from django.shortcuts import render, get_object_or_404, redirect
-from django.utils import timezone
+from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_POST
 
+from . import services
 from .forms import EmployeeSalaryForm, SalaryMonthForm, PaymentForm
 from .models import EmployeeSalary, SalaryMonth, Payment
-
-
-def _set_salary_triggers(response, *, close=False):
-    """Attach HX-Trigger header for HTMX updates."""
-    triggers = {'refreshSalaryList': True}
-    if close:
-        triggers['closeSlideOver'] = True
-    response['HX-Trigger'] = json.dumps(triggers)
-    return response
 
 
 @login_required
 def salary_list(request):
     """List all employee salary configurations."""
-    from django.contrib.auth import get_user_model
-    User = get_user_model()
-
-    salaries = EmployeeSalary.objects.select_related('user').prefetch_related('months').all()
-
-    now = timezone.now()
-    current_year = now.year
-    current_month = now.month
-
-    salary_data = []
-    for salary in salaries:
-        current_month_entry = salary.months.filter(
-            year=current_year, month=current_month
-        ).first()
-        salary_data.append({
-            'salary': salary,
-            'current_month': current_month_entry,
-        })
-
-    # Check if there are users available (non-staff users without salary configs)
-    # Staff users (admins) are not considered employees for salary purposes
-    users_with_salary = EmployeeSalary.objects.values_list('user_id', flat=True)
-    employee_users = User.objects.filter(is_staff=False)
-    has_available_users = employee_users.exclude(id__in=users_with_salary).exists()
-    has_any_users = employee_users.exists()
-
+    salary_data, current_year, current_month, has_available_users, has_any_users = (
+        services.get_salary_list_data()
+    )
     return render(request, 'salaries/salary_list.html', {
         'salary_data': salary_data,
         'current_year': current_year,
@@ -69,9 +35,9 @@ def salary_create(request):
     if request.method == 'POST':
         form = EmployeeSalaryForm(request.POST)
         if form.is_valid():
-            form.save()
+            services.create_employee_salary(form)
             response = HttpResponse('')
-            return _set_salary_triggers(response, close=True)
+            return services.set_salary_triggers(response, close=True)
         return render(request, 'salaries/partials/create_salary_drawer.html', {
             'form': form,
             'has_any_users': has_any_employees,
@@ -87,15 +53,11 @@ def salary_create(request):
 @login_required
 def salary_detail(request, pk):
     """Employee salary detail with month list."""
-    salary = get_object_or_404(
-        EmployeeSalary.objects.select_related('user'),
-        pk=pk
-    )
-    months = salary.months.prefetch_related('payments').all()
-
-    now = timezone.now()
-    current_year = now.year
-    current_month = now.month
+    try:
+        salary, months, current_year, current_month = services.get_salary_detail_data(pk)
+    except EmployeeSalary.DoesNotExist:
+        from django.http import Http404
+        raise Http404("Employee salary not found")
 
     return render(request, 'salaries/salary_detail.html', {
         'salary': salary,
@@ -116,9 +78,9 @@ def month_create(request, pk):
     if request.method == 'POST':
         form = SalaryMonthForm(request.POST, employee_salary=employee_salary)
         if form.is_valid():
-            form.save()
+            services.create_salary_month(form)
             response = HttpResponse('')
-            return _set_salary_triggers(response, close=True)
+            return services.set_salary_triggers(response, close=True)
         return render(request, 'salaries/partials/create_month_drawer.html', {
             'form': form,
             'employee_salary': employee_salary,
@@ -142,9 +104,9 @@ def payment_create(request, pk):
     if request.method == 'POST':
         form = PaymentForm(request.POST, employee_salary=employee_salary)
         if form.is_valid():
-            form.save()
+            services.create_payment(form)
             response = HttpResponse('')
-            return _set_salary_triggers(response, close=True)
+            return services.set_salary_triggers(response, close=True)
         return render(request, 'salaries/partials/create_payment_drawer.html', {
             'form': form,
             'employee_salary': employee_salary,
@@ -174,9 +136,9 @@ def salary_edit(request, pk):
         # When editing, we need to allow the current user
         form.fields['user'].queryset = form.fields['user'].queryset | salary.user.__class__.objects.filter(pk=salary.user.pk)
         if form.is_valid():
-            form.save()
+            services.update_employee_salary(form)
             response = HttpResponse('')
-            return _set_salary_triggers(response, close=True)
+            return services.set_salary_triggers(response, close=True)
         return render(request, 'salaries/partials/edit_salary_drawer.html', {
             'form': form,
             'salary': salary,
@@ -196,7 +158,7 @@ def salary_edit(request, pk):
 def salary_delete(request, pk):
     """Delete salary configuration."""
     salary = get_object_or_404(EmployeeSalary, pk=pk)
-    salary.delete()
+    services.delete_employee_salary(salary)
     response = HttpResponse('')
     response['HX-Redirect'] = '/salaries/'
     return response
@@ -218,9 +180,9 @@ def month_edit(request, pk, month_pk):
     if request.method == 'POST':
         form = SalaryMonthForm(request.POST, instance=month, employee_salary=employee_salary)
         if form.is_valid():
-            form.save()
+            services.update_salary_month(form)
             response = HttpResponse('')
-            return _set_salary_triggers(response, close=True)
+            return services.set_salary_triggers(response, close=True)
         return render(request, 'salaries/partials/edit_month_drawer.html', {
             'form': form,
             'employee_salary': employee_salary,
@@ -241,9 +203,9 @@ def month_delete(request, pk, month_pk):
     """Delete month entry."""
     employee_salary = get_object_or_404(EmployeeSalary, pk=pk)
     month = get_object_or_404(SalaryMonth, pk=month_pk, employee_salary=employee_salary)
-    month.delete()
+    services.delete_salary_month(month)
     response = HttpResponse('')
-    return _set_salary_triggers(response, close=True)
+    return services.set_salary_triggers(response, close=True)
 
 
 # ============================================================================
@@ -266,9 +228,9 @@ def payment_edit(request, pk, payment_pk):
     if request.method == 'POST':
         form = PaymentForm(request.POST, instance=payment, employee_salary=employee_salary)
         if form.is_valid():
-            form.save()
+            services.update_payment(form)
             response = HttpResponse('')
-            return _set_salary_triggers(response, close=True)
+            return services.set_salary_triggers(response, close=True)
         return render(request, 'salaries/partials/edit_payment_drawer.html', {
             'form': form,
             'employee_salary': employee_salary,
@@ -293,6 +255,6 @@ def payment_delete(request, pk, payment_pk):
         pk=payment_pk,
         salary_month__employee_salary=employee_salary
     )
-    payment.delete()
+    services.delete_payment(payment)
     response = HttpResponse('')
-    return _set_salary_triggers(response, close=True)
+    return services.set_salary_triggers(response, close=True)
