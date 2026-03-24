@@ -313,3 +313,36 @@ class TestBoardVisibility:
         assert response.status_code == 200
         status.refresh_from_db()
         assert status.visible_on_board is True
+
+    def test_task_status_dropdown_shows_all_statuses(self, client):
+        """The status dropdown on task detail should show all statuses including hidden ones."""
+        user = AdminUserFactory()
+        project = ProjectFactory()
+        hidden_status = project.statuses.filter(name='Done').first()
+        hidden_status.visible_on_board = False
+        hidden_status.save()
+        from apps.tasks.factories import TaskFactory
+        task = TaskFactory(project=project, status=project.statuses.first())
+        client.force_login(user)
+        response = client.get(reverse('task_detail', args=[task.pk]))
+        content = response.content.decode()
+        # All statuses should appear in the dropdown
+        assert 'Done' in content
+
+    def test_task_create_defaults_to_first_visible_status(self, client):
+        """When creating a task without specifying a status, use first visible status."""
+        user = AdminUserFactory()
+        project = ProjectFactory()
+        # Hide the first status (Backlog, order=0)
+        first_status = project.statuses.order_by('order').first()
+        first_status.visible_on_board = False
+        first_status.save()
+        second_status = project.statuses.filter(visible_on_board=True).order_by('order').first()
+        client.force_login(user)
+        response = client.post(
+            reverse('task_create', args=[project.pk]),
+            {'title': 'Test Task', 'description': ''},
+        )
+        from apps.tasks.models import Task
+        task = Task.objects.get(title='Test Task')
+        assert task.status == second_status

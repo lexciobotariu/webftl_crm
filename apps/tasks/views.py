@@ -66,7 +66,7 @@ def task_create(request, project_pk):
     if status_pk:
         status = get_object_or_404(Status, pk=status_pk, project=project)
     else:
-        status = project.statuses.first()
+        status = project.statuses.filter(visible_on_board=True).first() or project.statuses.first()
 
     if request.method == 'POST':
         form = TaskForm(project, request.POST)
