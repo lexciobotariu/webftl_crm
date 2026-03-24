@@ -120,10 +120,20 @@ def project_board(request, pk):
     if not can_access_project(request.user, project, 'viewer'):
         return HttpResponseForbidden("You don't have access to this project")
 
-    # Return just the board content for HTMX requests
+    visible_statuses = project.statuses.filter(visible_on_board=True)
+    hidden_task_count = Task.objects.filter(
+        project=project, status__visible_on_board=False
+    ).count()
+
+    context = {
+        'project': project,
+        'visible_statuses': visible_statuses,
+        'hidden_task_count': hidden_task_count,
+    }
+
     if request.htmx:
-        return render(request, 'projects/partials/kanban_board.html', {'project': project})
-    return render(request, 'projects/project_board.html', {'project': project})
+        return render(request, 'projects/partials/kanban_board.html', context)
+    return render(request, 'projects/project_board.html', context)
 
 
 @login_required

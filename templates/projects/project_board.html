@@ -40,6 +40,12 @@
                     <i data-lucide="settings" class="w-3.5 h-3.5"></i>
                     Settings
                 </a>
+                {% if hidden_task_count > 0 %}
+                <div class="flex items-center gap-1.5 text-[11px] text-zinc-500 bg-elevated border border-border-subtle rounded-card px-2.5 py-1.5">
+                    <i data-lucide="eye-off" class="w-3 h-3"></i>
+                    <span>{{ hidden_task_count }} hidden</span>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -67,7 +73,7 @@
          hx-target="#kanban-board-content"
          hx-swap="innerHTML">
         <div id="kanban-board-content" class="flex gap-3 p-4 h-full min-w-max">
-            {% for status in project.statuses.all %}
+            {% for status in visible_statuses %}
             {% include "projects/partials/kanban_column.html" %}
             {% endfor %}
         </div>

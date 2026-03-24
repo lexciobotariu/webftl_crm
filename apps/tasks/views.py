@@ -79,8 +79,11 @@ def task_create(request, project_pk):
             form.save_m2m()
             if request.htmx:
                 # Re-render the entire kanban board after task creation
-                statuses = project.statuses.prefetch_related('tasks')
-                response = render(request, 'projects/partials/kanban_board.html', {'project': project})
+                visible_statuses = project.statuses.filter(visible_on_board=True)
+                response = render(request, 'projects/partials/kanban_board.html', {
+                    'project': project,
+                    'visible_statuses': visible_statuses,
+                })
                 response['HX-Trigger'] = 'closeSlideOver'
                 return response
             return redirect('project_board', pk=project.pk)

@@ -230,3 +230,43 @@ class TestProjectDetail:
         content = response.content.decode()
         # Should show task count in stats
         assert '2' in content
+
+
+@pytest.mark.django_db
+class TestBoardVisibility:
+    def test_board_hides_invisible_statuses(self, client):
+        """Statuses with visible_on_board=False should not appear on the board."""
+        user = AdminUserFactory()
+        project = ProjectFactory()
+        hidden_status = project.statuses.filter(name='Done').first()
+        hidden_status.visible_on_board = False
+        hidden_status.save()
+        client.force_login(user)
+        response = client.get(reverse('project_board', args=[project.pk]))
+        content = response.content.decode()
+        assert 'Done' not in content
+        # Other statuses still visible
+        assert 'Backlog' in content
+        assert 'In Progress' in content
+
+    def test_board_shows_hidden_task_count(self, client):
+        """Board should show count of tasks in hidden statuses."""
+        user = AdminUserFactory()
+        project = ProjectFactory()
+        hidden_status = project.statuses.filter(name='Done').first()
+        hidden_status.visible_on_board = False
+        hidden_status.save()
+        from apps.tasks.factories import TaskFactory
+        TaskFactory(project=project, status=hidden_status)
+        TaskFactory(project=project, status=hidden_status)
+        client.force_login(user)
+        response = client.get(reverse('project_board', args=[project.pk]))
+        assert response.context['hidden_task_count'] == 2
+
+    def test_board_no_hidden_badge_when_zero(self, client):
+        """No hidden task count in context when all statuses are visible."""
+        user = AdminUserFactory()
+        project = ProjectFactory()
+        client.force_login(user)
+        response = client.get(reverse('project_board', args=[project.pk]))
+        assert response.context['hidden_task_count'] == 0
