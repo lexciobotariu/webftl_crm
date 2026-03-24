@@ -535,3 +535,43 @@ class TestPresetEdit:
         })
         preset.refresh_from_db()
         assert preset.name == 'Developer'
+
+
+@pytest.mark.django_db
+class TestPresetDelete:
+    def test_delete_custom_preset(self, client):
+        """Admin can delete a custom preset with no users."""
+        admin = AdminUserFactory()
+        preset = PermissionPreset.objects.create(name='ToDelete')
+        client.force_login(admin)
+        response = client.post(reverse('preset_delete', args=[preset.pk]))
+        assert response.status_code == 200
+        assert not PermissionPreset.objects.filter(name='ToDelete').exists()
+
+    def test_cannot_delete_system_preset(self, client):
+        """System presets cannot be deleted."""
+        admin = AdminUserFactory()
+        preset = PermissionPreset.objects.get(name='Admin')
+        client.force_login(admin)
+        response = client.post(reverse('preset_delete', args=[preset.pk]))
+        assert response.status_code == 400
+        assert PermissionPreset.objects.filter(name='Admin').exists()
+
+    def test_cannot_delete_preset_with_users(self, client):
+        """Presets assigned to users cannot be deleted."""
+        admin = AdminUserFactory()
+        preset = PermissionPreset.objects.create(name='InUse')
+        UserFactory(permission_preset=preset)
+        client.force_login(admin)
+        response = client.post(reverse('preset_delete', args=[preset.pk]))
+        assert response.status_code == 400
+        assert PermissionPreset.objects.filter(name='InUse').exists()
+
+    def test_delete_requires_admin(self, client):
+        """Non-admin cannot delete presets."""
+        preset_obj = PermissionPreset.objects.create(name='WithTeam', access_team=True)
+        user = UserFactory(permission_preset=preset_obj)
+        target = PermissionPreset.objects.create(name='ToDelete')
+        client.force_login(user)
+        response = client.post(reverse('preset_delete', args=[target.pk]))
+        assert response.status_code == 403

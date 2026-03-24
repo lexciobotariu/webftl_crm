@@ -182,8 +182,19 @@ def preset_edit(request, pk):
 @require_permission('access_team')
 @require_POST
 def preset_delete(request, pk):
+    """Delete a permission preset."""
     if not request.user.is_admin:
         return HttpResponseForbidden("Admin access required")
+
+    preset = get_object_or_404(PermissionPreset, pk=pk)
+
+    if preset.is_system:
+        return HttpResponse('Cannot delete system presets', status=400)
+
+    if preset.users.exists():
+        return HttpResponse('Cannot delete preset with assigned users', status=400)
+
+    preset.delete()
     return HttpResponse('')
 
 
