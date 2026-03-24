@@ -448,3 +448,90 @@ class TestTeamPresetDisplay:
         client.force_login(admin)
         response = client.get(reverse('team_list'))
         assert 'No preset' in response.content.decode()
+
+
+@pytest.mark.django_db
+class TestPresetCreate:
+    def test_create_preset_requires_admin(self, client):
+        preset = PermissionPreset.objects.get(name='Developer')
+        user = UserFactory(permission_preset=preset)
+        client.force_login(user)
+        response = client.post(reverse('preset_create'), {'name': 'New Preset'})
+        assert response.status_code == 403
+
+    def test_create_preset_success(self, client):
+        admin = AdminUserFactory()
+        client.force_login(admin)
+        response = client.post(reverse('preset_create'), {
+            'name': 'Contractor',
+            'description': 'External contractors',
+            'access_dashboard': 'on',
+            'access_projects': 'on',
+            'access_tasks': 'on',
+        })
+        assert response.status_code == 200
+        preset = PermissionPreset.objects.get(name='Contractor')
+        assert preset.access_dashboard is True
+        assert preset.access_projects is True
+        assert preset.access_tasks is True
+        assert preset.access_clients is False
+        assert preset.access_salaries is False
+
+    def test_create_preset_returns_item(self, client):
+        admin = AdminUserFactory()
+        client.force_login(admin)
+        response = client.post(reverse('preset_create'), {
+            'name': 'Viewer',
+            'access_dashboard': 'on',
+        })
+        assert 'Viewer' in response.content.decode()
+
+    def test_create_preset_duplicate_name_fails(self, client):
+        admin = AdminUserFactory()
+        client.force_login(admin)
+        response = client.post(reverse('preset_create'), {'name': 'Developer'})
+        assert response.status_code == 200
+        assert PermissionPreset.objects.filter(name='Developer').count() == 1
+
+
+@pytest.mark.django_db
+class TestPresetEdit:
+    def test_edit_preset_get_shows_form(self, client):
+        admin = AdminUserFactory()
+        preset = PermissionPreset.objects.get(name='Developer')
+        client.force_login(admin)
+        response = client.get(reverse('preset_edit', args=[preset.pk]))
+        content = response.content.decode()
+        assert 'Developer' in content
+        assert response.status_code == 200
+
+    def test_edit_preset_updates_permissions(self, client):
+        admin = AdminUserFactory()
+        preset = PermissionPreset.objects.create(name='Custom', access_clients=False)
+        client.force_login(admin)
+        response = client.post(reverse('preset_edit', args=[preset.pk]), {
+            'name': 'Custom',
+            'description': 'Updated',
+            'access_dashboard': 'on',
+            'access_clients': 'on',
+            'access_projects': 'on',
+            'access_tasks': 'on',
+            'access_todos': 'on',
+            'access_notes': 'on',
+        })
+        assert response.status_code == 200
+        preset.refresh_from_db()
+        assert preset.access_clients is True
+        assert preset.description == 'Updated'
+
+    def test_edit_system_preset_cannot_change_name(self, client):
+        admin = AdminUserFactory()
+        preset = PermissionPreset.objects.get(name='Developer')
+        client.force_login(admin)
+        response = client.post(reverse('preset_edit', args=[preset.pk]), {
+            'name': 'Renamed',
+            'access_dashboard': 'on',
+            'access_projects': 'on',
+        })
+        preset.refresh_from_db()
+        assert preset.name == 'Developer'

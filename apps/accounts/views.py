@@ -7,7 +7,7 @@ from django.views.decorators.http import require_POST
 
 from .decorators import require_permission
 from .models import User
-from .permissions import PermissionPreset
+from .permissions import PermissionPreset, PERMISSION_KEYS
 
 TEAM_MEMBERS_PER_PAGE = 20
 
@@ -119,17 +119,62 @@ def preset_list(request):
 @login_required
 @require_permission('access_team')
 def preset_create(request):
+    """Create a new permission preset via drawer."""
     if not request.user.is_admin:
         return HttpResponseForbidden("Admin access required")
+
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        description = request.POST.get('description', '').strip()
+
+        if not name:
+            return render(request, 'accounts/partials/preset_form_drawer.html', {
+                'error': 'Name is required.',
+            })
+
+        if PermissionPreset.objects.filter(name=name).exists():
+            return render(request, 'accounts/partials/preset_form_drawer.html', {
+                'error': f'A preset named "{name}" already exists.',
+                'form_name': name,
+                'form_description': description,
+            })
+
+        preset = PermissionPreset.objects.create(
+            name=name,
+            description=description,
+            **{key: key in request.POST for key in PERMISSION_KEYS},
+        )
+        preset.user_count = 0  # For template rendering
+        response = render(request, 'accounts/partials/preset_item.html', {'preset': preset})
+        response['HX-Trigger'] = 'closeSlideOver'
+        return response
+
     return render(request, 'accounts/partials/preset_form_drawer.html', {})
 
 
 @login_required
 @require_permission('access_team')
 def preset_edit(request, pk):
+    """Edit a permission preset via drawer."""
     if not request.user.is_admin:
         return HttpResponseForbidden("Admin access required")
+
     preset = get_object_or_404(PermissionPreset, pk=pk)
+
+    if request.method == 'POST':
+        if not preset.is_system:
+            preset.name = request.POST.get('name', '').strip() or preset.name
+        preset.description = request.POST.get('description', '').strip()
+        for key in PERMISSION_KEYS:
+            setattr(preset, key, key in request.POST)
+        preset.save()
+
+        from django.db.models import Count
+        preset = PermissionPreset.objects.annotate(user_count=Count('users')).get(pk=pk)
+        response = render(request, 'accounts/partials/preset_item.html', {'preset': preset})
+        response['HX-Trigger'] = 'closeSlideOver'
+        return response
+
     return render(request, 'accounts/partials/preset_form_drawer.html', {'preset': preset})
 
 
