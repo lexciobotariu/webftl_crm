@@ -1,4 +1,7 @@
 import pytest
+from django.test import RequestFactory
+
+from apps.accounts.decorators import require_permission
 from apps.accounts.permissions import PermissionPreset, PERMISSION_KEYS
 from apps.accounts.factories import UserFactory, AdminUserFactory
 
@@ -99,3 +102,68 @@ class TestDefaultPresets:
         assert preset.access_clients is False
         assert preset.access_salaries is False
         assert preset.access_team is False
+
+
+@pytest.mark.django_db
+class TestRequirePermissionDecorator:
+    def _make_request(self, user):
+        factory = RequestFactory()
+        request = factory.get('/test/')
+        request.user = user
+        return request
+
+    def test_admin_passes_any_permission(self):
+        admin = AdminUserFactory()
+        request = self._make_request(admin)
+
+        @require_permission('access_salaries')
+        def view(request):
+            from django.http import HttpResponse
+            return HttpResponse('ok')
+
+        response = view(request)
+        assert response.status_code == 200
+
+    def test_user_with_permission_passes(self):
+        preset = PermissionPreset.objects.create(
+            name='WithAccess',
+            access_projects=True,
+        )
+        user = UserFactory(permission_preset=preset)
+        request = self._make_request(user)
+
+        @require_permission('access_projects')
+        def view(request):
+            from django.http import HttpResponse
+            return HttpResponse('ok')
+
+        response = view(request)
+        assert response.status_code == 200
+
+    def test_user_without_permission_gets_403(self):
+        preset = PermissionPreset.objects.create(
+            name='NoClients',
+            access_clients=False,
+        )
+        user = UserFactory(permission_preset=preset)
+        request = self._make_request(user)
+
+        @require_permission('access_clients')
+        def view(request):
+            from django.http import HttpResponse
+            return HttpResponse('ok')
+
+        response = view(request)
+        assert response.status_code == 403
+
+    def test_user_without_preset_gets_403(self):
+        user = UserFactory(permission_preset=None)
+        request = self._make_request(user)
+
+        @require_permission('access_projects')
+        def view(request):
+            from django.http import HttpResponse
+            return HttpResponse('ok')
+
+        response = view(request)
+        assert response.status_code == 403
