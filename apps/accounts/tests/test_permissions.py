@@ -30,8 +30,8 @@ class TestPermissionPreset:
         assert preset.access_dashboard is True
 
     def test_preset_str(self):
-        preset = PermissionPreset.objects.create(name='Developer')
-        assert str(preset) == 'Developer'
+        preset = PermissionPreset.objects.create(name='Test Role')
+        assert str(preset) == 'Test Role'
 
     def test_preset_has_permission(self):
         preset = PermissionPreset.objects.create(
@@ -76,3 +76,26 @@ class TestUserPermissions:
         assert user.has_app_permission('access_dashboard') is True
         assert user.has_app_permission('access_clients') is False
         assert user.has_app_permission('access_projects') is False
+
+
+@pytest.mark.django_db
+class TestDefaultPresets:
+    def test_admin_preset_exists(self):
+        """Admin preset should exist with all permissions True."""
+        preset = PermissionPreset.objects.get(name='Admin')
+        assert preset.is_system is True
+        for key in PERMISSION_KEYS:
+            assert preset.has_permission(key) is True
+
+    def test_developer_preset_exists(self):
+        """Developer preset should exist with restricted permissions."""
+        preset = PermissionPreset.objects.get(name='Developer')
+        assert preset.is_system is True
+        assert preset.access_dashboard is True
+        assert preset.access_projects is True
+        assert preset.access_tasks is True
+        assert preset.access_todos is True
+        assert preset.access_notes is True
+        assert preset.access_clients is False
+        assert preset.access_salaries is False
+        assert preset.access_team is False
