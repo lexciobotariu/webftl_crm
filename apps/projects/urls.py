@@ -16,6 +16,7 @@ urlpatterns = [
     path('<int:pk>/statuses/', views.manage_statuses, name='manage_statuses'),
     path('<int:pk>/statuses/create/', views.status_create, name='status_create'),
     path('<int:pk>/statuses/<int:status_pk>/delete/', views.status_delete, name='status_delete'),
+    path('<int:pk>/statuses/<int:status_pk>/toggle-visibility/', views.status_toggle_visibility, name='status_toggle_visibility'),
     path('<int:pk>/statuses/reorder/', views.reorder_statuses, name='reorder_statuses'),
     path('<int:pk>/labels/create/', views.label_create, name='label_create'),
     path('<int:pk>/labels/<int:label_pk>/delete/', views.label_delete, name='label_delete'),

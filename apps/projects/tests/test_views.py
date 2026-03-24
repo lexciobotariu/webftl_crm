@@ -270,3 +270,46 @@ class TestBoardVisibility:
         client.force_login(user)
         response = client.get(reverse('project_board', args=[project.pk]))
         assert response.context['hidden_task_count'] == 0
+
+    def test_toggle_visibility_requires_manager(self, client):
+        """Only managers can toggle status visibility."""
+        user = UserFactory()
+        project = ProjectFactory()
+        ProjectMemberFactory(project=project, user=user, role='viewer')
+        status = project.statuses.first()
+        client.force_login(user)
+        response = client.post(
+            reverse('status_toggle_visibility', args=[project.pk, status.pk])
+        )
+        assert response.status_code == 403
+
+    def test_toggle_visibility_hides_status(self, client):
+        """POSTing to toggle endpoint should flip visible_on_board."""
+        user = UserFactory()
+        project = ProjectFactory()
+        ProjectMemberFactory(project=project, user=user, role='manager')
+        status = project.statuses.first()
+        assert status.visible_on_board is True
+        client.force_login(user)
+        response = client.post(
+            reverse('status_toggle_visibility', args=[project.pk, status.pk])
+        )
+        assert response.status_code == 200
+        status.refresh_from_db()
+        assert status.visible_on_board is False
+
+    def test_toggle_visibility_shows_status(self, client):
+        """Toggling a hidden status makes it visible again."""
+        user = UserFactory()
+        project = ProjectFactory()
+        ProjectMemberFactory(project=project, user=user, role='manager')
+        status = project.statuses.first()
+        status.visible_on_board = False
+        status.save()
+        client.force_login(user)
+        response = client.post(
+            reverse('status_toggle_visibility', args=[project.pk, status.pk])
+        )
+        assert response.status_code == 200
+        status.refresh_from_db()
+        assert status.visible_on_board is True

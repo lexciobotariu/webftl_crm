@@ -314,3 +314,16 @@ def status_delete(request, pk, status_pk):
 
     status.delete()
     return HttpResponse('')
+
+
+@login_required
+@require_POST
+def status_toggle_visibility(request, pk, status_pk):
+    project = get_object_or_404(Project, pk=pk)
+    if not can_access_project(request.user, project, 'manager'):
+        return HttpResponseForbidden("Manager access required")
+
+    status = get_object_or_404(Status, pk=status_pk, project=project)
+    status.visible_on_board = not status.visible_on_board
+    status.save()
+    return render(request, 'projects/partials/status_item.html', {'status': status, 'project': project})
