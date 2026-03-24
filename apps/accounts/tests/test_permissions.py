@@ -382,6 +382,47 @@ class TestUpdatePreset:
 
 
 @pytest.mark.django_db
+class TestPresetList:
+    def test_preset_list_requires_admin(self, client):
+        preset = PermissionPreset.objects.get(name='Developer')
+        user = UserFactory(permission_preset=preset)
+        client.force_login(user)
+        response = client.get(reverse('preset_list'))
+        assert response.status_code == 403
+
+    def test_preset_list_shows_presets(self, client):
+        admin = AdminUserFactory()
+        client.force_login(admin)
+        response = client.get(reverse('preset_list'))
+        content = response.content.decode()
+        assert response.status_code == 200
+        assert 'Admin' in content
+        assert 'Developer' in content
+
+    def test_preset_list_shows_user_count(self, client):
+        admin = AdminUserFactory()
+        preset = PermissionPreset.objects.get(name='Developer')
+        UserFactory(permission_preset=preset)
+        UserFactory(permission_preset=preset)
+        client.force_login(admin)
+        response = client.get(reverse('preset_list'))
+        assert response.status_code == 200
+
+    def test_preset_list_shows_permission_badges(self, client):
+        admin = AdminUserFactory()
+        client.force_login(admin)
+        response = client.get(reverse('preset_list'))
+        content = response.content.decode()
+        assert 'Projects' in content
+
+    def test_team_list_has_manage_presets_link(self, client):
+        admin = AdminUserFactory()
+        client.force_login(admin)
+        response = client.get(reverse('team_list'))
+        assert 'Manage Presets' in response.content.decode()
+
+
+@pytest.mark.django_db
 class TestTeamPresetDisplay:
     def test_team_list_shows_preset_column(self, client):
         """Team list should show a Preset column header."""

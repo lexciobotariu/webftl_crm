@@ -1,6 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.http import HttpResponseForbidden
+from django.db import models
+from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_POST
 
@@ -99,6 +100,46 @@ def update_preset(request, pk):
         user_obj.permission_preset = None
     user_obj.save()
     return render(request, 'accounts/partials/user_row.html', {'user': user_obj})
+
+
+@login_required
+@require_permission('access_team')
+def preset_list(request):
+    """List all permission presets."""
+    if not request.user.is_admin:
+        return HttpResponseForbidden("Admin access required")
+    presets = PermissionPreset.objects.annotate(
+        user_count=models.Count('users')
+    ).order_by('name')
+    return render(request, 'accounts/preset_list.html', {
+        'presets': presets,
+    })
+
+
+@login_required
+@require_permission('access_team')
+def preset_create(request):
+    if not request.user.is_admin:
+        return HttpResponseForbidden("Admin access required")
+    return render(request, 'accounts/partials/preset_form_drawer.html', {})
+
+
+@login_required
+@require_permission('access_team')
+def preset_edit(request, pk):
+    if not request.user.is_admin:
+        return HttpResponseForbidden("Admin access required")
+    preset = get_object_or_404(PermissionPreset, pk=pk)
+    return render(request, 'accounts/partials/preset_form_drawer.html', {'preset': preset})
+
+
+@login_required
+@require_permission('access_team')
+@require_POST
+def preset_delete(request, pk):
+    if not request.user.is_admin:
+        return HttpResponseForbidden("Admin access required")
+    return HttpResponse('')
 
 
 @login_required

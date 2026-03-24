@@ -12,11 +12,18 @@
                 <h1 class="text-sm font-medium text-zinc-100">Team</h1>
                 <span class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ total_count }}</span>
             </div>
-            <a href="{% url 'account_signup' %}"
-               class="inline-flex items-center gap-1.5 bg-accent text-white px-3 py-1.5 rounded-card text-xs font-medium hover:bg-accent-hover transition-colors">
-                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                Invite Member
-            </a>
+            <div class="flex items-center gap-2">
+                <a href="{% url 'preset_list' %}"
+                   class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
+                    <i data-lucide="shield" class="w-3.5 h-3.5"></i>
+                    Manage Presets
+                </a>
+                <a href="{% url 'account_signup' %}"
+                   class="inline-flex items-center gap-1.5 bg-accent text-white px-3 py-1.5 rounded-card text-xs font-medium hover:bg-accent-hover transition-colors">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                    Invite Member
+                </a>
+            </div>
         </div>
     </div>
 

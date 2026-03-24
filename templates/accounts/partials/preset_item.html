@@ -1,0 +1,62 @@
+<div class="bg-panel/80 rounded-panel border border-border-subtle overflow-hidden" id="preset-{{ preset.pk }}">
+    <div class="px-5 py-4 flex items-start justify-between">
+        <div class="flex-1">
+            <div class="flex items-center gap-2 mb-1">
+                <h3 class="text-sm font-medium text-zinc-100">{{ preset.name }}</h3>
+                {% if preset.is_system %}
+                <span class="px-1.5 py-0.5 text-[10px] rounded bg-zinc-500/10 text-zinc-500 border border-zinc-500/20">System</span>
+                {% endif %}
+                <span class="text-xs text-zinc-500">{{ preset.user_count }} user{{ preset.user_count|pluralize }}</span>
+            </div>
+            {% if preset.description %}
+            <p class="text-xs text-zinc-500 mb-3">{{ preset.description }}</p>
+            {% endif %}
+            <div class="flex flex-wrap gap-1.5">
+                {% if preset.access_dashboard %}
+                <span class="px-2 py-0.5 text-[10px] rounded bg-green-500/10 text-green-400 border border-green-500/20">Dashboard</span>
+                {% endif %}
+                {% if preset.access_clients %}
+                <span class="px-2 py-0.5 text-[10px] rounded bg-green-500/10 text-green-400 border border-green-500/20">Clients</span>
+                {% endif %}
+                {% if preset.access_projects %}
+                <span class="px-2 py-0.5 text-[10px] rounded bg-green-500/10 text-green-400 border border-green-500/20">Projects</span>
+                {% endif %}
+                {% if preset.access_tasks %}
+                <span class="px-2 py-0.5 text-[10px] rounded bg-green-500/10 text-green-400 border border-green-500/20">Tasks</span>
+                {% endif %}
+                {% if preset.access_todos %}
+                <span class="px-2 py-0.5 text-[10px] rounded bg-green-500/10 text-green-400 border border-green-500/20">Todos</span>
+                {% endif %}
+                {% if preset.access_notes %}
+                <span class="px-2 py-0.5 text-[10px] rounded bg-green-500/10 text-green-400 border border-green-500/20">Notes</span>
+                {% endif %}
+                {% if preset.access_salaries %}
+                <span class="px-2 py-0.5 text-[10px] rounded bg-green-500/10 text-green-400 border border-green-500/20">Salaries</span>
+                {% endif %}
+                {% if preset.access_team %}
+                <span class="px-2 py-0.5 text-[10px] rounded bg-green-500/10 text-green-400 border border-green-500/20">Team</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="flex items-center gap-1 ml-4">
+            <button hx-get="{% url 'preset_edit' preset.pk %}"
+                    hx-target="#slide-over"
+                    hx-swap="innerHTML"
+                    hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+                    class="p-1.5 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded transition-colors"
+                    title="Edit preset">
+                <i data-lucide="pencil" class="w-4 h-4"></i>
+            </button>
+            {% if not preset.is_system and preset.user_count == 0 %}
+            <button hx-post="{% url 'preset_delete' preset.pk %}"
+                    hx-target="#preset-{{ preset.pk }}"
+                    hx-swap="outerHTML"
+                    hx-confirm="Delete '{{ preset.name }}'?"
+                    class="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                    title="Delete preset">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
