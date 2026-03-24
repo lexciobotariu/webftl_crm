@@ -1,5 +1,6 @@
 import pytest
 from apps.accounts.permissions import PermissionPreset, PERMISSION_KEYS
+from apps.accounts.factories import UserFactory, AdminUserFactory
 
 
 @pytest.mark.django_db
@@ -45,3 +46,33 @@ class TestPermissionPreset:
     def test_preset_has_permission_invalid_key(self):
         preset = PermissionPreset.objects.create(name='Test')
         assert preset.has_permission('nonexistent_key') is False
+
+
+@pytest.mark.django_db
+class TestUserPermissions:
+    def test_admin_has_all_permissions(self):
+        """Admins bypass preset checks — always return True."""
+        admin = AdminUserFactory()
+        assert admin.has_app_permission('access_clients') is True
+        assert admin.has_app_permission('access_salaries') is True
+        assert admin.has_app_permission('access_team') is True
+
+    def test_user_with_preset(self):
+        """User with a preset uses the preset's permissions."""
+        preset = PermissionPreset.objects.create(
+            name='Dev',
+            access_clients=False,
+            access_salaries=False,
+            access_team=False,
+        )
+        user = UserFactory(permission_preset=preset)
+        assert user.has_app_permission('access_projects') is True
+        assert user.has_app_permission('access_clients') is False
+        assert user.has_app_permission('access_salaries') is False
+
+    def test_user_without_preset_denied(self):
+        """User without a preset should be denied non-dashboard access."""
+        user = UserFactory(permission_preset=None)
+        assert user.has_app_permission('access_dashboard') is True
+        assert user.has_app_permission('access_clients') is False
+        assert user.has_app_permission('access_projects') is False
