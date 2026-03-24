@@ -42,7 +42,19 @@
     </div>
 </div>
 
-<!-- Notes -->
+<!-- Notes (unified: client + project notes) -->
 <div class="border border-border-subtle rounded-card overflow-hidden mt-6" id="notes-section">
-    {% include "clients/partials/notes_display.html" %}
+    <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center gap-3">
+            <i data-lucide="file-text" class="w-4 h-4 text-zinc-500"></i>
+            <h2 class="text-sm font-medium text-zinc-100">Notes</h2>
+        </div>
+    </div>
+    <div hx-get="{% url 'client_profile_notes' client.pk %}"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+        <div class="flex items-center justify-center py-8">
+            <span class="text-sm text-zinc-500">Loading notes...</span>
+        </div>
+    </div>
 </div>
