@@ -5,6 +5,7 @@ These tests check templates and responses for consistent patterns.
 import pytest
 from django.urls import reverse
 from apps.accounts.factories import UserFactory, AdminUserFactory
+from apps.accounts.permissions import PermissionPreset
 from apps.clients.factories import ClientFactory
 from apps.projects.factories import ProjectFactory, ProjectMemberFactory
 
@@ -23,7 +24,8 @@ class TestPageHeaders:
         assert 'Dashboard' in content
 
     def test_client_list_has_compact_header(self, client):
-        user = UserFactory()
+        preset = PermissionPreset.objects.get(name='Admin')
+        user = UserFactory(permission_preset=preset)
         client.force_login(user)
         response = client.get(reverse('client_list'))
         content = response.content.decode()
@@ -50,7 +52,8 @@ class TestPagination:
     """All list pages should support pagination consistently."""
 
     def test_client_list_pagination_context(self, client):
-        user = UserFactory()
+        preset = PermissionPreset.objects.get(name='Admin')
+        user = UserFactory(permission_preset=preset)
         client.force_login(user)
         response = client.get(reverse('client_list'))
         assert 'page_obj' in response.context

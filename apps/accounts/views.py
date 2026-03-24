@@ -4,6 +4,7 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_POST
 
+from .decorators import require_permission
 from .models import User
 
 TEAM_MEMBERS_PER_PAGE = 20
@@ -51,6 +52,7 @@ def dashboard(request):
 
 
 @login_required
+@require_permission('access_team')
 def team_list(request):
     if not request.user.is_admin:
         return HttpResponseForbidden("Admin access required")
@@ -68,6 +70,7 @@ def team_list(request):
 
 
 @login_required
+@require_permission('access_team')
 @require_POST
 def toggle_role(request, pk):
     if not request.user.is_admin:

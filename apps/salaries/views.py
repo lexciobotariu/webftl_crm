@@ -3,12 +3,14 @@ from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_POST
 
+from apps.accounts.decorators import require_permission
 from . import services
 from .forms import EmployeeSalaryForm, SalaryMonthForm, PaymentForm
 from .models import EmployeeSalary, SalaryMonth, Payment
 
 
 @login_required
+@require_permission('access_salaries')
 def salary_list(request):
     """List all employee salary configurations."""
     salary_data, current_year, current_month, has_available_users, has_any_users = (
@@ -24,6 +26,7 @@ def salary_list(request):
 
 
 @login_required
+@require_permission('access_salaries')
 def salary_create(request):
     """Create salary configuration for an employee."""
     from django.contrib.auth import get_user_model
@@ -51,6 +54,7 @@ def salary_create(request):
 
 
 @login_required
+@require_permission('access_salaries')
 def salary_detail(request, pk):
     """Employee salary detail with month list."""
     try:
@@ -68,6 +72,7 @@ def salary_detail(request, pk):
 
 
 @login_required
+@require_permission('access_salaries')
 def month_create(request, pk):
     """Create month entry drawer."""
     employee_salary = get_object_or_404(
@@ -94,6 +99,7 @@ def month_create(request, pk):
 
 
 @login_required
+@require_permission('access_salaries')
 def payment_create(request, pk):
     """Record payment drawer."""
     employee_salary = get_object_or_404(
@@ -124,6 +130,7 @@ def payment_create(request, pk):
 # ============================================================================
 
 @login_required
+@require_permission('access_salaries')
 def salary_edit(request, pk):
     """Edit salary configuration drawer."""
     salary = get_object_or_404(
@@ -154,6 +161,7 @@ def salary_edit(request, pk):
 
 
 @login_required
+@require_permission('access_salaries')
 @require_POST
 def salary_delete(request, pk):
     """Delete salary configuration."""
@@ -169,6 +177,7 @@ def salary_delete(request, pk):
 # ============================================================================
 
 @login_required
+@require_permission('access_salaries')
 def month_edit(request, pk, month_pk):
     """Edit month entry drawer."""
     employee_salary = get_object_or_404(
@@ -198,6 +207,7 @@ def month_edit(request, pk, month_pk):
 
 
 @login_required
+@require_permission('access_salaries')
 @require_POST
 def month_delete(request, pk, month_pk):
     """Delete month entry."""
@@ -213,6 +223,7 @@ def month_delete(request, pk, month_pk):
 # ============================================================================
 
 @login_required
+@require_permission('access_salaries')
 def payment_edit(request, pk, payment_pk):
     """Edit payment drawer."""
     employee_salary = get_object_or_404(
@@ -246,6 +257,7 @@ def payment_edit(request, pk, payment_pk):
 
 
 @login_required
+@require_permission('access_salaries')
 @require_POST
 def payment_delete(request, pk, payment_pk):
     """Delete payment."""

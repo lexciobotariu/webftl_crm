@@ -211,6 +211,49 @@ class TestPermissionsContextProcessor:
 
 
 @pytest.mark.django_db
+class TestViewEnforcement:
+    def test_client_list_denied_for_developer(self, client):
+        """Developer preset should not access client list."""
+        preset = PermissionPreset.objects.get(name='Developer')
+        user = UserFactory(permission_preset=preset)
+        client.force_login(user)
+        response = client.get(reverse('client_list'))
+        assert response.status_code == 403
+
+    def test_salary_list_denied_for_developer(self, client):
+        """Developer preset should not access salary list."""
+        preset = PermissionPreset.objects.get(name='Developer')
+        user = UserFactory(permission_preset=preset)
+        client.force_login(user)
+        response = client.get(reverse('salary_list'))
+        assert response.status_code == 403
+
+    def test_team_list_denied_for_developer(self, client):
+        """Developer preset should not access team list."""
+        preset = PermissionPreset.objects.get(name='Developer')
+        user = UserFactory(permission_preset=preset)
+        client.force_login(user)
+        response = client.get(reverse('team_list'))
+        assert response.status_code == 403
+
+    def test_admin_accesses_all_views(self, client):
+        """Admin should access all views regardless of preset."""
+        admin = AdminUserFactory()
+        client.force_login(admin)
+        assert client.get(reverse('client_list')).status_code == 200
+        assert client.get(reverse('salary_list')).status_code == 200
+        assert client.get(reverse('team_list')).status_code == 200
+
+    def test_project_list_allowed_for_developer(self, client):
+        """Developer preset should access project list."""
+        preset = PermissionPreset.objects.get(name='Developer')
+        user = UserFactory(permission_preset=preset)
+        client.force_login(user)
+        response = client.get(reverse('project_list'))
+        assert response.status_code == 200
+
+
+@pytest.mark.django_db
 class TestSidebarPermissions:
     def test_sidebar_hides_clients_for_developer(self, client):
         """Developer preset should not see Clients link in sidebar."""

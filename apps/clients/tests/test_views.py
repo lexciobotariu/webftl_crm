@@ -1,6 +1,7 @@
 import pytest
 from django.urls import reverse
 from apps.accounts.factories import UserFactory, AdminUserFactory
+from apps.accounts.permissions import PermissionPreset
 from apps.clients.factories import ClientFactory
 
 
@@ -11,7 +12,8 @@ class TestClientList:
         assert response.status_code == 302
 
     def test_client_list_shows_clients(self, client):
-        user = UserFactory()
+        preset = PermissionPreset.objects.get(name='Admin')
+        user = UserFactory(permission_preset=preset)
         client.force_login(user)
         ClientFactory(name='Test Client')
         response = client.get(reverse('client_list'))
@@ -19,7 +21,8 @@ class TestClientList:
         assert 'Test Client' in response.content.decode()
 
     def test_client_list_pagination(self, client):
-        user = UserFactory()
+        preset = PermissionPreset.objects.get(name='Admin')
+        user = UserFactory(permission_preset=preset)
         for i in range(25):
             ClientFactory(name=f'Client {i}')
         client.force_login(user)
@@ -68,7 +71,8 @@ class TestClientCreate:
 @pytest.mark.django_db
 class TestClientDetail:
     def test_client_detail_shows_info(self, client):
-        user = UserFactory()
+        preset = PermissionPreset.objects.get(name='Admin')
+        user = UserFactory(permission_preset=preset)
         test_client = ClientFactory(name='Detail Client', email='detail@test.com')
         client.force_login(user)
         response = client.get(reverse('client_detail', args=[test_client.pk]))
@@ -76,7 +80,8 @@ class TestClientDetail:
         assert 'Detail Client' in response.content.decode()
 
     def test_client_detail_404_for_nonexistent(self, client):
-        user = UserFactory()
+        preset = PermissionPreset.objects.get(name='Admin')
+        user = UserFactory(permission_preset=preset)
         client.force_login(user)
         response = client.get(reverse('client_detail', args=[99999]))
         assert response.status_code == 404
@@ -113,7 +118,8 @@ class TestClientDelete:
 class TestClientDetailTabs:
     def test_client_detail_default_tab_is_profile(self, client):
         """GET /clients/<pk>/ should set active_tab to 'profile'"""
-        user = UserFactory()
+        preset = PermissionPreset.objects.get(name='Admin')
+        user = UserFactory(permission_preset=preset)
         client_obj = ClientFactory()
         client.force_login(user)
         response = client.get(reverse('client_detail', args=[client_obj.pk]))
@@ -122,7 +128,8 @@ class TestClientDetailTabs:
 
     def test_client_detail_projects_tab(self, client):
         """GET /clients/<pk>/projects/ should set active_tab to 'projects'"""
-        user = UserFactory()
+        preset = PermissionPreset.objects.get(name='Admin')
+        user = UserFactory(permission_preset=preset)
         client_obj = ClientFactory()
         client.force_login(user)
         response = client.get(reverse('client_detail_projects', args=[client_obj.pk]))
@@ -131,7 +138,8 @@ class TestClientDetailTabs:
 
     def test_client_detail_todos_tab(self, client):
         """GET /clients/<pk>/todos/ should set active_tab to 'todos'"""
-        user = UserFactory()
+        preset = PermissionPreset.objects.get(name='Admin')
+        user = UserFactory(permission_preset=preset)
         client_obj = ClientFactory()
         client.force_login(user)
         response = client.get(reverse('client_detail_todos', args=[client_obj.pk]))

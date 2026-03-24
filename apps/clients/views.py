@@ -5,6 +5,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from apps.accounts.decorators import require_permission
 from .forms import ClientForm
 from .models import Client
 
@@ -12,6 +13,7 @@ CLIENTS_PER_PAGE = 20
 
 
 @login_required
+@require_permission('access_clients')
 def client_list(request):
     clients_qs = Client.objects.all().order_by('name')
     paginator = Paginator(clients_qs, CLIENTS_PER_PAGE)
@@ -25,6 +27,7 @@ def client_list(request):
 
 
 @login_required
+@require_permission('access_clients')
 def client_create(request):
     if not request.user.is_admin:
         return HttpResponseForbidden("Admin access required to create clients")
@@ -42,6 +45,7 @@ def client_create(request):
 
 
 @login_required
+@require_permission('access_clients')
 def client_create_drawer(request):
     """Create client via drawer (HTMX)."""
     if not request.user.is_admin:
@@ -62,6 +66,7 @@ def client_create_drawer(request):
 
 
 @login_required
+@require_permission('access_clients')
 def client_detail(request, pk):
     client = get_object_or_404(Client, pk=pk)
 
@@ -95,6 +100,7 @@ def client_detail(request, pk):
 
 
 @login_required
+@require_permission('access_clients')
 def client_edit(request, pk):
     if not request.user.is_admin:
         return HttpResponseForbidden("Admin access required to edit clients")
@@ -111,6 +117,7 @@ def client_edit(request, pk):
 
 
 @login_required
+@require_permission('access_clients')
 def client_edit_drawer(request, pk):
     """Edit client profile via drawer (HTMX)."""
     if not request.user.is_admin:
@@ -133,6 +140,7 @@ def client_edit_drawer(request, pk):
 
 
 @login_required
+@require_permission('access_clients')
 def client_edit_notes(request, pk):
     """Edit client notes inline (HTMX)."""
     if not request.user.is_admin:
@@ -151,6 +159,7 @@ def client_edit_notes(request, pk):
 
 
 @login_required
+@require_permission('access_clients')
 def client_create_project(request, pk):
     """Create a new project for this client via drawer (HTMX)."""
     if not request.user.is_admin:
@@ -184,6 +193,7 @@ def client_create_project(request, pk):
 
 
 @login_required
+@require_permission('access_clients')
 def client_profile_notes(request, pk):
     """Return unified notes table for client profile (client + project notes)."""
     if not request.user.is_admin:
@@ -225,6 +235,7 @@ def client_profile_notes(request, pk):
 
 
 @login_required
+@require_permission('access_clients')
 @require_POST
 def client_delete(request, pk):
     if not request.user.is_admin:
