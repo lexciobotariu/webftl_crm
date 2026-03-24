@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-03-24
+
+### Features
+- Add status board visibility toggle — managers can hide status columns from the kanban board to reduce clutter
+- Hidden tasks badge shows count of tasks in non-visible columns on the board header
+- New tasks default to the first visible status when created without specifying one
+
+### Fixes
+- Support both Keep a Changelog and release skill section labels in changelog template
+
 ## [0.2.0] - 2026-03-24
 
 ### Features
