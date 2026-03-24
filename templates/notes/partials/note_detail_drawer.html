@@ -64,9 +64,7 @@
             </button>
             <button hx-post="{% url 'note_delete' note.pk %}"
                     hx-confirm="Are you sure you want to delete this note?"
-                    hx-target="#notes-list"
-                    hx-swap="outerHTML"
-                    hx-on::after-request="document.getElementById('slide-over').classList.add('hidden');"
+                    hx-swap="none"
                     class="px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-400 rounded-card text-sm font-medium hover:bg-red-500/20 transition-colors">
                 Delete
             </button>

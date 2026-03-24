@@ -51,7 +51,7 @@
         </div>
     </div>
     <div hx-get="{% url 'client_profile_notes' client.pk %}"
-         hx-trigger="load"
+         hx-trigger="load, notesChanged from:body"
          hx-swap="innerHTML">
         <div class="flex items-center justify-center py-8">
             <span class="text-sm text-zinc-500">Loading notes...</span>

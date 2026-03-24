@@ -185,21 +185,6 @@ def note_delete(request, pk):
     parent_type = 'client' if note.client else 'project'
     note.delete()
 
-    # Return updated list
-    notes = parent.note_objects.select_related('created_by', 'modified_by').all()
-    notes = [n for n in notes if can_view_note(request.user, n)]
-
-    can_create = can_create_note(
-        request.user,
-        client=parent if parent_type == 'client' else None,
-        project=parent if parent_type == 'project' else None
-    )
-
-    response = render(request, 'notes/partials/notes_list.html', {
-        'notes': notes,
-        'parent': parent,
-        'parent_type': parent_type,
-        'can_create_note': can_create,
-    })
-    response['HX-Trigger'] = 'closeSlideOver'
+    response = HttpResponse('')
+    response['HX-Trigger'] = 'notesChanged, closeSlideOver'
     return response

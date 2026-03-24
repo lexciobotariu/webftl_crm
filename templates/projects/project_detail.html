@@ -63,7 +63,7 @@
             </div>
             {% elif active_tab == 'notes' %}
             <div hx-get="{% url 'project_notes_list' project.pk %}"
-                 hx-trigger="load"
+                 hx-trigger="load, notesChanged from:body"
                  hx-swap="innerHTML"
                  class="h-full">
                 <div class="flex items-center justify-center h-full">
