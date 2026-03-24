@@ -8,14 +8,27 @@
     <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80">
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
+                {% if perms_map.access_clients %}
                 <a href="{% url 'client_detail' project.client.pk %}" class="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors" title="Back to Client">
                     <i data-lucide="arrow-left" class="w-4 h-4"></i>
                 </a>
+                {% else %}
+                <a href="{% url 'project_list' %}" class="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors" title="Back to Projects">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                </a>
+                {% endif %}
                 <div class="flex items-center gap-2 text-sm">
+                    {% if perms_map.access_clients %}
                     <a href="{% url 'client_detail' project.client.pk %}" class="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 transition-colors">
                         <i data-lucide="building-2" class="w-3.5 h-3.5"></i>
                         <span>{{ project.client.name }}</span>
                     </a>
+                    {% else %}
+                    <span class="flex items-center gap-1.5 text-zinc-500">
+                        <i data-lucide="building-2" class="w-3.5 h-3.5"></i>
+                        <span>{{ project.client.name }}</span>
+                    </span>
+                    {% endif %}
                     <span class="text-zinc-600">/</span>
                     <span class="flex items-center gap-1.5 text-zinc-100 font-medium" id="project-name">
                         <i data-lucide="folder" class="w-3.5 h-3.5"></i>

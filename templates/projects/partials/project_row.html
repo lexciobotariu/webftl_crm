@@ -6,9 +6,13 @@
     </td>
     <td class="px-4 py-3">
         {% if project.client %}
+        {% if perms_map.access_clients %}
         <a href="{% url 'client_detail' project.client.pk %}" class="text-sm text-zinc-400 hover:text-zinc-200 transition-colors">
             {{ project.client.name }}
         </a>
+        {% else %}
+        <span class="text-sm text-zinc-400">{{ project.client.name }}</span>
+        {% endif %}
         {% else %}
         <span class="text-sm text-zinc-600">—</span>
         {% endif %}

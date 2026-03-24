@@ -21,9 +21,13 @@
             <div>
                 <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Client</dt>
                 <dd class="text-zinc-300">
+                    {% if perms_map.access_clients %}
                     <a href="{% url 'client_detail' project.client.pk %}" class="hover:text-accent transition-colors">
                         {{ project.client.name }}
                     </a>
+                    {% else %}
+                    {{ project.client.name }}
+                    {% endif %}
                 </dd>
             </div>
             <div>

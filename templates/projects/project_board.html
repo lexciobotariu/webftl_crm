@@ -12,10 +12,17 @@
                     <i data-lucide="arrow-left" class="w-4 h-4"></i>
                 </a>
                 <div class="flex items-center gap-2 text-sm">
+                    {% if perms_map.access_clients %}
                     <a href="{% url 'client_detail' project.client.pk %}" class="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 transition-colors">
                         <i data-lucide="building-2" class="w-3.5 h-3.5"></i>
                         <span>{{ project.client.name }}</span>
                     </a>
+                    {% else %}
+                    <span class="flex items-center gap-1.5 text-zinc-500">
+                        <i data-lucide="building-2" class="w-3.5 h-3.5"></i>
+                        <span>{{ project.client.name }}</span>
+                    </span>
+                    {% endif %}
                     <span class="text-zinc-600">/</span>
                     <a href="{% url 'project_detail' project.pk %}" class="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 transition-colors">
                         <i data-lucide="folder" class="w-3.5 h-3.5"></i>

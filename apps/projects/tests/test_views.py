@@ -4,6 +4,7 @@ from django.urls import reverse
 from apps.accounts.factories import UserFactory, AdminUserFactory
 from apps.projects.factories import ProjectFactory, ProjectMemberFactory
 from apps.clients.factories import ClientFactory
+from apps.accounts.permissions import PermissionPreset
 
 
 @pytest.mark.django_db
@@ -346,3 +347,65 @@ class TestBoardVisibility:
         from apps.tasks.models import Task
         task = Task.objects.get(title='Test Task')
         assert task.status == second_status
+
+
+@pytest.mark.django_db
+class TestClientNameVisibility:
+    def test_project_list_shows_client_link_for_admin(self, client):
+        admin = AdminUserFactory()
+        project = ProjectFactory()
+        client.force_login(admin)
+        response = client.get(reverse('project_list'))
+        content = response.content.decode()
+        assert f'/clients/{project.client.pk}/' in content
+
+    def test_project_list_hides_client_link_for_developer(self, client):
+        preset = PermissionPreset.objects.get(name='Developer')
+        user = UserFactory(permission_preset=preset)
+        project = ProjectFactory()
+        ProjectMemberFactory(project=project, user=user, role='viewer')
+        client.force_login(user)
+        response = client.get(reverse('project_list'))
+        content = response.content.decode()
+        assert project.client.name in content
+        assert f'/clients/{project.client.pk}/' not in content
+
+    def test_project_list_hides_client_filter_for_developer(self, client):
+        preset = PermissionPreset.objects.get(name='Developer')
+        user = UserFactory(permission_preset=preset)
+        project = ProjectFactory()
+        ProjectMemberFactory(project=project, user=user, role='viewer')
+        client.force_login(user)
+        response = client.get(reverse('project_list'))
+        content = response.content.decode()
+        assert 'All Clients' not in content
+
+    def test_project_detail_shows_client_breadcrumb_link_for_admin(self, client):
+        admin = AdminUserFactory()
+        project = ProjectFactory()
+        client.force_login(admin)
+        response = client.get(reverse('project_detail', args=[project.pk]))
+        content = response.content.decode()
+        assert f'/clients/{project.client.pk}/' in content
+
+    def test_project_detail_hides_client_breadcrumb_link_for_developer(self, client):
+        preset = PermissionPreset.objects.get(name='Developer')
+        user = UserFactory(permission_preset=preset)
+        project = ProjectFactory()
+        ProjectMemberFactory(project=project, user=user, role='viewer')
+        client.force_login(user)
+        response = client.get(reverse('project_detail', args=[project.pk]))
+        content = response.content.decode()
+        assert project.client.name in content
+        assert f'/clients/{project.client.pk}/' not in content
+
+    def test_project_board_hides_client_link_for_developer(self, client):
+        preset = PermissionPreset.objects.get(name='Developer')
+        user = UserFactory(permission_preset=preset)
+        project = ProjectFactory()
+        ProjectMemberFactory(project=project, user=user, role='viewer')
+        client.force_login(user)
+        response = client.get(reverse('project_board', args=[project.pk]))
+        content = response.content.decode()
+        assert project.client.name in content
+        assert f'/clients/{project.client.pk}/' not in content

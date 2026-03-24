@@ -12,6 +12,7 @@
                 <h1 class="text-sm font-medium text-zinc-100">Projects</h1>
                 <span class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ total_count }}</span>
                 <!-- Client filter -->
+                {% if perms_map.access_clients %}
                 <select onchange="window.location.href='?client=' + this.value"
                         class="ml-4 bg-elevated border border-border-subtle rounded px-2 py-1 text-xs text-zinc-400 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
                     <option value="">All Clients</option>
@@ -21,6 +22,7 @@
                     </option>
                     {% endfor %}
                 </select>
+                {% endif %}
             </div>
             <a href="{% url 'project_create' %}"
                class="inline-flex items-center gap-1.5 bg-accent text-white px-3 py-1.5 rounded-card text-xs font-medium hover:bg-accent-hover transition-colors">
