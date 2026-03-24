@@ -6,6 +6,7 @@ from django.views.decorators.http import require_POST
 
 from .decorators import require_permission
 from .models import User
+from .permissions import PermissionPreset
 
 TEAM_MEMBERS_PER_PAGE = 20
 
@@ -56,7 +57,7 @@ def dashboard(request):
 def team_list(request):
     if not request.user.is_admin:
         return HttpResponseForbidden("Admin access required")
-    users_qs = User.objects.all().order_by('name')
+    users_qs = User.objects.select_related('permission_preset').order_by('name')
 
     paginator = Paginator(users_qs, TEAM_MEMBERS_PER_PAGE)
     page_number = request.GET.get('page', 1)
@@ -66,6 +67,19 @@ def team_list(request):
         'users': page_obj,
         'page_obj': page_obj,
         'total_count': paginator.count,
+    })
+
+
+@login_required
+@require_permission('access_team')
+def user_detail_drawer(request, pk):
+    if not request.user.is_admin:
+        return HttpResponseForbidden("Admin access required")
+    user_obj = get_object_or_404(User, pk=pk)
+    presets = PermissionPreset.objects.all()
+    return render(request, 'accounts/partials/user_detail_drawer.html', {
+        'user_obj': user_obj,
+        'presets': presets,
     })
 
 

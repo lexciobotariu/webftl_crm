@@ -11,14 +11,24 @@
         </span>
     </td>
     <td class="px-4 py-3">
+        {% if user.permission_preset %}
+        <span class="px-2 py-0.5 text-xs rounded-full border bg-elevated text-zinc-300 border-border-subtle">
+            {{ user.permission_preset.name }}
+        </span>
+        {% else %}
+        <span class="text-xs text-zinc-600">No preset</span>
+        {% endif %}
+    </td>
+    <td class="px-4 py-3">
         <div class="flex items-center justify-end gap-1">
             {% if user != request.user %}
-            <button hx-post="{% url 'toggle_role' user.pk %}"
-                    hx-target="#user-{{ user.pk }}"
-                    hx-swap="outerHTML"
+            <button hx-get="{% url 'user_detail_drawer' user.pk %}"
+                    hx-target="#slide-over"
+                    hx-swap="innerHTML"
+                    hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
                     class="p-1.5 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded transition-colors"
-                    title="Make {% if user.role == 'admin' %}Member{% else %}Admin{% endif %}">
-                <i data-lucide="{% if user.role == 'admin' %}user-minus{% else %}user-plus{% endif %}" class="w-4 h-4"></i>
+                    title="Edit user">
+                <i data-lucide="pencil" class="w-4 h-4"></i>
             </button>
             {% endif %}
         </div>

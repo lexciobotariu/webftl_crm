@@ -280,3 +280,31 @@ class TestSidebarPermissions:
         assert 'Projects' in content
         assert 'Salaries' in content
         assert 'Team' in content
+
+
+@pytest.mark.django_db
+class TestTeamPresetDisplay:
+    def test_team_list_shows_preset_column(self, client):
+        """Team list should show a Preset column header."""
+        admin = AdminUserFactory()
+        client.force_login(admin)
+        response = client.get(reverse('team_list'))
+        assert 'Preset' in response.content.decode()
+
+    def test_team_list_shows_user_preset_name(self, client):
+        """Team list should show the assigned preset name for each user."""
+        admin = AdminUserFactory()
+        preset = PermissionPreset.objects.get(name='Developer')
+        dev = UserFactory(name='Dev User', permission_preset=preset)
+        client.force_login(admin)
+        response = client.get(reverse('team_list'))
+        content = response.content.decode()
+        assert 'Developer' in content
+
+    def test_team_list_shows_no_preset_label(self, client):
+        """Users without a preset should show 'No preset' label."""
+        admin = AdminUserFactory()
+        member = UserFactory(name='New User', permission_preset=None)
+        client.force_login(admin)
+        response = client.get(reverse('team_list'))
+        assert 'No preset' in response.content.decode()
