@@ -14,6 +14,7 @@
 
     <!-- Navigation -->
     <nav class="flex-1 px-2 py-3 space-y-1">
+        {% if perms_map.access_dashboard %}
         <a href="{% url 'dashboard' %}"
            class="flex items-center gap-2.5 px-3 py-2 rounded-card text-[13px] font-medium transition-colors duration-150
                   {% if request.resolver_match.url_name == 'dashboard' %}
@@ -24,6 +25,8 @@
             <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
             Dashboard
         </a>
+        {% endif %}
+        {% if perms_map.access_clients %}
         <a href="{% url 'client_list' %}"
            class="flex items-center gap-2.5 px-3 py-2 rounded-card text-[13px] font-medium transition-colors duration-150
                   {% if 'client' in request.resolver_match.url_name %}
@@ -34,6 +37,8 @@
             <i data-lucide="building-2" class="w-4 h-4"></i>
             Clients
         </a>
+        {% endif %}
+        {% if perms_map.access_projects %}
         <a href="{% url 'project_list' %}"
            class="flex items-center gap-2.5 px-3 py-2 rounded-card text-[13px] font-medium transition-colors duration-150
                   {% if 'project' in request.resolver_match.url_name %}
@@ -44,6 +49,8 @@
             <i data-lucide="folder-kanban" class="w-4 h-4"></i>
             Projects
         </a>
+        {% endif %}
+        {% if perms_map.access_tasks %}
         <a href="{% url 'my_tasks' %}"
            class="flex items-center gap-2.5 px-3 py-2 rounded-card text-[13px] font-medium transition-colors duration-150
                   {% if request.resolver_match.url_name == 'my_tasks' %}
@@ -54,7 +61,9 @@
             <i data-lucide="user-check" class="w-4 h-4"></i>
             My Tasks
         </a>
+        {% endif %}
         <!-- Finances -->
+        {% if perms_map.access_salaries %}
         <div class="mt-4 pt-3 border-t border-border-subtle">
             <span class="px-3 text-[10px] uppercase tracking-wider text-zinc-600 font-medium">Finances</span>
         </div>
@@ -68,7 +77,8 @@
             <i data-lucide="wallet" class="w-4 h-4"></i>
             Salaries
         </a>
-        {% if user.role == 'admin' %}
+        {% endif %}
+        {% if perms_map.access_team %}
         <a href="{% url 'team_list' %}"
            class="flex items-center gap-2.5 px-3 py-2 rounded-card text-[13px] font-medium transition-colors duration-150
                   {% if 'team' in request.resolver_match.url_name %}

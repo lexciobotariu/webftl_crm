@@ -208,3 +208,32 @@ class TestPermissionsContextProcessor:
         request.user = AnonymousUser()
         result = permissions(request)
         assert result['perms_map'] == {}
+
+
+@pytest.mark.django_db
+class TestSidebarPermissions:
+    def test_sidebar_hides_clients_for_developer(self, client):
+        """Developer preset should not see Clients link in sidebar."""
+        preset = PermissionPreset.objects.get(name='Developer')
+        user = UserFactory(permission_preset=preset)
+        client.force_login(user)
+        response = client.get(reverse('dashboard'))
+        content = response.content.decode()
+        assert 'Clients' not in content
+        assert 'Salaries' not in content
+        assert 'Team' not in content
+        # Should still see these
+        assert 'Dashboard' in content
+        assert 'Projects' in content
+        assert 'My Tasks' in content
+
+    def test_sidebar_shows_all_for_admin(self, client):
+        """Admin should see all sidebar links."""
+        admin = AdminUserFactory()
+        client.force_login(admin)
+        response = client.get(reverse('dashboard'))
+        content = response.content.decode()
+        assert 'Clients' in content
+        assert 'Projects' in content
+        assert 'Salaries' in content
+        assert 'Team' in content

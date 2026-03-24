@@ -18,6 +18,7 @@
     <div class="flex-1 overflow-auto p-4">
         <!-- Stats Cards -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            {% if perms_map.access_clients %}
             <a href="{% url 'client_list' %}" class="bg-card/90 rounded-card border border-border-subtle p-4 hover:border-border-strong hover:bg-elevated/50 transition-all">
                 <div class="flex items-center justify-between">
                     <div class="text-xs uppercase tracking-wide text-zinc-500">Clients</div>
@@ -27,6 +28,7 @@
                 </div>
                 <div class="text-2xl font-semibold text-zinc-100 mt-2">{{ client_count }}</div>
             </a>
+            {% endif %}
             <a href="{% url 'project_list' %}" class="bg-card/90 rounded-card border border-border-subtle p-4 hover:border-border-strong hover:bg-elevated/50 transition-all">
                 <div class="flex items-center justify-between">
                     <div class="text-xs uppercase tracking-wide text-zinc-500">Projects</div>
