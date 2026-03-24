@@ -1,5 +1,6 @@
 import pytest
 from django.test import RequestFactory
+from django.urls import reverse
 
 from apps.accounts.decorators import require_permission
 from apps.accounts.permissions import PermissionPreset, PERMISSION_KEYS
@@ -167,3 +168,43 @@ class TestRequirePermissionDecorator:
 
         response = view(request)
         assert response.status_code == 403
+
+
+@pytest.mark.django_db
+class TestPermissionsContextProcessor:
+    def test_permissions_in_template_context(self, client):
+        """Logged-in user should have 'perms_map' in template context."""
+        preset = PermissionPreset.objects.create(
+            name='TestPreset',
+            access_clients=False,
+            access_salaries=False,
+        )
+        user = UserFactory(permission_preset=preset)
+        client.force_login(user)
+        response = client.get(reverse('dashboard'))
+        assert 'perms_map' in response.context
+        assert response.context['perms_map']['access_dashboard'] is True
+        assert response.context['perms_map']['access_clients'] is False
+        assert response.context['perms_map']['access_salaries'] is False
+        assert response.context['perms_map']['access_projects'] is True
+
+    def test_admin_permissions_all_true(self, client):
+        """Admin should have all permissions True in context."""
+        admin = AdminUserFactory()
+        client.force_login(admin)
+        response = client.get(reverse('dashboard'))
+        perms = response.context['perms_map']
+        for key in PERMISSION_KEYS:
+            assert perms[key] is True
+
+    def test_anonymous_user_no_perms(self, client):
+        """Anonymous requests should have empty perms_map."""
+        from config.context_processors import permissions
+        from django.test import RequestFactory
+        from django.contrib.auth.models import AnonymousUser
+
+        factory = RequestFactory()
+        request = factory.get('/')
+        request.user = AnonymousUser()
+        result = permissions(request)
+        assert result['perms_map'] == {}
