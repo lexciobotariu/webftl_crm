@@ -283,6 +283,105 @@ class TestSidebarPermissions:
 
 
 @pytest.mark.django_db
+class TestUserDetailDrawer:
+    def test_drawer_requires_team_permission(self, client):
+        """Non-admin without team access should get 403."""
+        preset = PermissionPreset.objects.get(name='Developer')
+        user = UserFactory(permission_preset=preset)
+        target = UserFactory()
+        client.force_login(user)
+        response = client.get(reverse('user_detail_drawer', args=[target.pk]))
+        assert response.status_code == 403
+
+    def test_drawer_requires_admin_role(self, client):
+        """Non-admin user with access_team permission should still get 403."""
+        preset = PermissionPreset.objects.create(name='TeamViewer', access_team=True)
+        user = UserFactory(permission_preset=preset)
+        target = UserFactory()
+        client.force_login(user)
+        response = client.get(reverse('user_detail_drawer', args=[target.pk]))
+        assert response.status_code == 403
+
+    def test_drawer_shows_user_info(self, client):
+        """Drawer should display user name, email, and current preset."""
+        admin = AdminUserFactory()
+        preset = PermissionPreset.objects.get(name='Developer')
+        target = UserFactory(name='John Doe', email='john@test.com', permission_preset=preset)
+        client.force_login(admin)
+        response = client.get(reverse('user_detail_drawer', args=[target.pk]))
+        content = response.content.decode()
+        assert 'John Doe' in content
+        assert 'john@test.com' in content
+        assert response.status_code == 200
+
+    def test_drawer_lists_all_presets(self, client):
+        """Drawer should list all available presets in a dropdown."""
+        admin = AdminUserFactory()
+        target = UserFactory()
+        client.force_login(admin)
+        response = client.get(reverse('user_detail_drawer', args=[target.pk]))
+        content = response.content.decode()
+        assert 'Admin' in content
+        assert 'Developer' in content
+
+
+@pytest.mark.django_db
+class TestUpdatePreset:
+    def test_assign_preset_to_user(self, client):
+        """Admin can assign a preset to a user."""
+        admin = AdminUserFactory()
+        target = UserFactory(permission_preset=None)
+        preset = PermissionPreset.objects.get(name='Developer')
+        client.force_login(admin)
+        response = client.post(
+            reverse('update_preset', args=[target.pk]),
+            {'preset_id': preset.pk},
+        )
+        assert response.status_code == 200
+        target.refresh_from_db()
+        assert target.permission_preset == preset
+
+    def test_clear_preset_from_user(self, client):
+        """Admin can clear a user's preset by sending empty preset_id."""
+        admin = AdminUserFactory()
+        preset = PermissionPreset.objects.get(name='Developer')
+        target = UserFactory(permission_preset=preset)
+        client.force_login(admin)
+        response = client.post(
+            reverse('update_preset', args=[target.pk]),
+            {'preset_id': ''},
+        )
+        assert response.status_code == 200
+        target.refresh_from_db()
+        assert target.permission_preset is None
+
+    def test_update_preset_requires_admin(self, client):
+        """Only admins can update presets."""
+        preset = PermissionPreset.objects.create(name='WithTeam', access_team=True)
+        user = UserFactory(permission_preset=preset)
+        target = UserFactory()
+        dev_preset = PermissionPreset.objects.get(name='Developer')
+        client.force_login(user)
+        response = client.post(
+            reverse('update_preset', args=[target.pk]),
+            {'preset_id': dev_preset.pk},
+        )
+        assert response.status_code == 403
+
+    def test_update_preset_returns_updated_row(self, client):
+        """After updating preset, response should contain the new preset name."""
+        admin = AdminUserFactory()
+        target = UserFactory(permission_preset=None)
+        preset = PermissionPreset.objects.get(name='Developer')
+        client.force_login(admin)
+        response = client.post(
+            reverse('update_preset', args=[target.pk]),
+            {'preset_id': preset.pk},
+        )
+        assert 'Developer' in response.content.decode()
+
+
+@pytest.mark.django_db
 class TestTeamPresetDisplay:
     def test_team_list_shows_preset_column(self, client):
         """Team list should show a Preset column header."""

@@ -86,6 +86,24 @@ def user_detail_drawer(request, pk):
 @login_required
 @require_permission('access_team')
 @require_POST
+def update_preset(request, pk):
+    """Update a user's permission preset."""
+    if not request.user.is_admin:
+        return HttpResponseForbidden("Admin access required")
+    user_obj = get_object_or_404(User, pk=pk)
+    preset_id = request.POST.get('preset_id', '').strip()
+    if preset_id:
+        preset = get_object_or_404(PermissionPreset, pk=preset_id)
+        user_obj.permission_preset = preset
+    else:
+        user_obj.permission_preset = None
+    user_obj.save()
+    return render(request, 'accounts/partials/user_row.html', {'user': user_obj})
+
+
+@login_required
+@require_permission('access_team')
+@require_POST
 def toggle_role(request, pk):
     if not request.user.is_admin:
         return HttpResponseForbidden("Admin access required")
