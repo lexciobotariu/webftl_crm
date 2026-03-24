@@ -45,3 +45,16 @@ class TestStatusModel:
         assert status.task_count == 0
         TaskFactory(project=project, status=status)
         assert status.task_count == 1
+
+    def test_visible_on_board_defaults_true(self):
+        project = ProjectFactory()
+        status = project.statuses.first()
+        assert status.visible_on_board is True
+
+    def test_visible_on_board_can_be_set_false(self):
+        project = ProjectFactory()
+        status = project.statuses.first()
+        status.visible_on_board = False
+        status.save()
+        status.refresh_from_db()
+        assert status.visible_on_board is False

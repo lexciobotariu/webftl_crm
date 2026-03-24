@@ -41,6 +41,7 @@ class Status(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='statuses')
     name = models.CharField(max_length=100)
     order = models.PositiveIntegerField(default=0)
+    visible_on_board = models.BooleanField(default=True)
 
     class Meta:
         ordering = ['order']
