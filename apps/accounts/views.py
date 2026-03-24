@@ -17,6 +17,8 @@ def dashboard(request):
         'project_count': 0,
         'my_task_count': 0,
         'recent_tasks': [],
+        'recent_todos': [],
+        'todo_count': 0,
     }
     # Try to get real counts if models exist
     try:
@@ -33,6 +35,16 @@ def dashboard(request):
         from apps.tasks.models import Task
         context['my_task_count'] = Task.objects.filter(assignee=request.user).exclude(status__name='Done').count()
         context['recent_tasks'] = Task.objects.filter(assignee=request.user).select_related('project', 'status').order_by('-updated_at')[:5]
+    except (ImportError, Exception):
+        pass
+    try:
+        from apps.todos.models import Todo
+        context['recent_todos'] = Todo.objects.filter(
+            owner=request.user, is_completed=False
+        ).select_related('client')[:5]
+        context['todo_count'] = Todo.objects.filter(
+            owner=request.user, is_completed=False
+        ).count()
     except (ImportError, Exception):
         pass
     return render(request, 'accounts/dashboard.html', context)

@@ -1,6 +1,7 @@
 import pytest
 from django.urls import reverse
 from apps.accounts.factories import UserFactory, AdminUserFactory
+from apps.todos.factories import TodoFactory
 
 
 @pytest.mark.django_db
@@ -23,6 +24,67 @@ class TestDashboard:
         assert 'client_count' in response.context
         assert 'project_count' in response.context
         assert 'my_task_count' in response.context
+
+
+@pytest.mark.django_db
+class TestDashboardTodos:
+    def test_dashboard_includes_todos_in_context(self, client):
+        """Dashboard should pass recent_todos to template."""
+        user = UserFactory()
+        TodoFactory(owner=user, title='My Todo')
+        client.force_login(user)
+        response = client.get(reverse('dashboard'))
+        assert 'recent_todos' in response.context
+        assert len(response.context['recent_todos']) == 1
+
+    def test_dashboard_shows_only_incomplete_todos(self, client):
+        """Dashboard should only show incomplete todos."""
+        user = UserFactory()
+        TodoFactory(owner=user, title='Pending Todo', is_completed=False)
+        TodoFactory(owner=user, title='Done Todo', is_completed=True)
+        client.force_login(user)
+        response = client.get(reverse('dashboard'))
+        assert len(response.context['recent_todos']) == 1
+        assert response.context['recent_todos'][0].title == 'Pending Todo'
+
+    def test_dashboard_shows_only_own_todos(self, client):
+        """Dashboard should only show todos owned by logged-in user."""
+        user = UserFactory()
+        other = UserFactory()
+        TodoFactory(owner=user, title='My Todo')
+        TodoFactory(owner=other, title='Other Todo')
+        client.force_login(user)
+        response = client.get(reverse('dashboard'))
+        assert len(response.context['recent_todos']) == 1
+
+    def test_dashboard_limits_todos_to_five(self, client):
+        """Dashboard should show at most 5 todos."""
+        user = UserFactory()
+        for i in range(7):
+            TodoFactory(owner=user, title=f'Todo {i}')
+        client.force_login(user)
+        response = client.get(reverse('dashboard'))
+        assert len(response.context['recent_todos']) == 5
+
+    def test_dashboard_includes_todo_count(self, client):
+        """Dashboard should pass total incomplete todo count."""
+        user = UserFactory()
+        for i in range(7):
+            TodoFactory(owner=user)
+        TodoFactory(owner=user, is_completed=True)
+        client.force_login(user)
+        response = client.get(reverse('dashboard'))
+        assert response.context['todo_count'] == 7
+
+    def test_dashboard_renders_todo_section(self, client):
+        """Dashboard should render the My To-Dos section with todo titles."""
+        user = UserFactory()
+        TodoFactory(owner=user, title='Buy groceries')
+        client.force_login(user)
+        response = client.get(reverse('dashboard'))
+        content = response.content.decode()
+        assert 'My To-Dos' in content
+        assert 'Buy groceries' in content
 
 
 @pytest.mark.django_db
