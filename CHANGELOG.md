@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-03-24
+
+### Features
+- Add app-level RBAC with permission presets (Admin, Developer) controlling access to Clients, Salaries, Team, and other sections
+- Sidebar dynamically shows/hides navigation links based on user's permission preset
+- User detail drawer on Team page for viewing user info and assigning permission presets
+- Preset editor UI for creating, editing, and deleting custom permission presets with per-section toggle switches
+- Client names shown as plain text (not clickable links) for users without client access in project breadcrumbs, lists, and detail pages
+- Client filter dropdown hidden from project list for restricted users
+- System presets (Admin, Developer) protected from deletion; presets with assigned users cannot be deleted
+
 ## [0.4.1] - 2026-03-24
 
 ### Fixes
