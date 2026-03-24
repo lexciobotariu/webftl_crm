@@ -38,10 +38,12 @@
                 {% for section in entry.sections %}
                 <div>
                     <span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-card mb-2
-                        {% if section.name == 'Added' %}bg-green-500/10 text-green-400 border border-green-500/20
-                        {% elif section.name == 'Fixed' %}bg-blue-500/10 text-blue-400 border border-blue-500/20
-                        {% elif section.name == 'Changed' %}bg-yellow-500/10 text-yellow-400 border border-yellow-500/20
-                        {% elif section.name == 'Removed' %}bg-red-500/10 text-red-400 border border-red-500/20
+                        {% if section.name == 'Added' or section.name == 'Features' %}bg-green-500/10 text-green-400 border border-green-500/20
+                        {% elif section.name == 'Fixed' or section.name == 'Fixes' %}bg-blue-500/10 text-blue-400 border border-blue-500/20
+                        {% elif section.name == 'Changed' or section.name == 'Refactor' %}bg-yellow-500/10 text-yellow-400 border border-yellow-500/20
+                        {% elif section.name == 'Removed' or section.name == 'Breaking Changes' %}bg-red-500/10 text-red-400 border border-red-500/20
+                        {% elif section.name == 'Documentation' %}bg-purple-500/10 text-purple-400 border border-purple-500/20
+                        {% elif section.name == 'Performance' %}bg-cyan-500/10 text-cyan-400 border border-cyan-500/20
                         {% else %}bg-elevated text-zinc-400 border border-border-subtle
                         {% endif %}">
                         {{ section.name }}
