@@ -4,9 +4,11 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 from apps.todos import views as todo_views
+from config import views as config_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('changelog/', config_views.changelog_view, name='changelog'),
     path('accounts/', include('allauth.urls')),
     path('', include('apps.accounts.urls')),
     path('clients/', include('apps.clients.urls')),
