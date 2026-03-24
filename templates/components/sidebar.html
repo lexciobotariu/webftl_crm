@@ -84,7 +84,7 @@
 
     <!-- Version -->
     <div class="px-4 py-2 border-t border-border-subtle">
-        <span class="text-[11px] text-zinc-600">v{{ app_version }}</span>
+        <a href="{% url 'changelog' %}" class="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors" title="View changelog">v{{ app_version }}</a>
     </div>
 
     <!-- User section -->
