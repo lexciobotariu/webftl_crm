@@ -18,7 +18,7 @@
             Save
         </button>
         <button type="button"
-                hx-get="{% url 'client_notes_display' client.pk %}"
+                hx-get="{% url 'client_profile_notes' client.pk %}"
                 hx-target="#notes-section"
                 hx-swap="innerHTML"
                 class="px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-300 transition-colors">

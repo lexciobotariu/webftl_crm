@@ -151,13 +151,6 @@ def client_edit_notes(request, pk):
 
 
 @login_required
-def client_notes_display(request, pk):
-    """Return notes display partial (for cancel action)."""
-    client = get_object_or_404(Client, pk=pk)
-    return render(request, 'clients/partials/notes_display.html', {'client': client})
-
-
-@login_required
 def client_create_project(request, pk):
     """Create a new project for this client via drawer (HTMX)."""
     if not request.user.is_admin:
@@ -188,6 +181,47 @@ def client_create_project(request, pk):
             return response
 
     return render(request, 'clients/partials/project_create_drawer.html', {'client': client})
+
+
+@login_required
+def client_profile_notes(request, pk):
+    """Return unified notes table for client profile (client + project notes)."""
+    if not request.user.is_admin:
+        return HttpResponseForbidden("Admin access required")
+
+    client = get_object_or_404(Client, pk=pk)
+
+    from apps.notes.models import Note, can_view_note
+
+    # Get client notes
+    client_notes = list(
+        Note.objects.filter(client=client)
+        .select_related('created_by', 'modified_by')
+    )
+
+    # Get notes from all client's projects
+    project_ids = client.projects.values_list('pk', flat=True)
+    project_notes = list(
+        Note.objects.filter(project_id__in=project_ids)
+        .select_related('created_by', 'modified_by', 'project')
+    )
+
+    # Merge, filter visibility, sort by most recent
+    all_notes = [n for n in client_notes + project_notes if can_view_note(request.user, n)]
+    all_notes.sort(key=lambda n: n.updated_at, reverse=True)
+
+    # Annotate each note with its type label
+    for note in all_notes:
+        if note.client_id:
+            note.type_label = 'Client'
+        else:
+            note.type_label = 'Project'
+            note.type_name = note.project.name
+
+    return render(request, 'clients/partials/profile_notes_table.html', {
+        'notes': all_notes,
+        'client': client,
+    })
 
 
 @login_required
