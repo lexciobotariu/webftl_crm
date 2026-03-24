@@ -31,3 +31,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def is_admin(self):
         return self.role == 'admin'
+
+
+from .permissions import PermissionPreset  # noqa: F401 — required for Django model discovery
