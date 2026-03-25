@@ -13,7 +13,7 @@ DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 # Fernet encryption key for sensitive fields (GitHub tokens)
 # Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-FERNET_KEYS = [os.getenv('FERNET_KEY', 'tFtN0secrpzD-AkKITH3lqBf6KlP39SOXaz6jLLwhp0=')]
+FERNET_KEYS = [os.getenv('FERNET_KEY', 'dev-fernet-key-change-in-production')]
 ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [

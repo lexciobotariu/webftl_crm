@@ -1,7 +1,0 @@
-{
-  "scripts": {
-    "setup": "cp $CONDUCTOR_ROOT_PATH/.env . && python3.12 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && python manage.py migrate",
-    "run": "source .venv/bin/activate && python manage.py runserver",
-    "archive": ""
-  }
-}

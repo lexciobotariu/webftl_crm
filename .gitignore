@@ -36,3 +36,9 @@ Thumbs.db
 # Test coverage
 .coverage
 htmlcov/
+
+# Playwright MCP
+.playwright-mcp/
+
+# Conductor
+conductor.json
