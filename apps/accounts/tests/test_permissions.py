@@ -334,8 +334,8 @@ class TestUpdatePreset:
         preset = PermissionPreset.objects.get(name='Developer')
         client.force_login(admin)
         response = client.post(
-            reverse('update_preset', args=[target.pk]),
-            {'preset_id': preset.pk},
+            reverse('user_update', args=[target.pk]),
+            {'name': target.name, 'email': target.email, 'role': target.role, 'preset_id': preset.pk},
         )
         assert response.status_code == 200
         target.refresh_from_db()
@@ -348,8 +348,8 @@ class TestUpdatePreset:
         target = UserFactory(permission_preset=preset)
         client.force_login(admin)
         response = client.post(
-            reverse('update_preset', args=[target.pk]),
-            {'preset_id': ''},
+            reverse('user_update', args=[target.pk]),
+            {'name': target.name, 'email': target.email, 'role': target.role, 'preset_id': ''},
         )
         assert response.status_code == 200
         target.refresh_from_db()
@@ -363,8 +363,8 @@ class TestUpdatePreset:
         dev_preset = PermissionPreset.objects.get(name='Developer')
         client.force_login(user)
         response = client.post(
-            reverse('update_preset', args=[target.pk]),
-            {'preset_id': dev_preset.pk},
+            reverse('user_update', args=[target.pk]),
+            {'name': target.name, 'email': target.email, 'role': target.role, 'preset_id': dev_preset.pk},
         )
         assert response.status_code == 403
 
@@ -375,8 +375,8 @@ class TestUpdatePreset:
         preset = PermissionPreset.objects.get(name='Developer')
         client.force_login(admin)
         response = client.post(
-            reverse('update_preset', args=[target.pk]),
-            {'preset_id': preset.pk},
+            reverse('user_update', args=[target.pk]),
+            {'name': target.name, 'email': target.email, 'role': target.role, 'preset_id': preset.pk},
         )
         assert 'Developer' in response.content.decode()
 

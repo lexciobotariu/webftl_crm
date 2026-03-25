@@ -114,36 +114,142 @@ class TestTeamList:
 
 @pytest.mark.django_db
 @pytest.mark.security
-class TestToggleRole:
-    def test_toggle_role_requires_admin(self, client):
+class TestUserUpdate:
+    def test_user_update_requires_admin(self, client):
         user = UserFactory(role='member')
-        target = UserFactory(role='member')
+        target = UserFactory()
         client.force_login(user)
-        response = client.post(reverse('toggle_role', args=[target.pk]))
+        response = client.post(reverse('user_update', args=[target.pk]), {
+            'name': 'New Name', 'email': target.email, 'role': 'member',
+        })
         assert response.status_code == 403
 
-    def test_toggle_role_works_for_admin(self, client):
+    def test_user_update_requires_post(self, client):
+        admin = AdminUserFactory()
+        target = UserFactory()
+        client.force_login(admin)
+        response = client.get(reverse('user_update', args=[target.pk]))
+        assert response.status_code == 405
+
+    def test_user_update_changes_name(self, client):
+        admin = AdminUserFactory()
+        target = UserFactory(name='Old Name')
+        client.force_login(admin)
+        response = client.post(reverse('user_update', args=[target.pk]), {
+            'name': 'New Name', 'email': target.email, 'role': 'member',
+        })
+        assert response.status_code == 200
+        target.refresh_from_db()
+        assert target.name == 'New Name'
+
+    def test_user_update_changes_email(self, client):
+        admin = AdminUserFactory()
+        target = UserFactory()
+        client.force_login(admin)
+        response = client.post(reverse('user_update', args=[target.pk]), {
+            'name': target.name, 'email': 'newemail@example.com', 'role': 'member',
+        })
+        assert response.status_code == 200
+        target.refresh_from_db()
+        assert target.email == 'newemail@example.com'
+
+    def test_user_update_rejects_duplicate_email(self, client):
+        admin = AdminUserFactory()
+        existing = UserFactory(email='taken@example.com')
+        target = UserFactory()
+        client.force_login(admin)
+        response = client.post(reverse('user_update', args=[target.pk]), {
+            'name': target.name, 'email': 'taken@example.com', 'role': 'member',
+        })
+        assert response.status_code == 200  # Re-renders drawer with error
+        target.refresh_from_db()
+        assert target.email != 'taken@example.com'
+        assert b'already in use' in response.content
+
+    def test_user_update_rejects_blank_name(self, client):
+        admin = AdminUserFactory()
+        target = UserFactory(name='Original')
+        client.force_login(admin)
+        response = client.post(reverse('user_update', args=[target.pk]), {
+            'name': '', 'email': target.email, 'role': 'member',
+        })
+        assert response.status_code == 200
+        target.refresh_from_db()
+        assert target.name == 'Original'
+        assert b'required' in response.content.lower()
+
+    def test_user_update_changes_role(self, client):
         admin = AdminUserFactory()
         target = UserFactory(role='member')
         client.force_login(admin)
-        response = client.post(reverse('toggle_role', args=[target.pk]))
+        response = client.post(reverse('user_update', args=[target.pk]), {
+            'name': target.name, 'email': target.email, 'role': 'admin',
+        })
         assert response.status_code == 200
         target.refresh_from_db()
         assert target.role == 'admin'
 
-    def test_admin_cannot_toggle_own_role(self, client):
-        admin = AdminUserFactory()
-        client.force_login(admin)
-        response = client.post(reverse('toggle_role', args=[admin.pk]))
-        admin.refresh_from_db()
-        assert admin.role == 'admin'
-
-    def test_toggle_role_requires_post(self, client):
+    def test_user_update_changes_preset(self, client):
         admin = AdminUserFactory()
         target = UserFactory()
+        preset = PermissionPreset.objects.create(name='Custom')
         client.force_login(admin)
-        response = client.get(reverse('toggle_role', args=[target.pk]))
-        assert response.status_code == 405
+        response = client.post(reverse('user_update', args=[target.pk]), {
+            'name': target.name, 'email': target.email, 'role': 'member',
+            'preset_id': preset.pk,
+        })
+        assert response.status_code == 200
+        target.refresh_from_db()
+        assert target.permission_preset == preset
+
+    def test_user_update_clears_preset(self, client):
+        admin = AdminUserFactory()
+        preset = PermissionPreset.objects.create(name='Custom')
+        target = UserFactory(permission_preset=preset)
+        client.force_login(admin)
+        response = client.post(reverse('user_update', args=[target.pk]), {
+            'name': target.name, 'email': target.email, 'role': 'member',
+            'preset_id': '',
+        })
+        assert response.status_code == 200
+        target.refresh_from_db()
+        assert target.permission_preset is None
+
+    def test_user_update_last_admin_guard(self, client):
+        """Cannot demote yourself if you're the last active admin."""
+        admin = AdminUserFactory()
+        client.force_login(admin)
+        response = client.post(reverse('user_update', args=[admin.pk]), {
+            'name': admin.name, 'email': admin.email, 'role': 'member',
+        })
+        assert response.status_code == 200
+        admin.refresh_from_db()
+        assert admin.role == 'admin'  # Not changed
+        assert b'last' in response.content.lower()
+
+    def test_user_update_allows_demote_when_other_admins_exist(self, client):
+        admin1 = AdminUserFactory()
+        admin2 = AdminUserFactory()
+        client.force_login(admin1)
+        response = client.post(reverse('user_update', args=[admin1.pk]), {
+            'name': admin1.name, 'email': admin1.email, 'role': 'member',
+        })
+        assert response.status_code == 200
+        admin1.refresh_from_db()
+        assert admin1.role == 'member'
+
+    def test_user_update_returns_user_row(self, client):
+        admin = AdminUserFactory()
+        target = UserFactory(name='Old')
+        client.force_login(admin)
+        response = client.post(reverse('user_update', args=[target.pk]), {
+            'name': 'New', 'email': target.email, 'role': 'member',
+        })
+        assert response.status_code == 200
+        assert b'New' in response.content
+        assert 'closeSlideOver' in response.get('HX-Trigger', '')
+        assert f'#user-{target.pk}' in response.get('HX-Retarget', '')
+        assert 'outerHTML' in response.get('HX-Reswap', '')
 
 
 @pytest.mark.django_db

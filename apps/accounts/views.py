@@ -88,19 +88,62 @@ def user_detail_drawer(request, pk):
 @login_required
 @require_permission('access_team')
 @require_POST
-def update_preset(request, pk):
-    """Update a user's permission preset."""
+def user_update(request, pk):
+    """Update a user's name, email, role, and preset."""
     if not request.user.is_admin:
         return HttpResponseForbidden("Admin access required")
+
     user_obj = get_object_or_404(User, pk=pk)
+    presets = PermissionPreset.objects.all()
+
+    name = request.POST.get('name', '').strip()
+    email = request.POST.get('email', '').strip()
+    role = request.POST.get('role', '').strip()
     preset_id = request.POST.get('preset_id', '').strip()
+
+    errors = {}
+
+    if not name:
+        errors['name'] = 'Name is required.'
+    if not email:
+        errors['email'] = 'Email is required.'
+    elif User.objects.filter(email=email).exclude(pk=pk).exists():
+        errors['email'] = 'This email is already in use.'
+
+    if role not in ('admin', 'member'):
+        role = user_obj.role
+
+    # Last-admin guard: prevent demoting if last active admin
+    if user_obj.role == 'admin' and role == 'member':
+        active_admin_count = User.objects.filter(role='admin', is_active=True).count()
+        if active_admin_count <= 1:
+            errors['role'] = 'Cannot demote the last active admin.'
+
+    if errors:
+        return render(request, 'accounts/partials/user_detail_drawer.html', {
+            'user_obj': user_obj,
+            'presets': presets,
+            'errors': errors,
+            'form_data': {'name': name, 'email': email, 'role': role, 'preset_id': preset_id},
+        })
+
+    user_obj.name = name
+    user_obj.email = email
+    user_obj.role = role
+
     if preset_id:
         preset = get_object_or_404(PermissionPreset, pk=preset_id)
         user_obj.permission_preset = preset
     else:
         user_obj.permission_preset = None
+
     user_obj.save()
-    return render(request, 'accounts/partials/user_row.html', {'user': user_obj})
+
+    response = render(request, 'accounts/partials/user_row.html', {'user': user_obj})
+    response['HX-Retarget'] = f'#user-{user_obj.pk}'
+    response['HX-Reswap'] = 'outerHTML'
+    response['HX-Trigger'] = 'closeSlideOver'
+    return response
 
 
 @login_required
@@ -225,18 +268,6 @@ def user_deactivate(request, pk):
     response['HX-Trigger'] = 'closeSlideOver'
     return response
 
-
-@login_required
-@require_permission('access_team')
-@require_POST
-def toggle_role(request, pk):
-    if not request.user.is_admin:
-        return HttpResponseForbidden("Admin access required")
-    user = get_object_or_404(User, pk=pk)
-    if user != request.user:
-        user.role = 'member' if user.role == 'admin' else 'admin'
-        user.save()
-    return render(request, 'accounts/partials/user_row.html', {'user': user})
 
 
 @login_required
