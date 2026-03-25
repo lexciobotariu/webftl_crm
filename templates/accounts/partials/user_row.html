@@ -1,6 +1,13 @@
-<tr id="user-{{ user.pk }}" class="hover:bg-elevated/50 transition-colors">
+<tr id="user-{{ user.pk }}" class="{% if not user.is_active %}opacity-50{% endif %} hover:bg-elevated/50 transition-colors">
     <td class="px-4 py-3">
-        <span class="font-medium text-sm text-zinc-100">{{ user.name }}</span>
+        <div class="flex items-center gap-2">
+            <span class="font-medium text-sm text-zinc-100">{{ user.name }}</span>
+            {% if not user.is_active %}
+            <span class="px-1.5 py-0.5 text-[10px] rounded-full bg-zinc-700 text-zinc-400 border border-zinc-600">
+                Inactive
+            </span>
+            {% endif %}
+        </div>
     </td>
     <td class="px-4 py-3">
         <span class="text-sm text-zinc-400">{{ user.email }}</span>
@@ -21,7 +28,6 @@
     </td>
     <td class="px-4 py-3">
         <div class="flex items-center justify-end gap-1">
-            {% if user != request.user %}
             <button hx-get="{% url 'user_detail_drawer' user.pk %}"
                     hx-target="#slide-over"
                     hx-swap="innerHTML"
@@ -30,7 +36,6 @@
                     title="Edit user">
                 <i data-lucide="pencil" class="w-4 h-4"></i>
             </button>
-            {% endif %}
         </div>
     </td>
 </tr>
