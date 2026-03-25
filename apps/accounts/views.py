@@ -201,6 +201,33 @@ def preset_delete(request, pk):
 @login_required
 @require_permission('access_team')
 @require_POST
+def user_deactivate(request, pk):
+    """Toggle a user's active status."""
+    if not request.user.is_admin:
+        return HttpResponseForbidden("Admin access required")
+
+    user_obj = get_object_or_404(User, pk=pk)
+
+    if user_obj == request.user:
+        return HttpResponse('Cannot deactivate yourself.', status=400)
+
+    # If deactivating (not reactivating), check last-admin guard
+    if user_obj.is_active and user_obj.role == 'admin':
+        active_admin_count = User.objects.filter(role='admin', is_active=True).count()
+        if active_admin_count <= 1:
+            return HttpResponse('Cannot deactivate the last active admin.', status=400)
+
+    user_obj.is_active = not user_obj.is_active
+    user_obj.save()
+
+    response = render(request, 'accounts/partials/user_row.html', {'user': user_obj})
+    response['HX-Trigger'] = 'closeSlideOver'
+    return response
+
+
+@login_required
+@require_permission('access_team')
+@require_POST
 def toggle_role(request, pk):
     if not request.user.is_admin:
         return HttpResponseForbidden("Admin access required")

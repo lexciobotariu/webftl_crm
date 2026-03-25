@@ -1,6 +1,7 @@
 import pytest
 from django.urls import reverse
 from apps.accounts.factories import UserFactory, AdminUserFactory
+from apps.accounts.permissions import PermissionPreset
 from apps.todos.factories import TodoFactory
 
 
@@ -142,3 +143,56 @@ class TestToggleRole:
         client.force_login(admin)
         response = client.get(reverse('toggle_role', args=[target.pk]))
         assert response.status_code == 405
+
+
+@pytest.mark.django_db
+class TestUserDeactivate:
+    def test_deactivate_requires_admin(self, client):
+        user = UserFactory(role='member')
+        target = UserFactory()
+        client.force_login(user)
+        response = client.post(reverse('user_deactivate', args=[target.pk]))
+        assert response.status_code == 403
+
+    def test_deactivate_requires_post(self, client):
+        admin = AdminUserFactory()
+        target = UserFactory()
+        client.force_login(admin)
+        response = client.get(reverse('user_deactivate', args=[target.pk]))
+        assert response.status_code == 405
+
+    def test_deactivate_user(self, client):
+        admin = AdminUserFactory()
+        target = UserFactory(is_active=True)
+        client.force_login(admin)
+        response = client.post(reverse('user_deactivate', args=[target.pk]))
+        assert response.status_code == 200
+        target.refresh_from_db()
+        assert target.is_active is False
+        assert 'closeSlideOver' in response.get('HX-Trigger', '')
+
+    def test_reactivate_user(self, client):
+        admin = AdminUserFactory()
+        target = UserFactory(is_active=False)
+        client.force_login(admin)
+        response = client.post(reverse('user_deactivate', args=[target.pk]))
+        assert response.status_code == 200
+        target.refresh_from_db()
+        assert target.is_active is True
+
+    def test_cannot_deactivate_self(self, client):
+        admin = AdminUserFactory()
+        client.force_login(admin)
+        response = client.post(reverse('user_deactivate', args=[admin.pk]))
+        assert response.status_code == 400
+        admin.refresh_from_db()
+        assert admin.is_active is True
+
+    def test_cannot_deactivate_last_admin(self, client):
+        admin = AdminUserFactory()
+        target = AdminUserFactory()
+        client.force_login(admin)
+        response = client.post(reverse('user_deactivate', args=[target.pk]))
+        assert response.status_code == 200
+        target.refresh_from_db()
+        assert target.is_active is False
