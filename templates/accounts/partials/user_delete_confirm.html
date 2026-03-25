@@ -1,0 +1,44 @@
+<div class="mt-2 p-3 bg-red-500/5 border border-red-500/20 rounded-card">
+    {% if counts.has_data %}
+    <p class="text-xs text-red-400 font-medium mb-2">This will permanently delete:</p>
+    <ul class="text-xs text-zinc-400 space-y-1 mb-2">
+        {% if counts.todos %}
+        <li>{{ counts.todos }} todo{{ counts.todos|pluralize }}</li>
+        {% endif %}
+        {% if counts.notes %}
+        <li>{{ counts.notes }} note{{ counts.notes|pluralize }}</li>
+        {% endif %}
+        {% if counts.comments %}
+        <li>{{ counts.comments }} comment{{ counts.comments|pluralize }}</li>
+        {% endif %}
+        {% if counts.attachments %}
+        <li>{{ counts.attachments }} attachment{{ counts.attachments|pluralize }}</li>
+        {% endif %}
+        {% if counts.project_memberships %}
+        <li>{{ counts.project_memberships }} project membership{{ counts.project_memberships|pluralize }}</li>
+        {% endif %}
+        {% if counts.salary %}
+        <li>Salary record (including {{ counts.salary_months }} month{{ counts.salary_months|pluralize }} and {{ counts.payments }} payment{{ counts.payments|pluralize }})</li>
+        {% endif %}
+    </ul>
+    {% if counts.tasks_unassigned %}
+    <p class="text-xs text-zinc-400 mb-3">Additionally, {{ counts.tasks_unassigned }} task{{ counts.tasks_unassigned|pluralize }} will be unassigned.</p>
+    {% endif %}
+    {% else %}
+    <p class="text-xs text-zinc-400 mb-3">This user has no associated data. Delete permanently?</p>
+    {% endif %}
+
+    <div class="flex gap-2">
+        <button onclick="this.closest('[id^=delete-confirm]').innerHTML = ''"
+                class="flex-1 px-3 py-1.5 text-xs text-zinc-400 bg-elevated rounded-card hover:bg-zinc-700 transition-colors">
+            Cancel
+        </button>
+        <button hx-post="{% url 'user_delete' user_obj.pk %}"
+                hx-target="#user-{{ user_obj.pk }}"
+                hx-swap="delete"
+                hx-on::after-request="document.getElementById('slide-over').classList.add('hidden');"
+                class="flex-1 px-3 py-1.5 text-xs text-white bg-red-600 rounded-card hover:bg-red-700 transition-colors">
+            {% if counts.has_data %}Delete Permanently{% else %}Delete{% endif %}
+        </button>
+    </div>
+</div>

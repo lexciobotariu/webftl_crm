@@ -1,6 +1,7 @@
 import pytest
 from django.urls import reverse
 from apps.accounts.factories import UserFactory, AdminUserFactory
+from apps.accounts.models import User
 from apps.accounts.permissions import PermissionPreset
 from apps.todos.factories import TodoFactory
 
@@ -196,3 +197,106 @@ class TestUserDeactivate:
         assert response.status_code == 200
         target.refresh_from_db()
         assert target.is_active is False
+
+
+@pytest.mark.django_db
+class TestUserDeleteConfirm:
+    def test_delete_confirm_requires_admin(self, client):
+        user = UserFactory(role='member')
+        target = UserFactory()
+        client.force_login(user)
+        response = client.get(reverse('user_delete_confirm', args=[target.pk]))
+        assert response.status_code == 403
+
+    def test_delete_confirm_returns_counts(self, client):
+        admin = AdminUserFactory()
+        target = UserFactory()
+        TodoFactory(owner=target)
+        TodoFactory(owner=target)
+        client.force_login(admin)
+        response = client.get(reverse('user_delete_confirm', args=[target.pk]))
+        assert response.status_code == 200
+        assert b'2 todo' in response.content.lower()
+
+    def test_delete_confirm_clean_user(self, client):
+        admin = AdminUserFactory()
+        target = UserFactory()
+        client.force_login(admin)
+        response = client.get(reverse('user_delete_confirm', args=[target.pk]))
+        assert response.status_code == 200
+        assert b'no associated data' in response.content.lower()
+
+    def test_delete_confirm_deduplicates_notes(self, client):
+        """A note where user is both created_by and modified_by counts once."""
+        admin = AdminUserFactory()
+        target = UserFactory()
+        from apps.notes.models import Note
+        Note.objects.create(
+            title='Test Note', description='x',
+            created_by=target, modified_by=target,
+        )
+        client.force_login(admin)
+        response = client.get(reverse('user_delete_confirm', args=[target.pk]))
+        assert response.status_code == 200
+        assert b'1 note' in response.content.lower()
+        assert b'2 note' not in response.content.lower()
+
+    def test_delete_confirm_cannot_delete_self(self, client):
+        admin = AdminUserFactory()
+        client.force_login(admin)
+        response = client.get(reverse('user_delete_confirm', args=[admin.pk]))
+        assert response.status_code == 400
+
+
+@pytest.mark.django_db
+class TestUserDelete:
+    def test_delete_requires_admin(self, client):
+        user = UserFactory(role='member')
+        target = UserFactory()
+        client.force_login(user)
+        response = client.post(reverse('user_delete', args=[target.pk]))
+        assert response.status_code == 403
+
+    def test_delete_requires_post(self, client):
+        admin = AdminUserFactory()
+        target = UserFactory()
+        client.force_login(admin)
+        response = client.get(reverse('user_delete', args=[target.pk]))
+        assert response.status_code == 405
+
+    def test_delete_clean_user(self, client):
+        admin = AdminUserFactory()
+        target = UserFactory()
+        target_pk = target.pk
+        client.force_login(admin)
+        response = client.post(reverse('user_delete', args=[target.pk]))
+        assert response.status_code == 200
+        assert not User.objects.filter(pk=target_pk).exists()
+
+    def test_delete_user_with_data_cascades(self, client):
+        admin = AdminUserFactory()
+        target = UserFactory()
+        TodoFactory(owner=target)
+        TodoFactory(owner=target)
+        target_pk = target.pk
+        client.force_login(admin)
+        response = client.post(reverse('user_delete', args=[target.pk]))
+        assert response.status_code == 200
+        assert not User.objects.filter(pk=target_pk).exists()
+        from apps.todos.models import Todo
+        assert Todo.objects.filter(owner_id=target_pk).count() == 0
+
+    def test_cannot_delete_self(self, client):
+        admin = AdminUserFactory()
+        client.force_login(admin)
+        response = client.post(reverse('user_delete', args=[admin.pk]))
+        assert response.status_code == 400
+        assert User.objects.filter(pk=admin.pk).exists()
+
+    def test_delete_returns_empty_response(self, client):
+        admin = AdminUserFactory()
+        target = UserFactory()
+        client.force_login(admin)
+        response = client.post(reverse('user_delete', args=[target.pk]))
+        assert response.status_code == 200
+        assert response.content == b''

@@ -13,4 +13,6 @@ urlpatterns = [
     path('team/presets/create/', views.preset_create, name='preset_create'),
     path('team/presets/<int:pk>/edit/', views.preset_edit, name='preset_edit'),
     path('team/presets/<int:pk>/delete/', views.preset_delete, name='preset_delete'),
+    path('team/<int:pk>/delete-confirm/', views.user_delete_confirm, name='user_delete_confirm'),
+    path('team/<int:pk>/delete/', views.user_delete, name='user_delete'),
 ]

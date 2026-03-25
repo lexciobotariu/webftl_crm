@@ -1,6 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import models
+from django.db.models import Q
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.http import require_POST
@@ -236,3 +237,75 @@ def toggle_role(request, pk):
         user.role = 'member' if user.role == 'admin' else 'admin'
         user.save()
     return render(request, 'accounts/partials/user_row.html', {'user': user})
+
+
+@login_required
+@require_permission('access_team')
+def user_delete_confirm(request, pk):
+    """Return deletion confirmation partial with cascade counts."""
+    if not request.user.is_admin:
+        return HttpResponseForbidden("Admin access required")
+
+    user_obj = get_object_or_404(User, pk=pk)
+
+    if user_obj == request.user:
+        return HttpResponse('Cannot delete yourself.', status=400)
+
+    from apps.todos.models import Todo
+    from apps.notes.models import Note
+    from apps.tasks.models import Task, Comment, Attachment
+    from apps.projects.models import ProjectMember
+    from apps.salaries.models import EmployeeSalary, SalaryMonth, Payment
+
+    counts = {
+        'todos': Todo.objects.filter(owner=user_obj).count(),
+        'notes': Note.objects.filter(Q(created_by=user_obj) | Q(modified_by=user_obj)).count(),
+        'comments': Comment.objects.filter(author=user_obj).count(),
+        'attachments': Attachment.objects.filter(uploaded_by=user_obj).count(),
+        'project_memberships': ProjectMember.objects.filter(user=user_obj).count(),
+        'tasks_unassigned': Task.objects.filter(assignee=user_obj).count(),
+    }
+
+    try:
+        salary = EmployeeSalary.objects.get(user=user_obj)
+        salary_months = SalaryMonth.objects.filter(employee_salary=salary)
+        counts['salary'] = True
+        counts['salary_months'] = salary_months.count()
+        counts['payments'] = Payment.objects.filter(salary_month__in=salary_months).count()
+    except EmployeeSalary.DoesNotExist:
+        counts['salary'] = False
+        counts['salary_months'] = 0
+        counts['payments'] = 0
+
+    counts['has_data'] = any([
+        counts['todos'], counts['notes'], counts['comments'],
+        counts['attachments'], counts['project_memberships'],
+        counts['salary'], counts['tasks_unassigned'],
+    ])
+
+    return render(request, 'accounts/partials/user_delete_confirm.html', {
+        'user_obj': user_obj,
+        'counts': counts,
+    })
+
+
+@login_required
+@require_permission('access_team')
+@require_POST
+def user_delete(request, pk):
+    """Permanently delete a user and all associated data."""
+    if not request.user.is_admin:
+        return HttpResponseForbidden("Admin access required")
+
+    user_obj = get_object_or_404(User, pk=pk)
+
+    if user_obj == request.user:
+        return HttpResponse('Cannot delete yourself.', status=400)
+
+    if user_obj.role == 'admin' and user_obj.is_active:
+        active_admin_count = User.objects.filter(role='admin', is_active=True).count()
+        if active_admin_count <= 1:
+            return HttpResponse('Cannot delete the last active admin.', status=400)
+
+    user_obj.delete()
+    return HttpResponse('')
