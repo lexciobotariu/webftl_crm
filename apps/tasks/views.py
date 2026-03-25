@@ -124,7 +124,7 @@ def task_detail(request, pk):
     if not can_access_project(request.user, task.project, 'viewer'):
         return HttpResponseForbidden("You don't have access to this task")
     subtask_form = SubtaskForm()
-    team_members = User.objects.all()
+    team_members = User.objects.filter(is_active=True)
     project_labels = task.project.labels.all()
     priority_choices = Task.PRIORITY_CHOICES
     return render(request, 'tasks/task_detail.html', {
@@ -307,7 +307,7 @@ def task_full_page(request, project_pk, task_pk):
     )
     if not can_access_project(request.user, task.project, 'viewer'):
         return HttpResponseForbidden("You don't have access to this task")
-    team_members = User.objects.all()
+    team_members = User.objects.filter(is_active=True)
     project_labels = task.project.labels.all()
     priority_choices = Task.PRIORITY_CHOICES
     return render(request, 'tasks/task_full_page.html', {
@@ -329,7 +329,7 @@ def task_update_assignee(request, pk):
         services.update_task_field(task, 'assignee', assignee, request.user)
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
-    team_members = User.objects.all()
+    team_members = User.objects.filter(is_active=True)
     response = render(request, 'tasks/partials/assignee_dropdown.html', {
         'task': task, 'team_members': team_members
     })
