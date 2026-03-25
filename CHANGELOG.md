@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-03-25
+
+### Features
+- Full user CRUD in Team page — admins can edit name, email, role, and permission preset from the user detail drawer
+- User deactivation (soft-delete) — deactivated users can't log in or be assigned to new tasks, shown greyed out with "Inactive" badge in team list
+- User deletion with two-tier cascade warning — clean delete for users with no data, force delete with itemized count of affected records (todos, notes, comments, attachments, salary, project memberships)
+- Consolidated user management into single edit form replacing separate toggle-role and update-preset actions
+
+### Fixes
+- Filter inactive users from task assignee dropdowns across all task views (task detail, full page, update assignee)
+
 ## [0.5.0] - 2026-03-24
 
 ### Features
