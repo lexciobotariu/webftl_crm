@@ -1,5 +1,5 @@
-<div class="relative" x-data="{ open: false }">
-    <button @click="open = !open"
+<div class="relative" x-data="dropdown">
+    <button @click="toggle()"
             class="flex items-center gap-2 px-2 py-1 rounded-card text-sm hover:bg-elevated transition-colors
                    {% if task.priority == 'urgent' %}text-red-400
                    {% elif task.priority == 'high' %}text-orange-400
@@ -12,14 +12,14 @@
         <span class="text-zinc-500">None</span>
         {% endif %}
     </button>
-    <div x-show="open" @click.away="open = false"
+    <div x-show="open" x-cloak @click.away="close()"
          x-transition
          class="absolute left-0 top-full mt-1 w-40 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 py-1">
         <button hx-post="{% url 'task_update_priority' task.pk %}"
                 hx-vals='{"priority": ""}'
                 hx-target="#priority-value-{{ task.pk }}"
                 hx-swap="innerHTML"
-                @click="open = false"
+                @click="close()"
                 class="w-full text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors text-zinc-400">
             None
         </button>
@@ -28,7 +28,7 @@
                 hx-vals='{"priority": "{{ value }}"}'
                 hx-target="#priority-value-{{ task.pk }}"
                 hx-swap="innerHTML"
-                @click="open = false"
+                @click="close()"
                 class="w-full text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors
                        {% if value == task.priority %}text-accent{% elif value == 'urgent' %}text-red-400{% elif value == 'high' %}text-orange-400{% elif value == 'medium' %}text-yellow-400{% else %}text-zinc-300{% endif %}">
             {{ label }}

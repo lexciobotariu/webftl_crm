@@ -1,9 +1,9 @@
-from django.test import TestCase, RequestFactory
 from django.contrib.auth import get_user_model
+from django.test import RequestFactory, TestCase
 
 from apps.clients.models import Client
-from apps.projects.models import Project
 from apps.notes.models import Note
+from apps.projects.models import Project
 
 User = get_user_model()
 
@@ -21,14 +21,14 @@ class ClientProfileNotesViewTest(TestCase):
 
     def test_returns_client_and_project_notes(self):
         """Profile notes table shows notes from client AND its projects."""
-        client_note = Note.objects.create(
+        Note.objects.create(
             client=self.client_obj,
             title='Client Note',
             description='About the client',
             created_by=self.admin,
             modified_by=self.admin,
         )
-        project_note = Note.objects.create(
+        Note.objects.create(
             project=self.project,
             title='Project Note',
             description='About the project',

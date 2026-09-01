@@ -1,12 +1,15 @@
 import json
 
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.http import HttpResponse
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from apps.accounts.decorators import require_permission
 from apps.clients.models import Client
+
 from .forms import TodoForm
 from .models import Todo
 
@@ -25,6 +28,7 @@ def _set_todo_triggers(response, *, has_client=False, close=False):
 
 
 @login_required
+@require_permission('access_todos')
 def todo_list(request):
     """Personal to-dos list (HTMX partial)."""
     todos_qs = Todo.objects.filter(owner=request.user).select_related('client')
@@ -42,10 +46,11 @@ def todo_list(request):
 
 
 @login_required
+@require_permission('access_todos')
 def todo_create(request):
     """Create personal to-do (drawer). GET renders form, POST creates todo."""
     if request.method == 'POST':
-        form = TodoForm(request.POST)
+        form = TodoForm(request.POST, user=request.user)
         if form.is_valid():
             todo = form.save(commit=False)
             todo.owner = request.user
@@ -55,15 +60,16 @@ def todo_create(request):
         # If form invalid, re-render drawer with errors
         return render(request, 'todos/partials/todo_create_drawer.html', {'form': form})
 
-    form = TodoForm()
+    form = TodoForm(user=request.user)
     return render(request, 'todos/partials/todo_create_drawer.html', {'form': form})
 
 
 @login_required
+@require_permission('access_todos')
 def todo_detail(request, pk):
     """View/edit to-do (drawer)."""
     todo = get_object_or_404(Todo, pk=pk, owner=request.user)
-    form = TodoForm(instance=todo)
+    form = TodoForm(instance=todo, user=request.user)
     return render(request, 'todos/partials/todo_detail_drawer.html', {
         'todo': todo,
         'form': form,
@@ -71,11 +77,12 @@ def todo_detail(request, pk):
 
 
 @login_required
+@require_permission('access_todos')
 @require_POST
 def todo_edit(request, pk):
     """Update to-do fields. Returns HTMX response."""
     todo = get_object_or_404(Todo, pk=pk, owner=request.user)
-    form = TodoForm(request.POST, instance=todo)
+    form = TodoForm(request.POST, instance=todo, user=request.user)
     if form.is_valid():
         todo_obj = form.save(commit=False)
         is_completed = request.POST.get('is_completed') is not None
@@ -95,13 +102,17 @@ def todo_edit(request, pk):
 
 
 @login_required
+@require_permission('access_todos')
 @require_POST
 def todo_toggle(request, pk):
     """Toggle completed status, sets completed_at. Returns updated todo item partial."""
-    todo = get_object_or_404(Todo, pk=pk, owner=request.user)
-    todo.is_completed = not todo.is_completed
-    todo.completed_at = timezone.now() if todo.is_completed else None
-    todo.save()
+    with transaction.atomic():
+        todo = get_object_or_404(
+            Todo.objects.select_for_update(), pk=pk, owner=request.user
+        )
+        todo.is_completed = not todo.is_completed
+        todo.completed_at = timezone.now() if todo.is_completed else None
+        todo.save(update_fields=['is_completed', 'completed_at'])
     response = render(request, 'todos/partials/todo_item.html', {
         'todo': todo,
         'today': timezone.now().date(),
@@ -110,6 +121,7 @@ def todo_toggle(request, pk):
 
 
 @login_required
+@require_permission('access_todos')
 @require_POST
 def todo_delete(request, pk):
     """Delete to-do. Returns HTMX response."""
@@ -121,6 +133,8 @@ def todo_delete(request, pk):
 
 
 @login_required
+@require_permission('access_todos')
+@require_permission('access_clients')
 def client_todo_list(request, pk):
     """Client's to-dos (HTMX partial)."""
     client = get_object_or_404(Client, pk=pk)
@@ -140,12 +154,14 @@ def client_todo_list(request, pk):
 
 
 @login_required
+@require_permission('access_todos')
+@require_permission('access_clients')
 def client_todo_create(request, pk):
     """Create client to-do (drawer). Pre-fills client field."""
     client = get_object_or_404(Client, pk=pk)
 
     if request.method == 'POST':
-        form = TodoForm(request.POST)
+        form = TodoForm(request.POST, user=request.user)
         if form.is_valid():
             todo = form.save(commit=False)
             todo.owner = request.user
@@ -159,7 +175,7 @@ def client_todo_create(request, pk):
             'client': client,
         })
 
-    form = TodoForm(initial={'client': client})
+    form = TodoForm(initial={'client': client}, user=request.user)
     return render(request, 'todos/partials/todo_create_drawer.html', {
         'form': form,
         'client': client,

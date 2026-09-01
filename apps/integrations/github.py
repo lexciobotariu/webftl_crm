@@ -5,7 +5,10 @@ import httpx
 
 from apps.projects.models import Project
 from apps.tasks.models import Task
+
 from .models import GitHubCommit, GitHubPullRequest
+
+GITHUB_TIMEOUT = httpx.Timeout(30.0)
 
 
 def parse_repo_url(url: str) -> tuple[str, str] | None:
@@ -24,7 +27,7 @@ def get_github_headers(token: str) -> dict:
     }
 
 
-async def sync_issues_from_github(project: Project, token: str):
+def sync_issues_from_github(project: Project, token: str):
     """Sync issues from GitHub to tasks."""
     repo_info = parse_repo_url(project.github_repo_url)
     if not repo_info:
@@ -33,8 +36,8 @@ async def sync_issues_from_github(project: Project, token: str):
     owner, repo = repo_info
     url = f'https://api.github.com/repos/{owner}/{repo}/issues'
 
-    async with httpx.AsyncClient() as client:
-        response = await client.get(url, headers=get_github_headers(token))
+    with httpx.Client(timeout=GITHUB_TIMEOUT) as client:
+        response = client.get(url, headers=get_github_headers(token))
         if response.status_code != 200:
             return
 
@@ -57,7 +60,7 @@ async def sync_issues_from_github(project: Project, token: str):
             )
 
 
-async def create_github_issue(task: Task, token: str):
+def create_github_issue(task: Task, token: str):
     """Create GitHub issue from task."""
     if not task.project.github_repo_url:
         return None
@@ -69,8 +72,8 @@ async def create_github_issue(task: Task, token: str):
     owner, repo = repo_info
     url = f'https://api.github.com/repos/{owner}/{repo}/issues'
 
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
+    with httpx.Client(timeout=GITHUB_TIMEOUT) as client:
+        response = client.post(
             url,
             headers=get_github_headers(token),
             json={
@@ -138,7 +141,7 @@ def process_webhook_issue(payload: dict, project: Project):
     elif action == 'closed':
         try:
             task = Task.objects.get(project=project, github_issue_id=issue['id'])
-            done_status = project.statuses.filter(name='Done').first()
+            done_status = project.statuses.filter(is_done=True).first()
             if done_status:
                 task.status = done_status
                 task.save()

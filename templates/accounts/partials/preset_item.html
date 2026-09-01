@@ -11,38 +11,13 @@
             {% if preset.description %}
             <p class="text-xs text-zinc-500 mb-3">{{ preset.description }}</p>
             {% endif %}
-            <div class="flex flex-wrap gap-1.5">
-                {% if preset.access_dashboard %}
-                <span class="px-2 py-0.5 text-[10px] rounded bg-green-500/10 text-green-400 border border-green-500/20">Dashboard</span>
-                {% endif %}
-                {% if preset.access_clients %}
-                <span class="px-2 py-0.5 text-[10px] rounded bg-green-500/10 text-green-400 border border-green-500/20">Clients</span>
-                {% endif %}
-                {% if preset.access_projects %}
-                <span class="px-2 py-0.5 text-[10px] rounded bg-green-500/10 text-green-400 border border-green-500/20">Projects</span>
-                {% endif %}
-                {% if preset.access_tasks %}
-                <span class="px-2 py-0.5 text-[10px] rounded bg-green-500/10 text-green-400 border border-green-500/20">Tasks</span>
-                {% endif %}
-                {% if preset.access_todos %}
-                <span class="px-2 py-0.5 text-[10px] rounded bg-green-500/10 text-green-400 border border-green-500/20">Todos</span>
-                {% endif %}
-                {% if preset.access_notes %}
-                <span class="px-2 py-0.5 text-[10px] rounded bg-green-500/10 text-green-400 border border-green-500/20">Notes</span>
-                {% endif %}
-                {% if preset.access_salaries %}
-                <span class="px-2 py-0.5 text-[10px] rounded bg-green-500/10 text-green-400 border border-green-500/20">Salaries</span>
-                {% endif %}
-                {% if preset.access_team %}
-                <span class="px-2 py-0.5 text-[10px] rounded bg-green-500/10 text-green-400 border border-green-500/20">Team</span>
-                {% endif %}
-            </div>
+            {% include "components/permission_badges.html" %}
         </div>
         <div class="flex items-center gap-1 ml-4">
             <button hx-get="{% url 'preset_edit' preset.pk %}"
                     hx-target="#slide-over"
                     hx-swap="innerHTML"
-                    hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+                    hx-on::after-request="openSlideOver(event)"
                     class="p-1.5 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded transition-colors"
                     title="Edit preset">
                 <i data-lucide="pencil" class="w-4 h-4"></i>

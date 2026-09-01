@@ -22,3 +22,14 @@ class ClientForm(forms.ModelForm):
                 'rows': 4
             }),
         }
+
+
+class ClientDrawerForm(ClientForm):
+    """Client form limited to the fields the drawers actually render.
+
+    ClientForm also covers the legacy ``notes`` text field; submitting the
+    drawer with the full field list silently blanked it.
+    """
+
+    class Meta(ClientForm.Meta):
+        fields = ['name', 'email', 'phone', 'address']

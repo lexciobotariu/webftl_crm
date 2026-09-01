@@ -1,12 +1,22 @@
 <div class="flex items-center justify-between p-3 bg-panel/70 rounded-card border border-border-subtle {% if not status.visible_on_board %}opacity-50{% endif %}" id="status-{{ status.pk }}">
     <div class="flex items-center gap-2">
         <span class="text-sm text-zinc-300">{{ status.name }}</span>
+        {% if status.is_done %}
+        <span class="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 rounded px-1.5 py-0.5">done</span>
+        {% endif %}
         {% if not status.visible_on_board %}
         <span class="text-[10px] text-zinc-500 bg-elevated border border-border-subtle rounded px-1.5 py-0.5">hidden</span>
         {% endif %}
     </div>
     <div class="flex items-center gap-3">
         <span class="text-xs text-zinc-500">{{ status.task_count }} tasks</span>
+        <button hx-post="{% url 'status_toggle_done' project.pk status.pk %}"
+                hx-target="#status-{{ status.pk }}"
+                hx-swap="outerHTML"
+                class="{% if status.is_done %}text-emerald-400 hover:text-emerald-300{% else %}text-zinc-500 hover:text-zinc-300{% endif %} transition-colors"
+                title="{% if status.is_done %}Stop counting tasks here as done{% else %}Count tasks here as done{% endif %}">
+            <i data-lucide="check-circle" class="w-4 h-4"></i>
+        </button>
         <button hx-post="{% url 'status_toggle_visibility' project.pk status.pk %}"
                 hx-target="#status-{{ status.pk }}"
                 hx-swap="outerHTML"

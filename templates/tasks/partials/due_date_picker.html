@@ -1,5 +1,5 @@
-<div class="relative" x-data="{ open: false }">
-    <button @click="open = !open"
+<div class="relative" x-data="dropdown">
+    <button @click="toggle()"
             class="flex items-center gap-2 px-2 py-1 rounded-card text-sm text-zinc-300 hover:bg-elevated transition-colors">
         {% if task.due_date %}
         <i data-lucide="calendar" class="w-3.5 h-3.5 text-zinc-500"></i>
@@ -8,13 +8,13 @@
         <span class="text-zinc-500">Add due date</span>
         {% endif %}
     </button>
-    <div x-show="open" @click.away="open = false"
+    <div x-show="open" x-cloak @click.away="close()"
          x-transition
          class="absolute left-0 top-full mt-1 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 p-3">
         <form hx-post="{% url 'task_update_due_date' task.pk %}"
               hx-target="#due-date-value-{{ task.pk }}"
               hx-swap="innerHTML"
-              @submit="open = false">
+              @submit="close()">
             {% csrf_token %}
             <input type="date" name="due_date" value="{{ task.due_date|date:'Y-m-d' }}"
                    class="bg-panel border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:outline-none">
@@ -26,7 +26,7 @@
                         hx-vals='{"due_date": ""}'
                         hx-target="#due-date-value-{{ task.pk }}"
                         hx-swap="innerHTML"
-                        @click="open = false"
+                        @click="close()"
                         class="text-zinc-400 hover:text-red-400 px-3 py-1 text-xs">Clear</button>
                 {% endif %}
             </div>

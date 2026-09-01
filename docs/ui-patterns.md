@@ -113,7 +113,6 @@ Used for form pages and simpler content. Automatically wrapped in padding and pa
 - `templates/clients/client_form.html`
 - `templates/tasks/task_form.html`
 - `templates/projects/project_form.html`
-- `templates/projects/manage_statuses.html`
 
 ### 4. Right Sidebar Navigation Pattern
 
@@ -222,15 +221,15 @@ Rows are typically included from partial templates (e.g., `client_row.html`, `pr
 
 ### Empty State Pattern
 
+Use the shared component rather than repeating the markup:
+
 ```html
-<div class="flex flex-col items-center justify-center py-16 text-zinc-500">
-    <i data-lucide="[icon]" class="w-12 h-12 mb-4 opacity-30"></i>
-    <p class="mb-2">[Empty message]</p>
-    <a href="{% url '[create_url]' %}" class="text-accent hover:text-accent-hover text-sm">
-        [Call to action]
-    </a>
-</div>
+{% url 'client_create_drawer' as create_url %}
+{% include "components/empty_state.html" with icon="users" message="No clients yet" action_hx_get=create_url action_label="Add your first client" %}
 ```
+
+`action_url` renders a link; `action_hx_get` renders a button that loads the URL
+into the drawer. Omit both for a message-only state.
 
 ---
 
@@ -284,33 +283,97 @@ Reusable pagination component at `templates/components/pagination.html`.
 </button>
 ```
 
+Destructive actions live in the settings page's Danger Zone, not in a page header —
+a Delete sitting next to Settings/Open Board is one mis-click away from wiping a
+record. See `project_settings.html` for the reference Danger Zone.
+
 ---
 
 ## Slide-Over (Drawer) Pattern
 
-A slide-over panel for editing content without leaving the current page.
+The **salaries app** is the reference implementation. All drawer forms should follow this contract.
 
 **Container (in base.html):**
 ```html
-<div id="slide-over" class="fixed inset-y-0 right-0 w-full max-w-xl bg-panel border-l border-border-subtle z-50 overflow-y-auto hidden animate-slide-in-right"></div>
+<div id="slide-over" class="fixed inset-y-0 right-0 w-full max-w-xl ..."></div>
 ```
 
-**HTMX Trigger:**
+**Form target — always the drawer:**
 ```html
-<button hx-get="{% url 'item_edit_drawer' item.pk %}"
-        hx-target="#slide-over"
-        hx-swap="innerHTML"
-        hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();">
-    Edit
-</button>
+<form hx-post="{% url 'salary_create' %}"
+      hx-target="#slide-over"
+      hx-swap="innerHTML">
 ```
 
-**Close event:**
-```javascript
-document.body.addEventListener('closeSlideOver', () => {
-    document.getElementById('slide-over').classList.add('hidden');
-});
+**Success response (view):** empty body + `HX-Trigger` JSON:
+```python
+response = HttpResponse('')
+response['HX-Trigger'] = json.dumps({'closeSlideOver': True, 'refreshSalaryList': True})
 ```
+
+**Validation error (view):** re-render the drawer partial into `#slide-over` (no trigger headers).
+
+**List refresh listener:** listen for the trigger and re-fetch the current URL,
+so an active filter or page number is not silently dropped. Keep the count pill
+and pagination inside the refreshed container so they cannot go stale.
+
+```html
+<div id="client-list-content"> ... table ... {% include "components/pagination.html" %} </div>
+
+<script>
+    document.body.addEventListener('refreshClientList', () => {
+        refreshFragment('#client-list-content');
+        refreshFragment('#client-count');
+    });
+</script>
+```
+
+The salaries app still uses the older `hx-get`/`hx-select` form; it has no
+filters or pagination, so nothing is lost there.
+
+**Row update variant (accounts user edit):** on success only, use `HX-Retarget` + `HX-Reswap` to update a table row outside the drawer.
+
+**Global utilities (base.html):**
+- `openSlideOver(event)` / `closeSlideOver()` — use these from `hx-on::after-request`
+  instead of hand-writing `document.getElementById('slide-over')...`. `openSlideOver`
+  is a no-op when the request failed, so an error never opens an empty drawer.
+- `closeSlideOver` event listener closes the drawer
+- **Click-outside close** — one global `click` listener closes the drawer when the
+  click lands outside `#slide-over`. It covers every opener because closing is
+  centralized in `closeSlideOver()`; nothing per-drawer is needed. The opening
+  click is safe: it bubbles while the panel is still `hidden`, so the guard
+  short-circuits before the HTMX response un-hides it.
+- `refreshFragment(selector)` — re-fetches the *current* URL and swaps that
+  fragment, so filters and `?page=` survive. Prefer this over a bare
+  `hx-get="{% url ... %}"` refresh, which drops the query string.
+- `showErrorToast(message)` — shared toast
+- `#htmx-indicator` shows loading state (`hx-indicator="#htmx-indicator"` on body)
+- `htmx:responseError` / `htmx:sendError` / `htmx:targetError` show a toast;
+  5xx bodies are replaced with a generic message rather than shown raw.
+- `Alpine.data('dropdown')` — shared `{ open, toggle(), close() }` used by the
+  task property dropdowns.
+- Any `x-show` panel whose expression is false at load must carry `x-cloak`; the
+  global `[x-cloak]` rule lives in `base.html` `<head>`.
+
+**Deprecated:** POSTing into list containers (`#client-list`, `#notes-list`, `#preset-list`) — causes broken empty states and nested IDs.
+
+---
+
+## Kanban Board
+
+**Top-nav actions** (`project_board.html`): Add Task (accent) then Task List and
+Settings (secondary). "Task List" is the way back to `project_detail_tasks` — the
+board is a peer view of the task list, not a dead end.
+
+**Card drag handle** (`partials/task_card.html`): the `x-sort:handle` grip is
+always visible and sits to the *right* of the title block, as the last child of
+the card's `flex items-start gap-2` row. It is not hover-revealed — a handle you
+cannot see is a handle you do not know exists. The title block keeps
+`flex-1 min-w-0` so it shrinks instead of pushing the grip out.
+
+**URLs:** `/projects/<pk>/overview/`, `/tasks/`, `/notes/` for the detail tabs and
+`/projects/<pk>/kanban/` for the board. A bare `/projects/<pk>/` redirects to the
+overview tab. Always link by URL *name*, never by literal path.
 
 ---
 
@@ -366,6 +429,25 @@ INPUT_CLASSES = 'w-full bg-panel border border-border-subtle rounded-card px-3 p
 - **Drawer**: Quick edits on detail pages
 - **Redirect**: Complex forms or create operations
 
+### 6. Salaries layout divergence
+
+The salaries pages do not use the right-sidebar navigation pattern; `salary_detail.html`
+is a single scrolling column of month/payment cards with drawers for every mutation.
+This is deliberate — there are no tabs to navigate — but it means the salaries app is
+the reference for the *drawer* contract and not for page layout.
+
+### Resolved
+
+- **Alpine sort buttons in `activity_panel.html`** — the `sortAsc` toggle was never
+  wired to the list; removed.
+- **`manage_statuses.html`** — folded into `project_settings.html`; template deleted.
+- **Duplicated drawer-open handlers** — replaced by `openSlideOver(event)`.
+- **Duplicated permission badge markup** — extracted to
+  `templates/components/permission_badges.html`.
+- **Duplicate kanban entry point** — the tasks tab had its own "Open Kanban Board"
+  button next to the header's "Open Board"; the tab-local one was removed.
+- **Delete button in the project header** — moved to the settings Danger Zone only.
+
 ---
 
 ## Icon Library
@@ -401,8 +483,14 @@ document.body.addEventListener('htmx:afterSwap', () => {
 
 ## JavaScript Libraries
 
-- **HTMX 2.0.4** - Dynamic HTML updates
-- **Alpine.js 3.x** - Reactive UI components
-- **Alpine.js Sort Plugin** - Drag and drop functionality
-- **Lucide** - Icon library
-- **Tailwind CSS** (via CDN) - Utility-first CSS
+All are loaded from a CDN, pinned to an exact version and checked with Subresource
+Integrity. Bumping a version means recomputing its `integrity` hash.
+
+- **HTMX 2.0.4** — dynamic HTML updates
+- **Alpine.js 3.17.1** — reactive UI components
+- **@alpinejs/sort 3.17.1** — kanban drag and drop
+- **@alpinejs/collapse 3.17.1** — `x-collapse` (used by the salary month list)
+- **Lucide 1.38.0** — icon library
+- **Iconify 2.3.0** — supplementary icons
+- **Tailwind CSS** (`cdn.tailwindcss.com`) — the one unpinned, unhashed dependency;
+  it is a JIT build with no versioned URL. See the README for the tradeoff.

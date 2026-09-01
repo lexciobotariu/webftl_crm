@@ -64,10 +64,7 @@
                     </tbody>
                 </table>
                 {% else %}
-                <div class="flex flex-col items-center justify-center py-16 text-zinc-500">
-                    <i data-lucide="check-square" class="w-12 h-12 mb-4 opacity-30"></i>
-                    <p class="mb-2">No tasks assigned to you yet</p>
-                </div>
+                {% include "components/empty_state.html" with icon="check-square" message="No tasks assigned to you yet" %}
                 {% endif %}
             </div>
 
@@ -84,9 +81,4 @@
         {% endif %}
     </div>
 </div>
-
-<script>
-    // Initialize today's date for comparison
-    window.today = new Date().toISOString().split('T')[0];
-</script>
 {% endblock %}

@@ -14,7 +14,7 @@
         <button hx-get="{% url 'salary_create' %}"
                 hx-target="#slide-over"
                 hx-swap="innerHTML"
-                hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+                hx-on::after-request="openSlideOver(event)"
                 class="flex items-center gap-2 px-3 py-1.5 bg-accent text-white text-sm font-medium rounded-card hover:bg-accent-hover transition-colors">
             <i data-lucide="plus" class="w-4 h-4"></i>
             Add Employee
@@ -61,7 +61,7 @@
             <button hx-get="{% url 'salary_create' %}"
                     hx-target="#slide-over"
                     hx-swap="innerHTML"
-                    hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+                    hx-on::after-request="openSlideOver(event)"
                     class="text-accent hover:text-accent-hover text-sm">
                 Configure first employee salary
             </button>

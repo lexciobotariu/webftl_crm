@@ -1,10 +1,12 @@
-import pytest
 import json
+
+import pytest
 from django.urls import reverse
-from apps.accounts.factories import UserFactory, AdminUserFactory
-from apps.projects.factories import ProjectFactory, ProjectMemberFactory
-from apps.clients.factories import ClientFactory
+
+from apps.accounts.factories import AdminUserFactory, UserFactory
 from apps.accounts.permissions import PermissionPreset
+from apps.clients.factories import ClientFactory
+from apps.projects.factories import ProjectFactory, ProjectMemberFactory
 
 
 @pytest.mark.django_db
@@ -26,7 +28,7 @@ class TestProjectList:
         """Non-admin users only see projects they're members of."""
         user = UserFactory()
         project1 = ProjectFactory(name='My Project')
-        project2 = ProjectFactory(name='Other Project')
+        ProjectFactory(name='Other Project')
         ProjectMemberFactory(project=project1, user=user, role='viewer')
         # user is NOT a member of project2
         client.force_login(user)
@@ -97,6 +99,27 @@ class TestProjectDelete:
         assert response.status_code == 302
         from apps.projects.models import Project
         assert not Project.objects.filter(pk=pk).exists()
+
+    def test_admin_can_delete_project_that_has_tasks(self, client):
+        """Task.status must not block a delete that also removes the statuses.
+
+        With on_delete=PROTECT this raised ProtectedError (500); RESTRICT allows
+        the delete because the referenced statuses go in the same cascade.
+        """
+        from apps.projects.models import Project
+        from apps.tasks.factories import TaskFactory
+        from apps.tasks.models import Task
+
+        admin = AdminUserFactory()
+        project = ProjectFactory()
+        TaskFactory(project=project, status=project.statuses.first())
+        client.force_login(admin)
+
+        response = client.post(reverse('project_delete', args=[project.pk]))
+
+        assert response.status_code == 302
+        assert not Project.objects.filter(pk=project.pk).exists()
+        assert not Task.objects.filter(project_id=project.pk).exists()
 
 
 @pytest.mark.django_db
@@ -174,7 +197,7 @@ class TestReorderStatuses:
 @pytest.mark.django_db
 class TestProjectDetailTabs:
     def test_project_detail_default_tab_is_overview(self, client):
-        """GET /projects/<pk>/detail/ should set active_tab to 'overview'"""
+        """GET /projects/<pk>/overview/ should set active_tab to 'overview'"""
         user = AdminUserFactory()
         project = ProjectFactory()
         client.force_login(user)
@@ -184,7 +207,7 @@ class TestProjectDetailTabs:
         assert response.context['active_tab'] == 'overview'
 
     def test_project_detail_tasks_tab(self, client):
-        """GET /projects/<pk>/detail/tasks/ should set active_tab to 'tasks'"""
+        """GET /projects/<pk>/tasks/ should set active_tab to 'tasks'"""
         user = AdminUserFactory()
         project = ProjectFactory()
         client.force_login(user)
@@ -192,6 +215,16 @@ class TestProjectDetailTabs:
         response = client.get(reverse('project_detail_tasks', args=[project.pk]))
         assert response.status_code == 200
         assert response.context['active_tab'] == 'tasks'
+
+    def test_bare_project_url_redirects_to_overview(self, client):
+        """GET /projects/<pk>/ should redirect to the overview tab"""
+        user = AdminUserFactory()
+        project = ProjectFactory()
+        client.force_login(user)
+
+        response = client.get(f'/projects/{project.pk}/')
+        assert response.status_code == 302
+        assert response['Location'] == reverse('project_detail', args=[project.pk])
 
 
 @pytest.mark.django_db
@@ -344,6 +377,7 @@ class TestBoardVisibility:
             reverse('task_create', args=[project.pk]),
             {'title': 'Test Task', 'description': ''},
         )
+        assert response.status_code in (200, 302)
         from apps.tasks.models import Task
         task = Task.objects.get(title='Test Task')
         assert task.status == second_status

@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from .models import EmployeeSalary, SalaryMonth, Payment
+from .models import EmployeeSalary, Payment, SalaryMonth
 
 User = get_user_model()
 

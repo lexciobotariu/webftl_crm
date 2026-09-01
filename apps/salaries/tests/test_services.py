@@ -1,15 +1,15 @@
 # apps/salaries/tests/test_services.py
 """Tests for the salaries service layer."""
-import pytest
-from decimal import Decimal
 from datetime import date
+from decimal import Decimal
 
+import pytest
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from apps.salaries import services
-from apps.salaries.forms import EmployeeSalaryForm, SalaryMonthForm, PaymentForm
-from apps.salaries.models import EmployeeSalary, SalaryMonth, Payment
+from apps.salaries.forms import EmployeeSalaryForm, PaymentForm, SalaryMonthForm
+from apps.salaries.models import EmployeeSalary, Payment, SalaryMonth
 
 User = get_user_model()
 

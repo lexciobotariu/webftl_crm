@@ -1,7 +1,8 @@
 import factory
-from apps.projects.models import Project, Status, ProjectMember
-from apps.clients.factories import ClientFactory
+
 from apps.accounts.factories import UserFactory
+from apps.clients.factories import ClientFactory
+from apps.projects.models import Project, ProjectMember, Status
 
 
 class ProjectFactory(factory.django.DjangoModelFactory):
@@ -20,7 +21,7 @@ class StatusFactory(factory.django.DjangoModelFactory):
         model = Status
 
     project = factory.SubFactory(ProjectFactory)
-    name = factory.Faker('word')
+    name = factory.Sequence(lambda n: f'Status {n}')
     order = factory.Sequence(lambda n: n)
 
 

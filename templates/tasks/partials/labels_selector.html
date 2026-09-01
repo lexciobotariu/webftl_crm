@@ -1,5 +1,5 @@
-<div class="relative" x-data="{ open: false }">
-    <button @click="open = !open"
+<div class="relative" x-data="dropdown">
+    <button @click="toggle()"
             class="flex items-center gap-1 px-2 py-1 rounded-card text-sm hover:bg-elevated transition-colors">
         {% if task.labels.exists %}
         {% for label in task.labels.all %}
@@ -12,7 +12,7 @@
         <span class="text-zinc-500">Add labels</span>
         {% endif %}
     </button>
-    <div x-show="open" @click.away="open = false"
+    <div x-show="open" x-cloak @click.away="close()"
          x-transition
          class="absolute left-0 top-full mt-1 w-56 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 py-1 max-h-64 overflow-y-auto">
         {% for label in project_labels %}

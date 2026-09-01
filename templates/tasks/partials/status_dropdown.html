@@ -1,10 +1,10 @@
-<div class="relative" id="status-dropdown-{{ task.pk }}" x-data="{ open: false }">
-    <button @click="open = !open"
+<div class="relative" id="status-dropdown-{{ task.pk }}" x-data="dropdown">
+    <button @click="toggle()"
             class="flex items-center gap-2 px-2 py-1 rounded-card text-sm text-zinc-300 hover:bg-elevated transition-colors">
         <i data-lucide="circle" class="w-3.5 h-3.5 text-zinc-500"></i>
         <span>{{ task.status.name }}</span>
     </button>
-    <div x-show="open" @click.away="open = false"
+    <div x-show="open" x-cloak @click.away="close()"
          x-transition
          class="absolute left-0 top-full mt-1 w-48 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 py-1">
         {% for status in task.project.statuses.all %}
@@ -12,7 +12,7 @@
                 hx-vals='{"status_id": "{{ status.pk }}"}'
                 hx-target="#status-dropdown-{{ task.pk }}"
                 hx-swap="outerHTML"
-                @click="open = false"
+                @click="close()"
                 class="w-full text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors {% if status.pk == task.status.pk %}text-accent{% else %}text-zinc-300{% endif %}">
             {{ status.name }}
         </button>

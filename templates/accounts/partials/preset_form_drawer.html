@@ -8,7 +8,7 @@
                     {% if preset %}Edit Preset{% else %}New Preset{% endif %}
                 </h2>
             </div>
-            <button onclick="document.getElementById('slide-over').classList.add('hidden')"
+            <button onclick="closeSlideOver()"
                     class="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors">
                 <i data-lucide="x" class="w-4 h-4"></i>
             </button>
@@ -17,8 +17,8 @@
 
     <!-- Form -->
     <form hx-post="{% if preset %}{% url 'preset_edit' preset.pk %}{% else %}{% url 'preset_create' %}{% endif %}"
-          hx-target="{% if preset %}#preset-{{ preset.pk }}{% else %}#preset-list{% endif %}"
-          hx-swap="{% if preset %}outerHTML{% else %}beforeend{% endif %}"
+          hx-target="#slide-over"
+          hx-swap="innerHTML"
           class="flex-1 overflow-y-auto p-4">
         {% csrf_token %}
 
@@ -138,7 +138,7 @@
                 {% if preset %}Save Changes{% else %}Create Preset{% endif %}
             </button>
             <button type="button"
-                    onclick="document.getElementById('slide-over').classList.add('hidden')"
+                    onclick="closeSlideOver()"
                     class="bg-elevated border border-border-subtle px-4 py-2 rounded-card text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
                 Cancel
             </button>

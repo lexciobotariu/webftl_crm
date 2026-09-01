@@ -1,0 +1,17 @@
+{# Usage: {% include "components/empty_state.html" with icon="users" message="No clients yet" action_url=url action_label="Add your first client" %} #}
+<div class="flex flex-col items-center justify-center py-16 text-zinc-500">
+    {% if icon %}
+    <i data-lucide="{{ icon }}" class="w-12 h-12 mb-4 opacity-30"></i>
+    {% endif %}
+    <p class="mb-2 text-sm">{{ message }}</p>
+    {% if action_url %}
+    <a href="{{ action_url }}" class="text-accent hover:text-accent-hover text-sm">{{ action_label }}</a>
+    {% elif action_hx_get %}
+    <button hx-get="{{ action_hx_get }}"
+            hx-target="#slide-over"
+            hx-swap="innerHTML"
+            class="text-accent hover:text-accent-hover text-sm">
+        {{ action_label }}
+    </button>
+    {% endif %}
+</div>

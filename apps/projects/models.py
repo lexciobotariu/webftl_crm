@@ -28,7 +28,9 @@ class Project(models.Model):
     def _create_default_statuses(self):
         defaults = ['Backlog', 'To Do', 'In Progress', 'Review', 'Done']
         for i, name in enumerate(defaults):
-            Status.objects.create(project=self, name=name, order=i)
+            Status.objects.create(
+                project=self, name=name, order=i, is_done=(name == 'Done')
+            )
 
     @property
     def task_count(self):
@@ -42,10 +44,14 @@ class Status(models.Model):
     name = models.CharField(max_length=100)
     order = models.PositiveIntegerField(default=0)
     visible_on_board = models.BooleanField(default=True)
+    is_done = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['order']
         verbose_name_plural = 'Statuses'
+        constraints = [
+            models.UniqueConstraint(fields=['project', 'name'], name='unique_status_name_per_project'),
+        ]
 
     def __str__(self):
         return self.name
@@ -98,3 +104,13 @@ def can_access_project(user, project, required_role='viewer'):
         return user_level >= required_level
     except ProjectMember.DoesNotExist:
         return False
+
+
+def get_assignable_users(project):
+    """Users who can be assigned tasks on this project (members + admins)."""
+    from apps.accounts.models import User
+
+    member_ids = ProjectMember.objects.filter(project=project).values_list('user_id', flat=True)
+    return User.objects.filter(is_active=True).filter(
+        models.Q(pk__in=member_ids) | models.Q(role='admin')
+    )

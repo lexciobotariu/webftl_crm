@@ -29,11 +29,14 @@
     scrollbar-color: #1B1C20 #0A0A0A;
 }
 
-/* HTMX loading states */
-.htmx-request .htmx-indicator {
-    display: inline-block;
-}
-
-.htmx-indicator {
-    display: none;
+/* HTMX loading states.
+   htmx already shows/hides the indicator by toggling opacity, so it stays in the
+   layout the whole time. At opacity 0 it was still hit-testable and, being fixed
+   to the top-right corner, silently swallowed clicks on the header action
+   buttons ("Add Client", "Add Task", "Edit"). It is decoration — never let it
+   take pointer events.
+   Do not add `display` rules here: `.htmx-request .htmx-indicator` outranks the
+   element's Tailwind `flex` class and would break its internal layout. */
+#htmx-indicator {
+    pointer-events: none;
 }

@@ -1,22 +1,28 @@
+import json
+
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.http import HttpResponse, HttpResponseForbidden
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_POST
 
-from apps.accounts.models import User
-from apps.projects.models import Project, Status, can_access_project
+from apps.accounts.decorators import require_permission
+from apps.projects.models import Project, Status, can_access_project, get_assignable_users
 from apps.tasks.models import Label
-from .forms import TaskForm, SubtaskForm, CommentForm
-from .models import Task, Subtask, Attachment, TaskActivity
+
+from .forms import SubtaskForm, TaskForm
+from .models import Subtask, Task
 
 TASKS_PER_PAGE = 20
 
 
 @login_required
+@require_permission('access_tasks')
 def my_tasks(request):
     # Determine active tab from URL
     active_tab = 'todos' if request.resolver_match.url_name == 'my_tasks_todos' else 'tasks'
@@ -56,6 +62,7 @@ def my_tasks(request):
 
 
 @login_required
+@require_permission('access_tasks')
 def task_create(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
     if not can_access_project(request.user, project, 'editor'):
@@ -78,20 +85,30 @@ def task_create(request, project_pk):
             task.save()
             form.save_m2m()
             if request.htmx:
-                # Re-render the entire kanban board after task creation
-                visible_statuses = project.statuses.filter(visible_on_board=True)
-                response = render(request, 'projects/partials/kanban_board.html', {
-                    'project': project,
-                    'visible_statuses': visible_statuses,
+                response = HttpResponse('')
+                response['HX-Trigger'] = json.dumps({
+                    'closeSlideOver': True,
+                    'taskStatusChanged': True,
                 })
-                response['HX-Trigger'] = 'closeSlideOver'
                 return response
             return redirect('project_board', pk=project.pk)
+        if request.htmx:
+            team_members = get_assignable_users(project)
+            project_labels = project.labels.all()
+            priority_choices = Task.PRIORITY_CHOICES
+            return render(request, 'tasks/task_create_slideover.html', {
+                'form': form,
+                'project': project,
+                'selected_status': status,
+                'team_members': team_members,
+                'project_labels': project_labels,
+                'priority_choices': priority_choices,
+            })
     else:
         form = TaskForm(project)
 
     # Context for custom dropdown components
-    team_members = User.objects.filter(is_active=True)
+    team_members = get_assignable_users(project)
     project_labels = project.labels.all()
     priority_choices = Task.PRIORITY_CHOICES
 
@@ -115,6 +132,7 @@ def task_create(request, project_pk):
 
 
 @login_required
+@require_permission('access_tasks')
 def task_detail(request, pk):
     task = get_object_or_404(
         Task.objects.select_related('project', 'status', 'assignee')
@@ -124,7 +142,7 @@ def task_detail(request, pk):
     if not can_access_project(request.user, task.project, 'viewer'):
         return HttpResponseForbidden("You don't have access to this task")
     subtask_form = SubtaskForm()
-    team_members = User.objects.filter(is_active=True)
+    team_members = get_assignable_users(task.project)
     project_labels = task.project.labels.all()
     priority_choices = Task.PRIORITY_CHOICES
     return render(request, 'tasks/task_detail.html', {
@@ -137,6 +155,7 @@ def task_detail(request, pk):
 
 
 @login_required
+@require_permission('access_tasks')
 def task_edit(request, pk):
     task = get_object_or_404(Task, pk=pk)
     if not can_access_project(request.user, task.project, 'editor'):
@@ -147,12 +166,12 @@ def task_edit(request, pk):
             task._changed_by = request.user
             form.save()
             if request.htmx:
-                return render(request, 'tasks/task_detail.html', {'task': task, 'subtask_form': SubtaskForm(), 'comment_form': CommentForm()})
+                return render(request, 'tasks/task_detail.html', {'task': task, 'subtask_form': SubtaskForm()})
             return redirect('project_board', pk=task.project.pk)
     else:
         form = TaskForm(task.project, instance=task)
 
-    team_members = User.objects.filter(is_active=True)
+    team_members = get_assignable_users(task.project)
     project_labels = task.project.labels.all()
     priority_choices = Task.PRIORITY_CHOICES
     return render(request, 'tasks/task_form.html', {
@@ -166,6 +185,7 @@ def task_edit(request, pk):
 
 
 @login_required
+@require_permission('access_tasks')
 @require_POST
 def task_delete(request, pk):
     task = get_object_or_404(Task, pk=pk)
@@ -176,27 +196,54 @@ def task_delete(request, pk):
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
     if request.htmx:
-        return HttpResponse('')
+        response = HttpResponse('')
+        response['HX-Trigger'] = json.dumps({
+            'closeSlideOver': True,
+            'taskStatusChanged': True,
+        })
+        current_url = request.headers.get('HX-Current-URL', '')
+        if f'/project/{project_pk}/{pk}/' in current_url:
+            response['HX-Redirect'] = reverse('project_board', args=[project_pk])
+        return response
     return redirect('project_board', pk=project_pk)
 
 
 @login_required
+@require_permission('access_tasks')
 @require_POST
 @transaction.atomic
 def task_move(request):
-    task_id = request.POST.get('task_id')
-    status_id = request.POST.get('status_id')
-    task = get_object_or_404(Task.objects.select_for_update(), pk=task_id)
+    try:
+        task_id = int(request.POST.get('task_id', ''))
+        status_id = int(request.POST.get('status_id', ''))
+    except (TypeError, ValueError):
+        return HttpResponse('Invalid task or status', status=400)
+
+    raw_position = request.POST.get('position')
+    position = None
+    if raw_position not in (None, ''):
+        try:
+            position = int(raw_position)
+        except (TypeError, ValueError):
+            return HttpResponse('Invalid position', status=400)
+
+    # move_task takes the row locks itself, in a deadlock-safe order.
+    task = get_object_or_404(Task, pk=task_id)
     status = get_object_or_404(Status, pk=status_id, project=task.project)
     try:
         from apps.tasks import services
-        services.move_task(task, status, request.user)
+        services.move_task(task, status, request.user, position=position)
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
+    except Task.DoesNotExist:
+        return HttpResponse('Task no longer exists', status=404)
+    # The board is driven by a raw fetch(), which ignores HX-Trigger; the caller
+    # dispatches the taskStatusChanged event itself.
     return HttpResponse(status=204)
 
 
 @login_required
+@require_permission('access_tasks')
 @require_POST
 def task_update_status(request, pk):
     task = get_object_or_404(Task, pk=pk)
@@ -207,12 +254,15 @@ def task_update_status(request, pk):
         services.move_task(task, status, request.user)
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
+    except Task.DoesNotExist:
+        return HttpResponse('Task no longer exists', status=404)
     response = render(request, 'tasks/partials/status_dropdown.html', {'task': task})
     response['HX-Trigger'] = 'taskStatusChanged, activityUpdated'
     return response
 
 
 @login_required
+@require_permission('access_tasks')
 @require_POST
 @transaction.atomic
 def subtask_create(request, pk):
@@ -231,6 +281,7 @@ def subtask_create(request, pk):
 
 
 @login_required
+@require_permission('access_tasks')
 @require_POST
 def subtask_toggle(request, pk, subtask_pk):
     subtask = get_object_or_404(Subtask, pk=subtask_pk, task_id=pk)
@@ -246,6 +297,7 @@ def subtask_toggle(request, pk, subtask_pk):
 
 
 @login_required
+@require_permission('access_tasks')
 @require_POST
 def subtask_delete(request, pk, subtask_pk):
     subtask = get_object_or_404(Subtask, pk=subtask_pk, task_id=pk)
@@ -260,6 +312,7 @@ def subtask_delete(request, pk, subtask_pk):
 
 
 @login_required
+@require_permission('access_tasks')
 @require_POST
 def comment_create(request, pk):
     task = get_object_or_404(Task, pk=pk)
@@ -275,6 +328,7 @@ def comment_create(request, pk):
 
 
 @login_required
+@require_permission('access_tasks')
 def task_activity_list(request, pk):
     """Return just the activity list for a task (for HTMX refresh)."""
     task = get_object_or_404(Task, pk=pk)
@@ -284,6 +338,7 @@ def task_activity_list(request, pk):
 
 
 @login_required
+@require_permission('access_tasks')
 @require_POST
 def attachment_upload(request, pk):
     task = get_object_or_404(Task, pk=pk)
@@ -298,6 +353,7 @@ def attachment_upload(request, pk):
 
 
 @login_required
+@require_permission('access_tasks')
 def task_full_page(request, project_pk, task_pk):
     """Full page task view with properties sidebar."""
     task = get_object_or_404(
@@ -307,7 +363,7 @@ def task_full_page(request, project_pk, task_pk):
     )
     if not can_access_project(request.user, task.project, 'viewer'):
         return HttpResponseForbidden("You don't have access to this task")
-    team_members = User.objects.filter(is_active=True)
+    team_members = get_assignable_users(task.project)
     project_labels = task.project.labels.all()
     priority_choices = Task.PRIORITY_CHOICES
     return render(request, 'tasks/task_full_page.html', {
@@ -319,17 +375,27 @@ def task_full_page(request, project_pk, task_pk):
 
 
 @login_required
+@require_permission('access_tasks')
 @require_POST
 def task_update_assignee(request, pk):
     task = get_object_or_404(Task, pk=pk)
     try:
         from apps.tasks import services
         assignee_id = request.POST.get('assignee_id')
-        assignee = User.objects.get(pk=assignee_id) if assignee_id else None
+        assignee = None
+        if assignee_id:
+            # A non-numeric id makes the pk lookup raise ValueError, not return empty.
+            try:
+                assignee_pk = int(assignee_id)
+            except (TypeError, ValueError):
+                return HttpResponse('Invalid assignee', status=400)
+            assignee = get_assignable_users(task.project).filter(pk=assignee_pk).first()
+            if assignee is None:
+                return HttpResponseForbidden('Invalid assignee')
         services.update_task_field(task, 'assignee', assignee, request.user)
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
-    team_members = User.objects.filter(is_active=True)
+    team_members = get_assignable_users(task.project)
     response = render(request, 'tasks/partials/assignee_dropdown.html', {
         'task': task, 'team_members': team_members
     })
@@ -338,6 +404,7 @@ def task_update_assignee(request, pk):
 
 
 @login_required
+@require_permission('access_tasks')
 @require_POST
 def task_update_priority(request, pk):
     task = get_object_or_404(Task, pk=pk)
@@ -358,17 +425,22 @@ def task_update_priority(request, pk):
 
 
 @login_required
+@require_permission('access_tasks')
 @require_POST
 def task_update_due_date(request, pk):
     task = get_object_or_404(Task, pk=pk)
     try:
         from apps.tasks import services
         due_date = request.POST.get('due_date')
-        services.update_task_field(
-            task, 'due_date',
-            due_date if due_date else None,
-            request.user
-        )
+        # parse_date returns None for malformed input but raises ValueError for
+        # well-formed-but-impossible dates such as 2026-02-30.
+        try:
+            parsed_date = parse_date(due_date) if due_date else None
+        except ValueError:
+            return HttpResponse('Invalid date', status=400)
+        if due_date and parsed_date is None:
+            return HttpResponse('Invalid date format', status=400)
+        services.update_task_field(task, 'due_date', parsed_date, request.user)
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
     response = render(request, 'tasks/partials/due_date_picker.html', {'task': task})
@@ -377,17 +449,18 @@ def task_update_due_date(request, pk):
 
 
 @login_required
+@require_permission('access_tasks')
 @require_POST
 def task_update_estimate(request, pk):
     task = get_object_or_404(Task, pk=pk)
     try:
         from apps.tasks import services
         estimate = request.POST.get('time_estimate')
-        services.update_task_field(
-            task, 'time_estimate',
-            int(estimate) if estimate else None,
-            request.user
-        )
+        try:
+            value = int(estimate) if estimate else None
+        except (ValueError, TypeError):
+            return HttpResponse('Invalid time estimate', status=400)
+        services.update_task_field(task, 'time_estimate', value, request.user)
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
     response = render(request, 'tasks/partials/estimate_input.html', {'task': task})
@@ -396,6 +469,7 @@ def task_update_estimate(request, pk):
 
 
 @login_required
+@require_permission('access_tasks')
 @require_POST
 def task_toggle_label(request, pk, label_pk):
     task = get_object_or_404(Task, pk=pk)
@@ -414,6 +488,7 @@ def task_toggle_label(request, pk, label_pk):
 
 
 @login_required
+@require_permission('access_tasks')
 def task_edit_description(request, pk):
     task = get_object_or_404(Task, pk=pk)
     if not can_access_project(request.user, task.project, 'editor'):
@@ -430,6 +505,7 @@ def task_edit_description(request, pk):
 
 
 @login_required
+@require_permission('access_tasks')
 def task_edit_title(request, pk):
     task = get_object_or_404(Task, pk=pk)
     if not can_access_project(request.user, task.project, 'editor'):
@@ -454,6 +530,7 @@ def task_edit_title(request, pk):
 
 
 @login_required
+@require_permission('access_tasks')
 def task_card(request, pk):
     """Return just the task card HTML for out-of-band swaps."""
     task = get_object_or_404(

@@ -61,14 +61,32 @@
             }
         }
     </script>
-    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/sort@3.x.x/dist/cdn.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://code.iconify.design/iconify-icon/2.3.0/iconify-icon.min.js"></script>
+    <!-- All third-party scripts are pinned to an exact version and checked with SRI.
+         cdn.tailwindcss.com is the one exception: it is a versionless JIT build.
+         See README ("Frontend dependencies") for the tradeoff. -->
+    <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"
+            integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+"
+            crossorigin="anonymous"></script>
+    <!-- Alpine plugins must be loaded before Alpine core. -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/sort@3.17.1/dist/cdn.min.js"
+            integrity="sha384-hqiYD2WaUm+VsLVKEqRzzkJ7HQownCb0Mjq/GQJUDyzwA+vztNBwFqsWkbRGZCv+"
+            crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.17.1/dist/cdn.min.js"
+            integrity="sha384-NArNwzWsUSF+kY2lgW4YriEkjLqi+J+za6HrENUn/3nZqkBnWbxV22kCJEK5Uu6n"
+            crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.17.1/dist/cdn.min.js"
+            integrity="sha384-x6MR287ZDHWauvRTQIBc3b1F++s/03J/rBHbpRGwBoYbrqIN+3wRx4EXbU1u9NGO"
+            crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/lucide@1.38.0/dist/umd/lucide.min.js"
+            integrity="sha384-yi0Nt4uuEMu/6z2xkzY7OkOlSzF+Spi8SreFE+kyQGlSDSV56UXyFUP0SPMo/xvL"
+            crossorigin="anonymous"></script>
+    <script src="https://code.iconify.design/iconify-icon/2.3.0/iconify-icon.min.js"
+            integrity="sha384-63H0EhkXL6M4HAjkA3bbnT+mkm0SbHKtxxj4Iv1hXtM6FDH+c6XqvuXgDKBJdJNG"
+            crossorigin="anonymous"></script>
     <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+    <style>[x-cloak] { display: none !important; }</style>
 </head>
-<body class="h-full bg-bg text-zinc-100 antialiased selection:bg-accent/30" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<body class="h-full bg-bg text-zinc-100 antialiased selection:bg-accent/30" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' hx-indicator="#htmx-indicator">
     {% if user.is_authenticated %}
     <div class="h-full flex overflow-hidden">
         {% include "components/sidebar.html" %}
@@ -97,19 +115,86 @@
     <!-- Slide-over panel container -->
     <div id="slide-over" class="fixed inset-y-0 right-0 w-full max-w-xl bg-panel border-l border-border-subtle z-50 overflow-y-auto hidden animate-slide-in-right"></div>
 
-    <!-- Modal container -->
-    <div id="modal" class="hidden"></div>
+    <!-- Global HTMX loading indicator -->
+    <div id="htmx-indicator" class="htmx-indicator fixed top-3 right-3 z-[60] flex items-center gap-2 px-3 py-1.5 bg-elevated border border-border-subtle rounded-card text-xs text-zinc-400">
+        <svg class="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+        </svg>
+        Loading…
+    </div>
+
+    <!-- Error toast for failed HTMX requests -->
+    <div id="htmx-error-toast" class="hidden fixed bottom-4 right-4 z-[60] max-w-sm px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-card text-sm text-red-300 shadow-lg"></div>
 
     <!-- Initialize Lucide icons and event handlers -->
     <script>
         lucide.createIcons();
-        // Re-init icons after HTMX swaps
         document.body.addEventListener('htmx:afterSwap', () => {
             lucide.createIcons();
         });
-        // Close slide-over on custom event
-        document.body.addEventListener('closeSlideOver', () => {
+
+        // One shared definition for the ten `x-data="{ open: false }"` dropdowns.
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('dropdown', () => ({
+                open: false,
+                toggle() { this.open = !this.open; },
+                close() { this.open = false; },
+            }));
+        });
+
+        // Drawer helpers — used by every `hx-on::after-request` that opens the panel.
+        window.openSlideOver = function (event) {
+            if (event && event.detail && event.detail.successful === false) return;
+            document.getElementById('slide-over').classList.remove('hidden');
+            lucide.createIcons();
+        };
+        window.closeSlideOver = function () {
             document.getElementById('slide-over').classList.add('hidden');
+        };
+        document.body.addEventListener('closeSlideOver', window.closeSlideOver);
+
+        // Click anywhere outside the open panel closes it. The click that opens a
+        // drawer bubbles here while the panel is still hidden, so it can't self-close.
+        document.addEventListener('click', (event) => {
+            const panel = document.getElementById('slide-over');
+            if (!panel.classList.contains('hidden') && !panel.contains(event.target)) {
+                window.closeSlideOver();
+            }
+        });
+
+        // Re-fetch a fragment of the current URL in place, so filters/pagination survive.
+        window.refreshFragment = function (selector) {
+            if (!document.querySelector(selector)) return;
+            htmx.ajax('GET', window.location.href, {
+                target: selector,
+                select: selector,
+                swap: 'outerHTML',
+            });
+        };
+
+        function showErrorToast(message) {
+            const toast = document.getElementById('htmx-error-toast');
+            toast.textContent = message.slice(0, 200);
+            toast.classList.remove('hidden');
+            clearTimeout(toast._hideTimer);
+            toast._hideTimer = setTimeout(() => toast.classList.add('hidden'), 5000);
+        }
+        window.showErrorToast = showErrorToast;
+
+        document.body.addEventListener('htmx:responseError', (event) => {
+            const status = event.detail.xhr.status;
+            // 5xx bodies are Django error pages (or worse, tracebacks) — never show them.
+            const message = status >= 500
+                ? 'Something went wrong. Please try again.'
+                : (event.detail.xhr.responseText?.trim() || 'Something went wrong. Please try again.');
+            showErrorToast(message);
+        });
+        document.body.addEventListener('htmx:sendError', () => {
+            showErrorToast('Network error. Check your connection and try again.');
+        });
+        document.body.addEventListener('htmx:targetError', () => {
+            showErrorToast('Something went wrong. Please try again.');
         });
     </script>
 </body>

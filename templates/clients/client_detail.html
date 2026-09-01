@@ -27,7 +27,7 @@
                 <button hx-get="{% url 'client_edit_drawer' client.pk %}"
                         hx-target="#slide-over"
                         hx-swap="innerHTML"
-                        hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+                        hx-on::after-request="openSlideOver(event)"
                         class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-300 hover:bg-hover transition-colors">
                     <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                     Edit
@@ -114,7 +114,7 @@
                             <i data-lucide="sticky-note" class="w-4 h-4"></i>
                             Notes
                         </span>
-                        <span class="text-xs text-zinc-500 bg-panel px-1.5 py-0.5 rounded">{{ notes_count }}</span>
+                        <span id="notes-count" class="text-xs text-zinc-500 bg-panel px-1.5 py-0.5 rounded">{{ notes_count }}</span>
                     </a>
                 </nav>
             </div>
@@ -124,15 +124,10 @@
 
 <script>
     // Listen for client name update from drawer
-    document.body.addEventListener('updateClientName', () => {
-        // The profile content has been updated, refresh the page title if needed
-        htmx.ajax('GET', window.location.href, {target: '#client-name', select: '#client-name'});
-    });
-
-    // Listen for project count update
-    document.body.addEventListener('updateProjectCount', () => {
-        // Refresh the sidebar project count
-        location.reload();
-    });
+    document.body.addEventListener('updateClientName', () => refreshFragment('#client-name'));
+    // The edit drawer no longer swaps the profile panel itself — refresh it here.
+    document.body.addEventListener('profileChanged', () => refreshFragment('#profile-content'));
+    // Keep the right-rail Notes count in sync with the notes list.
+    document.body.addEventListener('notesChanged', () => refreshFragment('#notes-count'));
 </script>
 {% endblock %}

@@ -43,6 +43,11 @@
                     <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                     Add Task
                 </button>
+                <a href="{% url 'project_detail_tasks' project.pk %}"
+                   class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-300 hover:bg-hover transition-colors">
+                    <i data-lucide="list" class="w-3.5 h-3.5"></i>
+                    Task List
+                </a>
                 <a href="{% url 'project_settings' project.pk %}?next=board" class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
                     <i data-lucide="settings" class="w-3.5 h-3.5"></i>
                     Settings
@@ -62,14 +67,26 @@
          x-data
          x-init="
             Alpine.store('kanban', {
-                moveTask(taskId, statusId) {
-                    fetch('/tasks/move/', {
+                moveTask(taskId, statusId, position) {
+                    fetch('{% url "task_move" %}', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded',
                             'X-CSRFToken': '{{ csrf_token }}'
                         },
-                        body: new URLSearchParams({ task_id: taskId, status_id: statusId })
+                        body: new URLSearchParams({
+                            task_id: taskId,
+                            status_id: statusId,
+                            position: position
+                        })
+                    }).then(response => {
+                        if (!response.ok) throw new Error('move failed: ' + response.status);
+                        // Re-render the board so the persisted order is what is shown.
+                        document.body.dispatchEvent(new CustomEvent('taskStatusChanged'));
+                    }).catch(() => {
+                        // Snap the card back by re-rendering from server state.
+                        document.body.dispatchEvent(new CustomEvent('taskStatusChanged'));
+                        window.showErrorToast('Could not move that task. The board has been refreshed.');
                     });
                 }
             })

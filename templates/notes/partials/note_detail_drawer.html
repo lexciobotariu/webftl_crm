@@ -6,7 +6,7 @@
                 <i data-lucide="sticky-note" class="w-4 h-4 text-zinc-500"></i>
                 <h2 class="text-sm font-medium text-zinc-100">{{ note.title }}</h2>
             </div>
-            <button onclick="document.getElementById('slide-over').classList.add('hidden')"
+            <button onclick="closeSlideOver()"
                     class="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors">
                 <i data-lucide="x" class="w-4 h-4"></i>
             </button>
@@ -44,7 +44,7 @@
             <div class="text-xs text-zinc-500 space-y-1">
                 <p>Created by {{ note.created_by.name|default:note.created_by.email }} on {{ note.created_at|date:"M d, Y" }} at {{ note.created_at|time:"g:i A" }}</p>
                 {% if note.created_at != note.updated_at %}
-                    <p>Last modified by {{ note.modified_by.name|default:note.modified_by.email }} on {{ note.updated_at|date:"M d, Y" }} at {{ note.updated_at|time:"g:i A" }}</p>
+                    <p>Last modified by {% if note.modified_by %}{{ note.modified_by.name|default:note.modified_by.email }}{% else %}a deleted user{% endif %} on {{ note.updated_at|date:"M d, Y" }} at {{ note.updated_at|time:"g:i A" }}</p>
                 {% endif %}
             </div>
         </div>

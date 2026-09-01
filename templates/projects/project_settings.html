@@ -3,7 +3,7 @@
 {% block title %}Settings - {{ project.name }}{% endblock %}
 
 {% block full_content %}
-<div class="flex-1 flex flex-col min-h-0" x-data="{ activeSection: 'general' }">
+<div class="flex-1 flex flex-col min-h-0">
     <!-- Compact Header -->
     <div class="flex-shrink-0 flex items-center justify-between px-4 py-2 border-b border-border-subtle bg-panel/80">
         <div class="flex items-center gap-3">
@@ -78,15 +78,22 @@
                         <form hx-post="{% url 'status_create' project.pk %}"
                               hx-target="#status-list"
                               hx-swap="beforeend"
-                              hx-on::after-request="if(event.detail.successful) { this.reset(); document.getElementById('no-statuses')?.remove(); }"
-                              class="flex gap-3 pt-3 border-t border-border-subtle">
+                              hx-on::after-request="if(event.detail.successful && event.detail.xhr.getResponseHeader('HX-Trigger')?.includes('statusCreated')) { this.reset(); document.getElementById('no-statuses')?.remove(); }"
+                              class="pt-3 border-t border-border-subtle">
                             {% csrf_token %}
-                            <input type="text" name="name" required placeholder="New status name..."
-                                   class="flex-1 bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
-                            <button type="submit" class="bg-elevated border border-border-subtle text-zinc-300 px-4 py-2 rounded-card text-sm hover:bg-hover hover:border-border-strong transition-colors flex items-center gap-2">
-                                <i data-lucide="plus" class="w-4 h-4"></i>
-                                Add Status
-                            </button>
+                            <div class="flex gap-3">
+                                <input type="text" name="name" required placeholder="New status name..."
+                                       class="flex-1 bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                                <button type="submit" class="bg-elevated border border-border-subtle text-zinc-300 px-4 py-2 rounded-card text-sm hover:bg-hover hover:border-border-strong transition-colors flex items-center gap-2">
+                                    <i data-lucide="plus" class="w-4 h-4"></i>
+                                    Add Status
+                                </button>
+                            </div>
+                            <label class="flex items-center gap-2 mt-2 text-xs text-zinc-500 cursor-pointer">
+                                <input type="checkbox" name="is_done" value="true" class="accent-accent w-3.5 h-3.5">
+                                Tasks in this status count as done
+                            </label>
+                            <div id="status-form-error" class="text-xs text-red-400 mt-2"></div>
                         </form>
                     </div>
                 </div>

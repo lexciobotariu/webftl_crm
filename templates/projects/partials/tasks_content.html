@@ -7,15 +7,10 @@
                 <span class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ total_tasks }}</span>
             </div>
             <div class="flex items-center gap-2">
-                <a href="{% url 'project_board' project.pk %}"
-                   class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-300 hover:bg-hover transition-colors">
-                    <i data-lucide="kanban" class="w-3.5 h-3.5"></i>
-                    Open Kanban Board
-                </a>
                 <button hx-get="{% url 'task_create' project.pk %}"
                         hx-target="#slide-over"
                         hx-swap="innerHTML"
-                        hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+                        hx-on::after-request="openSlideOver(event)"
                         class="inline-flex items-center gap-1.5 bg-accent text-white px-3 py-1.5 rounded-card text-xs font-medium hover:bg-accent-hover transition-colors">
                     <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                     New Task
@@ -36,11 +31,11 @@
         </thead>
         <tbody class="divide-y divide-border-subtle">
             {% for task in tasks %}
-            <tr class="hover:bg-elevated/50 transition-colors cursor-pointer"
+            <tr class="hover:bg-elevated/50 transition-colors cursor-pointer" id="task-{{ task.pk }}"
                 hx-get="{% url 'task_detail' task.pk %}"
                 hx-target="#slide-over"
                 hx-swap="innerHTML"
-                hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();">
+                hx-on::after-request="openSlideOver(event)">
                 <td class="px-4 py-3">
                     <span class="font-medium text-sm text-zinc-100">{{ task.title }}</span>
                 </td>
@@ -79,7 +74,7 @@
                 </td>
                 <td class="px-4 py-3">
                     {% if task.due_date %}
-                    <span class="text-sm {% if task.due_date < now_date and task.status.name|lower != 'done' %}text-red-400{% else %}text-zinc-400{% endif %}">
+                    <span class="text-sm {% if task.is_overdue %}text-red-400{% else %}text-zinc-400{% endif %}">
                         {{ task.due_date|date:"M d, Y" }}
                     </span>
                     {% else %}
@@ -97,7 +92,7 @@
         <button hx-get="{% url 'task_create' project.pk %}"
                 hx-target="#slide-over"
                 hx-swap="innerHTML"
-                hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+                hx-on::after-request="openSlideOver(event)"
                 class="text-accent hover:text-accent-hover text-sm">
             Create the first task
         </button>

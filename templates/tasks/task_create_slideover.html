@@ -10,14 +10,15 @@
                 {% endif %}
             </div>
         </div>
-        <button onclick="document.getElementById('slide-over').classList.add('hidden')"
+        <button onclick="closeSlideOver()"
                 class="w-8 h-8 flex items-center justify-center rounded-card bg-panel border border-border-subtle text-zinc-400 hover:text-zinc-200 hover:border-border-strong">&times;</button>
     </div>
 
     <form method="post" hx-post="{% url 'task_create' project.pk %}"
-          hx-target="#kanban-board-content" hx-swap="innerHTML"
+          hx-target="#slide-over" hx-swap="innerHTML"
           class="space-y-5 mt-5">
         {% csrf_token %}
+        {% include "components/form_error_banner.html" %}
         {% if selected_status %}
         <input type="hidden" name="status_id" value="{{ selected_status.pk }}">
         {% endif %}
@@ -27,7 +28,7 @@
             <button type="submit" class="bg-accent text-white px-4 py-2 rounded-card text-sm hover:bg-accent-hover transition-colors">
                 Create Task
             </button>
-            <button type="button" onclick="document.getElementById('slide-over').classList.add('hidden')"
+            <button type="button" onclick="closeSlideOver()"
                     class="bg-elevated border border-border-subtle px-4 py-2 rounded-card text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
                 Cancel
             </button>
@@ -35,6 +36,5 @@
     </form>
 </div>
 <script>
-document.getElementById('slide-over').classList.remove('hidden');
-lucide.createIcons();
+openSlideOver();
 </script>

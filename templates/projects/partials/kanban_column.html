@@ -12,19 +12,25 @@
                 <i data-lucide="plus" class="w-4 h-4"></i>
             </button>
             <span class="text-[10px] text-zinc-500 bg-elevated border border-border-subtle rounded px-1.5 py-0.5 tabular-nums">
-                {{ status.task_count }}
+                {{ status.board_task_count }}
             </span>
         </div>
     </div>
     <!-- Tasks container - scrollable, sortable -->
-    <div class="flex-1 overflow-y-auto p-2 space-y-2"
-         id="column-{{ status.pk }}-tasks"
-         x-sort:group="kanban"
-         x-sort:config="{ animation: 150 }"
-         x-sort="$store.kanban.moveTask($item, {{ status.pk }})"
-         data-status-id="{{ status.pk }}">
-        {% for task in status.tasks.all %}
-        {% include "projects/partials/task_card.html" %}
-        {% endfor %}
+    <div class="flex-1 overflow-y-auto p-2">
+        <div class="space-y-2 min-h-[3rem]"
+             id="column-{{ status.pk }}-tasks"
+             x-sort:group="kanban"
+             x-sort:config="{ animation: 150 }"
+             x-sort="$store.kanban.moveTask($item, {{ status.pk }}, $position)"
+             data-status-id="{{ status.pk }}">
+            {% for task in status.tasks.all %}
+            {% include "projects/partials/task_card.html" %}
+            {% endfor %}
+        </div>
+        {# Kept outside the sortable container so it never becomes a drop item. #}
+        {% if not status.tasks.all %}
+        {% include "components/empty_state.html" with icon="inbox" message="Nothing here yet" %}
+        {% endif %}
     </div>
 </div>

@@ -1,7 +1,9 @@
 from django import forms
 
 from apps.accounts.models import User
-from .models import Task, Subtask, Comment, Label
+from apps.projects.models import get_assignable_users
+
+from .models import Label, Subtask, Task
 
 INPUT_CLASSES = 'w-full bg-panel border border-border-subtle rounded-card px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none transition-colors'
 
@@ -22,10 +24,12 @@ class TaskForm(forms.ModelForm):
 
     def __init__(self, project=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['assignee'].queryset = User.objects.filter(is_active=True)
         self.fields['assignee'].required = False
         if project:
             self.fields['labels'].queryset = Label.objects.filter(project=project)
+            self.fields['assignee'].queryset = get_assignable_users(project)
+        else:
+            self.fields['assignee'].queryset = User.objects.none()
 
 
 class SubtaskForm(forms.ModelForm):
@@ -34,13 +38,4 @@ class SubtaskForm(forms.ModelForm):
         fields = ['title']
         widgets = {
             'title': forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'Add subtask...'}),
-        }
-
-
-class CommentForm(forms.ModelForm):
-    class Meta:
-        model = Comment
-        fields = ['content']
-        widgets = {
-            'content': forms.Textarea(attrs={'class': INPUT_CLASSES, 'rows': 3, 'placeholder': 'Write a comment...'}),
         }

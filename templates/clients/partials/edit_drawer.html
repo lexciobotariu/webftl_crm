@@ -6,7 +6,7 @@
                 <i data-lucide="pencil" class="w-4 h-4 text-zinc-500"></i>
                 <h2 class="text-sm font-medium text-zinc-100">Edit Client</h2>
             </div>
-            <button onclick="document.getElementById('slide-over').classList.add('hidden')"
+            <button onclick="closeSlideOver()"
                     class="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors">
                 <i data-lucide="x" class="w-4 h-4"></i>
             </button>
@@ -15,35 +15,48 @@
 
     <!-- Form -->
     <form hx-post="{% url 'client_edit_drawer' client.pk %}"
-          hx-target="#profile-content"
+          hx-target="#slide-over"
           hx-swap="innerHTML"
           class="flex-1 overflow-y-auto p-4">
         {% csrf_token %}
+        {% include "components/form_error_banner.html" %}
 
         <div class="space-y-4">
             <div>
                 <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Name</label>
-                <input type="text" name="name" value="{{ client.name }}"
+                <input type="text" name="name" value="{{ form.name.value|default_if_none:'' }}"
                        class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                        required>
+                {% if form.name.errors %}
+                <p class="text-xs text-red-400 mt-1">{{ form.name.errors.0 }}</p>
+                {% endif %}
             </div>
 
             <div>
                 <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Email</label>
-                <input type="email" name="email" value="{{ client.email|default:'' }}"
+                <input type="email" name="email" value="{{ form.email.value|default_if_none:'' }}"
                        class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                {% if form.email.errors %}
+                <p class="text-xs text-red-400 mt-1">{{ form.email.errors.0 }}</p>
+                {% endif %}
             </div>
 
             <div>
                 <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Phone</label>
-                <input type="text" name="phone" value="{{ client.phone|default:'' }}"
+                <input type="text" name="phone" value="{{ form.phone.value|default_if_none:'' }}"
                        class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                {% if form.phone.errors %}
+                <p class="text-xs text-red-400 mt-1">{{ form.phone.errors.0 }}</p>
+                {% endif %}
             </div>
 
             <div>
                 <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Address</label>
                 <textarea name="address" rows="3"
-                          class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none resize-none">{{ client.address|default:'' }}</textarea>
+                          class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none resize-none">{{ form.address.value|default_if_none:'' }}</textarea>
+                {% if form.address.errors %}
+                <p class="text-xs text-red-400 mt-1">{{ form.address.errors.0 }}</p>
+                {% endif %}
             </div>
         </div>
 
@@ -53,7 +66,7 @@
                 Save Changes
             </button>
             <button type="button"
-                    onclick="document.getElementById('slide-over').classList.add('hidden')"
+                    onclick="closeSlideOver()"
                     class="bg-elevated border border-border-subtle px-4 py-2 rounded-card text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
                 Cancel
             </button>

@@ -1,5 +1,6 @@
 import pytest
-from apps.accounts.factories import UserFactory, AdminUserFactory
+
+from apps.accounts.factories import AdminUserFactory, UserFactory
 
 
 @pytest.mark.django_db

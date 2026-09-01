@@ -12,7 +12,7 @@
         <tr hx-get="{% url 'note_detail_drawer' note.pk %}"
             hx-target="#slide-over"
             hx-swap="innerHTML"
-            hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+            hx-on::after-request="openSlideOver(event)"
             class="hover:bg-elevated/50 cursor-pointer transition-colors">
             <td class="px-4 py-3">
                 <span class="font-medium text-sm text-zinc-100">{{ note.title }}</span>

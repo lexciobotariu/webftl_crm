@@ -1,6 +1,7 @@
 import pytest
 from django.urls import reverse
-from apps.accounts.factories import UserFactory, AdminUserFactory
+
+from apps.accounts.factories import AdminUserFactory, UserFactory
 from apps.accounts.permissions import PermissionPreset
 from apps.clients.factories import ClientFactory
 
@@ -112,6 +113,25 @@ class TestClientDelete:
         client.force_login(admin)
         response = client.get(reverse('client_delete', args=[test_client.pk]))
         assert response.status_code == 405
+
+    def test_admin_can_delete_client_whose_project_has_tasks(self, client):
+        """The whole client -> project -> status/task cascade must go through."""
+        from apps.clients.models import Client
+        from apps.projects.factories import ProjectFactory
+        from apps.tasks.factories import TaskFactory
+        from apps.tasks.models import Task
+
+        admin = AdminUserFactory()
+        test_client = ClientFactory()
+        project = ProjectFactory(client=test_client)
+        task = TaskFactory(project=project, status=project.statuses.first())
+        client.force_login(admin)
+
+        response = client.post(reverse('client_delete', args=[test_client.pk]))
+
+        assert response.status_code == 302
+        assert not Client.objects.filter(pk=test_client.pk).exists()
+        assert not Task.objects.filter(pk=task.pk).exists()
 
 
 @pytest.mark.django_db

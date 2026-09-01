@@ -1,6 +1,5 @@
 from django.db import models
 
-
 PERMISSION_KEYS = [
     'access_dashboard',
     'access_clients',
