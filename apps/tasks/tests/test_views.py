@@ -1,9 +1,10 @@
 import pytest
-from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.urls import reverse
+
 from apps.accounts.factories import UserFactory
-from apps.tasks.factories import TaskFactory, SubtaskFactory
 from apps.projects.factories import ProjectFactory, ProjectMemberFactory, StatusFactory
+from apps.tasks.factories import SubtaskFactory, TaskFactory
 
 
 @pytest.mark.django_db
@@ -65,13 +66,14 @@ class TestTaskCreate:
         user = UserFactory()
         project = ProjectFactory()
         ProjectMemberFactory(project=project, user=user, role='editor')
-        status = StatusFactory(project=project)
+        StatusFactory(project=project)
         client.force_login(user)
 
         response = client.post(
             reverse('task_create', args=[project.pk]),
             {'title': 'New Task', 'description': 'Test'}
         )
+        assert response.status_code in (200, 302)
 
         task = project.tasks.first()
         activity = TaskActivity.objects.filter(task=task, activity_type='created').first()
@@ -88,7 +90,7 @@ class TestTaskEdit:
         user = UserFactory()
         project = ProjectFactory()
         ProjectMemberFactory(project=project, user=user, role='editor')
-        status = StatusFactory(project=project, name='Backlog')
+        status = project.statuses.get(name='Backlog')
         task = TaskFactory(project=project, status=status, priority='low')
         client.force_login(user)
 
@@ -99,6 +101,7 @@ class TestTaskEdit:
             reverse('task_edit', args=[task.pk]),
             {'title': 'Updated Title', 'description': 'Updated', 'priority': 'high'}
         )
+        assert response.status_code in (200, 302)
 
         activity = TaskActivity.objects.filter(task=task, activity_type='priority_change').first()
         assert activity is not None
@@ -159,8 +162,8 @@ class TestTaskMove:
         user = UserFactory()
         project = ProjectFactory()
         ProjectMemberFactory(project=project, user=user, role='editor')
-        status1 = StatusFactory(project=project, name='Backlog')
-        status2 = StatusFactory(project=project, name='Done')
+        status1 = project.statuses.get(name='Backlog')
+        status2 = project.statuses.get(name='Done')
         task = TaskFactory(project=project, status=status1)
         client.force_login(user)
 
@@ -171,6 +174,7 @@ class TestTaskMove:
             reverse('task_move'),
             {'task_id': task.pk, 'status_id': status2.pk}
         )
+        assert response.status_code == 204
 
         activity = TaskActivity.objects.filter(task=task, activity_type='status_change').first()
         assert activity is not None
@@ -186,8 +190,8 @@ class TestTaskUpdateStatus:
         user = UserFactory()
         project = ProjectFactory()
         ProjectMemberFactory(project=project, user=user, role='editor')
-        status1 = StatusFactory(project=project, name='Backlog')
-        status2 = StatusFactory(project=project, name='In Progress')
+        status1 = project.statuses.get(name='Backlog')
+        status2 = project.statuses.get(name='In Progress')
         task = TaskFactory(project=project, status=status1)
         client.force_login(user)
 
@@ -198,10 +202,34 @@ class TestTaskUpdateStatus:
             reverse('task_update_status', args=[task.pk]),
             {'status_id': status2.pk}
         )
+        assert response.status_code == 200
 
         activity = TaskActivity.objects.filter(task=task, activity_type='status_change').first()
         assert activity is not None
         assert activity.user == user
+
+    @pytest.mark.django_db
+    def test_task_update_status_renders_new_status_in_dropdown(self, client):
+        """The swapped dropdown must show the status the task was just moved to,
+        not the stale pre-move status from the caller's instance."""
+        user = UserFactory()
+        project = ProjectFactory()
+        ProjectMemberFactory(project=project, user=user, role='editor')
+        status1 = project.statuses.get(name='Backlog')
+        status2 = project.statuses.get(name='In Progress')
+        task = TaskFactory(project=project, status=status1)
+        client.force_login(user)
+
+        response = client.post(
+            reverse('task_update_status', args=[task.pk]),
+            {'status_id': status2.pk}
+        )
+        assert response.status_code == 200
+        content = response.content.decode()
+        # The button label (<span>...</span>) shows the current status; the
+        # option list also contains both names, so assert on the label markup.
+        assert f'<span>{status2.name}</span>' in content
+        assert f'<span>{status1.name}</span>' not in content
 
 
 @pytest.mark.django_db

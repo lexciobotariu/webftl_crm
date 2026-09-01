@@ -3,17 +3,19 @@ import hmac
 import json
 
 from django.conf import settings
+from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_object_or_404
 
-from apps.projects.models import Project
+from apps.projects.models import Project, can_access_project
+
 from .github import (
-    process_webhook_push,
     process_webhook_issue,
     process_webhook_pull_request,
+    process_webhook_push,
+    sync_issues_from_github,
 )
 
 
@@ -52,11 +54,9 @@ def github_webhook(request):
 
     webhook_secret = getattr(settings, 'GITHUB_WEBHOOK_SECRET', '')
 
-    # Require webhook secret in production
     if not webhook_secret:
-        if not settings.DEBUG:
-            return HttpResponse('Webhook secret not configured', status=500)
-    elif not verify_signature(request.body, signature, webhook_secret):
+        return HttpResponse('Webhook secret not configured', status=500)
+    if not verify_signature(request.body, signature, webhook_secret):
         return HttpResponse('Invalid signature', status=401)
 
     try:
@@ -97,15 +97,15 @@ def github_sync(request, project_pk):
     """Manually trigger GitHub sync for a project."""
     project = get_object_or_404(Project, pk=project_pk)
 
+    if not can_access_project(request.user, project, 'manager'):
+        return JsonResponse({'error': 'Manager access required'}, status=403)
+
     if not project.github_repo_url:
         return JsonResponse({'error': 'No GitHub repo configured'}, status=400)
 
     if not request.user.github_token:
         return JsonResponse({'error': 'GitHub token not configured'}, status=400)
 
-    import asyncio
-    from .github import sync_issues_from_github
-
-    asyncio.run(sync_issues_from_github(project, request.user.github_token))
+    sync_issues_from_github(project, request.user.github_token)
 
     return JsonResponse({'status': 'synced'})

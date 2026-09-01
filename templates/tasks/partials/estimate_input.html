@@ -1,5 +1,5 @@
-<div class="relative" x-data="{ open: false }">
-    <button @click="open = !open"
+<div class="relative" x-data="dropdown">
+    <button @click="toggle()"
             class="flex items-center gap-2 px-2 py-1 rounded-card text-sm text-zinc-300 hover:bg-elevated transition-colors">
         {% if task.time_estimate %}
         {{ task.time_estimate }}h
@@ -7,13 +7,13 @@
         <span class="text-zinc-500">Add estimate</span>
         {% endif %}
     </button>
-    <div x-show="open" @click.away="open = false"
+    <div x-show="open" x-cloak @click.away="close()"
          x-transition
          class="absolute left-0 top-full mt-1 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 p-3">
         <form hx-post="{% url 'task_update_estimate' task.pk %}"
               hx-target="#estimate-value-{{ task.pk }}"
               hx-swap="innerHTML"
-              @submit="open = false">
+              @submit="close()">
             {% csrf_token %}
             <input type="number" name="time_estimate" value="{{ task.time_estimate }}" step="0.5" min="0"
                    placeholder="Hours"

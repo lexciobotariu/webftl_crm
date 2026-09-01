@@ -1,5 +1,7 @@
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
+from django.utils import timezone
 
 from apps.projects.models import Project, Status
 
@@ -16,6 +18,27 @@ class Label(models.Model):
         return self.name
 
 
+class TaskQuerySet(models.QuerySet):
+    """Keeps the definitions of "done", "active" and "overdue" in one place.
+
+    ``Task.is_overdue`` is the per-instance version of :meth:`overdue`; the two
+    must agree, so anything counting overdue tasks should go through here rather
+    than re-deriving the filter.
+    """
+
+    def done(self):
+        return self.filter(status__is_done=True)
+
+    def active(self):
+        """Tasks in a status that does not count as done."""
+        return self.exclude(status__is_done=True)
+
+    def overdue(self, today=None):
+        if today is None:
+            today = timezone.now().date()
+        return self.active().filter(due_date__lt=today)
+
+
 class Task(models.Model):
     PRIORITY_CHOICES = [
         ('low', 'Low'),
@@ -25,7 +48,7 @@ class Task(models.Model):
     ]
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tasks')
-    status = models.ForeignKey(Status, on_delete=models.CASCADE, related_name='tasks')
+    status = models.ForeignKey(Status, on_delete=models.RESTRICT, related_name='tasks')
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     assignee = models.ForeignKey(
@@ -48,11 +71,28 @@ class Task(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    objects = TaskQuerySet.as_manager()
+
     class Meta:
         ordering = ['order', '-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['project', 'github_issue_id'],
+                condition=Q(github_issue_id__isnull=False),
+                name='unique_github_issue_per_project',
+            ),
+        ]
 
     def __str__(self):
         return self.title
+
+    @property
+    def is_overdue(self):
+        if not self.due_date:
+            return False
+        if self.status.is_done:
+            return False
+        return self.due_date < timezone.now().date()
 
     @property
     def subtask_progress(self):
@@ -76,20 +116,6 @@ class Subtask(models.Model):
         return self.title
 
 
-class Comment(models.Model):
-    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='comments')
-    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    content = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ['created_at']
-
-    def __str__(self):
-        return f"Comment by {self.author} on {self.task}"
-
-
 class TaskActivity(models.Model):
     """Tracks activity on tasks - comments, status changes, etc."""
     ACTIVITY_TYPES = [
@@ -111,13 +137,13 @@ class TaskActivity(models.Model):
         blank=True
     )
     activity_type = models.CharField(max_length=20, choices=ACTIVITY_TYPES)
-    content = models.TextField(blank=True)  # For comments or description of change
+    content = models.TextField(blank=True)
     old_value = models.CharField(max_length=255, blank=True)
     new_value = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['created_at']  # Chronological order (oldest first)
+        ordering = ['created_at']
         verbose_name_plural = 'Task activities'
 
     def __str__(self):

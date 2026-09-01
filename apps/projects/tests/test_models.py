@@ -1,4 +1,5 @@
 import pytest
+
 from apps.projects.factories import ProjectFactory, StatusFactory
 from apps.tasks.factories import TaskFactory
 

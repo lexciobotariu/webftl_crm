@@ -3,8 +3,8 @@ from django.test import RequestFactory
 from django.urls import reverse
 
 from apps.accounts.decorators import require_permission
-from apps.accounts.permissions import PermissionPreset, PERMISSION_KEYS
-from apps.accounts.factories import UserFactory, AdminUserFactory
+from apps.accounts.factories import AdminUserFactory, UserFactory
+from apps.accounts.permissions import PERMISSION_KEYS, PermissionPreset
 
 
 @pytest.mark.django_db
@@ -199,9 +199,10 @@ class TestPermissionsContextProcessor:
 
     def test_anonymous_user_no_perms(self, client):
         """Anonymous requests should have empty perms_map."""
-        from config.context_processors import permissions
-        from django.test import RequestFactory
         from django.contrib.auth.models import AnonymousUser
+        from django.test import RequestFactory
+
+        from config.context_processors import permissions
 
         factory = RequestFactory()
         request = factory.get('/')
@@ -435,7 +436,7 @@ class TestTeamPresetDisplay:
         """Team list should show the assigned preset name for each user."""
         admin = AdminUserFactory()
         preset = PermissionPreset.objects.get(name='Developer')
-        dev = UserFactory(name='Dev User', permission_preset=preset)
+        UserFactory(name='Dev User', permission_preset=preset)
         client.force_login(admin)
         response = client.get(reverse('team_list'))
         content = response.content.decode()
@@ -444,7 +445,7 @@ class TestTeamPresetDisplay:
     def test_team_list_shows_no_preset_label(self, client):
         """Users without a preset should show 'No preset' label."""
         admin = AdminUserFactory()
-        member = UserFactory(name='New User', permission_preset=None)
+        UserFactory(name='New User', permission_preset=None)
         client.force_login(admin)
         response = client.get(reverse('team_list'))
         assert 'No preset' in response.content.decode()
@@ -484,7 +485,9 @@ class TestPresetCreate:
             'name': 'Viewer',
             'access_dashboard': 'on',
         })
-        assert 'Viewer' in response.content.decode()
+        assert response.status_code == 200
+        assert 'refreshPresetList' in response.get('HX-Trigger', '')
+        assert PermissionPreset.objects.filter(name='Viewer').exists()
 
     def test_create_preset_duplicate_name_fails(self, client):
         admin = AdminUserFactory()
@@ -533,6 +536,7 @@ class TestPresetEdit:
             'access_dashboard': 'on',
             'access_projects': 'on',
         })
+        assert response.status_code == 200
         preset.refresh_from_db()
         assert preset.name == 'Developer'
 

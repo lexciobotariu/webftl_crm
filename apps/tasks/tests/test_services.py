@@ -4,7 +4,7 @@ from django.core.exceptions import PermissionDenied
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from apps.accounts.factories import UserFactory
-from apps.projects.factories import ProjectFactory, ProjectMemberFactory, StatusFactory
+from apps.projects.factories import ProjectFactory, ProjectMemberFactory
 from apps.tasks import services
 from apps.tasks.factories import LabelFactory, SubtaskFactory, TaskFactory
 from apps.tasks.models import Subtask, Task, TaskActivity
@@ -79,8 +79,8 @@ class TestMoveTask:
     def test_move_task_changes_status(self):
         user = UserFactory()
         project = ProjectFactory()
-        status1 = StatusFactory(project=project, name='Backlog')
-        status2 = StatusFactory(project=project, name='Done')
+        status1 = project.statuses.get(name='Backlog')
+        status2 = project.statuses.get(name='Done')
         task = TaskFactory(project=project, status=status1)
         ProjectMemberFactory(project=project, user=user, role='editor')
 
@@ -92,8 +92,8 @@ class TestMoveTask:
     def test_move_task_creates_activity(self):
         user = UserFactory()
         project = ProjectFactory()
-        status1 = StatusFactory(project=project, name='Backlog')
-        status2 = StatusFactory(project=project, name='Done')
+        status1 = project.statuses.get(name='Backlog')
+        status2 = project.statuses.get(name='Done')
         task = TaskFactory(project=project, status=status1)
         ProjectMemberFactory(project=project, user=user, role='editor')
         TaskActivity.objects.filter(task=task).delete()
@@ -107,13 +107,120 @@ class TestMoveTask:
     def test_move_task_requires_editor(self):
         user = UserFactory()
         project = ProjectFactory()
-        status1 = StatusFactory(project=project, name='Backlog')
-        status2 = StatusFactory(project=project, name='Done')
+        status1 = project.statuses.get(name='Backlog')
+        status2 = project.statuses.get(name='Done')
         task = TaskFactory(project=project, status=status1)
         ProjectMemberFactory(project=project, user=user, role='viewer')
 
         with pytest.raises(PermissionDenied):
             services.move_task(task, status2, user)
+
+
+@pytest.mark.django_db
+class TestMoveTaskOrdering:
+    """`order` must end up a dense 0..n-1 sequence matching the dropped position."""
+
+    @staticmethod
+    def _column(status):
+        return list(
+            Task.objects.filter(status=status).order_by('order').values_list('title', flat=True)
+        )
+
+    @staticmethod
+    def _orders(status):
+        return sorted(Task.objects.filter(status=status).values_list('order', flat=True))
+
+    @pytest.fixture
+    def board(self):
+        user = UserFactory()
+        project = ProjectFactory()
+        ProjectMemberFactory(project=project, user=user, role='editor')
+        backlog = project.statuses.get(name='Backlog')
+        done = project.statuses.get(name='Done')
+        tasks = [
+            TaskFactory(project=project, status=backlog, title=title, order=index)
+            for index, title in enumerate(['A', 'B', 'C'])
+        ]
+        return {
+            'user': user,
+            'project': project,
+            'backlog': backlog,
+            'done': done,
+            'tasks': {task.title: task for task in tasks},
+        }
+
+    def test_same_column_move_to_end(self, board):
+        services.move_task(board['tasks']['A'], board['backlog'], board['user'], position=2)
+
+        assert self._column(board['backlog']) == ['B', 'C', 'A']
+        assert self._orders(board['backlog']) == [0, 1, 2]
+
+    def test_move_syncs_callers_instance(self, board):
+        """Callers re-render the instance they passed in; it must reflect the
+        new status and order without a refresh_from_db()."""
+        task = board['tasks']['A']
+        services.move_task(task, board['done'], board['user'], position=0)
+
+        assert task.status == board['done']
+        assert task.order == Task.objects.get(pk=task.pk).order
+
+    def test_move_of_deleted_task_raises_does_not_exist(self, board):
+        task = board['tasks']['A']
+        Task.objects.filter(pk=task.pk).delete()
+
+        with pytest.raises(Task.DoesNotExist):
+            services.move_task(task, board['done'], board['user'])
+
+    def test_same_column_move_to_front(self, board):
+        services.move_task(board['tasks']['C'], board['backlog'], board['user'], position=0)
+
+        assert self._column(board['backlog']) == ['C', 'A', 'B']
+        assert self._orders(board['backlog']) == [0, 1, 2]
+
+    def test_same_column_move_to_middle(self, board):
+        services.move_task(board['tasks']['A'], board['backlog'], board['user'], position=1)
+
+        assert self._column(board['backlog']) == ['B', 'A', 'C']
+
+    def test_cross_column_move_inserts_at_position(self, board):
+        done = board['done']
+        TaskFactory(project=board['project'], status=done, title='X', order=0)
+        TaskFactory(project=board['project'], status=done, title='Y', order=1)
+
+        services.move_task(board['tasks']['B'], done, board['user'], position=1)
+
+        assert self._column(done) == ['X', 'B', 'Y']
+        assert self._orders(done) == [0, 1, 2]
+        assert self._column(board['backlog']) == ['A', 'C']
+        assert self._orders(board['backlog']) == [0, 1]
+
+    def test_move_without_position_appends(self, board):
+        done = board['done']
+        TaskFactory(project=board['project'], status=done, title='X', order=0)
+
+        services.move_task(board['tasks']['A'], done, board['user'])
+
+        assert self._column(done) == ['X', 'A']
+
+    def test_out_of_range_position_is_clamped(self, board):
+        services.move_task(board['tasks']['A'], board['backlog'], board['user'], position=99)
+
+        assert self._column(board['backlog']) == ['B', 'C', 'A']
+
+        services.move_task(board['tasks']['A'], board['backlog'], board['user'], position=-5)
+
+        assert self._column(board['backlog']) == ['A', 'B', 'C']
+
+    def test_order_survives_a_reload(self, board):
+        """Re-reading the column the way the board view does yields the drop order."""
+        services.move_task(board['tasks']['C'], board['backlog'], board['user'], position=0)
+
+        reloaded = list(
+            Task.objects.filter(status=board['backlog'])
+            .order_by('order', '-created_at')
+            .values_list('title', flat=True)
+        )
+        assert reloaded == ['C', 'A', 'B']
 
 
 @pytest.mark.django_db

@@ -12,10 +12,10 @@ Key patterns:
 import json
 
 from django.contrib.auth import get_user_model
+from django.db.models import Prefetch, Sum
 from django.utils import timezone
 
-from .models import EmployeeSalary, SalaryMonth, Payment
-
+from .models import EmployeeSalary, SalaryMonth
 
 # =============================================================================
 # Response Helpers
@@ -57,24 +57,28 @@ def get_salary_list_data():
     """
     User = get_user_model()
 
-    salaries = EmployeeSalary.objects.select_related('user').prefetch_related('months').all()
-
     now = timezone.now()
     current_year = now.year
     current_month = now.month
 
+    current_month_qs = SalaryMonth.objects.filter(
+        year=current_year, month=current_month
+    ).annotate(total_paid_sum=Sum('payments__amount'))
+
+    salaries = EmployeeSalary.objects.select_related('user').prefetch_related(
+        Prefetch('months', queryset=current_month_qs)
+    )
+
     salary_data = []
     for salary in salaries:
-        current_month_entry = salary.months.filter(
-            year=current_year, month=current_month
-        ).first()
+        months = list(salary.months.all())
+        current_month_entry = months[0] if months else None
         salary_data.append({
             'salary': salary,
             'current_month': current_month_entry,
         })
 
     # Check if there are users available (non-staff users without salary configs)
-    # Staff users (admins) are not considered employees for salary purposes
     users_with_salary = EmployeeSalary.objects.values_list('user_id', flat=True)
     employee_users = User.objects.filter(is_staff=False)
     has_available_users = employee_users.exclude(id__in=users_with_salary).exists()
@@ -141,7 +145,11 @@ def get_salary_detail_data(salary_pk):
         EmployeeSalary.DoesNotExist: If salary with given pk not found
     """
     salary = EmployeeSalary.objects.select_related('user').get(pk=salary_pk)
-    months = salary.months.prefetch_related('payments').all()
+    months = (
+        salary.months.prefetch_related('payments')
+        .annotate(total_paid_sum=Sum('payments__amount'))
+        .all()
+    )
 
     now = timezone.now()
     current_year = now.year

@@ -6,7 +6,7 @@
                 <i data-lucide="plus" class="w-4 h-4 text-zinc-500"></i>
                 <h2 class="text-sm font-medium text-zinc-100">Add To-Do</h2>
             </div>
-            <button onclick="document.getElementById('slide-over').classList.add('hidden')"
+            <button onclick="closeSlideOver()"
                     class="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors">
                 <i data-lucide="x" class="w-4 h-4"></i>
             </button>
@@ -83,7 +83,7 @@
                 Create To-Do
             </button>
             <button type="button"
-                    onclick="document.getElementById('slide-over').classList.add('hidden')"
+                    onclick="closeSlideOver()"
                     class="bg-elevated border border-border-subtle px-4 py-2 rounded-card text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
                 Cancel
             </button>

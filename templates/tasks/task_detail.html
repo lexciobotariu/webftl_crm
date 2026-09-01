@@ -2,7 +2,7 @@
     <!-- Header -->
     <div class="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-border-subtle">
         <div class="flex items-center gap-3">
-            <button onclick="document.getElementById('slide-over').classList.add('hidden')"
+            <button onclick="closeSlideOver()"
                     class="text-zinc-500 hover:text-zinc-300 transition-colors">
                 <i data-lucide="arrow-left" class="w-4 h-4"></i>
             </button>
@@ -17,14 +17,14 @@
                     :title="copied ? 'Copied!' : 'Copy link'"
                     :class="copied ? 'text-green-400 hover:text-green-300' : 'text-zinc-500 hover:text-zinc-300'"
                     class="transition-colors p-1.5 hover:bg-elevated rounded-card">
-                <i :data-lucide="copied ? 'check' : 'link'" class="w-4 h-4"></i>
+                <i data-lucide="link" :data-lucide="copied ? 'check' : 'link'" class="w-4 h-4"></i>
             </button>
             <a href="{% url 'task_full_page' task.project.pk task.pk %}"
                class="text-zinc-500 hover:text-zinc-300 transition-colors p-1.5 hover:bg-elevated rounded-card"
                title="Open full page">
                 <i data-lucide="maximize-2" class="w-4 h-4"></i>
             </a>
-            <button onclick="document.getElementById('slide-over').classList.add('hidden')"
+            <button onclick="closeSlideOver()"
                     class="text-zinc-500 hover:text-zinc-300 transition-colors p-1.5 hover:bg-elevated rounded-card">
                 <i data-lucide="x" class="w-4 h-4"></i>
             </button>
@@ -127,7 +127,6 @@
                     hx-confirm="Delete this task?"
                     hx-target="#task-{{ task.pk }}"
                     hx-swap="delete"
-                    onclick="document.getElementById('slide-over').classList.add('hidden')"
                     class="text-red-400 text-sm hover:text-red-300 transition-colors">
                 Delete task
             </button>
@@ -135,8 +134,7 @@
     </div>
 </div>
 <script>
-document.getElementById('slide-over').classList.remove('hidden');
-lucide.createIcons();
+openSlideOver();
 // Wire up the Add sub-task button to show the form
 document.querySelectorAll('[data-lucide="plus"]').forEach(el => {
     const btn = el.closest('button');

@@ -1,0 +1,12 @@
+{% comment %}
+Shared validation-error banner for drawers and inline forms.
+Pass either a bound `form` (non-field errors are shown) or an `error` string.
+{% endcomment %}
+{% if error or form.non_field_errors %}
+<div class="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-card">
+    {% if error %}<p class="text-sm text-red-400">{{ error }}</p>{% endif %}
+    {% for message in form.non_field_errors %}
+    <p class="text-sm text-red-400">{{ message }}</p>
+    {% endfor %}
+</div>
+{% endif %}

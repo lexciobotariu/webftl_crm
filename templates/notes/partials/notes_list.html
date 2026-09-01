@@ -11,7 +11,7 @@
             <button hx-get="{% url parent_type|add:'_note_create_drawer' parent.pk %}"
                     hx-target="#slide-over"
                     hx-swap="innerHTML"
-                    hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+                    hx-on::after-request="openSlideOver(event)"
                     class="inline-flex items-center gap-1.5 bg-accent text-white px-3 py-1.5 rounded-card text-xs font-medium hover:bg-accent-hover transition-colors">
                 <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                 Add Note
@@ -36,7 +36,7 @@
             <tr hx-get="{% url 'note_detail_drawer' note.pk %}"
                 hx-target="#slide-over"
                 hx-swap="innerHTML"
-                hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+                hx-on::after-request="openSlideOver(event)"
                 class="hover:bg-elevated/50 cursor-pointer transition-colors">
                 <td class="px-4 py-3">
                     <span class="font-medium text-sm text-zinc-100">{{ note.title }}</span>
@@ -48,7 +48,9 @@
                     <span class="text-sm text-zinc-400">{{ note.updated_at|date:"M d, Y g:i A" }}</span>
                 </td>
                 <td class="px-4 py-3">
-                    <span class="text-sm text-zinc-400">{{ note.modified_by.name|default:note.modified_by.email }}</span>
+                    <span class="text-sm {% if note.modified_by %}text-zinc-400{% else %}text-zinc-600 italic{% endif %}">
+                        {% if note.modified_by %}{{ note.modified_by.name|default:note.modified_by.email }}{% else %}deleted user{% endif %}
+                    </span>
                 </td>
                 <td class="px-4 py-3">
                     {% if note.is_private %}

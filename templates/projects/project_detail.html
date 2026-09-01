@@ -47,15 +47,6 @@
                     <i data-lucide="settings" class="w-3.5 h-3.5"></i>
                     Settings
                 </a>
-                {% if request.user.is_admin %}
-                <button hx-post="{% url 'project_delete' project.pk %}"
-                        hx-confirm="Delete {{ project.name|escapejs }}? This will also delete all tasks."
-                        hx-target="body"
-                        class="inline-flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 text-red-300 px-3 py-1.5 rounded-card text-xs hover:bg-red-500/20 transition-colors">
-                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                    Delete
-                </button>
-                {% endif %}
             </div>
         </div>
     </div>
@@ -131,4 +122,12 @@
         </div>
     </div>
 </div>
+<script>
+    // Task creation and status changes happen in drawers that target #slide-over;
+    // pull the affected panels back from the server so they don't go stale.
+    document.body.addEventListener('taskStatusChanged', () => {
+        refreshFragment('#tasks-content');
+        refreshFragment('#overview-content');
+    });
+</script>
 {% endblock %}

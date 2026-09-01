@@ -1,6 +1,7 @@
 import pytest
-from apps.tasks.factories import TaskFactory, SubtaskFactory, LabelFactory
+
 from apps.projects.factories import ProjectFactory
+from apps.tasks.factories import LabelFactory, SubtaskFactory, TaskFactory
 
 
 @pytest.mark.django_db

@@ -10,7 +10,7 @@
             <div class="flex items-center gap-3">
                 <i data-lucide="users" class="w-4 h-4 text-zinc-500"></i>
                 <h1 class="text-sm font-medium text-zinc-100">Team</h1>
-                <span class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ total_count }}</span>
+                <span id="team-count" class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ total_count }}</span>
             </div>
             <div class="flex items-center gap-2">
                 <a href="{% url 'preset_list' %}"
@@ -18,17 +18,22 @@
                     <i data-lucide="shield" class="w-3.5 h-3.5"></i>
                     Manage Presets
                 </a>
-                <a href="{% url 'account_signup' %}"
-                   class="inline-flex items-center gap-1.5 bg-accent text-white px-3 py-1.5 rounded-card text-xs font-medium hover:bg-accent-hover transition-colors">
+                <button hx-get="{% url 'user_create' %}"
+                        hx-target="#slide-over"
+                        hx-swap="innerHTML"
+                        hx-on::after-request="openSlideOver(event)"
+                        class="inline-flex items-center gap-1.5 bg-accent text-white px-3 py-1.5 rounded-card text-xs font-medium hover:bg-accent-hover transition-colors">
                     <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                    Invite Member
-                </a>
+                    Add Member
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Table content -->
-    <div class="flex-1 overflow-auto">
+    <!-- Table content. Pagination lives inside the refreshed region so it cannot
+         go stale, and the refresh re-fetches the current URL so ?page= survives. -->
+    <div class="flex-1 flex flex-col overflow-hidden" id="team-list-content">
+        <div class="flex-1 overflow-auto">
         {% if users %}
         <table class="w-full">
             <thead class="sticky top-0 bg-panel border-b border-border-subtle">
@@ -47,17 +52,18 @@
             </tbody>
         </table>
         {% else %}
-        <div class="flex flex-col items-center justify-center py-16 text-zinc-500">
-            <i data-lucide="users" class="w-12 h-12 mb-4 opacity-30"></i>
-            <p class="mb-2">No team members yet</p>
-            <a href="{% url 'account_signup' %}" class="text-accent hover:text-accent-hover text-sm">
-                Invite your first team member
-            </a>
-        </div>
+        {% url 'user_create' as user_create_url %}
+        {% include "components/empty_state.html" with icon="users" message="No team members yet" action_hx_get=user_create_url action_label="Add your first team member" %}
         {% endif %}
+        </div>
+        {% include "components/pagination.html" %}
     </div>
-
-    <!-- Pagination -->
-    {% include "components/pagination.html" %}
 </div>
+
+<script>
+    document.body.addEventListener('refreshTeamList', () => {
+        refreshFragment('#team-list-content');
+        refreshFragment('#team-count');
+    });
+</script>
 {% endblock %}

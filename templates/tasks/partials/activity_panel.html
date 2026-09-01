@@ -1,19 +1,6 @@
-<div x-data="{ sortAsc: true }">
-    <!-- Header with sort toggle -->
+<div>
     <div class="flex items-center justify-between mb-4">
         <h3 class="text-sm font-semibold text-zinc-300">Activity</h3>
-        <div class="flex items-center gap-1">
-            <button @click="sortAsc = true"
-                    :class="sortAsc ? 'text-zinc-200 bg-elevated' : 'text-zinc-500 hover:text-zinc-300'"
-                    class="p-1.5 rounded-card transition-colors" title="Oldest first">
-                <i data-lucide="arrow-up-narrow-wide" class="w-4 h-4"></i>
-            </button>
-            <button @click="sortAsc = false"
-                    :class="!sortAsc ? 'text-zinc-200 bg-elevated' : 'text-zinc-500 hover:text-zinc-300'"
-                    class="p-1.5 rounded-card transition-colors" title="Newest first">
-                <i data-lucide="arrow-down-wide-narrow" class="w-4 h-4"></i>
-            </button>
-        </div>
     </div>
 
     <!-- Timeline -->

@@ -1,4 +1,5 @@
 import pytest
+
 from apps.clients.factories import ClientFactory
 from apps.projects.factories import ProjectFactory
 

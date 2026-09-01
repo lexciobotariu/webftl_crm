@@ -17,3 +17,13 @@ def require_permission(permission_key):
             return view_func(request, *args, **kwargs)
         return _wrapped
     return decorator
+
+
+def require_admin(view_func):
+    """View decorator that requires an admin role. Assumes @login_required is applied separately."""
+    @wraps(view_func)
+    def _wrapped(request, *args, **kwargs):
+        if not request.user.is_admin:
+            return HttpResponseForbidden("Admin access required")
+        return view_func(request, *args, **kwargs)
+    return _wrapped

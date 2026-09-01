@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Q
 
 from apps.projects.models import can_access_project
 
@@ -41,7 +42,9 @@ class Note(models.Model):
     )
     modified_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='notes_modified'
     )
     created_at = models.DateTimeField(auto_now_add=True)
@@ -58,6 +61,23 @@ class Note(models.Model):
         """Ensure exactly one parent is set"""
         if not (bool(self.client) ^ bool(self.project)):
             raise ValidationError("Note must belong to either a client or project")
+
+
+def notes_visible_to_user(user, queryset=None):
+    """Filter notes queryset to those visible to the user (SQL, not per-row Python).
+
+    Mirrors :func:`can_view_note` exactly, including the project-membership check
+    — callers must be able to pass an unscoped queryset safely.
+    """
+    qs = queryset if queryset is not None else Note.objects.all()
+    if user.is_admin:
+        return qs
+    return qs.filter(
+        # Private notes: creator only, whatever the parent.
+        Q(is_private=True, created_by=user)
+        # Public notes: project notes, and only for members of that project.
+        | Q(is_private=False, project__isnull=False, project__members__user=user)
+    )
 
 
 def can_view_note(user, note):

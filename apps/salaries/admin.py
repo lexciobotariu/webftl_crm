@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import EmployeeSalary, SalaryMonth, Payment
+from .models import EmployeeSalary, Payment, SalaryMonth
 
 
 class SalaryMonthInline(admin.TabularInline):

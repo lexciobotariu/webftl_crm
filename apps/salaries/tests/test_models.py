@@ -1,10 +1,11 @@
-import pytest
-from decimal import Decimal
 from datetime import date
+from decimal import Decimal
+
+import pytest
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
 
-from apps.salaries.models import EmployeeSalary, SalaryMonth, Payment
+from apps.salaries.models import EmployeeSalary, Payment, SalaryMonth
 
 User = get_user_model()
 
@@ -104,12 +105,15 @@ class TestEmployeeSalaryModel:
         user = employee_salary.user
         assert user.salary_config == employee_salary
 
-    def test_cascade_delete(self, employee_salary):
-        """Test that deleting user deletes salary config."""
+    def test_user_delete_protected(self, employee_salary):
+        """Deleting a user with salary records is blocked by PROTECT."""
+        from django.db.models.deletion import ProtectedError
+
         user = employee_salary.user
         salary_id = employee_salary.pk
-        user.delete()
-        assert not EmployeeSalary.objects.filter(pk=salary_id).exists()
+        with pytest.raises(ProtectedError):
+            user.delete()
+        assert EmployeeSalary.objects.filter(pk=salary_id).exists()
 
 
 @pytest.mark.django_db

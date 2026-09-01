@@ -1,9 +1,10 @@
-import pytest
 from decimal import Decimal
+
+import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 
-from apps.salaries.models import EmployeeSalary, SalaryMonth, Payment
+from apps.salaries.models import EmployeeSalary, Payment, SalaryMonth
 
 User = get_user_model()
 
@@ -79,15 +80,15 @@ def other_user(db):
 
 
 class TestSalaryCreateView:
-    def test_salary_create_get(self, client_logged_in):
+    def test_salary_create_get(self, admin_client_logged_in):
         """Test GET returns the create drawer form."""
-        response = client_logged_in.get(reverse('salary_create'))
+        response = admin_client_logged_in.get(reverse('salary_create'))
         assert response.status_code == 200
         assert b'Add Employee Salary' in response.content
 
-    def test_salary_create_post_success(self, client_logged_in, other_user):
+    def test_salary_create_post_success(self, admin_client_logged_in, other_user):
         """Test POST creates a new salary configuration."""
-        response = client_logged_in.post(reverse('salary_create'), {
+        response = admin_client_logged_in.post(reverse('salary_create'), {
             'user': other_user.id,
             'base_salary': '4500.00',
             'currency': 'EUR',
@@ -98,9 +99,9 @@ class TestSalaryCreateView:
         assert salary.base_salary == Decimal('4500.00')
         assert salary.currency == 'EUR'
 
-    def test_salary_create_excludes_users_with_salary(self, client_logged_in, employee_salary, other_user):
+    def test_salary_create_excludes_users_with_salary(self, admin_client_logged_in, employee_salary, other_user):
         """Test form only shows users without salary configuration."""
-        response = client_logged_in.get(reverse('salary_create'))
+        response = admin_client_logged_in.get(reverse('salary_create'))
         assert response.status_code == 200
         # employee_salary.user should not be in the form options
         assert b'Other User' in response.content
@@ -108,15 +109,15 @@ class TestSalaryCreateView:
 
 
 class TestMonthCreateView:
-    def test_month_create_get(self, client_logged_in, employee_salary):
+    def test_month_create_get(self, admin_client_logged_in, employee_salary):
         """Test GET returns the month create drawer."""
-        response = client_logged_in.get(reverse('month_create', args=[employee_salary.id]))
+        response = admin_client_logged_in.get(reverse('month_create', args=[employee_salary.id]))
         assert response.status_code == 200
         assert b'Add Month' in response.content
 
-    def test_month_create_post_success(self, client_logged_in, employee_salary):
+    def test_month_create_post_success(self, admin_client_logged_in, employee_salary):
         """Test POST creates a new month entry."""
-        response = client_logged_in.post(reverse('month_create', args=[employee_salary.id]), {
+        response = admin_client_logged_in.post(reverse('month_create', args=[employee_salary.id]), {
             'year': 2025,
             'month': 2,
             'expected_amount': '5500.00',
@@ -128,13 +129,13 @@ class TestMonthCreateView:
             month=2
         ).exists()
 
-    def test_month_create_prefills_base_salary(self, client_logged_in, employee_salary):
+    def test_month_create_prefills_base_salary(self, admin_client_logged_in, employee_salary):
         """Test form pre-fills expected amount with base salary."""
-        response = client_logged_in.get(reverse('month_create', args=[employee_salary.id]))
+        response = admin_client_logged_in.get(reverse('month_create', args=[employee_salary.id]))
         assert response.status_code == 200
         assert b'5000' in response.content
 
-    def test_month_create_duplicate_validation(self, client_logged_in, employee_salary):
+    def test_month_create_duplicate_validation(self, admin_client_logged_in, employee_salary):
         """Test validation prevents duplicate year/month for same employee."""
         # Create existing month entry
         SalaryMonth.objects.create(
@@ -144,7 +145,7 @@ class TestMonthCreateView:
             expected_amount=Decimal('5000.00')
         )
         # Try to create duplicate
-        response = client_logged_in.post(reverse('month_create', args=[employee_salary.id]), {
+        response = admin_client_logged_in.post(reverse('month_create', args=[employee_salary.id]), {
             'year': 2025,
             'month': 3,
             'expected_amount': '5500.00',
@@ -160,7 +161,7 @@ class TestMonthCreateView:
 
 
 class TestPaymentCreateView:
-    def test_payment_create_get(self, client_logged_in, employee_salary):
+    def test_payment_create_get(self, admin_client_logged_in, employee_salary):
         """Test GET returns the payment create drawer."""
         SalaryMonth.objects.create(
             employee_salary=employee_salary,
@@ -168,11 +169,11 @@ class TestPaymentCreateView:
             month=1,
             expected_amount=Decimal('5000.00')
         )
-        response = client_logged_in.get(reverse('payment_create', args=[employee_salary.id]))
+        response = admin_client_logged_in.get(reverse('payment_create', args=[employee_salary.id]))
         assert response.status_code == 200
         assert b'Record Payment' in response.content
 
-    def test_payment_create_post_success(self, client_logged_in, employee_salary):
+    def test_payment_create_post_success(self, admin_client_logged_in, employee_salary):
         """Test POST creates a new payment."""
         month = SalaryMonth.objects.create(
             employee_salary=employee_salary,
@@ -180,7 +181,7 @@ class TestPaymentCreateView:
             month=1,
             expected_amount=Decimal('5000.00')
         )
-        response = client_logged_in.post(reverse('payment_create', args=[employee_salary.id]), {
+        response = admin_client_logged_in.post(reverse('payment_create', args=[employee_salary.id]), {
             'salary_month': month.id,
             'amount': '2500.00',
             'payment_date': '2025-01-15',
@@ -192,7 +193,7 @@ class TestPaymentCreateView:
         payment = Payment.objects.get(salary_month=month)
         assert payment.amount == Decimal('2500.00')
 
-    def test_payment_create_shows_existing_months(self, client_logged_in, employee_salary):
+    def test_payment_create_shows_existing_months(self, admin_client_logged_in, employee_salary):
         """Test form shows existing months for selection."""
         SalaryMonth.objects.create(
             employee_salary=employee_salary,
@@ -206,7 +207,7 @@ class TestPaymentCreateView:
             month=2,
             expected_amount=Decimal('5000.00')
         )
-        response = client_logged_in.get(reverse('payment_create', args=[employee_salary.id]))
+        response = admin_client_logged_in.get(reverse('payment_create', args=[employee_salary.id]))
         assert response.status_code == 200
         assert b'January 2025' in response.content
         assert b'February 2025' in response.content

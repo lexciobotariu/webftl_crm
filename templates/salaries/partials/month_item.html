@@ -12,7 +12,7 @@
                     {{ month.month_name }} {{ month.year }}
                 </div>
                 <div class="text-xs text-zinc-500">
-                    Expected: {% if salary.currency == 'EUR' %}€{% elif salary.currency == 'GBP' %}£{% else %}${% endif %}{{ month.expected_amount|floatformat:2 }}
+                    Expected: {{ salary.currency_symbol }}{{ month.expected_amount|floatformat:2 }}
                 </div>
             </div>
             {% if month.year == current_year and month.month == current_month %}
@@ -41,12 +41,12 @@
             <div class="text-sm text-right">
                 {% if month.total_paid > 0 %}
                     <div class="text-zinc-100">
-                        {% if salary.currency == 'EUR' %}€{% elif salary.currency == 'GBP' %}£{% else %}${% endif %}{{ month.total_paid|floatformat:2 }} paid
+                        {{ salary.currency_symbol }}{{ month.total_paid|floatformat:2 }} paid
                     </div>
                     {% if month.remaining > 0 %}
-                        <div class="text-xs text-yellow-400">{% if salary.currency == 'EUR' %}€{% elif salary.currency == 'GBP' %}£{% else %}${% endif %}{{ month.remaining|floatformat:2 }} remaining</div>
+                        <div class="text-xs text-yellow-400">{{ salary.currency_symbol }}{{ month.remaining|floatformat:2 }} remaining</div>
                     {% elif month.bonus_amount > 0 %}
-                        <div class="text-xs text-purple-400">{% if salary.currency == 'EUR' %}€{% elif salary.currency == 'GBP' %}£{% else %}${% endif %}{{ month.bonus_amount|floatformat:2 }} bonus</div>
+                        <div class="text-xs text-purple-400">{{ salary.currency_symbol }}{{ month.bonus_amount|floatformat:2 }} bonus</div>
                     {% endif %}
                 {% else %}
                     <span class="text-zinc-500">No payments yet</span>
@@ -54,7 +54,7 @@
             </div>
             <div class="flex items-center gap-2 text-zinc-500">
                 <span class="text-xs">{{ month.payment_count }} payment{{ month.payment_count|pluralize }}</span>
-                <button onclick="event.stopPropagation(); htmx.ajax('GET', '{% url 'month_edit' salary.id month.id %}', {target:'#slide-over', swap:'innerHTML'}).then(function() { document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons(); })"
+                <button onclick="event.stopPropagation(); htmx.ajax('GET', '{% url 'month_edit' salary.id month.id %}', {target:'#slide-over', swap:'innerHTML'}).then(function() { openSlideOver(); })"
                         class="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors"
                         title="Edit month">
                     <i data-lucide="pencil" class="w-3.5 h-3.5"></i>

@@ -1,7 +1,7 @@
-from django.contrib import admin
-from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib import admin
+from django.urls import include, path
 
 from apps.todos import views as todo_views
 from config import views as config_views

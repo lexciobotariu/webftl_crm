@@ -1,7 +1,8 @@
 import factory
-from apps.todos.models import Todo
+
 from apps.accounts.factories import UserFactory
 from apps.clients.factories import ClientFactory
+from apps.todos.models import Todo
 
 
 class TodoFactory(factory.django.DjangoModelFactory):

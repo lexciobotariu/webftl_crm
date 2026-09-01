@@ -16,13 +16,12 @@ from dataclasses import dataclass
 
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.db.models import Max
+from django.db.models import Max, Q
 from django.utils.text import get_valid_filename
 
 from apps.projects.models import can_access_project
 
 from .models import Attachment, Subtask, TaskActivity
-
 
 # File upload security settings
 ALLOWED_EXTENSIONS = {
@@ -84,23 +83,88 @@ def update_task_field(task, field, value, user):
     return task
 
 
-def move_task(task, new_status, user):
+@transaction.atomic
+def move_task(task, new_status, user, position=None):
     """
-    Move a task to a new status column.
+    Move a task to a new status column, optionally at a specific index.
+
+    The destination column is renumbered so ``order`` stays a dense 0..n-1
+    sequence; that is what makes both cross-column moves and intra-column
+    reordering survive a page reload.
 
     Args:
         task: Task instance to move
         new_status: Status instance to move to
         user: User performing the move (for permissions and activity log)
+        position: Zero-based index within the destination column. None appends.
 
     Raises:
         TaskPermissionError: If user lacks editor access
     """
     require_access(user, task.project, 'editor')
 
+    from apps.tasks.models import Task
+
+    # Lock the moved task and both column sets in one pk-ordered query. The
+    # subquery reads status_id at lock time so a concurrent move cannot leave
+    # us locking the wrong source column; a single query avoids deadlocks from
+    # taking the same rows in different orders across two SELECT … FOR UPDATEs.
+    _locked_tasks = list(
+        Task.objects.select_for_update()
+        .filter(
+            Q(pk=task.pk)
+            | Q(project_id=task.project_id, status_id=new_status.pk)
+            | Q(
+                project_id=task.project_id,
+                status_id__in=Task.objects.filter(pk=task.pk).values('status_id'),
+            )
+        )
+        .order_by('pk')
+    )
+    locked_task = next((t for t in _locked_tasks if t.pk == task.pk), None)
+    if locked_task is None:
+        # The task was deleted between the caller's fetch and our lock.
+        raise Task.DoesNotExist('Task was deleted during the move.')
+    old_status_id = locked_task.status_id
+
+    locked_task.status = new_status
+    locked_task._changed_by = user
+    locked_task.save()
+
+    destination = list(
+        Task.objects.filter(project_id=locked_task.project_id, status=new_status)
+        .exclude(pk=locked_task.pk)
+        .order_by('order', '-created_at')
+    )
+    if position is None:
+        index = len(destination)
+    else:
+        index = max(0, min(int(position), len(destination)))
+    destination.insert(index, locked_task)
+
+    columns = [destination]
+    if old_status_id != new_status.pk:
+        # Close the gap the task left behind, so `order` stays dense there too.
+        columns.append(
+            list(
+                Task.objects.filter(project_id=locked_task.project_id, status_id=old_status_id)
+                .order_by('order', '-created_at')
+            )
+        )
+
+    changed = []
+    for column in columns:
+        for new_order, sibling in enumerate(column):
+            if sibling.order != new_order:
+                sibling.order = new_order
+                changed.append(sibling)
+    if changed:
+        Task.objects.bulk_update(changed, ['order'])
+
+    # Sync the caller's instance so views can re-render it without a stale
+    # status/order (same contract as toggle_subtask).
     task.status = new_status
-    task._changed_by = user
-    task.save()
+    task.order = locked_task.order
 
 
 @transaction.atomic
@@ -130,9 +194,13 @@ def create_subtask(task, title, user):
     )
 
 
+@transaction.atomic
 def toggle_subtask(subtask, user):
     """
     Toggle a subtask's completion status.
+
+    The row is locked and re-read first, so two rapid clicks cannot both read
+    the same value and land on the same result.
 
     Args:
         subtask: Subtask instance to toggle
@@ -146,8 +214,11 @@ def toggle_subtask(subtask, user):
     """
     require_access(user, subtask.task.project, 'editor')
 
-    subtask.completed = not subtask.completed
-    subtask.save()
+    locked = Subtask.objects.select_for_update().get(pk=subtask.pk)
+    locked.completed = not locked.completed
+    locked.save(update_fields=['completed'])
+
+    subtask.completed = locked.completed
     return subtask
 
 

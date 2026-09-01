@@ -1,7 +1,9 @@
-from django.test import TestCase
 from django.contrib.auth import get_user_model
+from django.test import TestCase
 from django.utils import timezone
+
 from apps.clients.models import Client
+
 from ..models import Todo
 
 User = get_user_model()
@@ -10,9 +12,9 @@ User = get_user_model()
 class TodoModelTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
-            username='testuser',
             email='test@example.com',
-            password='testpass123'
+            password='testpass123',
+            name='Test User',
         )
         self.client = Client.objects.create(
             name='Test Client',
@@ -54,12 +56,12 @@ class TodoModelTest(TestCase):
         # Initially not completed
         self.assertFalse(todo.is_completed)
         self.assertIsNone(todo.completed_at)
-        
+
         # Mark as completed
         todo.is_completed = True
         todo.completed_at = timezone.now()
         todo.save()
-        
+
         self.assertTrue(todo.is_completed)
         self.assertIsNotNone(todo.completed_at)
 
@@ -69,19 +71,19 @@ class TodoModelTest(TestCase):
         todo1 = Todo.objects.create(owner=self.user, title='Completed Todo')
         todo1.is_completed = True
         todo1.save()
-        
+
         todo2 = Todo.objects.create(
             owner=self.user,
             title='Due Tomorrow',
             due_date=timezone.now().date() + timezone.timedelta(days=1)
         )
-        
+
         todo3 = Todo.objects.create(
             owner=self.user,
             title='Due Today',
             due_date=timezone.now().date()
         )
-        
+
         todos = list(Todo.objects.all())
         # Incomplete todos should come first, ordered by due date, then by created_at desc
         self.assertEqual(todos[0], todo3)  # Due today (incomplete)
@@ -91,19 +93,19 @@ class TodoModelTest(TestCase):
     def test_todo_private_to_owner(self):
         """Test todos are private to their owner."""
         other_user = User.objects.create_user(
-            username='otheruser',
             email='other@example.com',
-            password='otherpass123'
+            password='otherpass123',
+            name='Other User',
         )
-        
+
         todo = Todo.objects.create(
             owner=self.user,
             title='My Todo'
         )
-        
+
         # Should only find todos for the correct owner
         user_todos = Todo.objects.filter(owner=self.user)
         other_todos = Todo.objects.filter(owner=other_user)
-        
+
         self.assertIn(todo, user_todos)
         self.assertNotIn(todo, other_todos)

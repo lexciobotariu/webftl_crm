@@ -13,10 +13,15 @@ class EmployeeSalary(models.Model):
         ('EUR', 'EUR (€)'),
         ('GBP', 'GBP (£)'),
     ]
+    CURRENCY_SYMBOLS = {
+        'USD': '$',
+        'EUR': '€',
+        'GBP': '£',
+    }
 
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name='salary_config'
     )
     base_salary = models.DecimalField(max_digits=10, decimal_places=2)
@@ -30,6 +35,10 @@ class EmployeeSalary(models.Model):
 
     def __str__(self):
         return f'{self.user.name} - {self.base_salary} {self.currency}'
+
+    @property
+    def currency_symbol(self):
+        return self.CURRENCY_SYMBOLS.get(self.currency, '$')
 
 
 class SalaryMonth(models.Model):
@@ -65,6 +74,9 @@ class SalaryMonth(models.Model):
     @property
     def total_paid(self):
         """Sum of all payments for this month."""
+        annotated = getattr(self, 'total_paid_sum', None)
+        if annotated is not None:
+            return annotated or Decimal('0')
         result = self.payments.aggregate(total=Sum('amount'))['total']
         return result or Decimal('0')
 

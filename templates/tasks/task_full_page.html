@@ -3,7 +3,7 @@
 {% block title %}{{ task.title }} - {{ task.project.name }}{% endblock %}
 
 {% block full_content %}
-<div class="flex flex-col h-full bg-panel">
+<div class="flex flex-col h-full bg-panel" id="task-{{ task.pk }}">
     <!-- Breadcrumb header -->
     <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle">
         <div class="flex items-center justify-between">
@@ -21,10 +21,12 @@
                         :title="copied ? 'Copied!' : 'Copy link'"
                         :class="copied ? 'text-green-400 hover:text-green-300' : 'text-zinc-500 hover:text-zinc-300'"
                         class="p-1.5 hover:bg-elevated rounded-card transition-colors">
-                    <i :data-lucide="copied ? 'check' : 'link'" class="w-4 h-4"></i>
+                    <i data-lucide="link" :data-lucide="copied ? 'check' : 'link'" class="w-4 h-4"></i>
                 </button>
                 <button hx-post="{% url 'task_delete' task.pk %}"
                         hx-confirm="Delete this task?"
+                        hx-target="#task-{{ task.pk }}"
+                        hx-swap="delete"
                         class="text-zinc-500 hover:text-red-400 p-1.5 hover:bg-elevated rounded-card" title="Delete">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>

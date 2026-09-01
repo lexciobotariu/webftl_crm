@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-08-31
+
+### Features
+- Kanban cards can be reordered within a column, not just moved between them — the drop position is persisted and survives a reload
+- Statuses can be marked "counts as done" from project settings; project stats derive "Completed" and "Active" from that flag instead of matching status names
+- Empty states, permission badges, and the drawer open/close handlers are now shared components instead of copy-pasted markup
+- Team members can be added from inside the app: admins get an "Add Member" drawer that sets name, email, role, preset and an initial password, so adding people no longer requires Django admin (and therefore `is_staff`) access
+
+### Fixes
+- Deleting a project or a client no longer 500s when its tasks reference a status (`Task.status` uses `RESTRICT` rather than `PROTECT`)
+- Validation errors in the task-create and client create/edit drawers are rendered instead of being swallowed by HTMX; typed values are kept
+- Creating a task from the project Tasks tab or the dashboard now refreshes those lists
+- Editing a client from the detail page refreshes the profile panel and the notes count
+- Note creation through the client/project drawers works again — the form now assigns the parent before model validation runs
+- Last-admin guards actually lock now — `select_for_update().count()` emitted no `FOR UPDATE`, so two concurrent demotions could both succeed
+- `preset_create`, `status_create`, `task_update_assignee`, `task_update_due_date` and the note drawers return errors instead of 500s on duplicate names, non-numeric ids, impossible dates, and missing parents
+- Task assignee dropdowns on task detail, the full-page view and the assignee update endpoint are scoped to project members
+- `notes_visible_to_user` now applies the project-membership check, matching `can_view_note`
+- Notes list and detail render "deleted user" where the modifying user has been removed
+
+### Changed
+- Todo, subtask, status-visibility and status-done toggles run inside a transaction with the row locked
+- List refreshes re-fetch the current URL, so filters and pagination survive; the count pill and pagination moved inside the refreshed region
+- HTMX error toasts cover network and target errors, and show a generic message for 5xx instead of the raw response body
+- All CDN scripts are pinned to exact versions with Subresource Integrity; `@alpinejs/collapse` added (`x-collapse` was previously a no-op)
+- Signup is closed; the Team page's "Add Member" button opens the in-app create-member drawer rather than the allauth signup page or the Django admin
+- The Team list count pill and pagination moved inside the refreshed region, so creating a member updates both without a reload
+
+### Infrastructure
+- The unique-constraint migrations de-duplicate pre-existing data before adding the constraint, instead of failing mid-migrate
+- `tasks.0005_phase_c` copies any legacy `Comment` rows into `TaskActivity` before dropping the table, so hand-entered admin data on existing installs is not lost
+- README: the testing section installs `requirements-dev.txt`, which the install steps do not cover
+- CI: valid Fernet key, `SECURE_SSL_REDIRECT=False`, `manage.py check`, and a `collectstatic` step so templates can render under `DEBUG=False`
+- Docker: `collectstatic` runs with build-only secrets so the static manifest is generated, the image runs as a non-root user, gunicorn gets explicit workers/timeout, and `CHANGELOG.md` is no longer excluded (the in-app changelog page read it at request time)
+- Settings: optional `SECURE_PROXY_SSL_HEADER`, and an explicit `EMAIL_BACKEND` is required outside `DEBUG` rather than silently discarding mail
+- `.env.example` documents every supported variable
+- Test suite is green on a fresh database and on `--reuse-db`; `ruff check .` is clean
+
 ## [0.6.0] - 2026-03-25
 
 ### Features

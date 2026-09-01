@@ -1,0 +1,129 @@
+<div class="flex flex-col h-full">
+    <!-- Drawer header -->
+    <div class="flex-shrink-0 px-4 py-3 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <i data-lucide="user-plus" class="w-4 h-4 text-zinc-500"></i>
+                <h2 class="text-sm font-medium text-zinc-100">Add Member</h2>
+            </div>
+            <button onclick="closeSlideOver()"
+                    class="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Form. Errors re-render the drawer in place; success returns an empty body
+         plus HX-Trigger, so the panel closes and the team list refreshes. -->
+    <form hx-post="{% url 'user_create' %}"
+          hx-target="#slide-over"
+          hx-swap="innerHTML"
+          class="flex-1 overflow-y-auto p-4">
+        {% csrf_token %}
+
+        <!-- Name -->
+        <div class="mb-4">
+            <label for="new-name" class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Name</label>
+            <input type="text" name="name" id="new-name"
+                   value="{{ form_data.name|default:'' }}"
+                   class="w-full bg-elevated border {% if errors.name %}border-red-500{% else %}border-border-subtle{% endif %} rounded-card px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+                   placeholder="e.g. Ada Lovelace"
+                   required>
+            {% if errors.name %}
+            <p class="mt-1 text-xs text-red-400">{{ errors.name }}</p>
+            {% endif %}
+        </div>
+
+        <!-- Email -->
+        <div class="mb-4">
+            <label for="new-email" class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Email</label>
+            <input type="email" name="email" id="new-email"
+                   value="{{ form_data.email|default:'' }}"
+                   class="w-full bg-elevated border {% if errors.email %}border-red-500{% else %}border-border-subtle{% endif %} rounded-card px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+                   placeholder="name@example.com"
+                   required>
+            {% if errors.email %}
+            <p class="mt-1 text-xs text-red-400">{{ errors.email }}</p>
+            {% endif %}
+        </div>
+
+        <!-- Role -->
+        <div class="mb-4">
+            <label for="new-role" class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Role</label>
+            <select name="role" id="new-role"
+                    class="w-full bg-elevated border {% if errors.role %}border-red-500{% else %}border-border-subtle{% endif %} rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                <option value="member" {% if form_data.role != 'admin' %}selected{% endif %}>Member</option>
+                <option value="admin" {% if form_data.role == 'admin' %}selected{% endif %}>Admin</option>
+            </select>
+            {% if errors.role %}
+            <p class="mt-1 text-xs text-red-400">{{ errors.role }}</p>
+            {% endif %}
+        </div>
+
+        <!-- Permission Preset -->
+        <div class="mb-4">
+            <label for="new-preset" class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Permission Preset</label>
+            <select name="preset_id" id="new-preset"
+                    class="w-full bg-elevated border {% if errors.preset_id %}border-red-500{% else %}border-border-subtle{% endif %} rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                <option value="" {% if not form_data.preset_id %}selected{% endif %}>No preset</option>
+                {% for preset in presets %}
+                <option value="{{ preset.pk }}" {% if form_data.preset_id == preset.pk|stringformat:"s" %}selected{% endif %}>
+                    {{ preset.name }}{% if preset.description %} — {{ preset.description }}{% endif %}
+                </option>
+                {% endfor %}
+            </select>
+            {% if errors.preset_id %}
+            <p class="mt-1 text-xs text-red-400">{{ errors.preset_id }}</p>
+            {% else %}
+            <p class="mt-1 text-xs text-zinc-500">Admins bypass presets and always see everything.</p>
+            {% endif %}
+        </div>
+
+        <!-- Password -->
+        <div class="mb-4">
+            <label for="new-password1" class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Password</label>
+            <input type="password" name="password1" id="new-password1"
+                   autocomplete="new-password"
+                   class="w-full bg-elevated border {% if errors.password1 %}border-red-500{% else %}border-border-subtle{% endif %} rounded-card px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+                   required>
+            {% if errors.password1 %}
+            <p class="mt-1 text-xs text-red-400">{{ errors.password1 }}</p>
+            {% else %}
+            <p class="mt-1 text-xs text-zinc-500">Share this with the new member — they should change it after their first login.</p>
+            {% endif %}
+        </div>
+
+        <!-- Confirm password -->
+        <div class="mb-4">
+            <label for="new-password2" class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Confirm Password</label>
+            <input type="password" name="password2" id="new-password2"
+                   autocomplete="new-password"
+                   class="w-full bg-elevated border {% if errors.password2 %}border-red-500{% else %}border-border-subtle{% endif %} rounded-card px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+                   required>
+            {% if errors.password2 %}
+            <p class="mt-1 text-xs text-red-400">{{ errors.password2 }}</p>
+            {% endif %}
+        </div>
+
+        <div class="flex gap-3 mt-6 pt-4 border-t border-border-subtle">
+            <button type="submit"
+                    class="bg-accent text-white px-4 py-2 rounded-card text-sm font-medium hover:bg-accent-hover transition-colors">
+                Create member
+            </button>
+            <button type="button"
+                    onclick="closeSlideOver()"
+                    class="bg-elevated border border-border-subtle px-4 py-2 rounded-card text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
+                Cancel
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Self-opening, like clients/partials/create_drawer.html — the empty-state
+// "Add your first team member" button has no `hx-on::after-request` opener.
+openSlideOver();
+if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+}
+</script>

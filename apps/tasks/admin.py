@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Task, Subtask, Comment, Attachment, Label
+from .models import Label, Subtask, Task
 
 
 class SubtaskInline(admin.TabularInline):
@@ -8,18 +8,12 @@ class SubtaskInline(admin.TabularInline):
     extra = 0
 
 
-class CommentInline(admin.TabularInline):
-    model = Comment
-    extra = 0
-    readonly_fields = ['author', 'created_at']
-
-
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
     list_display = ('title', 'project', 'status', 'assignee', 'priority', 'due_date')
     list_filter = ('project', 'status', 'priority', 'assignee')
     search_fields = ('title', 'description')
-    inlines = [SubtaskInline, CommentInline]
+    inlines = [SubtaskInline]
 
 
 @admin.register(Label)

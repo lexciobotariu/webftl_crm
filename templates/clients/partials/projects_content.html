@@ -9,7 +9,7 @@
             <button hx-get="{% url 'client_create_project' client.pk %}"
                     hx-target="#slide-over"
                     hx-swap="innerHTML"
-                    hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+                    hx-on::after-request="openSlideOver(event)"
                     class="inline-flex items-center gap-1.5 bg-accent text-white px-3 py-1.5 rounded-card text-xs font-medium hover:bg-accent-hover transition-colors">
                 <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                 Add Project
@@ -64,7 +64,7 @@
         <button hx-get="{% url 'client_create_project' client.pk %}"
                 hx-target="#slide-over"
                 hx-swap="innerHTML"
-                hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+                hx-on::after-request="openSlideOver(event)"
                 class="text-accent hover:text-accent-hover text-sm">
             Create the first project
         </button>

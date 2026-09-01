@@ -1,7 +1,8 @@
 from django import forms
 
-from .models import Project, Status
 from apps.tasks.models import Label
+
+from .models import Project, Status
 
 INPUT_CLASSES = 'w-full bg-panel border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none'
 
@@ -21,9 +22,11 @@ class ProjectForm(forms.ModelForm):
 class StatusForm(forms.ModelForm):
     class Meta:
         model = Status
-        fields = ['name']
+        fields = ['name', 'is_done']
+        labels = {'is_done': 'Counts as done'}
         widgets = {
             'name': forms.TextInput(attrs={'class': INPUT_CLASSES}),
+            'is_done': forms.CheckboxInput(attrs={'class': 'accent-accent w-4 h-4'}),
         }
 
 

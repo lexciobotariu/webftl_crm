@@ -52,13 +52,8 @@
             </tbody>
         </table>
         {% else %}
-        <div class="flex flex-col items-center justify-center py-16 text-zinc-500">
-            <i data-lucide="folder-kanban" class="w-12 h-12 mb-4 opacity-30"></i>
-            <p class="mb-2">No projects yet</p>
-            <a href="{% url 'project_create' %}" class="text-accent hover:text-accent-hover text-sm">
-                Create your first project
-            </a>
-        </div>
+        {% url 'project_create' as project_create_url %}
+        {% include "components/empty_state.html" with icon="folder-kanban" message="No projects yet" action_url=project_create_url action_label="Create your first project" %}
         {% endif %}
     </div>
 

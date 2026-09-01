@@ -4,9 +4,9 @@ These tests check templates and responses for consistent patterns.
 """
 import pytest
 from django.urls import reverse
-from apps.accounts.factories import UserFactory, AdminUserFactory
+
+from apps.accounts.factories import AdminUserFactory, UserFactory
 from apps.accounts.permissions import PermissionPreset
-from apps.clients.factories import ClientFactory
 from apps.projects.factories import ProjectFactory, ProjectMemberFactory
 
 

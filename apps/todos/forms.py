@@ -1,6 +1,7 @@
 from django import forms
 
 from apps.clients.models import Client
+
 from .models import Todo
 
 INPUT_CLASSES = 'w-full bg-panel border border-border-subtle rounded-card px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none transition-colors'
@@ -17,8 +18,11 @@ class TodoForm(forms.ModelForm):
             'client': forms.Select(attrs={'class': INPUT_CLASSES}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['client'].queryset = Client.objects.all()
+        if user and not user.is_admin and not user.has_app_permission('access_clients'):
+            self.fields['client'].queryset = Client.objects.none()
+        else:
+            self.fields['client'].queryset = Client.objects.all()
         self.fields['client'].required = False
         self.fields['client'].empty_label = 'Personal (no client)'

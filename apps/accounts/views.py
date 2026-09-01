@@ -1,21 +1,43 @@
+import json
+
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.db import models
+from django.db import IntegrityError, models, transaction
 from django.db.models import Q
 from django.http import HttpResponse, HttpResponseForbidden
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
 
-from .decorators import require_permission
+from .decorators import require_admin, require_permission
 from .models import User
-from .permissions import PermissionPreset, PERMISSION_KEYS
+from .permissions import PERMISSION_KEYS, PermissionPreset
 
 TEAM_MEMBERS_PER_PAGE = 20
 
 
+def _lock_active_admins():
+    """Lock every active admin row and return them, for last-admin guards.
+
+    ``select_for_update().count()`` does not lock anything — Django drops the
+    FOR UPDATE clause on aggregate queries, so two concurrent demotions could
+    both read a count of 2 and both succeed. Materialising the rows is what
+    actually takes the locks.
+
+    Always call this *before* locking the target user so that concurrent
+    transactions take the locks in the same order and cannot deadlock.
+    """
+    return list(
+        User.objects.filter(role='admin', is_active=True)
+        .order_by('pk')
+        .select_for_update()
+    )
+
+
 @login_required
+@require_permission('access_dashboard')
 def dashboard(request):
-    # Stats will work once models exist, for now use safe defaults
     context = {
         'client_count': 0,
         'project_count': 0,
@@ -24,24 +46,26 @@ def dashboard(request):
         'recent_todos': [],
         'todo_count': 0,
     }
-    # Try to get real counts if models exist
-    try:
+
+    if request.user.has_app_permission('access_clients'):
         from apps.clients.models import Client
         context['client_count'] = Client.objects.count()
-    except (ImportError, Exception):
-        pass
-    try:
+
+    if request.user.has_app_permission('access_projects'):
         from apps.projects.models import Project
-        context['project_count'] = Project.objects.count()
-    except (ImportError, Exception):
-        pass
-    try:
+        if request.user.is_admin:
+            context['project_count'] = Project.objects.count()
+        else:
+            context['project_count'] = Project.objects.filter(members__user=request.user).count()
+
+    if request.user.has_app_permission('access_tasks'):
         from apps.tasks.models import Task
-        context['my_task_count'] = Task.objects.filter(assignee=request.user).exclude(status__name='Done').count()
-        context['recent_tasks'] = Task.objects.filter(assignee=request.user).select_related('project', 'status').order_by('-updated_at')[:5]
-    except (ImportError, Exception):
-        pass
-    try:
+        context['my_task_count'] = Task.objects.filter(assignee=request.user).active().count()
+        context['recent_tasks'] = Task.objects.filter(assignee=request.user).select_related(
+            'project', 'status'
+        ).order_by('-updated_at')[:5]
+
+    if request.user.has_app_permission('access_todos'):
         from apps.todos.models import Todo
         context['recent_todos'] = Todo.objects.filter(
             owner=request.user, is_completed=False
@@ -49,8 +73,7 @@ def dashboard(request):
         context['todo_count'] = Todo.objects.filter(
             owner=request.user, is_completed=False
         ).count()
-    except (ImportError, Exception):
-        pass
+
     return render(request, 'accounts/dashboard.html', context)
 
 
@@ -74,6 +97,99 @@ def team_list(request):
 
 @login_required
 @require_permission('access_team')
+@require_admin
+def user_create(request):
+    """Create a team member from inside the app, with an admin-set password.
+
+    Signup is closed and application admins are not necessarily Django staff,
+    so the Django admin add-user form is not reachable for them.
+    """
+    presets = PermissionPreset.objects.all()
+
+    if request.method != 'POST':
+        return render(request, 'accounts/partials/user_create_drawer.html', {
+            'presets': presets,
+        })
+
+    name = request.POST.get('name', '').strip()
+    email = request.POST.get('email', '').strip()
+    role = request.POST.get('role', '').strip()
+    preset_id = request.POST.get('preset_id', '').strip()
+    password1 = request.POST.get('password1', '')
+    password2 = request.POST.get('password2', '')
+
+    if role not in dict(User.ROLE_CHOICES):
+        role = 'member'
+
+    errors = {}
+
+    if not name:
+        errors['name'] = 'Name is required.'
+    if not email:
+        errors['email'] = 'Email is required.'
+    elif User.objects.filter(email=email).exists():
+        errors['email'] = 'This email is already in use.'
+
+    preset = None
+    if preset_id:
+        preset = (
+            PermissionPreset.objects.filter(pk=preset_id).first()
+            if preset_id.isdigit()
+            else None
+        )
+        if preset is None:
+            errors['preset_id'] = 'Select a valid permission preset.'
+
+    if not password1:
+        errors['password1'] = 'Password is required.'
+    elif password1 != password2:
+        errors['password2'] = 'Passwords do not match.'
+    else:
+        try:
+            validate_password(password1, User(email=email, name=name, role=role))
+        except ValidationError as exc:
+            errors['password1'] = ' '.join(exc.messages)
+
+    def render_drawer(drawer_errors):
+        """Re-render the drawer with the typed values; passwords are not echoed."""
+        return render(request, 'accounts/partials/user_create_drawer.html', {
+            'presets': presets,
+            'errors': drawer_errors,
+            'form_data': {
+                'name': name,
+                'email': email,
+                'role': role,
+                'preset_id': preset_id,
+            },
+        })
+
+    if errors:
+        return render_drawer(errors)
+
+    try:
+        with transaction.atomic():
+            User.objects.create_user(
+                email=email,
+                password=password1,
+                name=name,
+                role=role,
+                permission_preset=preset,
+                is_active=True,
+            )
+    except IntegrityError:
+        # Lost the race between the uniqueness pre-check and the insert.
+        return render_drawer({'email': 'This email is already in use.'})
+
+    response = HttpResponse('')
+    response['HX-Trigger'] = json.dumps({
+        'closeSlideOver': True,
+        'refreshTeamList': True,
+    })
+    return response
+
+
+@login_required
+@require_permission('access_team')
 def user_detail_drawer(request, pk):
     if not request.user.is_admin:
         return HttpResponseForbidden("Admin access required")
@@ -88,12 +204,14 @@ def user_detail_drawer(request, pk):
 @login_required
 @require_permission('access_team')
 @require_POST
+@transaction.atomic
 def user_update(request, pk):
     """Update a user's name, email, role, and preset."""
     if not request.user.is_admin:
         return HttpResponseForbidden("Admin access required")
 
-    user_obj = get_object_or_404(User, pk=pk)
+    active_admins = _lock_active_admins()
+    user_obj = get_object_or_404(User.objects.select_for_update(), pk=pk)
     presets = PermissionPreset.objects.all()
 
     name = request.POST.get('name', '').strip()
@@ -114,10 +232,8 @@ def user_update(request, pk):
         role = user_obj.role
 
     # Last-admin guard: prevent demoting if last active admin
-    if user_obj.role == 'admin' and role == 'member':
-        active_admin_count = User.objects.filter(role='admin', is_active=True).count()
-        if active_admin_count <= 1:
-            errors['role'] = 'Cannot demote the last active admin.'
+    if user_obj.role == 'admin' and role == 'member' and len(active_admins) <= 1:
+        errors['role'] = 'Cannot demote the last active admin.'
 
     if errors:
         return render(request, 'accounts/partials/user_detail_drawer.html', {
@@ -137,7 +253,16 @@ def user_update(request, pk):
     else:
         user_obj.permission_preset = None
 
-    user_obj.save()
+    try:
+        with transaction.atomic():
+            user_obj.save()
+    except IntegrityError:
+        return render(request, 'accounts/partials/user_detail_drawer.html', {
+            'user_obj': user_obj,
+            'presets': presets,
+            'errors': {'email': 'This email is already in use.'},
+            'form_data': {'name': name, 'email': email, 'role': role, 'preset_id': preset_id},
+        })
 
     response = render(request, 'accounts/partials/user_row.html', {'user': user_obj})
     response['HX-Retarget'] = f'#user-{user_obj.pk}'
@@ -183,14 +308,24 @@ def preset_create(request):
                 'form_description': description,
             })
 
-        preset = PermissionPreset.objects.create(
-            name=name,
-            description=description,
-            **{key: key in request.POST for key in PERMISSION_KEYS},
-        )
-        preset.user_count = 0  # For template rendering
-        response = render(request, 'accounts/partials/preset_item.html', {'preset': preset})
-        response['HX-Trigger'] = 'closeSlideOver'
+        try:
+            PermissionPreset.objects.create(
+                name=name,
+                description=description,
+                **{key: key in request.POST for key in PERMISSION_KEYS},
+            )
+        except IntegrityError:
+            return render(request, 'accounts/partials/preset_form_drawer.html', {
+                'error': f'A preset named "{name}" already exists.',
+                'form_name': name,
+                'form_description': description,
+            })
+
+        response = HttpResponse('')
+        response['HX-Trigger'] = json.dumps({
+            'closeSlideOver': True,
+            'refreshPresetList': True,
+        })
         return response
 
     return render(request, 'accounts/partials/preset_form_drawer.html', {})
@@ -207,16 +342,29 @@ def preset_edit(request, pk):
 
     if request.method == 'POST':
         if not preset.is_system:
-            preset.name = request.POST.get('name', '').strip() or preset.name
+            new_name = request.POST.get('name', '').strip() or preset.name
+            if new_name != preset.name and PermissionPreset.objects.filter(name=new_name).exists():
+                return render(request, 'accounts/partials/preset_form_drawer.html', {
+                    'preset': preset,
+                    'error': f'A preset named "{new_name}" already exists.',
+                })
+            preset.name = new_name
         preset.description = request.POST.get('description', '').strip()
         for key in PERMISSION_KEYS:
             setattr(preset, key, key in request.POST)
-        preset.save()
+        try:
+            preset.save()
+        except IntegrityError:
+            return render(request, 'accounts/partials/preset_form_drawer.html', {
+                'preset': preset,
+                'error': 'A preset with this name already exists.',
+            })
 
-        from django.db.models import Count
-        preset = PermissionPreset.objects.annotate(user_count=Count('users')).get(pk=pk)
-        response = render(request, 'accounts/partials/preset_item.html', {'preset': preset})
-        response['HX-Trigger'] = 'closeSlideOver'
+        response = HttpResponse('')
+        response['HX-Trigger'] = json.dumps({
+            'closeSlideOver': True,
+            'refreshPresetList': True,
+        })
         return response
 
     return render(request, 'accounts/partials/preset_form_drawer.html', {'preset': preset})
@@ -239,30 +387,32 @@ def preset_delete(request, pk):
         return HttpResponse('Cannot delete preset with assigned users', status=400)
 
     preset.delete()
-    return HttpResponse('')
+    response = HttpResponse('')
+    response['HX-Trigger'] = json.dumps({'refreshPresetList': True})
+    return response
 
 
 @login_required
 @require_permission('access_team')
 @require_POST
+@transaction.atomic
 def user_deactivate(request, pk):
     """Toggle a user's active status."""
     if not request.user.is_admin:
         return HttpResponseForbidden("Admin access required")
 
-    user_obj = get_object_or_404(User, pk=pk)
+    active_admins = _lock_active_admins()
+    user_obj = get_object_or_404(User.objects.select_for_update(), pk=pk)
 
     if user_obj == request.user:
         return HttpResponse('Cannot deactivate yourself.', status=400)
 
     # If deactivating (not reactivating), check last-admin guard
-    if user_obj.is_active and user_obj.role == 'admin':
-        active_admin_count = User.objects.filter(role='admin', is_active=True).count()
-        if active_admin_count <= 1:
-            return HttpResponse('Cannot deactivate the last active admin.', status=400)
+    if user_obj.is_active and user_obj.role == 'admin' and len(active_admins) <= 1:
+        return HttpResponse('Cannot deactivate the last active admin.', status=400)
 
     user_obj.is_active = not user_obj.is_active
-    user_obj.save()
+    user_obj.save(update_fields=['is_active'])
 
     response = render(request, 'accounts/partials/user_row.html', {'user': user_obj})
     response['HX-Trigger'] = 'closeSlideOver'
@@ -282,16 +432,16 @@ def user_delete_confirm(request, pk):
     if user_obj == request.user:
         return HttpResponse('Cannot delete yourself.', status=400)
 
-    from apps.todos.models import Todo
     from apps.notes.models import Note
-    from apps.tasks.models import Task, Comment, Attachment
     from apps.projects.models import ProjectMember
-    from apps.salaries.models import EmployeeSalary, SalaryMonth, Payment
+    from apps.salaries.models import EmployeeSalary, Payment, SalaryMonth
+    from apps.tasks.models import Attachment, Task, TaskActivity
+    from apps.todos.models import Todo
 
     counts = {
         'todos': Todo.objects.filter(owner=user_obj).count(),
         'notes': Note.objects.filter(Q(created_by=user_obj) | Q(modified_by=user_obj)).count(),
-        'comments': Comment.objects.filter(author=user_obj).count(),
+        'comments': TaskActivity.objects.filter(user=user_obj, activity_type='comment').count(),
         'attachments': Attachment.objects.filter(uploaded_by=user_obj).count(),
         'project_memberships': ProjectMember.objects.filter(user=user_obj).count(),
         'tasks_unassigned': Task.objects.filter(assignee=user_obj).count(),
@@ -323,20 +473,24 @@ def user_delete_confirm(request, pk):
 @login_required
 @require_permission('access_team')
 @require_POST
+@transaction.atomic
 def user_delete(request, pk):
     """Permanently delete a user and all associated data."""
     if not request.user.is_admin:
         return HttpResponseForbidden("Admin access required")
 
-    user_obj = get_object_or_404(User, pk=pk)
+    active_admins = _lock_active_admins()
+    user_obj = get_object_or_404(User.objects.select_for_update(), pk=pk)
 
     if user_obj == request.user:
         return HttpResponse('Cannot delete yourself.', status=400)
 
-    if user_obj.role == 'admin' and user_obj.is_active:
-        active_admin_count = User.objects.filter(role='admin', is_active=True).count()
-        if active_admin_count <= 1:
-            return HttpResponse('Cannot delete the last active admin.', status=400)
+    if user_obj.role == 'admin' and user_obj.is_active and len(active_admins) <= 1:
+        return HttpResponse('Cannot delete the last active admin.', status=400)
+
+    from apps.salaries.models import EmployeeSalary
+    if EmployeeSalary.objects.filter(user=user_obj).exists():
+        return HttpResponse('Cannot delete user with salary records.', status=400)
 
     user_obj.delete()
     return HttpResponse('')

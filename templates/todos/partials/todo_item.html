@@ -19,7 +19,7 @@
         <button hx-get="{% url 'todo_detail' todo.id %}"
                 hx-target="#slide-over"
                 hx-swap="innerHTML"
-                hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+                hx-on::after-request="openSlideOver(event)"
                 class="text-left font-medium text-sm hover:text-accent transition-colors {% if todo.is_completed %}line-through text-zinc-500{% else %}text-zinc-100{% endif %}">
             {{ todo.title }}
         </button>
@@ -67,7 +67,7 @@
             <button hx-get="{% url 'todo_detail' todo.id %}"
                     hx-target="#slide-over"
                     hx-swap="innerHTML"
-                    hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+                    hx-on::after-request="openSlideOver(event)"
                     class="p-1.5 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded transition-colors"
                     title="Edit">
                 <i data-lucide="edit-2" class="w-4 h-4"></i>

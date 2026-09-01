@@ -1,7 +1,8 @@
 import factory
-from apps.tasks.models import Task, Subtask, Label, Comment, TaskActivity
-from apps.projects.factories import ProjectFactory, StatusFactory
+
 from apps.accounts.factories import UserFactory
+from apps.projects.factories import ProjectFactory
+from apps.tasks.models import Label, Subtask, Task, TaskActivity
 
 
 class LabelFactory(factory.django.DjangoModelFactory):
@@ -33,15 +34,6 @@ class SubtaskFactory(factory.django.DjangoModelFactory):
     title = factory.Faker('sentence', nb_words=3)
     completed = False
     order = factory.Sequence(lambda n: n)
-
-
-class CommentFactory(factory.django.DjangoModelFactory):
-    class Meta:
-        model = Comment
-
-    task = factory.SubFactory(TaskFactory)
-    author = factory.SubFactory(UserFactory)
-    content = factory.Faker('paragraph')
 
 
 class TaskActivityFactory(factory.django.DjangoModelFactory):

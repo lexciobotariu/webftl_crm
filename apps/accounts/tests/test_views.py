@@ -1,6 +1,14 @@
+import json
+
 import pytest
 from django.urls import reverse
-from apps.accounts.factories import UserFactory, AdminUserFactory
+
+from apps.accounts.factories import (
+    AdminUserFactory,
+    UserFactory,
+    admin_preset,
+    developer_preset,
+)
 from apps.accounts.models import User
 from apps.accounts.permissions import PermissionPreset
 from apps.todos.factories import TodoFactory
@@ -30,9 +38,13 @@ class TestDashboard:
 
 @pytest.mark.django_db
 class TestDashboardTodos:
+    def _user_with_todo_access(self):
+        preset = PermissionPreset.objects.get(name='Developer')
+        return UserFactory(permission_preset=preset)
+
     def test_dashboard_includes_todos_in_context(self, client):
         """Dashboard should pass recent_todos to template."""
-        user = UserFactory()
+        user = self._user_with_todo_access()
         TodoFactory(owner=user, title='My Todo')
         client.force_login(user)
         response = client.get(reverse('dashboard'))
@@ -41,7 +53,7 @@ class TestDashboardTodos:
 
     def test_dashboard_shows_only_incomplete_todos(self, client):
         """Dashboard should only show incomplete todos."""
-        user = UserFactory()
+        user = self._user_with_todo_access()
         TodoFactory(owner=user, title='Pending Todo', is_completed=False)
         TodoFactory(owner=user, title='Done Todo', is_completed=True)
         client.force_login(user)
@@ -51,7 +63,7 @@ class TestDashboardTodos:
 
     def test_dashboard_shows_only_own_todos(self, client):
         """Dashboard should only show todos owned by logged-in user."""
-        user = UserFactory()
+        user = self._user_with_todo_access()
         other = UserFactory()
         TodoFactory(owner=user, title='My Todo')
         TodoFactory(owner=other, title='Other Todo')
@@ -61,7 +73,7 @@ class TestDashboardTodos:
 
     def test_dashboard_limits_todos_to_five(self, client):
         """Dashboard should show at most 5 todos."""
-        user = UserFactory()
+        user = self._user_with_todo_access()
         for i in range(7):
             TodoFactory(owner=user, title=f'Todo {i}')
         client.force_login(user)
@@ -70,8 +82,8 @@ class TestDashboardTodos:
 
     def test_dashboard_includes_todo_count(self, client):
         """Dashboard should pass total incomplete todo count."""
-        user = UserFactory()
-        for i in range(7):
+        user = self._user_with_todo_access()
+        for _ in range(7):
             TodoFactory(owner=user)
         TodoFactory(owner=user, is_completed=True)
         client.force_login(user)
@@ -80,7 +92,7 @@ class TestDashboardTodos:
 
     def test_dashboard_renders_todo_section(self, client):
         """Dashboard should render the My To-Dos section with todo titles."""
-        user = UserFactory()
+        user = self._user_with_todo_access()
         TodoFactory(owner=user, title='Buy groceries')
         client.force_login(user)
         response = client.get(reverse('dashboard'))
@@ -110,6 +122,174 @@ class TestTeamList:
         client.force_login(admin)
         response = client.get(reverse('team_list'))
         assert response.context['page_obj'].has_next()
+
+
+@pytest.mark.django_db
+@pytest.mark.security
+class TestUserCreate:
+    def test_drawer_requires_admin(self, client):
+        """A member with access_team still cannot reach the create drawer."""
+        member = UserFactory(role='member', permission_preset=admin_preset())
+        client.force_login(member)
+        response = client.get(reverse('user_create'))
+        assert response.status_code == 403
+
+    def test_non_staff_admin_gets_drawer(self, client):
+        admin = AdminUserFactory(is_staff=False)
+        client.force_login(admin)
+        response = client.get(reverse('user_create'))
+        assert response.status_code == 200
+        assert b'Add Member' in response.content
+
+    def test_creates_user_and_triggers_refresh(self, client):
+        admin = AdminUserFactory(is_staff=False)
+        client.force_login(admin)
+        response = client.post(reverse('user_create'), {
+            'name': 'Ada Lovelace',
+            'email': 'ada@example.com',
+            'role': 'member',
+            'preset_id': '',
+            'password1': 'analytical-engine-1843',
+            'password2': 'analytical-engine-1843',
+        })
+        assert response.status_code == 200
+        assert response.content == b''
+        triggers = json.loads(response['HX-Trigger'])
+        assert triggers == {'closeSlideOver': True, 'refreshTeamList': True}
+
+        created = User.objects.get(email='ada@example.com')
+        assert created.name == 'Ada Lovelace'
+        assert created.is_active
+        assert not created.is_staff
+
+        # Logging in proves the password went through the manager's hashing.
+        client.logout()
+        assert client.login(email='ada@example.com', password='analytical-engine-1843')
+
+    def test_persists_role_and_preset(self, client):
+        admin = AdminUserFactory()
+        preset = developer_preset()
+        client.force_login(admin)
+        response = client.post(reverse('user_create'), {
+            'name': 'Grace Hopper',
+            'email': 'grace@example.com',
+            'role': 'admin',
+            'preset_id': str(preset.pk),
+            'password1': 'nanoseconds-are-short',
+            'password2': 'nanoseconds-are-short',
+        })
+        assert response.status_code == 200
+        created = User.objects.get(email='grace@example.com')
+        assert created.role == 'admin'
+        assert created.permission_preset == preset
+
+    def test_rejects_duplicate_email(self, client):
+        admin = AdminUserFactory()
+        UserFactory(email='taken@example.com')
+        client.force_login(admin)
+        response = client.post(reverse('user_create'), {
+            'name': 'Impostor',
+            'email': 'taken@example.com',
+            'role': 'member',
+            'password1': 'analytical-engine-1843',
+            'password2': 'analytical-engine-1843',
+        })
+        assert response.status_code == 200
+        assert b'already in use' in response.content
+        assert User.objects.filter(email='taken@example.com').count() == 1
+        assert not User.objects.filter(name='Impostor').exists()
+
+    def test_handles_integrity_error_on_save(self, client, monkeypatch):
+        """Race on email uniqueness must re-render the drawer, not 500."""
+        from django.db import IntegrityError
+
+        admin = AdminUserFactory()
+        client.force_login(admin)
+
+        def raise_integrity(*args, **kwargs):
+            raise IntegrityError('duplicate key')
+
+        monkeypatch.setattr(User, 'save', raise_integrity)
+        response = client.post(reverse('user_create'), {
+            'name': 'Racer',
+            'email': 'race@example.com',
+            'role': 'member',
+            'password1': 'analytical-engine-1843',
+            'password2': 'analytical-engine-1843',
+        })
+        assert response.status_code == 200
+        assert b'already in use' in response.content
+
+    def test_rejects_mismatched_passwords(self, client):
+        admin = AdminUserFactory()
+        client.force_login(admin)
+        response = client.post(reverse('user_create'), {
+            'name': 'Ada Lovelace',
+            'email': 'ada@example.com',
+            'role': 'member',
+            'password1': 'analytical-engine-1843',
+            'password2': 'difference-engine-1822',
+        })
+        assert response.status_code == 200
+        assert b'Passwords do not match.' in response.content
+        assert not User.objects.filter(email='ada@example.com').exists()
+
+    def test_rejects_weak_password(self, client):
+        admin = AdminUserFactory()
+        client.force_login(admin)
+        response = client.post(reverse('user_create'), {
+            'name': 'Ada Lovelace',
+            'email': 'ada@example.com',
+            'role': 'member',
+            'password1': 'abc',
+            'password2': 'abc',
+        })
+        assert response.status_code == 200
+        assert b'too short' in response.content
+        assert not User.objects.filter(email='ada@example.com').exists()
+
+    def test_rejects_blank_name(self, client):
+        admin = AdminUserFactory()
+        client.force_login(admin)
+        response = client.post(reverse('user_create'), {
+            'name': '',
+            'email': 'ada@example.com',
+            'role': 'member',
+            'password1': 'analytical-engine-1843',
+            'password2': 'analytical-engine-1843',
+        })
+        assert response.status_code == 200
+        assert b'Name is required.' in response.content
+        assert not User.objects.filter(email='ada@example.com').exists()
+
+    def test_rejects_unknown_preset(self, client):
+        """A non-numeric or dangling preset id is an error, not a 500."""
+        admin = AdminUserFactory()
+        client.force_login(admin)
+        response = client.post(reverse('user_create'), {
+            'name': 'Ada Lovelace',
+            'email': 'ada@example.com',
+            'role': 'member',
+            'preset_id': 'not-an-id',
+            'password1': 'analytical-engine-1843',
+            'password2': 'analytical-engine-1843',
+        })
+        assert response.status_code == 200
+        assert b'valid permission preset' in response.content
+        assert not User.objects.filter(email='ada@example.com').exists()
+
+    def test_unknown_role_falls_back_to_member(self, client):
+        admin = AdminUserFactory()
+        client.force_login(admin)
+        response = client.post(reverse('user_create'), {
+            'name': 'Ada Lovelace',
+            'email': 'ada@example.com',
+            'role': 'superuser',
+            'password1': 'analytical-engine-1843',
+            'password2': 'analytical-engine-1843',
+        })
+        assert response.status_code == 200
+        assert User.objects.get(email='ada@example.com').role == 'member'
 
 
 @pytest.mark.django_db
@@ -155,7 +335,7 @@ class TestUserUpdate:
 
     def test_user_update_rejects_duplicate_email(self, client):
         admin = AdminUserFactory()
-        existing = UserFactory(email='taken@example.com')
+        UserFactory(email='taken@example.com')
         target = UserFactory()
         client.force_login(admin)
         response = client.post(reverse('user_update', args=[target.pk]), {
@@ -164,6 +344,24 @@ class TestUserUpdate:
         assert response.status_code == 200  # Re-renders drawer with error
         target.refresh_from_db()
         assert target.email != 'taken@example.com'
+        assert b'already in use' in response.content
+
+    def test_user_update_handles_integrity_error_on_save(self, client, monkeypatch):
+        """Race on email uniqueness must re-render the drawer, not 500."""
+        from django.db import IntegrityError
+
+        admin = AdminUserFactory()
+        target = UserFactory()
+        client.force_login(admin)
+
+        def raise_integrity(*args, **kwargs):
+            raise IntegrityError('duplicate key')
+
+        monkeypatch.setattr(User, 'save', raise_integrity)
+        response = client.post(reverse('user_update', args=[target.pk]), {
+            'name': target.name, 'email': 'race@example.com', 'role': 'member',
+        })
+        assert response.status_code == 200
         assert b'already in use' in response.content
 
     def test_user_update_rejects_blank_name(self, client):
@@ -229,7 +427,7 @@ class TestUserUpdate:
 
     def test_user_update_allows_demote_when_other_admins_exist(self, client):
         admin1 = AdminUserFactory()
-        admin2 = AdminUserFactory()
+        AdminUserFactory()  # a second admin makes the demotion legal
         client.force_login(admin1)
         response = client.post(reverse('user_update', args=[admin1.pk]), {
             'name': admin1.name, 'email': admin1.email, 'role': 'member',

@@ -25,7 +25,7 @@
         <div class="text-right">
             <div class="text-sm text-zinc-500">Base Salary</div>
             <div class="text-xl font-semibold text-zinc-100">
-                {% if salary.currency == 'EUR' %}€{% elif salary.currency == 'GBP' %}£{% else %}${% endif %}{{ salary.base_salary|floatformat:2 }}
+                {{ salary.currency_symbol }}{{ salary.base_salary|floatformat:2 }}
                 <span class="text-sm text-zinc-500 font-normal">/month</span>
             </div>
         </div>
@@ -36,7 +36,7 @@
         <button hx-get="{% url 'payment_create' salary.id %}"
                 hx-target="#slide-over"
                 hx-swap="innerHTML"
-                hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+                hx-on::after-request="openSlideOver(event)"
                 class="flex items-center gap-2 px-3 py-1.5 bg-accent text-white text-sm font-medium rounded-card hover:bg-accent-hover transition-colors">
             <i data-lucide="plus" class="w-4 h-4"></i>
             Record Payment
@@ -44,7 +44,7 @@
         <button hx-get="{% url 'month_create' salary.id %}"
                 hx-target="#slide-over"
                 hx-swap="innerHTML"
-                hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+                hx-on::after-request="openSlideOver(event)"
                 class="flex items-center gap-2 px-3 py-1.5 bg-elevated text-zinc-300 text-sm font-medium rounded-card border border-border-subtle hover:bg-hover transition-colors">
             <i data-lucide="calendar-plus" class="w-4 h-4"></i>
             Add Month
@@ -52,7 +52,7 @@
         <button hx-get="{% url 'salary_edit' salary.id %}"
                 hx-target="#slide-over"
                 hx-swap="innerHTML"
-                hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+                hx-on::after-request="openSlideOver(event)"
                 class="flex items-center gap-2 px-3 py-1.5 bg-elevated text-zinc-300 text-sm font-medium rounded-card border border-border-subtle hover:bg-hover transition-colors">
             <i data-lucide="settings" class="w-4 h-4"></i>
             Settings
@@ -79,7 +79,7 @@
             <button hx-get="{% url 'month_create' salary.id %}"
                     hx-target="#slide-over"
                     hx-swap="innerHTML"
-                    hx-on::after-request="document.getElementById('slide-over').classList.remove('hidden'); lucide.createIcons();"
+                    hx-on::after-request="openSlideOver(event)"
                     class="text-accent hover:text-accent-hover text-sm">
                 Add the first month
             </button>

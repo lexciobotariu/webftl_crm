@@ -1,11 +1,13 @@
-import pytest
-import json
 import hashlib
 import hmac
-from django.urls import reverse
+import json
+
+import pytest
 from django.test import override_settings
+from django.urls import reverse
+
+from apps.accounts.factories import AdminUserFactory, UserFactory
 from apps.projects.factories import ProjectFactory
-from apps.accounts.factories import UserFactory
 
 
 def generate_signature(payload: bytes, secret: str) -> str:
@@ -17,18 +19,21 @@ def generate_signature(payload: bytes, secret: str) -> str:
     ).hexdigest()
 
 
+WEBHOOK_SECRET = 'test-webhook-secret'
+
+
 @pytest.mark.django_db
 @pytest.mark.security
 class TestGitHubWebhook:
     def test_webhook_rejects_invalid_signature(self, client):
-        project = ProjectFactory(
+        ProjectFactory(
             github_repo_url='https://github.com/test/repo',
             github_sync_enabled=True
         )
         payload = json.dumps({
             'repository': {'html_url': 'https://github.com/test/repo'}
         }).encode()
-        with override_settings(GITHUB_WEBHOOK_SECRET='secret'):
+        with override_settings(GITHUB_WEBHOOK_SECRET=WEBHOOK_SECRET):
             response = client.post(
                 reverse('github_webhook'),
                 payload,
@@ -39,7 +44,7 @@ class TestGitHubWebhook:
         assert response.status_code == 401
 
     def test_webhook_accepts_valid_signature(self, client):
-        project = ProjectFactory(
+        ProjectFactory(
             github_repo_url='https://github.com/test/repo',
             github_sync_enabled=True
         )
@@ -47,9 +52,8 @@ class TestGitHubWebhook:
             'repository': {'html_url': 'https://github.com/test/repo'},
             'commits': []
         }).encode()
-        secret = 'test-secret'
-        signature = generate_signature(payload, secret)
-        with override_settings(GITHUB_WEBHOOK_SECRET=secret):
+        signature = generate_signature(payload, WEBHOOK_SECRET)
+        with override_settings(GITHUB_WEBHOOK_SECRET=WEBHOOK_SECRET):
             response = client.post(
                 reverse('github_webhook'),
                 payload,
@@ -60,23 +64,27 @@ class TestGitHubWebhook:
         assert response.status_code == 200
 
     def test_webhook_rejects_invalid_json(self, client):
-        # Use DEBUG=True to skip webhook secret requirement for this test
-        with override_settings(DEBUG=True):
+        payload = b'not json'
+        signature = generate_signature(payload, WEBHOOK_SECRET)
+        with override_settings(GITHUB_WEBHOOK_SECRET=WEBHOOK_SECRET):
             response = client.post(
                 reverse('github_webhook'),
-                'not json',
+                payload,
                 content_type='application/json',
+                HTTP_X_HUB_SIGNATURE_256=signature,
                 HTTP_X_GITHUB_EVENT='push'
             )
         assert response.status_code == 400
 
     def test_webhook_requires_repository_url(self, client):
         payload = json.dumps({'repository': {}}).encode()
-        with override_settings(DEBUG=True):
+        signature = generate_signature(payload, WEBHOOK_SECRET)
+        with override_settings(GITHUB_WEBHOOK_SECRET=WEBHOOK_SECRET):
             response = client.post(
                 reverse('github_webhook'),
                 payload,
                 content_type='application/json',
+                HTTP_X_HUB_SIGNATURE_256=signature,
                 HTTP_X_GITHUB_EVENT='push'
             )
         assert response.status_code == 400
@@ -85,35 +93,39 @@ class TestGitHubWebhook:
         payload = json.dumps({
             'repository': {'html_url': 'https://github.com/unknown/repo'}
         }).encode()
-        with override_settings(DEBUG=True):
+        signature = generate_signature(payload, WEBHOOK_SECRET)
+        with override_settings(GITHUB_WEBHOOK_SECRET=WEBHOOK_SECRET):
             response = client.post(
                 reverse('github_webhook'),
                 payload,
                 content_type='application/json',
+                HTTP_X_HUB_SIGNATURE_256=signature,
                 HTTP_X_GITHUB_EVENT='push'
             )
         assert response.status_code == 404
 
     def test_webhook_404_for_disabled_sync(self, client):
-        project = ProjectFactory(
+        ProjectFactory(
             github_repo_url='https://github.com/test/repo',
             github_sync_enabled=False
         )
         payload = json.dumps({
             'repository': {'html_url': 'https://github.com/test/repo'}
         }).encode()
-        with override_settings(DEBUG=True):
+        signature = generate_signature(payload, WEBHOOK_SECRET)
+        with override_settings(GITHUB_WEBHOOK_SECRET=WEBHOOK_SECRET):
             response = client.post(
                 reverse('github_webhook'),
                 payload,
                 content_type='application/json',
+                HTTP_X_HUB_SIGNATURE_256=signature,
                 HTTP_X_GITHUB_EVENT='push'
             )
         assert response.status_code == 404
 
-    def test_webhook_requires_secret_in_production(self, client):
-        """In production (DEBUG=False), webhook secret must be configured."""
-        with override_settings(DEBUG=False, GITHUB_WEBHOOK_SECRET=''):
+    def test_webhook_requires_secret(self, client):
+        """Webhook secret must be configured — no DEBUG bypass."""
+        with override_settings(GITHUB_WEBHOOK_SECRET=''):
             response = client.post(
                 reverse('github_webhook'),
                 '{}',
@@ -131,18 +143,25 @@ class TestGitHubSync:
         response = client.post(reverse('github_sync', args=[project.pk]))
         assert response.status_code == 302
 
-    def test_sync_requires_github_repo(self, client):
-        user = UserFactory()
-        project = ProjectFactory(github_repo_url='')
+    def test_sync_requires_manager_access(self, client):
+        user = UserFactory(github_token='gh-token')
+        project = ProjectFactory(github_repo_url='https://github.com/test/repo')
         client.force_login(user)
+        response = client.post(reverse('github_sync', args=[project.pk]))
+        assert response.status_code == 403
+
+    def test_sync_requires_github_repo(self, client):
+        admin = AdminUserFactory(github_token='gh-token')
+        project = ProjectFactory(github_repo_url='')
+        client.force_login(admin)
         response = client.post(reverse('github_sync', args=[project.pk]))
         assert response.status_code == 400
         assert 'No GitHub repo' in response.json()['error']
 
     def test_sync_requires_github_token(self, client):
-        user = UserFactory(github_token='')
+        admin = AdminUserFactory(github_token='')
         project = ProjectFactory(github_repo_url='https://github.com/test/repo')
-        client.force_login(user)
+        client.force_login(admin)
         response = client.post(reverse('github_sync', args=[project.pk]))
         assert response.status_code == 400
         assert 'token' in response.json()['error'].lower()

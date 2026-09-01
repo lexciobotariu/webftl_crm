@@ -5,10 +5,10 @@
     </div>
     <div class="flex items-center gap-1">
         {% if page_obj.has_previous %}
-        <a href="?page=1" class="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded transition-colors" title="First">
+        <a href="{% querystring page=1 %}" class="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded transition-colors" title="First">
             <i data-lucide="chevrons-left" class="w-4 h-4"></i>
         </a>
-        <a href="?page={{ page_obj.previous_page_number }}" class="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded transition-colors" title="Previous">
+        <a href="{% querystring page=page_obj.previous_page_number %}" class="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded transition-colors" title="Previous">
             <i data-lucide="chevron-left" class="w-4 h-4"></i>
         </a>
         {% else %}
@@ -25,9 +25,9 @@
                 {% if page_obj.number == num %}
                 <span class="px-3 py-1 text-sm font-medium text-zinc-100 bg-accent rounded">{{ num }}</span>
                 {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                <a href="?page={{ num }}" class="px-3 py-1 text-sm text-zinc-400 hover:text-zinc-200 hover:bg-elevated rounded transition-colors">{{ num }}</a>
+                <a href="{% querystring page=num %}" class="px-3 py-1 text-sm text-zinc-400 hover:text-zinc-200 hover:bg-elevated rounded transition-colors">{{ num }}</a>
                 {% elif num == 1 or num == page_obj.paginator.num_pages %}
-                <a href="?page={{ num }}" class="px-3 py-1 text-sm text-zinc-400 hover:text-zinc-200 hover:bg-elevated rounded transition-colors">{{ num }}</a>
+                <a href="{% querystring page=num %}" class="px-3 py-1 text-sm text-zinc-400 hover:text-zinc-200 hover:bg-elevated rounded transition-colors">{{ num }}</a>
                 {% elif num == page_obj.number|add:'-3' or num == page_obj.number|add:'3' %}
                 <span class="px-1 text-zinc-600">...</span>
                 {% endif %}
@@ -35,10 +35,10 @@
         </div>
 
         {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}" class="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded transition-colors" title="Next">
+        <a href="{% querystring page=page_obj.next_page_number %}" class="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded transition-colors" title="Next">
             <i data-lucide="chevron-right" class="w-4 h-4"></i>
         </a>
-        <a href="?page={{ page_obj.paginator.num_pages }}" class="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded transition-colors" title="Last">
+        <a href="{% querystring page=page_obj.paginator.num_pages %}" class="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded transition-colors" title="Last">
             <i data-lucide="chevrons-right" class="w-4 h-4"></i>
         </a>
         {% else %}

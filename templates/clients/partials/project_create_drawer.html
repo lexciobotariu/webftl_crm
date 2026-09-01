@@ -6,7 +6,7 @@
                 <i data-lucide="folder-plus" class="w-4 h-4 text-zinc-500"></i>
                 <h2 class="text-sm font-medium text-zinc-100">New Project</h2>
             </div>
-            <button onclick="document.getElementById('slide-over').classList.add('hidden')"
+            <button onclick="closeSlideOver()"
                     class="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors">
                 <i data-lucide="x" class="w-4 h-4"></i>
             </button>
@@ -15,15 +15,22 @@
 
     <!-- Form -->
     <form hx-post="{% url 'client_create_project' client.pk %}"
-          hx-target="#projects-content"
+          hx-target="#slide-over"
           hx-swap="innerHTML"
           class="flex-1 overflow-y-auto p-4">
         {% csrf_token %}
+
+        {% if error %}
+        <div class="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-card">
+            <p class="text-sm text-red-400">{{ error }}</p>
+        </div>
+        {% endif %}
 
         <div class="space-y-4">
             <div>
                 <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Project Name</label>
                 <input type="text" name="name"
+                       value="{{ form_name|default:'' }}"
                        class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                        placeholder="Enter project name"
                        required>
@@ -33,12 +40,13 @@
                 <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Description</label>
                 <textarea name="description" rows="4"
                           class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none resize-none"
-                          placeholder="Describe the project..."></textarea>
+                          placeholder="Describe the project...">{{ form_description|default:'' }}</textarea>
             </div>
 
             <div>
                 <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">GitHub Repository</label>
                 <input type="url" name="github_repo_url"
+                       value="{{ form_github_repo_url|default:'' }}"
                        class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                        placeholder="https://github.com/org/repo">
             </div>
@@ -58,7 +66,7 @@
                 Create Project
             </button>
             <button type="button"
-                    onclick="document.getElementById('slide-over').classList.add('hidden')"
+                    onclick="closeSlideOver()"
                     class="bg-elevated border border-border-subtle px-4 py-2 rounded-card text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
                 Cancel
             </button>
