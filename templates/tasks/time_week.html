@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}My Week - WebFTL CRM{% endblock %}
+
+{% block full_content %}
+<div class="flex flex-col h-full">
+    <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+                <i data-lucide="clock" class="w-4 h-4 text-zinc-500"></i>
+                <h1 class="text-sm font-medium text-zinc-100">My Week</h1>
+                <span class="text-xs text-zinc-500">
+                    {{ week_start|date:"M j" }} – {{ week_end|date:"M j, Y" }}
+                    {% if project %}· {{ project.name }}{% endif %}
+                </span>
+            </div>
+            <div class="flex items-center gap-1">
+                <a href="?week={{ prev_week|date:'Y-m-d' }}{% if project %}&project={{ project.pk }}{% endif %}"
+                   class="p-1.5 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded-card"
+                   title="Previous week">
+                    <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                </a>
+                <a href="{% url 'time_week' %}{% if project %}?project={{ project.pk }}{% endif %}"
+                   class="px-2 py-1 text-xs text-zinc-400 hover:text-zinc-200">This week</a>
+                <a href="?week={{ next_week|date:'Y-m-d' }}{% if project %}&project={{ project.pk }}{% endif %}"
+                   class="p-1.5 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded-card"
+                   title="Next week">
+                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex-1 overflow-auto">
+        {% if entries %}
+        <table class="w-full">
+            <thead class="sticky top-0 bg-panel border-b border-border-subtle">
+                <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
+                    <th class="px-4 py-3 font-medium">Task</th>
+                    {% if not project %}<th class="px-4 py-3 font-medium">Project</th>{% endif %}
+                    {% if sees_everyone %}<th class="px-4 py-3 font-medium">Person</th>{% endif %}
+                    <th class="px-4 py-3 font-medium">Start</th>
+                    <th class="px-4 py-3 font-medium">End</th>
+                    <th class="px-4 py-3 font-medium">Duration</th>
+                    <th class="px-4 py-3 font-medium">Note</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-border-subtle">
+                {% for entry in entries %}
+                <tr class="text-sm text-zinc-300">
+                    <td class="px-4 py-3">
+                        <a href="{% url 'task_full_page' entry.task.project_id entry.task_id %}"
+                           class="hover:text-zinc-100">{{ entry.task.title }}</a>
+                    </td>
+                    {% if not project %}
+                    <td class="px-4 py-3 text-zinc-400">{{ entry.task.project.name }}</td>
+                    {% endif %}
+                    {% if sees_everyone %}
+                    <td class="px-4 py-3 text-zinc-400">{{ entry.user.name }}</td>
+                    {% endif %}
+                    <td class="px-4 py-3 whitespace-nowrap">{{ entry.started_at|date:"D, M j, H:i" }}</td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        {% if entry.ended_at %}{{ entry.ended_at|date:"H:i" }}{% else %}Running{% endif %}
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-zinc-400">{{ entry.duration_label }}</td>
+                    <td class="px-4 py-3 text-zinc-500">{{ entry.note }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="px-4 py-3 border-t border-border-subtle text-sm text-zinc-400">
+            Total {{ total_label }}
+        </div>
+        {% else %}
+        {% include "components/empty_state.html" with icon="clock" message="No time logged this week" %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

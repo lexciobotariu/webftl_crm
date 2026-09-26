@@ -13,15 +13,17 @@ Key patterns:
 """
 import os
 from dataclasses import dataclass
+from datetime import datetime, time, timedelta
 
 from django.core.exceptions import PermissionDenied
-from django.db import transaction
-from django.db.models import Max, Q
+from django.db import IntegrityError, transaction
+from django.db.models import DateTimeField, ExpressionWrapper, F, Max, Q
+from django.utils import timezone
 from django.utils.text import get_valid_filename
 
 from apps.projects.models import can_access_project
 
-from .models import Attachment, Subtask, TaskActivity
+from .models import Attachment, Subtask, TaskActivity, TimeEntry
 
 # File upload security settings
 ALLOWED_EXTENSIONS = {
@@ -30,6 +32,7 @@ ALLOWED_EXTENSIONS = {
     '.txt', '.csv', '.zip'
 }
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+TIMER_LIMIT = timedelta(hours=12)
 
 
 @dataclass
@@ -41,6 +44,10 @@ class FileValidationError:
 class TaskPermissionError(PermissionDenied):
     """Raised when user lacks required access level for a task operation."""
     pass
+
+
+class TimeEntryValidationError(ValueError):
+    """A logged time range breaks the manual-entry rules."""
 
 
 def require_access(user, project, level='editor'):
@@ -353,3 +360,182 @@ def toggle_label(task, label, user):
         task.labels.remove(label)
     else:
         task.labels.add(label)
+
+
+def close_expired_timers(now=None):
+    """Stop timers that have been running longer than 12 hours.
+
+    ``ended_at`` is the start plus 12 hours, not the moment this runs.
+    Already-closed rows are left alone, including manual entries longer
+    than 12 hours. Returns the number of rows closed.
+    """
+    if now is None:
+        now = timezone.now()
+    cutoff = now - TIMER_LIMIT
+    return TimeEntry.objects.filter(
+        ended_at__isnull=True,
+        started_at__lte=cutoff,
+    ).update(
+        ended_at=ExpressionWrapper(
+            F('started_at') + TIMER_LIMIT,
+            output_field=DateTimeField(),
+        )
+    )
+
+
+def _close_open_entry(entry, now):
+    """Close one running row at ``now``, or at the 12-hour mark if past it."""
+    cap = entry.started_at + TIMER_LIMIT
+    entry.ended_at = cap if now >= cap else now
+    entry.save(update_fields=['ended_at'])
+    return entry
+
+
+def _close_user_open_timer(user, now):
+    entry = (
+        TimeEntry.objects.select_for_update()
+        .filter(user=user, ended_at__isnull=True)
+        .first()
+    )
+    if entry is None:
+        return None
+    return _close_open_entry(entry, now)
+
+
+def require_entry_edit(user, entry):
+    """Owner-editors and admins may change an entry. Managers may not edit others."""
+    if user.is_admin:
+        return
+    if entry.user_id != user.pk:
+        raise TaskPermissionError('You can only change your own time entries')
+    require_access(user, entry.task.project, 'editor')
+
+
+def _validate_closed_range(started_at, ended_at, now=None):
+    if started_at is None or ended_at is None:
+        raise TimeEntryValidationError('Start and end are required.')
+    if timezone.is_naive(started_at) or timezone.is_naive(ended_at):
+        raise TimeEntryValidationError('Start and end must include a timezone.')
+    if ended_at <= started_at:
+        raise TimeEntryValidationError('End must be after start.')
+    if now is None:
+        now = timezone.now()
+    if ended_at > now:
+        raise TimeEntryValidationError('End cannot be in the future.')
+
+
+def _week_bounds(week_start):
+    """Seven days starting at ``week_start`` (a date or datetime) in the local zone."""
+    if isinstance(week_start, datetime):
+        if timezone.is_aware(week_start):
+            week_start = timezone.localtime(week_start).date()
+        else:
+            week_start = week_start.date()
+    start = timezone.make_aware(datetime.combine(week_start, time.min))
+    return start, start + timedelta(days=7)
+
+
+@transaction.atomic
+def start_timer(task, user):
+    """Start a timer on ``task`` for ``user``.
+
+    Editors only. Any other open timer for this person is closed first:
+    at now, or at the 12-hour mark if that timer is already past it.
+    """
+    require_access(user, task.project, 'editor')
+    now = timezone.now()
+    _close_user_open_timer(user, now)
+    try:
+        with transaction.atomic():
+            return TimeEntry.objects.create(
+                task=task,
+                user=user,
+                started_at=now,
+            )
+    except IntegrityError:
+        _close_user_open_timer(user, timezone.now())
+        return TimeEntry.objects.create(
+            task=task,
+            user=user,
+            started_at=timezone.now(),
+        )
+
+
+@transaction.atomic
+def stop_timer(user):
+    """Stop the user's running timer.
+
+    ``ended_at`` is now. If the timer has already passed 12 hours,
+    ``ended_at`` is the start plus 12 hours instead. Returns the closed
+    row, or None when nothing is running.
+    """
+    return _close_user_open_timer(user, timezone.now())
+
+
+def log_manual(task, user, started_at, ended_at, note=''):
+    """Log a finished block of the user's own time. Editors only.
+
+    The span may be longer than 12 hours. It must end after it starts
+    and cannot end in the future.
+    """
+    require_access(user, task.project, 'editor')
+    _validate_closed_range(started_at, ended_at)
+    return TimeEntry.objects.create(
+        task=task,
+        user=user,
+        started_at=started_at,
+        ended_at=ended_at,
+        note=note or '',
+    )
+
+
+def update_entry(entry, user, *, started_at, ended_at, note=''):
+    """Change a closed entry. The owner must still be an editor; admins may change any."""
+    require_entry_edit(user, entry)
+    now = timezone.now()
+    if ended_at is None:
+        raise TimeEntryValidationError('A logged entry needs an end time.')
+    _validate_closed_range(started_at, ended_at, now=now)
+    entry.started_at = started_at
+    entry.ended_at = ended_at
+    entry.note = note or ''
+    entry.save(update_fields=['started_at', 'ended_at', 'note'])
+    return entry
+
+
+def delete_entry(entry, user):
+    """Delete an entry. Same permission rule as :func:`update_entry`."""
+    require_entry_edit(user, entry)
+    entry.delete()
+
+
+def entries_for_week(user, week_start, project=None):
+    """Entries that started in the seven days from ``week_start``.
+
+    Without a project, this is the user's own week. With a project, a
+    manager or admin sees every entry on that project; everyone else
+    still sees only their own.
+    """
+    start, end = _week_bounds(week_start)
+    entries = (
+        TimeEntry.objects.filter(started_at__gte=start, started_at__lt=end)
+        .select_related('task', 'task__project', 'user')
+        .order_by('started_at')
+    )
+    if project is not None:
+        entries = entries.filter(task__project=project)
+        if can_access_project(user, project, 'manager'):
+            return entries
+    return entries.filter(user=user)
+
+
+def entries_on_task(user, task):
+    """Entries visible on a task screen.
+
+    Managers and admins see everyone's time on the task. Everyone else
+    sees only their own.
+    """
+    entries = task.time_entries.select_related('user')
+    if can_access_project(user, task.project, 'manager'):
+        return entries
+    return entries.filter(user=user)

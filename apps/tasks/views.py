@@ -1,4 +1,5 @@
 import json
+from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -15,10 +16,35 @@ from apps.accounts.decorators import require_permission
 from apps.projects.models import Project, Status, can_access_project, get_assignable_users
 from apps.tasks.models import Label
 
-from .forms import SubtaskForm, TaskForm
-from .models import Subtask, Task
+from .forms import SubtaskForm, TaskForm, TimeEntryForm
+from .models import Subtask, Task, TimeEntry
 
 TASKS_PER_PAGE = 20
+
+
+def _time_context(user, task):
+    """Close expired timers, then the entries and edit flag for a task screen."""
+    from apps.tasks import services
+
+    services.close_expired_timers()
+    return {
+        'time_entries': services.entries_on_task(user, task),
+        'can_log_time': can_access_project(user, task.project, 'editor'),
+    }
+
+
+def _monday(day):
+    return day - timedelta(days=day.weekday())
+
+
+def _format_total(entries):
+    total_seconds = 0
+    for entry in entries:
+        if entry.duration is not None:
+            total_seconds += max(int(entry.duration.total_seconds()), 0)
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes = remainder // 60
+    return f'{hours}h {minutes:02d}m'
 
 
 @login_required
@@ -151,6 +177,7 @@ def task_detail(request, pk):
         'team_members': team_members,
         'project_labels': project_labels,
         'priority_choices': priority_choices,
+        **_time_context(request.user, task),
     })
 
 
@@ -166,7 +193,11 @@ def task_edit(request, pk):
             task._changed_by = request.user
             form.save()
             if request.htmx:
-                return render(request, 'tasks/task_detail.html', {'task': task, 'subtask_form': SubtaskForm()})
+                return render(request, 'tasks/task_detail.html', {
+                    'task': task,
+                    'subtask_form': SubtaskForm(),
+                    **_time_context(request.user, task),
+                })
             return redirect('project_board', pk=task.project.pk)
     else:
         form = TaskForm(task.project, instance=task)
@@ -371,6 +402,7 @@ def task_full_page(request, project_pk, task_pk):
         'team_members': team_members,
         'project_labels': project_labels,
         'priority_choices': priority_choices,
+        **_time_context(request.user, task),
     })
 
 
@@ -540,3 +572,234 @@ def task_card(request, pk):
     if not can_access_project(request.user, task.project, 'viewer'):
         return HttpResponseForbidden("You don't have access to this task")
     return render(request, 'projects/partials/task_card.html', {'task': task})
+
+
+def _timer_changed(response):
+    response['HX-Trigger'] = 'timerChanged'
+    return response
+
+
+def _require_task_viewer(user, task):
+    if not can_access_project(user, task.project, 'viewer'):
+        return HttpResponseForbidden("You don't have access to this task")
+    return None
+
+
+@login_required
+@require_permission('access_tasks')
+def time_week(request):
+    """The current user's week, optionally filtered to one project."""
+    from apps.tasks import services
+
+    services.close_expired_timers()
+
+    week_param = request.GET.get('week')
+    if week_param:
+        week_date = parse_date(week_param)
+        if week_date is None:
+            return HttpResponse('Invalid week', status=400)
+        week_date = _monday(week_date)
+    else:
+        week_date = _monday(timezone.localdate())
+
+    project = None
+    project_param = request.GET.get('project')
+    if project_param:
+        try:
+            project_pk = int(project_param)
+        except (TypeError, ValueError):
+            return HttpResponse('Invalid project', status=400)
+        project = get_object_or_404(Project, pk=project_pk)
+        if not can_access_project(request.user, project, 'viewer'):
+            return HttpResponseForbidden("You don't have access to this project")
+
+    entries = list(services.entries_for_week(request.user, week_date, project=project))
+    sees_everyone = project is not None and can_access_project(
+        request.user, project, 'manager'
+    )
+    return render(request, 'tasks/time_week.html', {
+        'entries': entries,
+        'week_start': week_date,
+        'week_end': week_date + timedelta(days=6),
+        'prev_week': week_date - timedelta(days=7),
+        'next_week': week_date + timedelta(days=7),
+        'project': project,
+        'sees_everyone': sees_everyone,
+        'total_label': _format_total(entries),
+    })
+
+
+@login_required
+@require_permission('access_tasks')
+def running_timer_indicator(request):
+    """The layout timer bar. ``running_timer`` comes from the context processor."""
+    from apps.tasks import services
+
+    services.close_expired_timers()
+    return render(request, 'components/running_timer.html')
+
+
+@login_required
+@require_permission('access_tasks')
+def task_time_section(request, pk):
+    task = get_object_or_404(Task.objects.select_related('project'), pk=pk)
+    denied = _require_task_viewer(request.user, task)
+    if denied:
+        return denied
+    return render(request, 'tasks/partials/time_section.html', {
+        'task': task,
+        **_time_context(request.user, task),
+    })
+
+
+@login_required
+@require_permission('access_tasks')
+@require_POST
+def timer_start(request, pk):
+    task = get_object_or_404(Task.objects.select_related('project'), pk=pk)
+    try:
+        from apps.tasks import services
+        services.start_timer(task, request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
+    return _timer_changed(HttpResponse(status=204))
+
+
+@login_required
+@require_permission('access_tasks')
+@require_POST
+def timer_stop(request):
+    from apps.tasks import services
+
+    services.close_expired_timers()
+    services.stop_timer(request.user)
+    return _timer_changed(HttpResponse(status=204))
+
+
+def _time_entry_drawer(request, task, form, *, heading, form_action):
+    return render(request, 'tasks/partials/time_entry_drawer.html', {
+        'task': task,
+        'form': form,
+        'heading': heading,
+        'form_action': form_action,
+    })
+
+
+@login_required
+@require_permission('access_tasks')
+def time_log(request, pk):
+    task = get_object_or_404(Task.objects.select_related('project'), pk=pk)
+    denied = _require_task_viewer(request.user, task)
+    if denied:
+        return denied
+    if not can_access_project(request.user, task.project, 'editor'):
+        return HttpResponseForbidden('Editor access required')
+
+    if request.method == 'POST':
+        form = TimeEntryForm(request.POST)
+        inline = request.POST.get('inline') == '1'
+        if form.is_valid():
+            try:
+                from apps.tasks import services
+                services.log_manual(
+                    task,
+                    request.user,
+                    form.cleaned_data['started_at'],
+                    form.cleaned_data['ended_at'],
+                    form.cleaned_data.get('note') or '',
+                )
+            except PermissionDenied as e:
+                return HttpResponseForbidden(str(e))
+            except ValueError as e:
+                form.add_error(None, str(e))
+            else:
+                response = HttpResponse('')
+                response['HX-Trigger'] = json.dumps({
+                    'closeSlideOver': True,
+                    'timerChanged': True,
+                })
+                return response
+        if inline:
+            message = form.errors.get('__all__') or form.errors.get('ended_at') or form.errors.get('started_at')
+            text = message[0] if message else 'Check the start and end.'
+            return HttpResponse(text, status=400)
+    else:
+        form = TimeEntryForm()
+    return _time_entry_drawer(
+        request,
+        task,
+        form,
+        heading='Log time',
+        form_action=reverse('time_log', args=[task.pk]),
+    )
+
+
+@login_required
+@require_permission('access_tasks')
+def time_entry_edit(request, entry_pk):
+    entry = get_object_or_404(
+        TimeEntry.objects.select_related('task__project', 'user'),
+        pk=entry_pk,
+    )
+    task = entry.task
+    denied = _require_task_viewer(request.user, task)
+    if denied:
+        return denied
+    try:
+        from apps.tasks import services
+        services.require_entry_edit(request.user, entry)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
+
+    if request.method == 'POST':
+        form = TimeEntryForm(request.POST)
+        if form.is_valid():
+            try:
+                from apps.tasks import services
+                services.update_entry(
+                    entry,
+                    request.user,
+                    started_at=form.cleaned_data['started_at'],
+                    ended_at=form.cleaned_data['ended_at'],
+                    note=form.cleaned_data.get('note') or '',
+                )
+            except PermissionDenied as e:
+                return HttpResponseForbidden(str(e))
+            except ValueError as e:
+                form.add_error(None, str(e))
+            else:
+                response = HttpResponse('')
+                response['HX-Trigger'] = json.dumps({
+                    'closeSlideOver': True,
+                    'timerChanged': True,
+                })
+                return response
+    else:
+        form = TimeEntryForm(initial={
+            'started_at': entry.started_at,
+            'ended_at': entry.ended_at,
+            'note': entry.note,
+        })
+    return _time_entry_drawer(
+        request,
+        task,
+        form,
+        heading='Edit time',
+        form_action=reverse('time_entry_edit', args=[entry.pk]),
+    )
+
+
+@login_required
+@require_permission('access_tasks')
+@require_POST
+def time_entry_delete(request, entry_pk):
+    entry = get_object_or_404(
+        TimeEntry.objects.select_related('task__project'),
+        pk=entry_pk,
+    )
+    try:
+        from apps.tasks import services
+        services.delete_entry(entry, request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
+    return _timer_changed(HttpResponse(status=204))

@@ -91,6 +91,7 @@
     <div class="h-full flex overflow-hidden">
         {% include "components/sidebar.html" %}
         <main class="flex-1 flex flex-col overflow-hidden">
+            {% include "components/running_timer.html" %}
             {% block full_content %}
             <div class="flex-1 p-4 overflow-auto">
                 <div class="min-h-full rounded-panel border border-border-subtle bg-panel overflow-hidden">
@@ -130,8 +131,11 @@
     <!-- Initialize Lucide icons and event handlers -->
     <script>
         lucide.createIcons();
-        document.body.addEventListener('htmx:afterSwap', () => {
+        document.body.addEventListener('htmx:afterSwap', (event) => {
             lucide.createIcons();
+            if (window.Alpine && event.detail && event.detail.elt) {
+                Alpine.initTree(event.detail.elt);
+            }
         });
 
         // One shared definition for the ten `x-data="{ open: false }"` dropdowns.
@@ -140,6 +144,27 @@
                 open: false,
                 toggle() { this.open = !this.open; },
                 close() { this.open = false; },
+            }));
+            // Elapsed time for the layout timer. The server, not this clock,
+            // stops a timer at 12 hours.
+            Alpine.data('runningTimer', (startedAt) => ({
+                elapsed: '00:00:00',
+                _timer: null,
+                tick() {
+                    const total = Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000));
+                    const hours = Math.floor(total / 3600);
+                    const minutes = Math.floor((total % 3600) / 60);
+                    const seconds = total % 60;
+                    const pad = (n) => String(n).padStart(2, '0');
+                    this.elapsed = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+                },
+                init() {
+                    this.tick();
+                    this._timer = setInterval(() => this.tick(), 1000);
+                },
+                destroy() {
+                    clearInterval(this._timer);
+                },
             }));
         });
 
