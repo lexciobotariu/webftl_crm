@@ -3,7 +3,8 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 
-from apps.projects.models import can_access_project, can_work_on_project
+from apps.clients.models import visible_clients
+from apps.projects.models import ProjectAccess, can_access_project
 
 
 class Note(models.Model):
@@ -63,67 +64,96 @@ class Note(models.Model):
             raise ValidationError("Note must belong to either a client or project")
 
 
-def notes_visible_to_user(user, queryset=None):
-    """Filter notes queryset to those visible to the user (SQL, not per-row Python).
-
-    Mirrors :func:`can_view_note` for private notes and ProjectAccess rows.
-    Callers must be able to pass an unscoped queryset safely.
-    """
-    qs = queryset if queryset is not None else Note.objects.all()
-    if user.is_admin:
-        return qs
-    return qs.filter(
-        # Private notes: creator only, whatever the parent.
-        Q(is_private=True, created_by=user)
-        # Public notes: project notes, and only with a ProjectAccess row.
-        | Q(is_private=False, project__isnull=False, project__access__user=user)
-    )
-
-
-def can_view_note(user, note):
-    """Check if user can view this note"""
-    if user.is_admin:
-        return True
-
-    # Private notes: only creator
-    if note.is_private:
-        return note.created_by == user
-
-    # Public client notes: admin-only (already handled above)
-    if note.client:
-        return False
-
-    # Public project notes: anyone who can open the project.
-    if note.project:
+def _can_open_note_parent(user, note):
+    """A client the user can already see, or a project they can already open."""
+    if note.client_id:
+        return visible_clients(user).filter(pk=note.client_id).exists()
+    if note.project_id:
         return can_access_project(user, note.project)
-
     return False
 
 
-def can_create_note(user, project=None, client=None):
-    """Check if user can create notes"""
-    if user.is_admin:
+def _public_view_own_q(user):
+    """Public notes on a parent :func:`_can_open_note_parent` would allow.
+
+    Project visibility matches :func:`can_access_project` for a non-admin:
+    a ProjectAccess row, ``projects_view_all``, or ``projects_edit_all``.
+    """
+    visible = Q(client_id__in=visible_clients(user).values('pk'))
+    if user.has_app_permission('projects_view_all') or user.has_app_permission('projects_edit_all'):
+        visible |= Q(project__isnull=False)
+    else:
+        visible |= Q(project_id__in=ProjectAccess.objects.filter(user=user).values('project_id'))
+    return Q(is_private=False) & visible
+
+
+def notes_visible_to_user(user, queryset=None):
+    """Notes this user may list. Same rules as :func:`can_view_note`.
+
+    A private note is only the author's. ``role=admin`` does not see someone
+    else's. A public note needs ``access_notes`` and either a parent the user
+    can already open or ``notes_view_all``. Clients or projects access alone
+    does not include any note.
+    """
+    qs = queryset if queryset is not None else Note.objects.all()
+    if not user.has_app_permission('access_notes'):
+        return qs.none()
+    own_private = Q(is_private=True, created_by=user)
+    if user.has_app_permission('notes_view_all'):
+        return qs.filter(own_private | Q(is_private=False))
+    return qs.filter(own_private | _public_view_own_q(user))
+
+
+def can_view_note(user, note):
+    """Whether this user may open this note.
+
+    Privacy is decided before ``has_app_permission``, which is true for every
+    key when ``role=admin``. That bypass must not reveal a private note.
+    """
+    if note.is_private and note.created_by_id != user.id:
+        return False
+    if not user.has_app_permission('access_notes'):
+        return False
+    if note.is_private:
         return True
+    if user.has_app_permission('notes_view_all'):
+        return True
+    return _can_open_note_parent(user, note)
 
-    if client:
-        return False  # Only admins can create client notes
 
-    if project:
-        return can_work_on_project(user, project)
+def can_create_note(user, project=None, client=None):
+    """Create a private or public note on a parent the user can already open.
 
+    ``access_notes`` is required. There is no separate create flag. Opening
+    the client or the project is :func:`visible_clients` or
+    :func:`can_access_project`, not ``can_work_on_project``.
+    """
+    if not user.has_app_permission('access_notes'):
+        return False
+    if client is not None:
+        return visible_clients(user).filter(pk=client.pk).exists()
+    if project is not None:
+        return can_access_project(user, project)
     return False
 
 
 def can_modify_note(user, note):
-    """Check if user can edit/delete this note.
+    """Edit or delete this note.
 
-    Admins can. Anyone else must have written it. A project note also
-    requires access to that project, so someone who lost their row cannot edit it.
+    The author can change their own note, private or public, while they can
+    still open its parent. ``notes_edit_public`` can change any public note,
+    including one they did not write and one whose parent they cannot open.
+    It never applies to a private note. Privacy is checked before the admin
+    bypass in ``has_app_permission``.
     """
-    if user.is_admin:
+    if note.is_private and note.created_by_id != user.id:
+        return False
+    if not user.has_app_permission('access_notes'):
+        return False
+    if note.is_private:
+        return _can_open_note_parent(user, note)
+    if user.has_app_permission('notes_edit_public'):
         return True
     if note.created_by_id != user.id:
         return False
-    if note.project_id:
-        return can_access_project(user, note.project)
-    return True
+    return _can_open_note_parent(user, note)

@@ -249,14 +249,53 @@
                                class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
                     </label>
 
-                    <label data-module="notes" class="flex items-center justify-between gap-3 p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
-                        <span class="flex items-center gap-2">
-                            <i data-lucide="sticky-note" class="w-4 h-4 text-zinc-500"></i>
-                            <span class="text-sm text-zinc-300">Notes</span>
-                        </span>
-                        <input type="checkbox" name="access_notes" {% if not preset or preset.access_notes %}checked{% endif %}
-                               class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
-                    </label>
+                    <div data-module="notes"
+                         class="bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors"
+                         x-data="{
+                            open: {% if not preset or preset.access_notes %}true{% else %}false{% endif %},
+                            enabled: {% if not preset or preset.access_notes %}true{% else %}false{% endif %},
+                            init() {
+                                this.$watch('enabled', (on) => {
+                                    this.open = on;
+                                    if (!on) {
+                                        this.$root.querySelectorAll('[data-extra]').forEach((box) => {
+                                            box.checked = false;
+                                        });
+                                    }
+                                });
+                            }
+                         }">
+                        <div class="flex items-center justify-between gap-3 p-3">
+                            <button type="button"
+                                    class="flex items-center gap-2 min-w-0 text-left"
+                                    @click="open = !open"
+                                    :aria-expanded="open">
+                                <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-500 transition-transform" :class="{ 'rotate-90': open }"></i>
+                                <i data-lucide="sticky-note" class="w-4 h-4 text-zinc-500"></i>
+                                <span class="text-sm text-zinc-300">Notes</span>
+                            </button>
+                            <input type="checkbox" name="access_notes" {% if not preset or preset.access_notes %}checked{% endif %}
+                                   class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent"
+                                   x-model="enabled"
+                                   @click.stop>
+                        </div>
+                        <div x-show="open" x-collapse {% if preset and not preset.access_notes %}x-cloak{% endif %}>
+                            <div class="grid grid-cols-2 gap-x-3 gap-y-2 pt-0 px-3 pb-3 ml-12" :class="{ 'opacity-40': !enabled }">
+                                <label class="flex items-center gap-2 min-w-0">
+                                    <input type="checkbox" name="notes_view_all"{% if preset.access_notes and preset.notes_view_all %} checked{% endif %}{% if preset and not preset.access_notes %} disabled{% endif %}
+                                           data-extra :disabled="!enabled"
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                    <span class="text-sm text-zinc-300">View all</span>
+                                </label>
+                                <label class="flex items-center gap-2 min-w-0">
+                                    <input type="checkbox" name="notes_edit_public"{% if preset.access_notes and preset.notes_edit_public %} checked{% endif %}{% if preset and not preset.access_notes %} disabled{% endif %}
+                                           data-extra :disabled="!enabled"
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                    <span class="text-sm text-zinc-300">Edit public</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
 
                     <label data-module="salaries" class="flex items-center justify-between gap-3 p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
                         <span class="flex items-center gap-2">

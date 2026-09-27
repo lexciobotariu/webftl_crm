@@ -87,15 +87,20 @@ class ClientProfileNotesViewTest(TestCase):
         self.assertEqual(response.status_code, 403)
 
     def test_respects_note_visibility(self):
-        """Private notes from other users are not shown."""
+        """A private note stays with its author. Another admin does not see it."""
         other_admin = User.objects.create_user(
             email='other@test.com', password='test', role='admin'
         )
-        # Private note by other user — should still show for admin
         Note.objects.create(
             client=self.client_obj,
             title='Private Note',
             is_private=True,
+            created_by=other_admin,
+            modified_by=other_admin,
+        )
+        Note.objects.create(
+            client=self.client_obj,
+            title='Public Note',
             created_by=other_admin,
             modified_by=other_admin,
         )
@@ -104,8 +109,8 @@ class ClientProfileNotesViewTest(TestCase):
         response = self.client.get(
             f'/clients/{self.client_obj.pk}/profile-notes/'
         )
-        # Admins can see all notes
-        self.assertContains(response, 'Private Note')
+        self.assertNotContains(response, 'Private Note')
+        self.assertContains(response, 'Public Note')
 
     def test_empty_state(self):
         """Shows empty message when no notes exist."""

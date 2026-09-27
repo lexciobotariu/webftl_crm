@@ -300,6 +300,9 @@ def _apply_module_gates(values):
             'tasks_edit_all',
         ):
             values[key] = False
+    if not values['access_notes']:
+        for key in ('notes_view_all', 'notes_edit_public'):
+            values[key] = False
     return values
 
 

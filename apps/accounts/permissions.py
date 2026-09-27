@@ -18,6 +18,8 @@ PERMISSION_KEYS = [
     'tasks_edit_all',
     'access_todos',
     'access_notes',
+    'notes_view_all',
+    'notes_edit_public',
     'access_salaries',
     'access_team',
 ]
@@ -53,6 +55,11 @@ class PermissionPreset(models.Model):
     tasks_create = models.BooleanField(default=False)
     tasks_edit_own = models.BooleanField(default=False)
     tasks_edit_all = models.BooleanField(default=False)
+
+    # View own is access_notes plus a client or project the user can already open.
+    # These never reach a private note. There is no create flag.
+    notes_view_all = models.BooleanField(default=False)
+    notes_edit_public = models.BooleanField(default=False)
 
     is_system = models.BooleanField(default=False, help_text="System presets cannot be deleted")
 

@@ -6,7 +6,7 @@ from apps.accounts.permissions import PermissionPreset
 User = get_user_model()
 
 
-# Mirrors the seeded Admin and Developer presets (migrations 0005 through 0009).
+# Mirrors the seeded Admin and Developer presets (migrations 0005 through 0010).
 SYSTEM_PRESET_DEFAULTS = {
     'Admin': {
         'description': 'Full access to all sections',
@@ -28,6 +28,8 @@ SYSTEM_PRESET_DEFAULTS = {
         'tasks_edit_all': True,
         'access_todos': True,
         'access_notes': True,
+        'notes_view_all': True,
+        'notes_edit_public': True,
         'access_salaries': True,
         'access_team': True,
     },
@@ -51,6 +53,8 @@ SYSTEM_PRESET_DEFAULTS = {
         'tasks_edit_all': False,
         'access_todos': True,
         'access_notes': True,
+        'notes_view_all': False,
+        'notes_edit_public': False,
         'access_salaries': False,
         'access_team': False,
     },
