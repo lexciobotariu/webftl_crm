@@ -10,7 +10,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
 
-from .decorators import require_permission
+from .decorators import require_admin, require_permission
 from .models import User
 from .permissions import PERMISSION_KEYS, PermissionPreset
 
@@ -105,7 +105,7 @@ def team_list(request):
 
 
 @login_required
-@require_permission('access_team')
+@require_permission('team_create')
 def user_create(request):
     """Create a team member from inside the app, with an admin-set password.
 
@@ -127,6 +127,9 @@ def user_create(request):
     password2 = request.POST.get('password2', '')
 
     if role not in dict(User.ROLE_CHOICES):
+        role = 'member'
+    # Creating an admin is a role change, so it stays role=admin.
+    if not request.user.is_admin:
         role = 'member'
 
     errors = {}
@@ -208,11 +211,11 @@ def user_detail_drawer(request, pk):
 
 
 @login_required
-@require_permission('access_team')
+@require_permission('team_edit')
 @require_POST
 @transaction.atomic
 def user_update(request, pk):
-    """Update a user's name, email, role, and preset."""
+    """Update a user's name, email, and preset. Role changes stay role=admin."""
     active_admins = _lock_active_admins()
     user_obj = get_object_or_404(User.objects.select_for_update(), pk=pk)
     presets = PermissionPreset.objects.all()
@@ -231,12 +234,14 @@ def user_update(request, pk):
     elif User.objects.filter(email=email).exclude(pk=pk).exists():
         errors['email'] = 'This email is already in use.'
 
-    if role not in ('admin', 'member'):
+    if request.user.is_admin:
+        if role not in ('admin', 'member'):
+            role = user_obj.role
+        # Last-admin guard: prevent demoting if last active admin
+        if user_obj.role == 'admin' and role == 'member' and len(active_admins) <= 1:
+            errors['role'] = 'Cannot demote the last active admin.'
+    else:
         role = user_obj.role
-
-    # Last-admin guard: prevent demoting if last active admin
-    if user_obj.role == 'admin' and role == 'member' and len(active_admins) <= 1:
-        errors['role'] = 'Cannot demote the last active admin.'
 
     if errors:
         return render(request, 'accounts/partials/user_detail_drawer.html', {
@@ -306,11 +311,14 @@ def _apply_module_gates(values):
     if not values['access_salaries']:
         for key in ('salaries_view_all', 'salaries_edit'):
             values[key] = False
+    if not values['access_team']:
+        for key in ('team_create', 'team_edit'):
+            values[key] = False
     return values
 
 
 @login_required
-@require_permission('access_team')
+@require_admin
 def preset_list(request):
     """List all permission presets."""
     presets = PermissionPreset.objects.annotate(
@@ -322,7 +330,7 @@ def preset_list(request):
 
 
 @login_required
-@require_permission('access_team')
+@require_admin
 def preset_create(request):
     """Create a new permission preset via drawer."""
     if request.method == 'POST':
@@ -365,7 +373,7 @@ def preset_create(request):
 
 
 @login_required
-@require_permission('access_team')
+@require_admin
 def preset_edit(request, pk):
     """Edit a permission preset via drawer."""
     preset = get_object_or_404(PermissionPreset, pk=pk)
@@ -402,7 +410,7 @@ def preset_edit(request, pk):
 
 
 @login_required
-@require_permission('access_team')
+@require_admin
 @require_POST
 def preset_delete(request, pk):
     """Delete a permission preset."""
@@ -421,7 +429,7 @@ def preset_delete(request, pk):
 
 
 @login_required
-@require_permission('access_team')
+@require_permission('team_edit')
 @require_POST
 @transaction.atomic
 def user_deactivate(request, pk):
@@ -446,7 +454,7 @@ def user_deactivate(request, pk):
 
 
 @login_required
-@require_permission('access_team')
+@require_admin
 def user_delete_confirm(request, pk):
     """Return deletion confirmation partial with cascade counts."""
     user_obj = get_object_or_404(User, pk=pk)
@@ -493,7 +501,7 @@ def user_delete_confirm(request, pk):
 
 
 @login_required
-@require_permission('access_team')
+@require_admin
 @require_POST
 @transaction.atomic
 def user_delete(request, pk):

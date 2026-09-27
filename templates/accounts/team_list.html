@@ -13,11 +13,14 @@
                 <span id="team-count" class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ total_count }}</span>
             </div>
             <div class="flex items-center gap-2">
+                {% if request.user.is_admin %}
                 <a href="{% url 'preset_list' %}"
                    class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
                     <i data-lucide="shield" class="w-3.5 h-3.5"></i>
                     Manage Presets
                 </a>
+                {% endif %}
+                {% if perms_map.team_create %}
                 <button hx-get="{% url 'user_create' %}"
                         hx-target="#slide-over"
                         hx-swap="innerHTML"
@@ -26,6 +29,7 @@
                     <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                     Add Member
                 </button>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -52,8 +56,12 @@
             </tbody>
         </table>
         {% else %}
+        {% if perms_map.team_create %}
         {% url 'user_create' as user_create_url %}
         {% include "components/empty_state.html" with icon="users" message="No team members yet" action_hx_get=user_create_url action_label="Add your first team member" %}
+        {% else %}
+        {% include "components/empty_state.html" with icon="users" message="No team members yet" %}
+        {% endif %}
         {% endif %}
         </div>
         {% include "components/pagination.html" %}

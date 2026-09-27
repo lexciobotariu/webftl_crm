@@ -6,7 +6,7 @@ from apps.accounts.permissions import PermissionPreset
 User = get_user_model()
 
 
-# Mirrors the seeded Admin and Developer presets (migrations 0005 through 0010).
+# Mirrors the seeded Admin and Developer presets (migrations 0005 through 0011).
 SYSTEM_PRESET_DEFAULTS = {
     'Admin': {
         'description': 'Full access to all sections',
@@ -34,6 +34,8 @@ SYSTEM_PRESET_DEFAULTS = {
         'salaries_view_all': True,
         'salaries_edit': True,
         'access_team': True,
+        'team_create': True,
+        'team_edit': True,
     },
     'Developer': {
         'description': 'Access to assigned projects, tasks, and personal todos',
@@ -61,6 +63,8 @@ SYSTEM_PRESET_DEFAULTS = {
         'salaries_view_all': False,
         'salaries_edit': False,
         'access_team': False,
+        'team_create': False,
+        'team_edit': False,
     },
 }
 
