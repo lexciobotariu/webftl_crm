@@ -29,11 +29,11 @@ def salaries_preset(db):
 
 @pytest.fixture
 def user(db, salaries_preset):
-    """A plain member who is allowed into the salaries section but cannot write.
+    """A plain member who can open Salaries and see only their own rows.
 
-    Read views only need ``access_salaries``; every mutating view additionally
-    requires ``@require_admin``. Keeping this fixture non-admin is what makes
-    the boundary tests in ``test_permissions.py`` meaningful.
+    Creating and changing salaries needs ``salaries_edit``. Delete stays
+    ``@require_admin``. Keeping this fixture non-admin is what makes the
+    boundary tests in ``test_permissions.py`` meaningful.
     """
     return User.objects.create_user(
         email='user@example.com',

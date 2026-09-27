@@ -1,5 +1,5 @@
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
 
@@ -10,12 +10,30 @@ from .forms import EmployeeSalaryForm, PaymentForm, SalaryMonthForm
 from .models import EmployeeSalary, Payment, SalaryMonth
 
 
+def visible_salaries(user):
+    """Employee salaries this user may open.
+
+    ``salaries_view_all`` is every EmployeeSalary. Without it, rows where
+    ``user`` is the employee. ``role=admin`` bypasses the flag through
+    ``User.has_app_permission``.
+    """
+    salaries = EmployeeSalary.objects.select_related('user')
+    if user.has_app_permission('salaries_view_all'):
+        return salaries
+    return salaries.filter(user=user)
+
+
+def _salary_or_404(user, pk):
+    """A salary outside ``visible_salaries`` is a 404, including by id."""
+    return get_object_or_404(visible_salaries(user), pk=pk)
+
+
 @login_required
 @require_permission('access_salaries')
 def salary_list(request):
-    """List all employee salary configurations."""
+    """List the employee salaries this user may open."""
     salary_data, current_year, current_month, has_available_users, has_any_users = (
-        services.get_salary_list_data()
+        services.get_salary_list_data(visible_salaries(request.user))
     )
     return render(request, 'salaries/salary_list.html', {
         'salary_data': salary_data,
@@ -28,7 +46,7 @@ def salary_list(request):
 
 @login_required
 @require_permission('access_salaries')
-@require_admin
+@require_permission('salaries_edit')
 def salary_create(request):
     """Create salary configuration for an employee."""
     from django.contrib.auth import get_user_model
@@ -60,9 +78,10 @@ def salary_create(request):
 def salary_detail(request, pk):
     """Employee salary detail with month list."""
     try:
-        salary, months, current_year, current_month = services.get_salary_detail_data(pk)
+        salary, months, current_year, current_month = services.get_salary_detail_data(
+            pk, visible_salaries(request.user)
+        )
     except EmployeeSalary.DoesNotExist as exc:
-        from django.http import Http404
         raise Http404("Employee salary not found") from exc
 
     return render(request, 'salaries/salary_detail.html', {
@@ -75,13 +94,10 @@ def salary_detail(request, pk):
 
 @login_required
 @require_permission('access_salaries')
-@require_admin
+@require_permission('salaries_edit')
 def month_create(request, pk):
     """Create month entry drawer."""
-    employee_salary = get_object_or_404(
-        EmployeeSalary.objects.select_related('user'),
-        pk=pk
-    )
+    employee_salary = _salary_or_404(request.user, pk)
 
     if request.method == 'POST':
         form = SalaryMonthForm(request.POST, employee_salary=employee_salary)
@@ -103,13 +119,10 @@ def month_create(request, pk):
 
 @login_required
 @require_permission('access_salaries')
-@require_admin
+@require_permission('salaries_edit')
 def payment_create(request, pk):
     """Record payment drawer."""
-    employee_salary = get_object_or_404(
-        EmployeeSalary.objects.select_related('user'),
-        pk=pk
-    )
+    employee_salary = _salary_or_404(request.user, pk)
 
     if request.method == 'POST':
         form = PaymentForm(request.POST, employee_salary=employee_salary)
@@ -135,13 +148,10 @@ def payment_create(request, pk):
 
 @login_required
 @require_permission('access_salaries')
-@require_admin
+@require_permission('salaries_edit')
 def salary_edit(request, pk):
     """Edit salary configuration drawer."""
-    salary = get_object_or_404(
-        EmployeeSalary.objects.select_related('user'),
-        pk=pk
-    )
+    salary = _salary_or_404(request.user, pk)
 
     if request.method == 'POST':
         form = EmployeeSalaryForm(request.POST, instance=salary)
@@ -171,7 +181,7 @@ def salary_edit(request, pk):
 @require_POST
 def salary_delete(request, pk):
     """Delete salary configuration."""
-    salary = get_object_or_404(EmployeeSalary, pk=pk)
+    salary = _salary_or_404(request.user, pk)
     services.delete_employee_salary(salary)
     response = HttpResponse('')
     response['HX-Redirect'] = '/salaries/'
@@ -184,13 +194,10 @@ def salary_delete(request, pk):
 
 @login_required
 @require_permission('access_salaries')
-@require_admin
+@require_permission('salaries_edit')
 def month_edit(request, pk, month_pk):
     """Edit month entry drawer."""
-    employee_salary = get_object_or_404(
-        EmployeeSalary.objects.select_related('user'),
-        pk=pk
-    )
+    employee_salary = _salary_or_404(request.user, pk)
     month = get_object_or_404(SalaryMonth, pk=month_pk, employee_salary=employee_salary)
 
     if request.method == 'POST':
@@ -219,7 +226,7 @@ def month_edit(request, pk, month_pk):
 @require_POST
 def month_delete(request, pk, month_pk):
     """Delete month entry."""
-    employee_salary = get_object_or_404(EmployeeSalary, pk=pk)
+    employee_salary = _salary_or_404(request.user, pk)
     month = get_object_or_404(SalaryMonth, pk=month_pk, employee_salary=employee_salary)
     services.delete_salary_month(month)
     response = HttpResponse('')
@@ -232,13 +239,10 @@ def month_delete(request, pk, month_pk):
 
 @login_required
 @require_permission('access_salaries')
-@require_admin
+@require_permission('salaries_edit')
 def payment_edit(request, pk, payment_pk):
     """Edit payment drawer."""
-    employee_salary = get_object_or_404(
-        EmployeeSalary.objects.select_related('user'),
-        pk=pk
-    )
+    employee_salary = _salary_or_404(request.user, pk)
     payment = get_object_or_404(
         Payment.objects.select_related('salary_month'),
         pk=payment_pk,
@@ -271,7 +275,7 @@ def payment_edit(request, pk, payment_pk):
 @require_POST
 def payment_delete(request, pk, payment_pk):
     """Delete payment."""
-    employee_salary = get_object_or_404(EmployeeSalary, pk=pk)
+    employee_salary = _salary_or_404(request.user, pk)
     payment = get_object_or_404(
         Payment,
         pk=payment_pk,

@@ -54,11 +54,13 @@
             </div>
             <div class="flex items-center gap-2 text-zinc-500">
                 <span class="text-xs">{{ month.payment_count }} payment{{ month.payment_count|pluralize }}</span>
+                {% if perms_map.salaries_edit %}
                 <button onclick="event.stopPropagation(); htmx.ajax('GET', '{% url 'month_edit' salary.id month.id %}', {target:'#slide-over', swap:'innerHTML'}).then(function() { openSlideOver(); })"
                         class="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors"
                         title="Edit month">
                     <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                 </button>
+                {% endif %}
                 <i data-lucide="chevron-down" class="w-4 h-4 transition-transform"
                    :class="{ 'rotate-180': expandedMonth === {{ month.id }} }"></i>
             </div>

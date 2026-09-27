@@ -128,6 +128,7 @@
     </form>
 
     <!-- Delete section -->
+    {% if request.user.is_admin %}
     <div class="flex-shrink-0 px-4 py-3 border-t border-border-subtle bg-panel/50">
         <button hx-post="{% url 'payment_delete' employee_salary.id payment.id %}"
                 hx-confirm="Are you sure you want to delete this payment?"
@@ -136,6 +137,7 @@
             Delete Payment
         </button>
     </div>
+    {% endif %}
 </div>
 
 <script>

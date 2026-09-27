@@ -303,6 +303,9 @@ def _apply_module_gates(values):
     if not values['access_notes']:
         for key in ('notes_view_all', 'notes_edit_public'):
             values[key] = False
+    if not values['access_salaries']:
+        for key in ('salaries_view_all', 'salaries_edit'):
+            values[key] = False
     return values
 
 
