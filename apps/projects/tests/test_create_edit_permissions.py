@@ -307,6 +307,11 @@ def _team(project):
     return reverse('project_detail_team', args=[project.pk])
 
 
+def _record_menu(html):
+    start = html.index('w-56 flex-shrink-0 border-r border-border-subtle bg-panel/50')
+    return html[start:html.index('flex-1 overflow-y-auto', start)]
+
+
 @pytest.mark.django_db
 class TestProjectTeam:
     def test_a_row_with_no_edit_flag_sees_the_list_only(self, client):
@@ -549,3 +554,14 @@ class TestProjectTeam:
         assert 'Documents' in after
         assert 'Team' not in after
         assert 'file-text' in after
+
+    def test_project_name_heads_the_menu(self, client):
+        user = _user('Viewer')
+        project = ProjectFactory(name='Harbor Rebuild')
+        ProjectAccessFactory(project=project, user=user)
+        client.force_login(user)
+
+        html = client.get(reverse('project_detail', args=[project.pk])).content.decode()
+        menu = _record_menu(html)
+        assert '>Harbor Rebuild</div>' in menu
+        assert 'Navigation' not in menu

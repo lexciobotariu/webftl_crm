@@ -53,40 +53,12 @@
         </div>
     </div>
 
-    <!-- Main content with right sidebar -->
+    <!-- Record menu, then the page -->
     <div class="flex-1 flex overflow-hidden">
-        <!-- Main content area -->
-        <div class="flex-1 overflow-y-auto p-6 pb-12">
-            {% if active_tab == 'overview' %}
-            <!-- Overview Section -->
-            <div class="space-y-6 pb-6" id="overview-content">
-                {% include "projects/partials/overview_content.html" %}
-            </div>
-            {% elif active_tab == 'tasks' %}
-            <!-- Tasks Section -->
-            <div class="pb-6" id="tasks-content">
-                {% include "projects/partials/tasks_content.html" %}
-            </div>
-            {% elif active_tab == 'notes' %}
-            <div hx-get="{% url 'project_notes_list' project.pk %}"
-                 hx-trigger="load, notesChanged from:body"
-                 hx-swap="innerHTML"
-                 class="h-full">
-                <div class="flex items-center justify-center h-full">
-                    <div class="text-zinc-500">Loading notes...</div>
-                </div>
-            </div>
-            {% elif active_tab == 'team' %}
-            <div class="pb-6" id="team-content">
-                {% include "projects/partials/team_content.html" %}
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- Right sidebar navigation -->
-        <div class="w-56 flex-shrink-0 border-l border-border-subtle bg-panel/50 overflow-hidden">
+        <!-- Record menu -->
+        <div class="w-56 flex-shrink-0 border-r border-border-subtle bg-panel/50 overflow-hidden">
             <div class="p-3">
-                <div class="text-[10px] uppercase tracking-wider text-zinc-600 px-2 mb-2">Navigation</div>
+                <div class="text-[10px] uppercase tracking-wider text-zinc-600 px-2 mb-2 truncate" title="{{ project.name }}">{{ project.name }}</div>
                 <nav class="space-y-1">
                     <a href="{% url 'project_detail' project.pk %}"
                        class="w-full flex items-center gap-3 px-3 py-2 rounded-card text-sm transition-colors text-left {% if active_tab == 'overview' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
@@ -127,6 +99,34 @@
                     </div>
                 </nav>
             </div>
+        </div>
+
+        <!-- Main content area -->
+        <div class="flex-1 overflow-y-auto p-6 pb-12">
+            {% if active_tab == 'overview' %}
+            <!-- Overview Section -->
+            <div class="space-y-6 pb-6" id="overview-content">
+                {% include "projects/partials/overview_content.html" %}
+            </div>
+            {% elif active_tab == 'tasks' %}
+            <!-- Tasks Section -->
+            <div class="pb-6" id="tasks-content">
+                {% include "projects/partials/tasks_content.html" %}
+            </div>
+            {% elif active_tab == 'notes' %}
+            <div hx-get="{% url 'project_notes_list' project.pk %}"
+                 hx-trigger="load, notesChanged from:body"
+                 hx-swap="innerHTML"
+                 class="h-full">
+                <div class="flex items-center justify-center h-full">
+                    <div class="text-zinc-500">Loading notes...</div>
+                </div>
+            </div>
+            {% elif active_tab == 'team' %}
+            <div class="pb-6" id="team-content">
+                {% include "projects/partials/team_content.html" %}
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>

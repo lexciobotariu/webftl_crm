@@ -280,3 +280,21 @@ class TestDeleteStaysAdmin:
         deleted = client.post(reverse('client_delete', args=[existing.pk]))
         assert deleted.status_code == 302
         assert not Client.objects.filter(pk=existing.pk).exists()
+
+
+def _record_menu(html):
+    start = html.index('w-56 flex-shrink-0 border-r border-border-subtle bg-panel/50')
+    return html[start:html.index('flex-1 overflow-y-auto', start)]
+
+
+@pytest.mark.django_db
+class TestRecordMenu:
+    def test_client_name_heads_the_menu(self, client):
+        user = _user('MenuViewer', clients_view_all=True)
+        client_obj = ClientFactory(name='Northwind Studio')
+        client.force_login(user)
+
+        html = client.get(reverse('client_detail', args=[client_obj.pk])).content.decode()
+        menu = _record_menu(html)
+        assert '>Northwind Studio</div>' in menu
+        assert 'Navigation' not in menu
