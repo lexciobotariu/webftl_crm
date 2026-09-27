@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Label, Subtask, Task
+from .models import Label, Subtask, Task, TimeEntry
 
 
 class SubtaskInline(admin.TabularInline):
@@ -20,3 +20,10 @@ class TaskAdmin(admin.ModelAdmin):
 class LabelAdmin(admin.ModelAdmin):
     list_display = ('name', 'project', 'color')
     list_filter = ('project',)
+
+
+@admin.register(TimeEntry)
+class TimeEntryAdmin(admin.ModelAdmin):
+    list_display = ('task', 'user', 'started_at', 'ended_at')
+    list_filter = ('user',)
+    search_fields = ('task__title', 'note', 'user__email')

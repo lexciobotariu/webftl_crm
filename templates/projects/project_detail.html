@@ -100,6 +100,11 @@
                         <i data-lucide="sticky-note" class="w-4 h-4"></i>
                         Notes
                     </a>
+                    <a href="{% url 'time_week' %}?project={{ project.pk }}"
+                       class="w-full flex items-center gap-3 px-3 py-2 rounded-card text-sm text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50 transition-colors">
+                        <i data-lucide="clock" class="w-4 h-4"></i>
+                        Time Tracking
+                    </a>
                 </nav>
 
                 <!-- Coming Soon placeholders -->
@@ -112,10 +117,6 @@
                     <div class="w-full flex items-center gap-3 px-3 py-2 rounded-card text-sm text-zinc-600 cursor-not-allowed">
                         <i data-lucide="file-text" class="w-4 h-4"></i>
                         Documents
-                    </div>
-                    <div class="w-full flex items-center gap-3 px-3 py-2 rounded-card text-sm text-zinc-600 cursor-not-allowed">
-                        <i data-lucide="clock" class="w-4 h-4"></i>
-                        Time Tracking
                     </div>
                 </nav>
             </div>

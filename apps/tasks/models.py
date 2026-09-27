@@ -150,6 +150,61 @@ class TaskActivity(models.Model):
         return f"{self.get_activity_type_display()} on {self.task}"
 
 
+class TimeEntry(models.Model):
+    """Logged time on a task.
+
+    ``ended_at`` is null while a timer is running. Duration is
+    ``ended_at - started_at`` and is not stored. A person has at most one
+    open row; a manual entry may run longer than the 12-hour timer cap.
+    """
+
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='time_entries')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='time_entries',
+    )
+    started_at = models.DateTimeField()
+    ended_at = models.DateTimeField(null=True, blank=True)
+    note = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-started_at']
+        indexes = [
+            models.Index(fields=['user', 'started_at']),
+            models.Index(fields=['task']),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user'],
+                condition=Q(ended_at__isnull=True),
+                name='unique_open_timer_per_user',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.user} on {self.task} at {self.started_at:%Y-%m-%d %H:%M}'
+
+    @property
+    def duration(self):
+        if self.ended_at is None:
+            return None
+        return self.ended_at - self.started_at
+
+    @property
+    def duration_label(self):
+        if self.duration is None:
+            return 'Running'
+        total_seconds = max(int(self.duration.total_seconds()), 0)
+        hours, remainder = divmod(total_seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        if hours:
+            return f'{hours}h {minutes:02d}m'
+        if minutes:
+            return f'{minutes}m {seconds:02d}s'
+        return f'{seconds}s'
+
+
 class Attachment(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='attachments')
     file = models.FileField(upload_to='attachments/%Y/%m/')

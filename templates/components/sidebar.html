@@ -61,6 +61,16 @@
             <i data-lucide="user-check" class="w-4 h-4"></i>
             My Tasks
         </a>
+        <a href="{% url 'time_week' %}"
+           class="flex items-center gap-2.5 pl-9 pr-3 py-1.5 rounded-card text-[13px] font-medium transition-colors duration-150
+                  {% if request.resolver_match.url_name == 'time_week' %}
+                  bg-elevated text-zinc-100 border border-border-subtle
+                  {% else %}
+                  text-zinc-400 hover:text-zinc-200 hover:bg-hover
+                  {% endif %}">
+            <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+            My Week
+        </a>
         {% endif %}
         <!-- Finances -->
         {% if perms_map.access_salaries %}

@@ -1,4 +1,5 @@
 from django import forms
+from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.projects.models import get_assignable_users
@@ -30,6 +31,54 @@ class TaskForm(forms.ModelForm):
             self.fields['assignee'].queryset = get_assignable_users(project)
         else:
             self.fields['assignee'].queryset = User.objects.none()
+
+
+DATETIME_INPUT_FORMATS = [
+    '%Y-%m-%dT%H:%M',
+    '%Y-%m-%dT%H:%M:%S',
+    '%Y-%m-%d %H:%M:%S',
+]
+
+DRAWER_INPUT = (
+    'w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm '
+    'text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none'
+)
+
+
+class TimeEntryForm(forms.Form):
+    started_at = forms.DateTimeField(
+        input_formats=DATETIME_INPUT_FORMATS,
+        widget=forms.DateTimeInput(format='%Y-%m-%dT%H:%M', attrs={
+            'type': 'datetime-local',
+            'class': DRAWER_INPUT,
+        }),
+    )
+    ended_at = forms.DateTimeField(
+        input_formats=DATETIME_INPUT_FORMATS,
+        widget=forms.DateTimeInput(format='%Y-%m-%dT%H:%M', attrs={
+            'type': 'datetime-local',
+            'class': DRAWER_INPUT,
+        }),
+    )
+    note = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': DRAWER_INPUT,
+            'rows': 3,
+            'placeholder': 'What did you work on? (optional)',
+        }),
+    )
+
+    def clean(self):
+        cleaned = super().clean()
+        started = cleaned.get('started_at')
+        ended = cleaned.get('ended_at')
+        if started and ended:
+            if ended <= started:
+                self.add_error('ended_at', 'End must be after start.')
+            elif ended > timezone.now():
+                self.add_error('ended_at', 'End cannot be in the future.')
+        return cleaned
 
 
 class SubtaskForm(forms.ModelForm):
