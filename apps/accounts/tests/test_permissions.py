@@ -20,6 +20,8 @@ class TestPermissionPreset:
         assert 'access_notes' in PERMISSION_KEYS
         assert 'access_dashboard' in PERMISSION_KEYS
         assert 'clients_view_all' in PERMISSION_KEYS
+        assert 'clients_create' in PERMISSION_KEYS
+        assert 'clients_edit' in PERMISSION_KEYS
         assert 'projects_view_all' in PERMISSION_KEYS
 
     def test_create_preset(self):
@@ -106,6 +108,8 @@ class TestDefaultPresets:
         assert preset.access_salaries is False
         assert preset.access_team is False
         assert preset.clients_view_all is False
+        assert preset.clients_create is False
+        assert preset.clients_edit is False
         assert preset.projects_view_all is False
 
 
@@ -484,6 +488,8 @@ class TestPresetCreate:
         assert preset.access_clients is False
         assert preset.access_salaries is False
         assert preset.clients_view_all is False
+        assert preset.clients_create is False
+        assert preset.clients_edit is False
         assert preset.projects_view_all is False
 
     def test_create_preset_returns_item(self, client):

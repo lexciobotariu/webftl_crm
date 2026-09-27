@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -7,6 +8,13 @@ class Client(models.Model):
     phone = models.CharField(max_length=50, blank=True)
     address = models.TextField(blank=True)
     notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_clients',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -22,11 +30,12 @@ class Client(models.Model):
 
 
 def visible_clients(user):
-    """Clients this user may see on the dashboard and in the client list.
+    """Clients this user may open on the dashboard, list, detail, edit, and delete.
 
     ``clients_view_all`` is every client. Without it, the distinct clients of
-    projects where ``user`` has a membership. ``role=admin`` bypasses the flag
-    through ``User.has_app_permission``.
+    projects where ``user`` has a membership, plus clients ``user`` created.
+    ``role=admin`` bypasses the flag through ``User.has_app_permission``.
+    Creating a client does not grant edit.
 
     Membership is filtered through a primary-key subquery so two projects on
     the same client still count as one client.
@@ -36,4 +45,4 @@ def visible_clients(user):
     from apps.projects.models import ProjectMember
 
     client_ids = ProjectMember.objects.filter(user=user).values('project__client_id')
-    return Client.objects.filter(pk__in=client_ids)
+    return Client.objects.filter(models.Q(pk__in=client_ids) | models.Q(created_by=user))
