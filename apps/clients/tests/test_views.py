@@ -4,7 +4,7 @@ from django.urls import reverse
 from apps.accounts.factories import AdminUserFactory, UserFactory
 from apps.accounts.permissions import PermissionPreset
 from apps.clients.factories import ClientFactory
-from apps.projects.factories import ProjectFactory, ProjectMemberFactory
+from apps.projects.factories import ProjectAccessFactory, ProjectFactory
 
 
 @pytest.mark.django_db
@@ -168,7 +168,7 @@ class TestClientDetailTabs:
         client_obj = ClientFactory()
         mine = ProjectFactory(client=client_obj, name='Mine Project')
         ProjectFactory(client=client_obj, name='Secret Project')
-        ProjectMemberFactory(project=mine, user=user, role='viewer')
+        ProjectAccessFactory(project=mine, user=user)
         client.force_login(user)
 
         response = client.get(reverse('client_detail_projects', args=[client_obj.pk]))

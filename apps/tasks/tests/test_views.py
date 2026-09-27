@@ -3,7 +3,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
 from apps.accounts.factories import UserFactory
-from apps.projects.factories import ProjectFactory, ProjectMemberFactory, StatusFactory
+from apps.projects.factories import ProjectAccessFactory, ProjectFactory, StatusFactory
 from apps.tasks.factories import SubtaskFactory, TaskFactory
 
 
@@ -18,7 +18,7 @@ class TestMyTasks:
         other = UserFactory()
         project = ProjectFactory()
         status = project.statuses.first()
-        ProjectMemberFactory(project=project, user=user, role='editor')
+        ProjectAccessFactory(project=project, user=user)
         TaskFactory(project=project, status=status, assignee=user, title='My Task')
         TaskFactory(project=project, status=status, assignee=other, title='Other Task')
         client.force_login(user)
@@ -36,10 +36,9 @@ class TestTaskCreate:
         assert response.status_code == 302
 
     def test_task_create_requires_editor_role(self, client):
-        """Viewers cannot create tasks."""
+        """A person without a ProjectAccess row cannot create tasks."""
         user = UserFactory()
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='viewer')
         client.force_login(user)
         response = client.post(
             reverse('task_create', args=[project.pk]),
@@ -50,7 +49,7 @@ class TestTaskCreate:
     def test_task_create_with_valid_data(self, client):
         user = UserFactory()
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='editor')
+        ProjectAccessFactory(project=project, user=user)
         client.force_login(user)
         response = client.post(
             reverse('task_create', args=[project.pk]),
@@ -66,7 +65,7 @@ class TestTaskCreate:
 
         user = UserFactory()
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='editor')
+        ProjectAccessFactory(project=project, user=user)
         StatusFactory(project=project)
         client.force_login(user)
 
@@ -90,7 +89,7 @@ class TestTaskEdit:
 
         user = UserFactory()
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='editor')
+        ProjectAccessFactory(project=project, user=user)
         status = project.statuses.get(name='Backlog')
         task = TaskFactory(project=project, status=status, priority='low')
         client.force_login(user)
@@ -114,7 +113,7 @@ class TestTaskMove:
     def test_move_task_to_new_status(self, client):
         user = UserFactory()
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='editor')
+        ProjectAccessFactory(project=project, user=user)
         status1 = project.statuses.first()
         status2 = project.statuses.last()
         task = TaskFactory(project=project, status=status1)
@@ -128,10 +127,9 @@ class TestTaskMove:
         assert task.status == status2
 
     def test_move_task_requires_editor(self, client):
-        """Viewers cannot move tasks."""
+        """A person without a ProjectAccess row cannot move tasks."""
         user = UserFactory()
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='viewer')
         status1 = project.statuses.first()
         status2 = project.statuses.last()
         task = TaskFactory(project=project, status=status1)
@@ -146,7 +144,7 @@ class TestTaskMove:
         user = UserFactory()
         project1 = ProjectFactory()
         project2 = ProjectFactory()
-        ProjectMemberFactory(project=project1, user=user, role='editor')
+        ProjectAccessFactory(project=project1, user=user)
         task = TaskFactory(project=project1, status=project1.statuses.first())
         other_status = project2.statuses.first()
         client.force_login(user)
@@ -162,7 +160,7 @@ class TestTaskMove:
 
         user = UserFactory()
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='editor')
+        ProjectAccessFactory(project=project, user=user)
         status1 = project.statuses.get(name='Backlog')
         status2 = project.statuses.get(name='Done')
         task = TaskFactory(project=project, status=status1)
@@ -190,7 +188,7 @@ class TestTaskUpdateStatus:
 
         user = UserFactory()
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='editor')
+        ProjectAccessFactory(project=project, user=user)
         status1 = project.statuses.get(name='Backlog')
         status2 = project.statuses.get(name='In Progress')
         task = TaskFactory(project=project, status=status1)
@@ -215,7 +213,7 @@ class TestTaskUpdateStatus:
         not the stale pre-move status from the caller's instance."""
         user = UserFactory()
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='editor')
+        ProjectAccessFactory(project=project, user=user)
         status1 = project.statuses.get(name='Backlog')
         status2 = project.statuses.get(name='In Progress')
         task = TaskFactory(project=project, status=status1)
@@ -238,7 +236,7 @@ class TestSubtasks:
     def test_create_subtask(self, client):
         user = UserFactory()
         task = TaskFactory()
-        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        ProjectAccessFactory(project=task.project, user=user)
         client.force_login(user)
         response = client.post(
             reverse('subtask_create', args=[task.pk]),
@@ -250,7 +248,7 @@ class TestSubtasks:
     def test_toggle_subtask(self, client):
         user = UserFactory()
         task = TaskFactory()
-        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        ProjectAccessFactory(project=task.project, user=user)
         subtask = SubtaskFactory(task=task, completed=False)
         client.force_login(user)
         response = client.post(
@@ -263,7 +261,7 @@ class TestSubtasks:
     def test_delete_subtask(self, client):
         user = UserFactory()
         task = TaskFactory()
-        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        ProjectAccessFactory(project=task.project, user=user)
         subtask = SubtaskFactory(task=task)
         client.force_login(user)
         response = client.post(
@@ -279,7 +277,7 @@ class TestAttachmentUpload:
     def test_upload_valid_file(self, client):
         user = UserFactory()
         task = TaskFactory()
-        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        ProjectAccessFactory(project=task.project, user=user)
         file = SimpleUploadedFile('test.txt', b'file content', content_type='text/plain')
         client.force_login(user)
         response = client.post(
@@ -292,7 +290,7 @@ class TestAttachmentUpload:
     def test_upload_no_file(self, client):
         user = UserFactory()
         task = TaskFactory()
-        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        ProjectAccessFactory(project=task.project, user=user)
         client.force_login(user)
         response = client.post(
             reverse('attachment_upload', args=[task.pk]),
@@ -301,10 +299,9 @@ class TestAttachmentUpload:
         assert response.status_code == 400
 
     def test_upload_requires_editor(self, client):
-        """Viewers cannot upload attachments."""
+        """A person without a ProjectAccess row cannot upload attachments."""
         user = UserFactory()
         task = TaskFactory()
-        ProjectMemberFactory(project=task.project, user=user, role='viewer')
         file = SimpleUploadedFile('test.txt', b'file content', content_type='text/plain')
         client.force_login(user)
         response = client.post(
@@ -320,7 +317,7 @@ class TestComments:
         """Editors can create comments."""
         user = UserFactory()
         task = TaskFactory()
-        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        ProjectAccessFactory(project=task.project, user=user)
         client.force_login(user)
         response = client.post(
             reverse('comment_create', args=[task.pk]),
@@ -332,7 +329,6 @@ class TestComments:
     def test_viewer_cannot_comment(self, client):
         user = UserFactory()
         task = TaskFactory()
-        ProjectMemberFactory(project=task.project, user=user, role='viewer')
         client.force_login(user)
         response = client.post(
             reverse('comment_create', args=[task.pk]),
@@ -344,7 +340,7 @@ class TestComments:
     def test_empty_comment_rejected(self, client):
         user = UserFactory()
         task = TaskFactory()
-        ProjectMemberFactory(project=task.project, user=user, role='viewer')
+        ProjectAccessFactory(project=task.project, user=user)
         client.force_login(user)
         response = client.post(
             reverse('comment_create', args=[task.pk]),

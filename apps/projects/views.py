@@ -14,7 +14,14 @@ from apps.clients.models import Client, visible_clients
 from apps.tasks.models import Label, Task, TaskActivity
 
 from .forms import LabelForm, ProjectForm, StatusForm
-from .models import Project, Status, can_access_project, visible_projects
+from .models import (
+    Project,
+    ProjectAccess,
+    Status,
+    can_access_project,
+    can_edit_project,
+    visible_projects,
+)
 
 PROJECTS_PER_PAGE = 20
 
@@ -46,8 +53,8 @@ def project_list(request):
 @login_required
 @require_permission('access_projects')
 def project_create(request):
-    if not request.user.is_admin:
-        return HttpResponseForbidden("Admin access required to create projects")
+    if not request.user.has_app_permission('projects_create'):
+        return HttpResponseForbidden("You can't create projects")
 
     initial = {}
     if request.GET.get('client'):
@@ -57,6 +64,7 @@ def project_create(request):
         form = ProjectForm(request.POST)
         if form.is_valid():
             project = form.save()
+            ProjectAccess.objects.create(project=project, user=request.user)
             return redirect('project_board', pk=project.pk)
     else:
         form = ProjectForm(initial=initial)
@@ -68,7 +76,7 @@ def project_create(request):
 def project_detail(request, pk):
     """Project detail page with overview and tasks tabs."""
     project = get_object_or_404(Project, pk=pk)
-    if not can_access_project(request.user, project, 'viewer'):
+    if not can_access_project(request.user, project):
         return HttpResponseForbidden("You don't have access to this project")
 
     # Calculate stats. "Done" is whatever the project marks with Status.is_done,
@@ -101,6 +109,7 @@ def project_detail(request, pk):
         'overdue_tasks': overdue_tasks,
         'recent_activities': recent_activities,
         'active_tab': active_tab,
+        'can_edit_project': can_edit_project(request.user, project),
     })
 
 
@@ -108,7 +117,7 @@ def project_detail(request, pk):
 @require_permission('access_projects')
 def project_board(request, pk):
     project = get_object_or_404(Project, pk=pk)
-    if not can_access_project(request.user, project, 'viewer'):
+    if not can_access_project(request.user, project):
         return HttpResponseForbidden("You don't have access to this project")
 
     visible_statuses = (
@@ -131,6 +140,7 @@ def project_board(request, pk):
         'project': project,
         'visible_statuses': visible_statuses,
         'hidden_task_count': hidden_task_count,
+        'can_edit_project': can_edit_project(request.user, project),
     }
 
     if request.htmx:
@@ -166,8 +176,8 @@ def project_delete(request, pk):
 @transaction.atomic
 def reorder_statuses(request, pk):
     project = get_object_or_404(Project, pk=pk)
-    if not can_access_project(request.user, project, 'manager'):
-        return HttpResponseForbidden("Manager access required")
+    if not can_edit_project(request.user, project):
+        return HttpResponseForbidden("You can't edit this project")
 
     try:
         data = json.loads(request.body)
@@ -188,8 +198,8 @@ def reorder_statuses(request, pk):
 def project_settings(request, pk):
     """Unified project settings page with statuses and labels."""
     project = get_object_or_404(Project, pk=pk)
-    if not can_access_project(request.user, project, 'manager'):
-        return HttpResponseForbidden("Manager access required")
+    if not can_edit_project(request.user, project):
+        return HttpResponseForbidden("You can't edit this project")
 
     # Determine back URL based on 'next' parameter
     next_page = request.GET.get('next', 'board')
@@ -205,6 +215,7 @@ def project_settings(request, pk):
         'status_form': status_form,
         'label_form': label_form,
         'back_url': back_url,
+        'can_edit_project': can_edit_project(request.user, project),
     })
 
 
@@ -214,8 +225,8 @@ def project_settings(request, pk):
 def project_settings_update(request, pk):
     """Handle General settings form submission via HTMX."""
     project = get_object_or_404(Project, pk=pk)
-    if not can_access_project(request.user, project, 'manager'):
-        return HttpResponseForbidden("Manager access required")
+    if not can_edit_project(request.user, project):
+        return HttpResponseForbidden("You can't edit this project")
 
     name = request.POST.get('name', '').strip()
     description = request.POST.get('description', '').strip()
@@ -247,8 +258,8 @@ def project_settings_update(request, pk):
 @require_POST
 def label_create(request, pk):
     project = get_object_or_404(Project, pk=pk)
-    if not can_access_project(request.user, project, 'manager'):
-        return HttpResponseForbidden("Manager access required")
+    if not can_edit_project(request.user, project):
+        return HttpResponseForbidden("You can't edit this project")
 
     form = LabelForm(request.POST)
     if form.is_valid():
@@ -264,8 +275,8 @@ def label_create(request, pk):
 @require_POST
 def label_delete(request, pk, label_pk):
     project = get_object_or_404(Project, pk=pk)
-    if not can_access_project(request.user, project, 'manager'):
-        return HttpResponseForbidden("Manager access required")
+    if not can_edit_project(request.user, project):
+        return HttpResponseForbidden("You can't edit this project")
 
     label = get_object_or_404(Label, pk=label_pk, project=project)
     label.delete()
@@ -278,8 +289,8 @@ def label_delete(request, pk, label_pk):
 @transaction.atomic
 def status_create(request, pk):
     project = get_object_or_404(Project.objects.select_for_update(), pk=pk)
-    if not can_access_project(request.user, project, 'manager'):
-        return HttpResponseForbidden("Manager access required")
+    if not can_edit_project(request.user, project):
+        return HttpResponseForbidden("You can't edit this project")
 
     form = StatusForm(request.POST)
     if form.is_valid():
@@ -314,8 +325,8 @@ def status_create(request, pk):
 @require_POST
 def status_delete(request, pk, status_pk):
     project = get_object_or_404(Project, pk=pk)
-    if not can_access_project(request.user, project, 'manager'):
-        return HttpResponseForbidden("Manager access required")
+    if not can_edit_project(request.user, project):
+        return HttpResponseForbidden("You can't edit this project")
 
     status = get_object_or_404(Status, pk=status_pk, project=project)
 
@@ -336,8 +347,8 @@ def status_delete(request, pk, status_pk):
 @require_POST
 def status_toggle_visibility(request, pk, status_pk):
     project = get_object_or_404(Project, pk=pk)
-    if not can_access_project(request.user, project, 'manager'):
-        return HttpResponseForbidden("Manager access required")
+    if not can_edit_project(request.user, project):
+        return HttpResponseForbidden("You can't edit this project")
 
     with transaction.atomic():
         status = get_object_or_404(
@@ -353,8 +364,8 @@ def status_toggle_visibility(request, pk, status_pk):
 @require_POST
 def status_toggle_done(request, pk, status_pk):
     project = get_object_or_404(Project, pk=pk)
-    if not can_access_project(request.user, project, 'manager'):
-        return HttpResponseForbidden("Manager access required")
+    if not can_edit_project(request.user, project):
+        return HttpResponseForbidden("You can't edit this project")
 
     with transaction.atomic():
         status = get_object_or_404(

@@ -8,6 +8,9 @@ PERMISSION_KEYS = [
     'clients_edit',
     'access_projects',
     'projects_view_all',
+    'projects_create',
+    'projects_edit_own',
+    'projects_edit_all',
     'access_tasks',
     'access_todos',
     'access_notes',
@@ -37,6 +40,9 @@ class PermissionPreset(models.Model):
     # Create and edit are separate from view. Delete stays role=admin.
     clients_create = models.BooleanField(default=False)
     clients_edit = models.BooleanField(default=False)
+    projects_create = models.BooleanField(default=False)
+    projects_edit_own = models.BooleanField(default=False)
+    projects_edit_all = models.BooleanField(default=False)
 
     is_system = models.BooleanField(default=False, help_text="System presets cannot be deleted")
 

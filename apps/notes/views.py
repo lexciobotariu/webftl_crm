@@ -53,7 +53,7 @@ def project_notes_list(request, project_pk):
     """Render notes table for project detail page"""
     project = get_object_or_404(Project, pk=project_pk)
 
-    if not can_access_project(request.user, project, 'viewer'):
+    if not can_access_project(request.user, project):
         return HttpResponseForbidden("Access denied")
 
     notes = notes_visible_to_user(

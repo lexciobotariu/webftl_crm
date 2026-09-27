@@ -4,7 +4,7 @@ from django.core.exceptions import PermissionDenied
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from apps.accounts.factories import UserFactory
-from apps.projects.factories import ProjectFactory, ProjectMemberFactory
+from apps.projects.factories import ProjectAccessFactory, ProjectFactory
 from apps.tasks import services
 from apps.tasks.factories import LabelFactory, SubtaskFactory, TaskFactory
 from apps.tasks.models import Subtask, Task, TaskActivity
@@ -18,17 +18,17 @@ class TestPermissions:
         # No membership created
 
         with pytest.raises(PermissionDenied) as exc_info:
-            services.require_access(user, project, 'editor')
+            services.require_access(user, project)
 
-        assert 'Editor access required' in str(exc_info.value)
+        assert 'Project access required' in str(exc_info.value)
 
     def test_require_access_passes_for_editor(self):
         user = UserFactory()
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='editor')
+        ProjectAccessFactory(project=project, user=user)
 
         # Should not raise
-        services.require_access(user, project, 'editor')
+        services.require_access(user, project)
 
     def test_require_access_passes_for_admin(self):
         from apps.accounts.factories import AdminUserFactory
@@ -37,7 +37,7 @@ class TestPermissions:
         # No membership needed for admin
 
         # Should not raise
-        services.require_access(admin, project, 'manager')
+        services.require_access(admin, project)
 
 
 @pytest.mark.django_db
@@ -45,7 +45,7 @@ class TestUpdateTaskField:
     def test_update_task_field_changes_value(self):
         user = UserFactory()
         task = TaskFactory(priority='low')
-        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        ProjectAccessFactory(project=task.project, user=user)
 
         result = services.update_task_field(task, 'priority', 'high', user)
 
@@ -56,7 +56,7 @@ class TestUpdateTaskField:
     def test_update_task_field_creates_activity(self):
         user = UserFactory()
         task = TaskFactory(priority='low')
-        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        ProjectAccessFactory(project=task.project, user=user)
         TaskActivity.objects.filter(task=task).delete()
 
         services.update_task_field(task, 'priority', 'high', user)
@@ -68,7 +68,6 @@ class TestUpdateTaskField:
     def test_update_task_field_requires_editor(self):
         user = UserFactory()
         task = TaskFactory()
-        ProjectMemberFactory(project=task.project, user=user, role='viewer')
 
         with pytest.raises(PermissionDenied):
             services.update_task_field(task, 'priority', 'high', user)
@@ -82,7 +81,7 @@ class TestMoveTask:
         status1 = project.statuses.get(name='Backlog')
         status2 = project.statuses.get(name='Done')
         task = TaskFactory(project=project, status=status1)
-        ProjectMemberFactory(project=project, user=user, role='editor')
+        ProjectAccessFactory(project=project, user=user)
 
         services.move_task(task, status2, user)
 
@@ -95,7 +94,7 @@ class TestMoveTask:
         status1 = project.statuses.get(name='Backlog')
         status2 = project.statuses.get(name='Done')
         task = TaskFactory(project=project, status=status1)
-        ProjectMemberFactory(project=project, user=user, role='editor')
+        ProjectAccessFactory(project=project, user=user)
         TaskActivity.objects.filter(task=task).delete()
 
         services.move_task(task, status2, user)
@@ -110,7 +109,6 @@ class TestMoveTask:
         status1 = project.statuses.get(name='Backlog')
         status2 = project.statuses.get(name='Done')
         task = TaskFactory(project=project, status=status1)
-        ProjectMemberFactory(project=project, user=user, role='viewer')
 
         with pytest.raises(PermissionDenied):
             services.move_task(task, status2, user)
@@ -134,7 +132,7 @@ class TestMoveTaskOrdering:
     def board(self):
         user = UserFactory()
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='editor')
+        ProjectAccessFactory(project=project, user=user)
         backlog = project.statuses.get(name='Backlog')
         done = project.statuses.get(name='Done')
         tasks = [
@@ -228,7 +226,7 @@ class TestSubtaskServices:
     def test_create_subtask(self):
         user = UserFactory()
         task = TaskFactory()
-        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        ProjectAccessFactory(project=task.project, user=user)
 
         subtask = services.create_subtask(task, 'New subtask', user)
 
@@ -239,7 +237,7 @@ class TestSubtaskServices:
     def test_create_subtask_auto_orders(self):
         user = UserFactory()
         task = TaskFactory()
-        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        ProjectAccessFactory(project=task.project, user=user)
         SubtaskFactory(task=task, order=0)
         SubtaskFactory(task=task, order=1)
 
@@ -251,7 +249,7 @@ class TestSubtaskServices:
         """Ensure new subtask gets order=1 when only subtask has order=0."""
         user = UserFactory()
         task = TaskFactory()
-        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        ProjectAccessFactory(project=task.project, user=user)
         SubtaskFactory(task=task, order=0)  # Only one subtask with order=0
 
         subtask = services.create_subtask(task, 'Second', user)
@@ -261,7 +259,6 @@ class TestSubtaskServices:
     def test_create_subtask_requires_editor(self):
         user = UserFactory()
         task = TaskFactory()
-        ProjectMemberFactory(project=task.project, user=user, role='viewer')
 
         with pytest.raises(PermissionDenied):
             services.create_subtask(task, 'Subtask', user)
@@ -269,7 +266,7 @@ class TestSubtaskServices:
     def test_toggle_subtask(self):
         user = UserFactory()
         task = TaskFactory()
-        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        ProjectAccessFactory(project=task.project, user=user)
         subtask = SubtaskFactory(task=task, completed=False)
 
         result = services.toggle_subtask(subtask, user)
@@ -281,7 +278,7 @@ class TestSubtaskServices:
     def test_toggle_subtask_again(self):
         user = UserFactory()
         task = TaskFactory()
-        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        ProjectAccessFactory(project=task.project, user=user)
         subtask = SubtaskFactory(task=task, completed=True)
 
         services.toggle_subtask(subtask, user)
@@ -292,7 +289,7 @@ class TestSubtaskServices:
     def test_delete_subtask(self):
         user = UserFactory()
         task = TaskFactory()
-        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        ProjectAccessFactory(project=task.project, user=user)
         subtask = SubtaskFactory(task=task)
         subtask_pk = subtask.pk
 
@@ -303,7 +300,6 @@ class TestSubtaskServices:
     def test_delete_subtask_requires_editor(self):
         user = UserFactory()
         task = TaskFactory()
-        ProjectMemberFactory(project=task.project, user=user, role='viewer')
         subtask = SubtaskFactory(task=task)
 
         with pytest.raises(PermissionDenied):
@@ -315,7 +311,7 @@ class TestCommentService:
     def test_add_comment(self):
         user = UserFactory()
         task = TaskFactory()
-        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        ProjectAccessFactory(project=task.project, user=user)
 
         activity = services.add_comment(task, 'This is a comment', user)
 
@@ -327,7 +323,6 @@ class TestCommentService:
     def test_viewer_cannot_comment(self):
         user = UserFactory()
         task = TaskFactory()
-        ProjectMemberFactory(project=task.project, user=user, role='viewer')
 
         with pytest.raises(PermissionDenied):
             services.add_comment(task, 'Comment', user)
@@ -377,7 +372,7 @@ class TestAttachmentService:
     def test_upload_attachment(self):
         user = UserFactory()
         task = TaskFactory()
-        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        ProjectAccessFactory(project=task.project, user=user)
         file = SimpleUploadedFile('test.txt', b'content', content_type='text/plain')
 
         attachment = services.upload_attachment(task, file, user)
@@ -389,7 +384,6 @@ class TestAttachmentService:
     def test_upload_attachment_requires_editor(self):
         user = UserFactory()
         task = TaskFactory()
-        ProjectMemberFactory(project=task.project, user=user, role='viewer')
         file = SimpleUploadedFile('test.txt', b'content')
 
         with pytest.raises(PermissionDenied):
@@ -398,7 +392,7 @@ class TestAttachmentService:
     def test_upload_attachment_validates_file(self):
         user = UserFactory()
         task = TaskFactory()
-        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        ProjectAccessFactory(project=task.project, user=user)
         file = SimpleUploadedFile('test.exe', b'content')
 
         with pytest.raises(ValueError) as exc_info:
@@ -413,7 +407,7 @@ class TestDeleteTask:
         user = UserFactory()
         task = TaskFactory()
         task_pk = task.pk
-        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        ProjectAccessFactory(project=task.project, user=user)
 
         services.delete_task(task, user)
 
@@ -422,7 +416,6 @@ class TestDeleteTask:
     def test_delete_task_requires_editor(self):
         user = UserFactory()
         task = TaskFactory()
-        ProjectMemberFactory(project=task.project, user=user, role='viewer')
 
         with pytest.raises(PermissionDenied):
             services.delete_task(task, user)
@@ -434,7 +427,7 @@ class TestToggleLabel:
         user = UserFactory()
         task = TaskFactory()
         label = LabelFactory(project=task.project)
-        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        ProjectAccessFactory(project=task.project, user=user)
 
         services.toggle_label(task, label, user)
 
@@ -445,7 +438,7 @@ class TestToggleLabel:
         task = TaskFactory()
         label = LabelFactory(project=task.project)
         task.labels.add(label)
-        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        ProjectAccessFactory(project=task.project, user=user)
 
         services.toggle_label(task, label, user)
 
@@ -455,7 +448,6 @@ class TestToggleLabel:
         user = UserFactory()
         task = TaskFactory()
         label = LabelFactory(project=task.project)
-        ProjectMemberFactory(project=task.project, user=user, role='viewer')
 
         with pytest.raises(PermissionDenied):
             services.toggle_label(task, label, user)

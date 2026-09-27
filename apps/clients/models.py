@@ -33,16 +33,16 @@ def visible_clients(user):
     """Clients this user may open on the dashboard, list, detail, edit, and delete.
 
     ``clients_view_all`` is every client. Without it, the distinct clients of
-    projects where ``user`` has a membership, plus clients ``user`` created.
+    projects where ``user`` has a ProjectAccess row, plus clients ``user`` created.
     ``role=admin`` bypasses the flag through ``User.has_app_permission``.
     Creating a client does not grant edit.
 
-    Membership is filtered through a primary-key subquery so two projects on
+    Access is filtered through a primary-key subquery so two projects on
     the same client still count as one client.
     """
     if user.has_app_permission('clients_view_all'):
         return Client.objects.all()
-    from apps.projects.models import ProjectMember
+    from apps.projects.models import ProjectAccess
 
-    client_ids = ProjectMember.objects.filter(user=user).values('project__client_id')
+    client_ids = ProjectAccess.objects.filter(user=user).values('project__client_id')
     return Client.objects.filter(models.Q(pk__in=client_ids) | models.Q(created_by=user))

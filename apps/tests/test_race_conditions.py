@@ -21,11 +21,17 @@ class TestStatusOrderRace(TransactionTestCase):
         from django.urls import reverse
 
         from apps.accounts.factories import UserFactory
-        from apps.projects.factories import ProjectMemberFactory
+        from apps.accounts.permissions import PermissionPreset
+        from apps.projects.factories import ProjectAccessFactory
 
         project = ProjectFactory()
-        user = UserFactory()
-        ProjectMemberFactory(project=project, user=user, role='manager')
+        preset = PermissionPreset.objects.create(
+            name='RaceEditOwn',
+            access_projects=True,
+            projects_edit_own=True,
+        )
+        user = UserFactory(permission_preset=preset)
+        ProjectAccessFactory(project=project, user=user)
         initial_count = project.statuses.count()
 
         def create_status(name):
@@ -67,11 +73,11 @@ class TestSubtaskOrderRace(TransactionTestCase):
         from django.urls import reverse
 
         from apps.accounts.factories import UserFactory
-        from apps.projects.factories import ProjectMemberFactory
+        from apps.projects.factories import ProjectAccessFactory
 
         task = TaskFactory()
         user = UserFactory()
-        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        ProjectAccessFactory(project=task.project, user=user)
 
         def create_subtask(title):
             try:
@@ -111,14 +117,14 @@ class TestTaskMoveRace(TransactionTestCase):
         from django.urls import reverse
 
         from apps.accounts.factories import UserFactory
-        from apps.projects.factories import ProjectMemberFactory
+        from apps.projects.factories import ProjectAccessFactory
 
         project = ProjectFactory()
         status1 = project.statuses.first()
         status2 = project.statuses.last()
         task = TaskFactory(project=project, status=status1)
         user = UserFactory()
-        ProjectMemberFactory(project=project, user=user, role='editor')
+        ProjectAccessFactory(project=project, user=user)
 
         def move_task(status_id):
             try:
@@ -150,7 +156,7 @@ class TestTaskMoveRace(TransactionTestCase):
         from django.urls import reverse
 
         from apps.accounts.factories import UserFactory
-        from apps.projects.factories import ProjectMemberFactory
+        from apps.projects.factories import ProjectAccessFactory
         from apps.tasks.models import Task
 
         project = ProjectFactory()
@@ -160,7 +166,7 @@ class TestTaskMoveRace(TransactionTestCase):
             for i in range(5)
         ]
         user = UserFactory()
-        ProjectMemberFactory(project=project, user=user, role='editor')
+        ProjectAccessFactory(project=project, user=user)
 
         def reorder(task_id, position):
             try:

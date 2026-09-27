@@ -6,7 +6,7 @@
                 <h2 class="text-sm font-medium text-zinc-100">Projects</h2>
                 <span class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ projects.count }}</span>
             </div>
-            {% if request.user.is_admin %}
+            {% if perms_map.projects_create %}
             <button hx-get="{% url 'client_create_project' client.pk %}"
                     hx-target="#slide-over"
                     hx-swap="innerHTML"
@@ -63,7 +63,7 @@
     <div class="flex flex-col items-center justify-center py-12 text-zinc-500">
         <i data-lucide="folder-kanban" class="w-10 h-10 mb-3 opacity-30"></i>
         <p class="text-sm mb-2">No projects yet</p>
-        {% if request.user.is_admin %}
+        {% if perms_map.projects_create %}
         <button hx-get="{% url 'client_create_project' client.pk %}"
                 hx-target="#slide-over"
                 hx-swap="innerHTML"

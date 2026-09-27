@@ -6,7 +6,7 @@ from apps.accounts.permissions import PermissionPreset
 User = get_user_model()
 
 
-# Mirrors the seeded Admin and Developer presets (migrations 0005, 0006, and 0007).
+# Mirrors the seeded Admin and Developer presets (migrations 0005 through 0008).
 SYSTEM_PRESET_DEFAULTS = {
     'Admin': {
         'description': 'Full access to all sections',
@@ -18,6 +18,9 @@ SYSTEM_PRESET_DEFAULTS = {
         'clients_edit': True,
         'access_projects': True,
         'projects_view_all': True,
+        'projects_create': True,
+        'projects_edit_own': True,
+        'projects_edit_all': True,
         'access_tasks': True,
         'access_todos': True,
         'access_notes': True,
@@ -34,6 +37,9 @@ SYSTEM_PRESET_DEFAULTS = {
         'clients_edit': False,
         'access_projects': True,
         'projects_view_all': False,
+        'projects_create': False,
+        'projects_edit_own': False,
+        'projects_edit_all': False,
         'access_tasks': True,
         'access_todos': True,
         'access_notes': True,

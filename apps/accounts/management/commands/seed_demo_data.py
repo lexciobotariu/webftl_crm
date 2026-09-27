@@ -156,7 +156,7 @@ class Command(BaseCommand):
         from apps.accounts.factories import admin_preset, developer_preset
         from apps.clients.models import Client
         from apps.notes.models import Note
-        from apps.projects.models import Project, ProjectMember
+        from apps.projects.models import Project, ProjectAccess
         from apps.tasks.models import Label, Subtask, Task, TaskActivity
         from apps.todos.models import Todo
 
@@ -203,11 +203,7 @@ class Command(BaseCommand):
                 )
 
                 for user in [admin, *rng.sample(members, k=2)]:
-                    ProjectMember.objects.get_or_create(
-                        project=project,
-                        user=user,
-                        defaults={'role': 'manager' if user == admin else 'editor'},
-                    )
+                    ProjectAccess.objects.get_or_create(project=project, user=user)
 
                 labels = [
                     Label.objects.create(project=project, name=name, color=color)

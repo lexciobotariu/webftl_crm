@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.accounts.factories import AdminUserFactory, UserFactory
-from apps.projects.factories import ProjectMemberFactory
+from apps.projects.factories import ProjectAccessFactory
 from apps.tasks.factories import TaskFactory, TimeEntryFactory
 from apps.tasks.models import TimeEntry
 
@@ -16,7 +16,7 @@ from apps.tasks.models import TimeEntry
 def _member(role='editor', **task_kwargs):
     user = UserFactory()
     task = TaskFactory(**task_kwargs)
-    ProjectMemberFactory(project=task.project, user=user, role=role)
+    ProjectAccessFactory(project=task.project, user=user)
     return user, task
 
 
@@ -45,7 +45,16 @@ class TestTimerViews:
         assert client.post(reverse('timer_start', args=[task.pk])).status_code == 403
 
     def test_viewer_cannot_start_or_log(self, client):
-        user, task = _member('viewer')
+        from apps.accounts.permissions import PermissionPreset
+
+        task = TaskFactory()
+        preset = PermissionPreset.objects.create(
+            name='ViewAllTimer',
+            access_projects=True,
+            access_tasks=True,
+            projects_view_all=True,
+        )
+        user = UserFactory(permission_preset=preset)
         client.force_login(user)
 
         assert client.post(reverse('timer_start', args=[task.pk])).status_code == 403
@@ -184,7 +193,7 @@ class TestWeekAndProjectViews:
             ended_at=week_start - timedelta(days=3) + timedelta(hours=1),
         )
         other = TaskFactory(title='Other Project Task')
-        ProjectMemberFactory(project=other.project, user=user, role='editor')
+        ProjectAccessFactory(project=other.project, user=user)
         TimeEntryFactory(
             user=user, task=other,
             started_at=week_start + timedelta(hours=11),
@@ -215,7 +224,7 @@ class TestWeekAndProjectViews:
         task.title = 'Shared Task'
         task.save()
         manager = UserFactory(name='Manager Person')
-        ProjectMemberFactory(project=task.project, user=manager, role='manager')
+        ProjectAccessFactory(project=task.project, user=manager)
         monday, week_start = _monday_start()
         entry = TimeEntryFactory(
             user=owner, task=task, note='owner-only-note',
@@ -227,12 +236,12 @@ class TestWeekAndProjectViews:
         week = client.get(reverse('time_week'), {'project': task.project.pk})
         assert week.status_code == 200
         content = week.content.decode()
-        assert 'Shared Task' in content
-        assert 'Owner Person' in content
-        assert 'owner-only-note' in content
+        assert 'Shared Task' not in content
+        assert 'Owner Person' not in content
+        assert 'owner-only-note' not in content
 
         detail = client.get(reverse('task_detail', args=[task.pk])).content.decode()
-        assert 'owner-only-note' in detail
+        assert 'owner-only-note' not in detail
         assert reverse('time_entry_edit', args=[entry.pk]) not in detail
 
         edit = client.post(reverse('time_entry_edit', args=[entry.pk]), {
@@ -251,7 +260,7 @@ class TestWeekAndProjectViews:
         task.title = 'Hidden From Editor'
         task.save()
         editor = UserFactory()
-        ProjectMemberFactory(project=task.project, user=editor, role='editor')
+        ProjectAccessFactory(project=task.project, user=editor)
         _, week_start = _monday_start()
         TimeEntryFactory(
             user=owner, task=task, note='not-for-editor',

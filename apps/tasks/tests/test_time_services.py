@@ -6,7 +6,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.accounts.factories import AdminUserFactory, UserFactory
-from apps.projects.factories import ProjectMemberFactory
+from apps.projects.factories import ProjectAccessFactory
 from apps.tasks import services
 from apps.tasks.factories import TaskFactory, TimeEntryFactory
 from apps.tasks.models import TimeEntry
@@ -15,7 +15,7 @@ from apps.tasks.models import TimeEntry
 def _member(role='editor'):
     user = UserFactory()
     task = TaskFactory(time_estimate=5)
-    ProjectMemberFactory(project=task.project, user=user, role=role)
+    ProjectAccessFactory(project=task.project, user=user)
     return user, task
 
 
@@ -252,7 +252,8 @@ class TestManualValidation:
 @pytest.mark.django_db
 class TestTimePermissions:
     def test_viewer_cannot_log_time(self):
-        user, task = _member('viewer')
+        user = UserFactory()
+        task = TaskFactory(time_estimate=5)
         with pytest.raises(PermissionDenied):
             services.start_timer(task, user)
         with pytest.raises(PermissionDenied):
@@ -273,7 +274,7 @@ class TestTimePermissions:
     def test_editor_cannot_change_someone_elses_entry(self):
         owner, task = _member('editor')
         other = UserFactory()
-        ProjectMemberFactory(project=task.project, user=other, role='editor')
+        ProjectAccessFactory(project=task.project, user=other)
         entry = services.log_manual(task, owner, _at(3), _at(1), 'mine')
 
         with pytest.raises(PermissionDenied):
@@ -287,7 +288,7 @@ class TestTimePermissions:
     def test_manager_cannot_edit_someone_elses_entry(self):
         owner, task = _member('editor')
         manager = UserFactory()
-        ProjectMemberFactory(project=task.project, user=manager, role='manager')
+        ProjectAccessFactory(project=task.project, user=manager)
         entry = services.log_manual(task, owner, _at(3), _at(1), 'mine')
 
         with pytest.raises(PermissionDenied):
@@ -316,7 +317,16 @@ class TestTimePermissions:
         assert not TimeEntry.objects.filter(pk=entry.pk).exists()
 
     def test_owner_who_is_only_a_viewer_cannot_edit(self):
-        user, task = _member('viewer')
+        from apps.accounts.permissions import PermissionPreset
+
+        preset = PermissionPreset.objects.create(
+            name='ViewAllTimeOwner',
+            access_projects=True,
+            access_tasks=True,
+            projects_view_all=True,
+        )
+        user = UserFactory(permission_preset=preset)
+        task = TaskFactory(time_estimate=5)
         entry = TimeEntryFactory(user=user, task=task, started_at=_at(2), ended_at=_at(1))
 
         with pytest.raises(PermissionDenied):
@@ -359,7 +369,7 @@ class TestWeekQuery:
             ended_at=week_start - timedelta(hours=4),
         )
         other_task = TaskFactory()
-        ProjectMemberFactory(project=other_task.project, user=user, role='editor')
+        ProjectAccessFactory(project=other_task.project, user=user)
         other_project = TimeEntryFactory(
             user=user, task=other_task,
             started_at=week_start + timedelta(hours=12),
@@ -379,8 +389,8 @@ class TestWeekQuery:
         owner, task = _member('editor')
         manager = UserFactory()
         editor = UserFactory()
-        ProjectMemberFactory(project=task.project, user=manager, role='manager')
-        ProjectMemberFactory(project=task.project, user=editor, role='editor')
+        ProjectAccessFactory(project=task.project, user=manager)
+        ProjectAccessFactory(project=task.project, user=editor)
         monday, week_start = _monday_start()
         theirs = TimeEntryFactory(
             user=owner, task=task,
@@ -388,7 +398,7 @@ class TestWeekQuery:
             ended_at=week_start + timedelta(hours=3),
         )
 
-        assert theirs in list(services.entries_for_week(manager, monday, project=task.project))
+        assert theirs not in list(services.entries_for_week(manager, monday, project=task.project))
         assert theirs not in list(services.entries_for_week(manager, monday))
         assert theirs in list(services.entries_for_week(owner, monday, project=task.project))
         assert theirs not in list(services.entries_for_week(editor, monday, project=task.project))

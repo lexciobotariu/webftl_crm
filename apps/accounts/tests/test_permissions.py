@@ -23,6 +23,9 @@ class TestPermissionPreset:
         assert 'clients_create' in PERMISSION_KEYS
         assert 'clients_edit' in PERMISSION_KEYS
         assert 'projects_view_all' in PERMISSION_KEYS
+        assert 'projects_create' in PERMISSION_KEYS
+        assert 'projects_edit_own' in PERMISSION_KEYS
+        assert 'projects_edit_all' in PERMISSION_KEYS
 
     def test_create_preset(self):
         """Can create a preset with specific permissions."""
@@ -111,6 +114,9 @@ class TestDefaultPresets:
         assert preset.clients_create is False
         assert preset.clients_edit is False
         assert preset.projects_view_all is False
+        assert preset.projects_create is False
+        assert preset.projects_edit_own is False
+        assert preset.projects_edit_all is False
 
 
 @pytest.mark.django_db
@@ -491,6 +497,9 @@ class TestPresetCreate:
         assert preset.clients_create is False
         assert preset.clients_edit is False
         assert preset.projects_view_all is False
+        assert preset.projects_create is False
+        assert preset.projects_edit_own is False
+        assert preset.projects_edit_all is False
 
     def test_create_preset_returns_item(self, client):
         admin = AdminUserFactory()
@@ -627,11 +636,17 @@ class TestPresetModuleCards:
             'clients_create': 'on',
             'clients_edit': 'on',
             'projects_view_all': 'on',
+            'projects_create': 'on',
+            'projects_edit_own': 'on',
+            'projects_edit_all': 'on',
         })
         assert created.status_code == 200
         preset = PermissionPreset.objects.get(name='No Project Access')
         assert preset.access_projects is False
         assert preset.projects_view_all is False
+        assert preset.projects_create is False
+        assert preset.projects_edit_own is False
+        assert preset.projects_edit_all is False
         assert preset.access_clients is True
         assert preset.clients_view_all is True
         assert preset.clients_create is True
@@ -641,6 +656,9 @@ class TestPresetModuleCards:
             name='Project Viewers',
             access_projects=True,
             projects_view_all=True,
+            projects_create=True,
+            projects_edit_own=True,
+            projects_edit_all=True,
             access_clients=True,
             clients_view_all=True,
         )
@@ -649,11 +667,17 @@ class TestPresetModuleCards:
             'access_clients': 'on',
             'clients_view_all': 'on',
             'projects_view_all': 'on',
+            'projects_create': 'on',
+            'projects_edit_own': 'on',
+            'projects_edit_all': 'on',
         })
         assert edited.status_code == 200
         existing.refresh_from_db()
         assert existing.access_projects is False
         assert existing.projects_view_all is False
+        assert existing.projects_create is False
+        assert existing.projects_edit_own is False
+        assert existing.projects_edit_all is False
         assert existing.clients_view_all is True
 
     def test_drawer_renders_extras_under_their_modules(self, client):
@@ -672,7 +696,13 @@ class TestPresetModuleCards:
         assert 'name="projects_view_all"' not in clients
 
         assert projects.index('>Projects<') < projects.index('name="projects_view_all"')
+        assert projects.index('name="projects_view_all"') < projects.index('name="projects_create"')
+        assert projects.index('name="projects_create"') < projects.index('name="projects_edit_own"')
+        assert projects.index('name="projects_edit_own"') < projects.index('name="projects_edit_all"')
         assert 'View all' in projects
+        assert 'Create' in projects
+        assert 'Edit own' in projects
+        assert 'Edit all' in projects
         assert 'name="clients_view_all"' not in projects
         assert 'name="clients_create"' not in projects
         assert 'name="clients_edit"' not in projects
@@ -693,7 +723,15 @@ class TestPresetModuleCards:
             'access_team',
         ):
             assert 'checked' in _checkbox_attrs(html, name)
-        for name in ('clients_view_all', 'clients_create', 'clients_edit', 'projects_view_all'):
+        for name in (
+            'clients_view_all',
+            'clients_create',
+            'clients_edit',
+            'projects_view_all',
+            'projects_create',
+            'projects_edit_own',
+            'projects_edit_all',
+        ):
             attrs = _checkbox_attrs(html, name)
             assert 'checked' not in attrs.split()
             assert 'disabled' not in attrs.split()
@@ -704,9 +742,15 @@ class TestPresetModuleCards:
             attrs = _checkbox_attrs(developer_html, name)
             assert 'checked' not in attrs.split()
             assert 'disabled' in attrs.split()
-        project_attrs = _checkbox_attrs(developer_html, 'projects_view_all')
-        assert 'checked' not in project_attrs.split()
-        assert 'disabled' not in project_attrs.split()
+        for name in (
+            'projects_view_all',
+            'projects_create',
+            'projects_edit_own',
+            'projects_edit_all',
+        ):
+            project_attrs = _checkbox_attrs(developer_html, name)
+            assert 'checked' not in project_attrs.split()
+            assert 'disabled' not in project_attrs.split()
 
 
 @pytest.mark.django_db

@@ -158,6 +158,24 @@
                                            class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
                                     <span class="text-sm text-zinc-300">View all</span>
                                 </label>
+                                <label class="flex items-center gap-2 min-w-0">
+                                    <input type="checkbox" name="projects_create"{% if preset.access_projects and preset.projects_create %} checked{% endif %}{% if preset and not preset.access_projects %} disabled{% endif %}
+                                           data-extra :disabled="!enabled"
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                    <span class="text-sm text-zinc-300">Create</span>
+                                </label>
+                                <label class="flex items-center gap-2 min-w-0">
+                                    <input type="checkbox" name="projects_edit_own"{% if preset.access_projects and preset.projects_edit_own %} checked{% endif %}{% if preset and not preset.access_projects %} disabled{% endif %}
+                                           data-extra :disabled="!enabled"
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                    <span class="text-sm text-zinc-300">Edit own</span>
+                                </label>
+                                <label class="flex items-center gap-2 min-w-0">
+                                    <input type="checkbox" name="projects_edit_all"{% if preset.access_projects and preset.projects_edit_all %} checked{% endif %}{% if preset and not preset.access_projects %} disabled{% endif %}
+                                           data-extra :disabled="!enabled"
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                    <span class="text-sm text-zinc-300">Edit all</span>
+                                </label>
                             </div>
                         </div>
                     </div>

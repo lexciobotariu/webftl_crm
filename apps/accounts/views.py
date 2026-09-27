@@ -285,7 +285,13 @@ def _apply_module_gates(values):
         for key in ('clients_view_all', 'clients_create', 'clients_edit'):
             values[key] = False
     if not values['access_projects']:
-        values['projects_view_all'] = False
+        for key in (
+            'projects_view_all',
+            'projects_create',
+            'projects_edit_own',
+            'projects_edit_all',
+        ):
+            values[key] = False
     return values
 
 
@@ -435,7 +441,7 @@ def user_delete_confirm(request, pk):
         return HttpResponse('Cannot delete yourself.', status=400)
 
     from apps.notes.models import Note
-    from apps.projects.models import ProjectMember
+    from apps.projects.models import ProjectAccess
     from apps.salaries.models import EmployeeSalary, Payment, SalaryMonth
     from apps.tasks.models import Attachment, Task, TaskActivity
     from apps.todos.models import Todo
@@ -445,7 +451,7 @@ def user_delete_confirm(request, pk):
         'notes': Note.objects.filter(Q(created_by=user_obj) | Q(modified_by=user_obj)).count(),
         'comments': TaskActivity.objects.filter(user=user_obj, activity_type='comment').count(),
         'attachments': Attachment.objects.filter(uploaded_by=user_obj).count(),
-        'project_memberships': ProjectMember.objects.filter(user=user_obj).count(),
+        'project_access': ProjectAccess.objects.filter(user=user_obj).count(),
         'tasks_unassigned': Task.objects.filter(assignee=user_obj).count(),
     }
 
@@ -462,7 +468,7 @@ def user_delete_confirm(request, pk):
 
     counts['has_data'] = any([
         counts['todos'], counts['notes'], counts['comments'],
-        counts['attachments'], counts['project_memberships'],
+        counts['attachments'], counts['project_access'],
         counts['salary'], counts['tasks_unassigned'],
     ])
 

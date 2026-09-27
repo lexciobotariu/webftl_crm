@@ -166,10 +166,10 @@ def client_edit_drawer(request, pk):
 @require_permission('access_clients')
 def client_create_project(request, pk):
     """Create a new project for this client via drawer (HTMX)."""
-    if not request.user.is_admin:
-        return HttpResponseForbidden("Admin access required to create projects")
+    if not request.user.has_app_permission('projects_create'):
+        return HttpResponseForbidden("You can't create projects")
 
-    from apps.projects.models import Project
+    from apps.projects.models import Project, ProjectAccess
 
     client = get_object_or_404(Client, pk=pk)
 
@@ -193,6 +193,7 @@ def client_create_project(request, pk):
             description=description,
             github_repo_url=github_repo_url,
         )
+        ProjectAccess.objects.create(project=project, user=request.user)
 
         from django.urls import reverse
         response = HttpResponse('')

@@ -48,10 +48,12 @@
                     <i data-lucide="list" class="w-3.5 h-3.5"></i>
                     Task List
                 </a>
+                {% if can_edit_project %}
                 <a href="{% url 'project_settings' project.pk %}?next=board" class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
                     <i data-lucide="settings" class="w-3.5 h-3.5"></i>
                     Settings
                 </a>
+                {% endif %}
                 {% if hidden_task_count > 0 %}
                 <div class="flex items-center gap-1.5 text-[11px] text-zinc-500 bg-elevated border border-border-subtle rounded-card px-2.5 py-1.5">
                     <i data-lucide="eye-off" class="w-3 h-3"></i>

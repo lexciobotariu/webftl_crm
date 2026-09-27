@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from apps.accounts.factories import UserFactory
 from apps.notes.models import Note, can_modify_note
-from apps.projects.factories import ProjectFactory, ProjectMemberFactory
+from apps.projects.factories import ProjectAccessFactory, ProjectFactory
 from apps.tasks.factories import TaskFactory, TimeEntryFactory
 from apps.tasks.models import TimeEntry
 
@@ -32,12 +32,12 @@ class TestMemberRemoval:
             title='Design the logo',
             description='Secret brief',
         )
-        membership = ProjectMemberFactory(project=project, user=user, role='editor')
-        ProjectMemberFactory(project=project, user=other, role='editor')
+        membership = ProjectAccessFactory(project=project, user=user)
+        ProjectAccessFactory(project=project, user=other)
 
         kept_project = ProjectFactory()
         kept = TaskFactory(project=kept_project, assignee=user, title='Still mine')
-        ProjectMemberFactory(project=kept_project, user=user, role='editor')
+        ProjectAccessFactory(project=kept_project, user=user)
 
         week_start = _monday_start()
         entry = TimeEntryFactory(

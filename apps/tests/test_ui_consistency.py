@@ -7,7 +7,7 @@ from django.urls import reverse
 
 from apps.accounts.factories import AdminUserFactory, UserFactory
 from apps.accounts.permissions import PermissionPreset
-from apps.projects.factories import ProjectFactory, ProjectMemberFactory
+from apps.projects.factories import ProjectAccessFactory, ProjectFactory
 
 
 @pytest.mark.django_db
@@ -84,7 +84,7 @@ class TestHTMXSupport:
     def test_project_board_htmx(self, client):
         user = UserFactory()
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='viewer')
+        ProjectAccessFactory(project=project, user=user)
         client.force_login(user)
         response = client.get(
             reverse('project_board', args=[project.pk]),
@@ -98,7 +98,7 @@ class TestHTMXSupport:
     def test_task_create_htmx(self, client):
         user = UserFactory()
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='editor')
+        ProjectAccessFactory(project=project, user=user)
         client.force_login(user)
         response = client.get(
             reverse('task_create', args=[project.pk]),
