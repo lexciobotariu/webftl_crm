@@ -21,9 +21,16 @@ from django.db.models import DateTimeField, ExpressionWrapper, F, Max, Q
 from django.utils import timezone
 from django.utils.text import get_valid_filename
 
-from apps.projects.models import can_work_on_project
-
-from .models import Attachment, Subtask, TaskActivity, TimeEntry
+from .models import (
+    Attachment,
+    Subtask,
+    TaskActivity,
+    TimeEntry,
+    can_create_task,
+    can_edit_task,
+    can_edit_tasks_on,
+    can_view_task,
+)
 
 # File upload security settings
 ALLOWED_EXTENSIONS = {
@@ -51,12 +58,13 @@ class TimeEntryValidationError(ValueError):
 
 
 def require_access(user, project):
-    """Tasks, comments, and the user's own time need a ProjectAccess row.
+    """Edit a task on ``project``.
 
-    Admins pass. View-all alone does not. The edit flags do not grant this.
+    Admin, ``tasks_edit_all``, or ``tasks_edit_own`` plus a ProjectAccess row.
+    Project view, project edit, and ``tasks_view_all`` do not grant this.
     """
-    if not can_work_on_project(user, project):
-        raise TaskPermissionError('Project access required')
+    if not can_edit_tasks_on(user, project):
+        raise TaskPermissionError('You cannot edit this task')
 
 
 def update_task_field(task, field, value, user):
@@ -183,7 +191,8 @@ def create_subtask(task, title, user):
     Raises:
         TaskPermissionError: If user lacks editor access
     """
-    require_access(user, task.project)
+    if not can_create_task(user, task.project):
+        raise TaskPermissionError('You cannot create tasks on this project')
 
     max_order = task.subtasks.aggregate(Max('order'))['order__max']
     next_order = 0 if max_order is None else max_order + 1
@@ -322,16 +331,17 @@ def upload_attachment(task, file, user):
 
 def delete_task(task, user):
     """
-    Delete a task.
+    Delete a task. ``role=admin`` only. Edit flags do not grant this.
 
     Args:
         task: Task instance to delete
         user: User performing the deletion (for permissions)
 
     Raises:
-        TaskPermissionError: If user lacks editor access
+        TaskPermissionError: If the user is not an admin
     """
-    require_access(user, task.project)
+    if not user.is_admin:
+        raise TaskPermissionError('Admin access required')
     task.delete()
 
 
@@ -420,12 +430,17 @@ def _close_user_open_timer(user, now):
 
 
 def require_entry_edit(user, entry):
-    """The owner, with a ProjectAccess row, and admins may change an entry."""
+    """The owner may change their own entry when they can edit the task.
+
+    Changing someone else's entry stays ``role=admin``. ``tasks_edit_all``
+    does not grant that.
+    """
     if user.is_admin:
         return
     if entry.user_id != user.pk:
         raise TaskPermissionError('You can only change your own time entries')
-    require_access(user, entry.task.project)
+    if not can_edit_task(user, entry.task):
+        raise TaskPermissionError('You cannot edit this task')
 
 
 def _validate_closed_range(started_at, ended_at, now=None):
@@ -529,9 +544,9 @@ def delete_entry(entry, user):
 def entries_for_week(user, week_start, project=None):
     """Entries that started in the seven days from ``week_start``.
 
-    Without a project, this is the user's own week. With a project, only
-    ``role=admin`` sees every entry on that project; everyone else still
-    sees only their own.
+    Without a project, this is the user's own week. With a project,
+    ``role=admin`` and ``tasks_view_all`` see every entry on that project.
+    Everyone else still sees only their own.
     """
     start, end = _week_bounds(week_start)
     entries = (
@@ -541,7 +556,7 @@ def entries_for_week(user, week_start, project=None):
     )
     if project is not None:
         entries = entries.filter(task__project=project)
-        if user.is_admin:
+        if user.is_admin or user.has_app_permission('tasks_view_all'):
             return entries
     return entries.filter(user=user)
 
@@ -549,10 +564,12 @@ def entries_for_week(user, week_start, project=None):
 def entries_on_task(user, task):
     """Entries visible on a task screen.
 
-    Only ``role=admin`` sees everyone's time on the task. Everyone else
-    sees only their own.
+    You see your own time on tasks you can view. ``role=admin`` and
+    ``tasks_view_all`` also see everyone else's time on those tasks.
     """
+    if not can_view_task(user, task):
+        return task.time_entries.none()
     entries = task.time_entries.select_related('user')
-    if user.is_admin:
+    if user.is_admin or user.has_app_permission('tasks_view_all'):
         return entries
     return entries.filter(user=user)

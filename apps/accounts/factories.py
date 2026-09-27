@@ -6,7 +6,7 @@ from apps.accounts.permissions import PermissionPreset
 User = get_user_model()
 
 
-# Mirrors the seeded Admin and Developer presets (migrations 0005 through 0008).
+# Mirrors the seeded Admin and Developer presets (migrations 0005 through 0009).
 SYSTEM_PRESET_DEFAULTS = {
     'Admin': {
         'description': 'Full access to all sections',
@@ -22,6 +22,10 @@ SYSTEM_PRESET_DEFAULTS = {
         'projects_edit_own': True,
         'projects_edit_all': True,
         'access_tasks': True,
+        'tasks_view_all': True,
+        'tasks_create': True,
+        'tasks_edit_own': True,
+        'tasks_edit_all': True,
         'access_todos': True,
         'access_notes': True,
         'access_salaries': True,
@@ -41,6 +45,10 @@ SYSTEM_PRESET_DEFAULTS = {
         'projects_edit_own': False,
         'projects_edit_all': False,
         'access_tasks': True,
+        'tasks_view_all': False,
+        'tasks_create': False,
+        'tasks_edit_own': False,
+        'tasks_edit_all': False,
         'access_todos': True,
         'access_notes': True,
         'access_salaries': False,
@@ -72,6 +80,23 @@ def developer_preset():
     return system_preset('Developer')
 
 
+def member_preset():
+    """Developer sections plus task create and edit own.
+
+    The seeded Developer preset leaves the task write flags off. Tests that
+    create or edit a task use this preset so a project member still can.
+    """
+    defaults = {
+        **SYSTEM_PRESET_DEFAULTS['Developer'],
+        'is_system': False,
+        'description': 'Assigned projects, with task create and edit own',
+        'tasks_create': True,
+        'tasks_edit_own': True,
+    }
+    preset, _ = PermissionPreset.objects.get_or_create(name='Member', defaults=defaults)
+    return preset
+
+
 def admin_preset():
     return system_preset('Admin')
 
@@ -85,7 +110,7 @@ class UserFactory(factory.django.DjangoModelFactory):
     role = 'member'
     github_token = ''
     is_active = True
-    permission_preset = factory.LazyFunction(developer_preset)
+    permission_preset = factory.LazyFunction(member_preset)
 
     @classmethod
     def _create(cls, model_class, *args, **kwargs):

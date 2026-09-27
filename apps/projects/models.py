@@ -64,9 +64,10 @@ class Status(models.Model):
 class ProjectAccess(models.Model):
     """One row means this person has access to that project.
 
-    The row opens the project and, until a later pass, allows tasks, comments,
-    and the person's own time. It does not grant settings edits. Admins bypass
-    the row through ``is_admin`` and ``has_app_permission``.
+    The row opens the project. Seeing tasks on it also needs ``access_tasks``.
+    Creating and editing tasks need their own flags. The row does not grant
+    settings edits. Admins bypass the row through ``is_admin`` and
+    ``has_app_permission``.
     """
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='access')
@@ -127,10 +128,11 @@ def can_edit_project(user, project):
 
 
 def can_work_on_project(user, project):
-    """Tasks, comments, and the user's own time.
+    """Project notes.
 
-    What an editor could do: admin, or a ProjectAccess row. View-all alone is
-    not enough, and neither edit flag adds this.
+    Admin, or a ProjectAccess row. Task view, create, and edit use the task
+    flags instead of this. Project view-all and the project edit flags do not
+    grant this.
     """
     if user.is_admin:
         return True

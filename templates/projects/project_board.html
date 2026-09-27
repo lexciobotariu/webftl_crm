@@ -36,6 +36,7 @@
                 </div>
             </div>
             <div class="flex items-center gap-2">
+                {% if can_create_task %}
                 <button hx-get="{% url 'task_create' project.pk %}"
                         hx-target="#slide-over"
                         hx-swap="innerHTML"
@@ -43,6 +44,7 @@
                     <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                     Add Task
                 </button>
+                {% endif %}
                 <a href="{% url 'project_detail_tasks' project.pk %}"
                    class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-300 hover:bg-hover transition-colors">
                     <i data-lucide="list" class="w-3.5 h-3.5"></i>

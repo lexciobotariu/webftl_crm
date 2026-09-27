@@ -23,6 +23,7 @@
                         class="p-1.5 hover:bg-elevated rounded-card transition-colors">
                     <i data-lucide="link" :data-lucide="copied ? 'check' : 'link'" class="w-4 h-4"></i>
                 </button>
+                {% if request.user.is_admin %}
                 <button hx-post="{% url 'task_delete' task.pk %}"
                         hx-confirm="Delete this task?"
                         hx-target="#task-{{ task.pk }}"
@@ -30,6 +31,7 @@
                         class="text-zinc-500 hover:text-red-400 p-1.5 hover:bg-elevated rounded-card" title="Delete">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
+                {% endif %}
             </div>
         </div>
     </div>

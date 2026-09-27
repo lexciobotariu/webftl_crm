@@ -3,7 +3,7 @@ import json
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
-from django.db.models import Count, Max, Prefetch
+from django.db.models import Count, Max, Prefetch, Q
 from django.db.models.deletion import RestrictedError
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
@@ -11,7 +11,7 @@ from django.views.decorators.http import require_POST
 
 from apps.accounts.decorators import require_permission
 from apps.clients.models import Client, visible_clients
-from apps.tasks.models import Label, Task, TaskActivity
+from apps.tasks.models import Label, TaskActivity, can_create_task, visible_tasks
 
 from .forms import LabelForm, ProjectForm, StatusForm
 from .models import (
@@ -81,15 +81,15 @@ def project_detail(request, pk):
 
     # Calculate stats. "Done" is whatever the project marks with Status.is_done,
     # so renaming a column cannot break these numbers.
-    tasks = Task.objects.filter(project=project).select_related('status', 'assignee')
+    tasks = visible_tasks(request.user, project).select_related('status', 'assignee')
     total_tasks = tasks.count()
     completed_tasks = tasks.done().count()
     active_tasks = tasks.active().count()
     overdue_tasks = tasks.overdue().count()
 
-    # Recent activity (last 5 across all project tasks)
+    # Recent activity (last 5 across tasks this person can view)
     recent_activities = TaskActivity.objects.filter(
-        task__project=project
+        task__in=visible_tasks(request.user, project)
     ).select_related('user', 'task').order_by('-created_at')[:5]
 
     # Determine active tab based on URL
@@ -110,6 +110,7 @@ def project_detail(request, pk):
         'recent_activities': recent_activities,
         'active_tab': active_tab,
         'can_edit_project': can_edit_project(request.user, project),
+        'can_create_task': can_create_task(request.user, project),
     })
 
 
@@ -120,27 +121,27 @@ def project_board(request, pk):
     if not can_access_project(request.user, project):
         return HttpResponseForbidden("You don't have access to this project")
 
+    shown = visible_tasks(request.user, project)
     visible_statuses = (
         project.statuses.filter(visible_on_board=True)
-        .annotate(board_task_count=Count('tasks'))
+        .annotate(board_task_count=Count('tasks', filter=Q(tasks__in=shown)))
         .prefetch_related(
             Prefetch(
                 'tasks',
-                queryset=Task.objects.select_related('assignee').prefetch_related('labels').order_by(
+                queryset=shown.select_related('assignee').prefetch_related('labels').order_by(
                     'order', '-created_at'
                 ),
             )
         )
     )
-    hidden_task_count = Task.objects.filter(
-        project=project, status__visible_on_board=False
-    ).count()
+    hidden_task_count = shown.filter(status__visible_on_board=False).count()
 
     context = {
         'project': project,
         'visible_statuses': visible_statuses,
         'hidden_task_count': hidden_task_count,
         'can_edit_project': can_edit_project(request.user, project),
+        'can_create_task': can_create_task(request.user, project),
     }
 
     if request.htmx:

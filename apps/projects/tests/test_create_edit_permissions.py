@@ -229,7 +229,7 @@ class TestEditFlags:
 @pytest.mark.django_db
 class TestProjectWorkStaysWithTheRow:
     def test_row_can_create_a_task_and_comment_view_all_cannot(self, client):
-        worker = _user('Worker')
+        worker = _user('Worker', tasks_create=True, tasks_edit_own=True)
         watcher = _user('Watcher', projects_view_all=True)
         project = ProjectFactory()
         ProjectAccessFactory(project=project, user=worker)

@@ -12,6 +12,10 @@ PERMISSION_KEYS = [
     'projects_edit_own',
     'projects_edit_all',
     'access_tasks',
+    'tasks_view_all',
+    'tasks_create',
+    'tasks_edit_own',
+    'tasks_edit_all',
     'access_todos',
     'access_notes',
     'access_salaries',
@@ -43,6 +47,12 @@ class PermissionPreset(models.Model):
     projects_create = models.BooleanField(default=False)
     projects_edit_own = models.BooleanField(default=False)
     projects_edit_all = models.BooleanField(default=False)
+
+    # View own is access_tasks plus a ProjectAccess row. There is no view-own flag.
+    tasks_view_all = models.BooleanField(default=False)
+    tasks_create = models.BooleanField(default=False)
+    tasks_edit_own = models.BooleanField(default=False)
+    tasks_edit_all = models.BooleanField(default=False)
 
     is_system = models.BooleanField(default=False, help_text="System presets cannot be deleted")
 
