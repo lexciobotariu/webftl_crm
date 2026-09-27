@@ -53,7 +53,9 @@
             <select name="role" id="new-role"
                     class="w-full bg-elevated border {% if errors.role %}border-red-500{% else %}border-border-subtle{% endif %} rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
                 <option value="member" {% if form_data.role != 'admin' %}selected{% endif %}>Member</option>
+                {% if request.user.is_admin %}
                 <option value="admin" {% if form_data.role == 'admin' %}selected{% endif %}>Admin</option>
+                {% endif %}
             </select>
             {% if errors.role %}
             <p class="mt-1 text-xs text-red-400">{{ errors.role }}</p>

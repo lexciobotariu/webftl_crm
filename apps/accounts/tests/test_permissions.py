@@ -34,6 +34,8 @@ class TestPermissionPreset:
         assert 'tasks_edit_all' in PERMISSION_KEYS
         assert 'salaries_view_all' in PERMISSION_KEYS
         assert 'salaries_edit' in PERMISSION_KEYS
+        assert 'team_create' in PERMISSION_KEYS
+        assert 'team_edit' in PERMISSION_KEYS
 
     def test_create_preset(self):
         """Can create a preset with specific permissions."""
@@ -135,6 +137,8 @@ class TestDefaultPresets:
         assert preset.tasks_edit_all is False
         assert preset.salaries_view_all is False
         assert preset.salaries_edit is False
+        assert preset.team_create is False
+        assert preset.team_edit is False
 
 
 @pytest.mark.django_db
@@ -327,13 +331,19 @@ class TestUserDetailDrawer:
         assert response.status_code == 403
 
     def test_drawer_open_with_access_team(self, client):
-        """A preset with access_team can open the user drawer. Role is not required."""
+        """access_team opens a read-only drawer. Role is not required."""
         preset = PermissionPreset.objects.create(name='TeamViewer', access_team=True)
         user = UserFactory(permission_preset=preset)
         target = UserFactory()
         client.force_login(user)
         response = client.get(reverse('user_detail_drawer', args=[target.pk]))
         assert response.status_code == 200
+        content = response.content.decode()
+        assert 'View User' in content
+        assert 'Save Changes' not in content
+        assert 'name="name"' not in content
+        assert 'Deactivate User' not in content
+        assert 'Delete User' not in content
 
     def test_drawer_shows_user_info(self, client):
         """Drawer should display user name, email, and current preset."""
@@ -389,19 +399,22 @@ class TestUpdatePreset:
         assert target.permission_preset is None
 
     def test_update_preset_with_access_team(self, client):
-        """A preset with access_team can assign presets."""
+        """access_team alone cannot assign presets. That needs team_edit."""
         preset = PermissionPreset.objects.create(name='WithTeam', access_team=True)
         user = UserFactory(permission_preset=preset)
         target = UserFactory()
+        original = target.permission_preset
         dev_preset = PermissionPreset.objects.get(name='Developer')
         client.force_login(user)
         response = client.post(
             reverse('user_update', args=[target.pk]),
-            {'name': target.name, 'email': target.email, 'role': target.role, 'preset_id': dev_preset.pk},
+            {'name': 'Renamed', 'email': target.email, 'role': 'admin', 'preset_id': dev_preset.pk},
         )
-        assert response.status_code == 200
+        assert response.status_code == 403
         target.refresh_from_db()
-        assert target.permission_preset == dev_preset
+        assert target.permission_preset == original
+        assert target.name != 'Renamed'
+        assert target.role != 'admin'
 
     def test_update_preset_returns_updated_row(self, client):
         """After updating preset, response should contain the new preset name."""
@@ -527,6 +540,8 @@ class TestPresetCreate:
         assert preset.notes_edit_public is False
         assert preset.salaries_view_all is False
         assert preset.salaries_edit is False
+        assert preset.team_create is False
+        assert preset.team_edit is False
 
     def test_create_preset_returns_item(self, client):
         admin = AdminUserFactory()
@@ -846,6 +861,59 @@ class TestPresetModuleCards:
             assert 'checked' not in attrs.split()
             assert 'disabled' in attrs.split()
 
+    def test_team_access_off_clears_posted_extras(self, client):
+        admin = AdminUserFactory()
+        client.force_login(admin)
+
+        created = client.post(reverse('preset_create'), {
+            'name': 'No Team Access',
+            'access_projects': 'on',
+            'projects_view_all': 'on',
+            'team_create': 'on',
+            'team_edit': 'on',
+        })
+        assert created.status_code == 200
+        preset = PermissionPreset.objects.get(name='No Team Access')
+        assert preset.access_team is False
+        assert preset.team_create is False
+        assert preset.team_edit is False
+        assert preset.access_projects is True
+        assert preset.projects_view_all is True
+
+        existing = PermissionPreset.objects.create(
+            name='Team Writers',
+            access_team=True,
+            team_create=True,
+            team_edit=True,
+            access_projects=True,
+            projects_view_all=True,
+        )
+        edited = client.post(reverse('preset_edit', args=[existing.pk]), {
+            'name': 'Team Writers',
+            'access_projects': 'on',
+            'projects_view_all': 'on',
+            'team_create': 'on',
+            'team_edit': 'on',
+        })
+        assert edited.status_code == 200
+        existing.refresh_from_db()
+        assert existing.access_team is False
+        assert existing.team_create is False
+        assert existing.team_edit is False
+        assert existing.projects_view_all is True
+
+        saved = client.post(reverse('preset_create'), {
+            'name': 'Team Flags On',
+            'access_team': 'on',
+            'team_create': 'on',
+            'team_edit': 'on',
+        })
+        assert saved.status_code == 200
+        writers = PermissionPreset.objects.get(name='Team Flags On')
+        assert writers.access_team is True
+        assert writers.team_create is True
+        assert writers.team_edit is True
+
     def test_drawer_renders_extras_under_their_modules(self, client):
         admin = AdminUserFactory()
         client.force_login(admin)
@@ -904,7 +972,16 @@ class TestPresetModuleCards:
         assert 'name="tasks_view_all"' not in salaries
         assert 'grid-cols-2' in salaries
 
-        for module in ('dashboard', 'todos', 'team'):
+        team = _card(html, 'team')
+        assert team.index('>Team<') < team.index('name="team_create"')
+        assert team.index('name="team_create"') < team.index('name="team_edit"')
+        assert '>Create<' in team
+        assert '>Edit<' in team
+        assert 'View all' not in team
+        assert 'name="salaries_view_all"' not in team
+        assert 'grid-cols-2' in team
+
+        for module in ('dashboard', 'todos'):
             card = _card(html, module)
             assert 'chevron-right' not in card
             assert 'data-extra' not in card
@@ -936,6 +1013,8 @@ class TestPresetModuleCards:
             'notes_edit_public',
             'salaries_view_all',
             'salaries_edit',
+            'team_create',
+            'team_edit',
         ):
             attrs = _checkbox_attrs(html, name)
             assert 'checked' not in attrs.split()
@@ -973,10 +1052,14 @@ class TestPresetModuleCards:
             salary_attrs = _checkbox_attrs(developer_html, name)
             assert 'checked' not in salary_attrs.split()
             assert 'disabled' in salary_attrs.split()
+        for name in ('team_create', 'team_edit'):
+            team_attrs = _checkbox_attrs(developer_html, name)
+            assert 'checked' not in team_attrs.split()
+            assert 'disabled' in team_attrs.split()
 
         admin_preset = PermissionPreset.objects.get(name='Admin')
         admin_html = client.get(reverse('preset_edit', args=[admin_preset.pk])).content.decode()
-        for name in ('salaries_view_all', 'salaries_edit'):
+        for name in ('salaries_view_all', 'salaries_edit', 'team_create', 'team_edit'):
             admin_attrs = _checkbox_attrs(admin_html, name)
             assert 'checked' in admin_attrs.split()
             assert 'disabled' not in admin_attrs.split()
@@ -1074,14 +1157,19 @@ class TestPresetDelete:
         assert PermissionPreset.objects.filter(name='InUse').exists()
 
     def test_delete_with_access_team(self, client):
-        """A preset with access_team can delete an unused preset."""
-        preset_obj = PermissionPreset.objects.create(name='WithTeam', access_team=True)
+        """Team flags do not grant preset delete. That stays role=admin."""
+        preset_obj = PermissionPreset.objects.create(
+            name='WithTeam',
+            access_team=True,
+            team_create=True,
+            team_edit=True,
+        )
         user = UserFactory(permission_preset=preset_obj)
         target = PermissionPreset.objects.create(name='ToDelete')
         client.force_login(user)
         response = client.post(reverse('preset_delete', args=[target.pk]))
-        assert response.status_code == 200
-        assert not PermissionPreset.objects.filter(name='ToDelete').exists()
+        assert response.status_code == 403
+        assert PermissionPreset.objects.filter(name='ToDelete').exists()
 
     def test_delete_requires_team_permission(self, client):
         """A member without access_team cannot delete presets."""

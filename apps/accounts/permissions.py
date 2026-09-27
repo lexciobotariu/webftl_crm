@@ -24,6 +24,8 @@ PERMISSION_KEYS = [
     'salaries_view_all',
     'salaries_edit',
     'access_team',
+    'team_create',
+    'team_edit',
 ]
 
 
@@ -66,6 +68,11 @@ class PermissionPreset(models.Model):
     # View own is access_salaries. There is no edit-own flag.
     salaries_view_all = models.BooleanField(default=False)
     salaries_edit = models.BooleanField(default=False)
+
+    # One company, so access_team is the directory. Role changes, user delete,
+    # and preset editing stay role=admin.
+    team_create = models.BooleanField(default=False)
+    team_edit = models.BooleanField(default=False)
 
     is_system = models.BooleanField(default=False, help_text="System presets cannot be deleted")
 
