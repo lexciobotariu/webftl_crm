@@ -14,8 +14,8 @@
         {% if counts.attachments %}
         <li>{{ counts.attachments }} attachment{{ counts.attachments|pluralize }}</li>
         {% endif %}
-        {% if counts.project_memberships %}
-        <li>{{ counts.project_memberships }} project membership{{ counts.project_memberships|pluralize }}</li>
+        {% if counts.project_access %}
+        <li>{{ counts.project_access }} project access row{{ counts.project_access|pluralize }}</li>
         {% endif %}
         {% if counts.salary %}
         <li>Salary record (including {{ counts.salary_months }} month{{ counts.salary_months|pluralize }} and {{ counts.payments }} payment{{ counts.payments|pluralize }})</li>

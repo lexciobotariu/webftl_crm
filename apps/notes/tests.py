@@ -7,7 +7,7 @@ from apps.accounts.factories import AdminUserFactory, UserFactory
 from apps.clients.factories import ClientFactory
 from apps.notes.forms import NoteForm
 from apps.notes.models import Note
-from apps.projects.factories import ProjectFactory, ProjectMemberFactory
+from apps.projects.factories import ProjectAccessFactory, ProjectFactory
 
 
 @pytest.mark.django_db
@@ -49,7 +49,7 @@ class TestNoteCreateDrawer:
     def test_create_project_note(self, client):
         user = UserFactory()
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='editor')
+        ProjectAccessFactory(project=project, user=user)
         client.force_login(user)
         response = client.post(
             reverse('project_note_create_drawer', args=[project.pk]),

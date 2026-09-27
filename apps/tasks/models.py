@@ -47,7 +47,7 @@ class TaskQuerySet(models.QuerySet):
         qs = self.filter(assignee=user)
         if user.is_admin:
             return qs
-        return qs.filter(project__members__user=user)
+        return qs.filter(project__access__user=user)
 
 
 class Task(models.Model):

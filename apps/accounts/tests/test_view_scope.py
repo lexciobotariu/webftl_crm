@@ -6,8 +6,8 @@ from django.urls import reverse
 from apps.accounts.factories import AdminUserFactory, UserFactory
 from apps.accounts.permissions import PermissionPreset
 from apps.clients.factories import ClientFactory
-from apps.projects.factories import ProjectFactory, ProjectMemberFactory
-from apps.projects.models import can_access_project
+from apps.projects.factories import ProjectAccessFactory, ProjectFactory
+from apps.projects.models import can_access_project, can_edit_project, can_work_on_project
 from apps.tasks.factories import TaskFactory
 from apps.todos.factories import TodoFactory
 
@@ -53,7 +53,7 @@ class TestViewOwn:
         other_client = ClientFactory(name='Other Client')
         mine = ProjectFactory(client=mine_client, name='Mine Project')
         ProjectFactory(client=other_client, name='Other Project')
-        ProjectMemberFactory(project=mine, user=user, role='viewer')
+        ProjectAccessFactory(project=mine, user=user)
         client.force_login(user)
 
         dashboard, clients_page, projects_page = _lists(client)
@@ -72,8 +72,8 @@ class TestViewOwn:
         shared = ClientFactory(name='Shared Client')
         first = ProjectFactory(client=shared, name='First Project')
         second = ProjectFactory(client=shared, name='Second Project')
-        ProjectMemberFactory(project=first, user=user, role='viewer')
-        ProjectMemberFactory(project=second, user=user, role='viewer')
+        ProjectAccessFactory(project=first, user=user)
+        ProjectAccessFactory(project=second, user=user)
         client.force_login(user)
 
         dashboard, _, projects_page = _lists(client)
@@ -92,7 +92,7 @@ class TestClientsViewAll:
         other_client = ClientFactory(name='Other Client')
         mine = ProjectFactory(client=mine_client, name='Mine Project')
         ProjectFactory(client=other_client, name='Hidden Project')
-        ProjectMemberFactory(project=mine, user=user, role='viewer')
+        ProjectAccessFactory(project=mine, user=user)
         client.force_login(user)
 
         dashboard, clients_page, projects_page = _lists(client)
@@ -118,7 +118,7 @@ class TestProjectsViewAll:
         other_client = ClientFactory(name='Other Client')
         mine = ProjectFactory(client=mine_client, name='Mine Project')
         foreign = ProjectFactory(client=other_client, name='Foreign Project')
-        ProjectMemberFactory(project=mine, user=user, role='editor')
+        ProjectAccessFactory(project=mine, user=user)
         mine_task = TaskFactory(project=mine, title='Mine Task')
         foreign_task = TaskFactory(project=foreign, title='Foreign Task')
         client.force_login(user)
@@ -131,11 +131,12 @@ class TestProjectsViewAll:
         assert 'Mine Project' in project_html
         assert 'Foreign Project' in project_html
 
-        assert can_access_project(user, mine, 'editor') is True
-        assert can_access_project(user, mine, 'manager') is False
-        assert can_access_project(user, foreign, 'viewer') is True
-        assert can_access_project(user, foreign, 'editor') is False
-        assert can_access_project(user, foreign, 'manager') is False
+        assert can_access_project(user, mine) is True
+        assert can_work_on_project(user, mine) is True
+        assert can_edit_project(user, mine) is False
+        assert can_access_project(user, foreign) is True
+        assert can_work_on_project(user, foreign) is False
+        assert can_edit_project(user, foreign) is False
 
         assert client.get(reverse('project_board', args=[foreign.pk])).status_code == 200
         assert client.get(reverse('project_settings', args=[foreign.pk])).status_code == 403
@@ -178,7 +179,7 @@ class TestPersonalTasksAndTodos:
         user = _user('Personal', clients_view_all=True, projects_view_all=True)
         other = UserFactory()
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='editor')
+        ProjectAccessFactory(project=project, user=user)
         TaskFactory(project=project, assignee=user, title='Mine Task')
         TaskFactory(project=project, assignee=other, title='Their Task')
         outside = ProjectFactory()

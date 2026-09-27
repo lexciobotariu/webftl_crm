@@ -7,7 +7,7 @@ from apps.accounts.factories import AdminUserFactory, UserFactory
 from apps.accounts.permissions import PermissionPreset
 from apps.clients.factories import ClientFactory
 from apps.clients.models import Client
-from apps.projects.factories import ProjectFactory, ProjectMemberFactory
+from apps.projects.factories import ProjectAccessFactory, ProjectFactory
 
 
 def _preset(name, **overrides):
@@ -29,7 +29,7 @@ def _user(name, **overrides):
 
 def _attach(user, client_obj):
     project = ProjectFactory(client=client_obj, name=f'{client_obj.name} Project')
-    ProjectMemberFactory(project=project, user=user, role='viewer')
+    ProjectAccessFactory(project=project, user=user)
     return project
 
 

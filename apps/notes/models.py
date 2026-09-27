@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 
-from apps.projects.models import can_access_project
+from apps.projects.models import can_access_project, can_work_on_project
 
 
 class Note(models.Model):
@@ -66,8 +66,8 @@ class Note(models.Model):
 def notes_visible_to_user(user, queryset=None):
     """Filter notes queryset to those visible to the user (SQL, not per-row Python).
 
-    Mirrors :func:`can_view_note` exactly, including the project-membership check
-    — callers must be able to pass an unscoped queryset safely.
+    Mirrors :func:`can_view_note` for private notes and ProjectAccess rows.
+    Callers must be able to pass an unscoped queryset safely.
     """
     qs = queryset if queryset is not None else Note.objects.all()
     if user.is_admin:
@@ -75,8 +75,8 @@ def notes_visible_to_user(user, queryset=None):
     return qs.filter(
         # Private notes: creator only, whatever the parent.
         Q(is_private=True, created_by=user)
-        # Public notes: project notes, and only for members of that project.
-        | Q(is_private=False, project__isnull=False, project__members__user=user)
+        # Public notes: project notes, and only with a ProjectAccess row.
+        | Q(is_private=False, project__isnull=False, project__access__user=user)
     )
 
 
@@ -93,9 +93,9 @@ def can_view_note(user, note):
     if note.client:
         return False
 
-    # Public project notes: any project member
+    # Public project notes: anyone who can open the project.
     if note.project:
-        return can_access_project(user, note.project, 'viewer')
+        return can_access_project(user, note.project)
 
     return False
 
@@ -109,7 +109,7 @@ def can_create_note(user, project=None, client=None):
         return False  # Only admins can create client notes
 
     if project:
-        return can_access_project(user, project, 'editor')
+        return can_work_on_project(user, project)
 
     return False
 
@@ -118,7 +118,7 @@ def can_modify_note(user, note):
     """Check if user can edit/delete this note.
 
     Admins can. Anyone else must have written it. A project note also
-    requires access to that project, so a former member cannot edit it.
+    requires access to that project, so someone who lost their row cannot edit it.
     """
     if user.is_admin:
         return True

@@ -8,7 +8,7 @@ from django.urls import reverse
 
 from apps.accounts.factories import AdminUserFactory, UserFactory
 from apps.accounts.permissions import PermissionPreset
-from apps.projects.factories import ProjectFactory, ProjectMemberFactory
+from apps.projects.factories import ProjectAccessFactory, ProjectFactory
 
 
 def generate_signature(payload: bytes, secret: str) -> str:
@@ -148,7 +148,7 @@ class TestGitHubSync:
         preset = PermissionPreset.objects.create(name='NoProjects', access_projects=False)
         user = UserFactory(permission_preset=preset, github_token='gh-token')
         project = ProjectFactory(github_repo_url='https://github.com/test/repo')
-        ProjectMemberFactory(project=project, user=user, role='manager')
+        ProjectAccessFactory(project=project, user=user)
         client.force_login(user)
         response = client.post(reverse('github_sync', args=[project.pk]))
         assert response.status_code == 403

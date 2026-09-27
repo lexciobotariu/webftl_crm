@@ -42,6 +42,7 @@
         <!-- Main Content -->
         <div class="flex-1 overflow-y-auto p-6">
             <div class="max-w-4xl space-y-6">
+                {% if can_edit_project %}
                 <!-- General Settings -->
                 <div id="section-general" class="bg-panel/80 rounded-panel border border-border-subtle overflow-hidden">
                     <div class="px-5 py-3 border-b border-border-subtle flex items-center gap-2">
@@ -140,6 +141,7 @@
                         </form>
                     </div>
                 </div>
+                {% endif %}
 
                 {% if request.user.is_admin %}
                 <!-- Danger Zone -->

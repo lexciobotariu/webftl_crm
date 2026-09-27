@@ -6,7 +6,19 @@ from django.urls import reverse
 from apps.accounts.factories import AdminUserFactory, UserFactory
 from apps.accounts.permissions import PermissionPreset
 from apps.clients.factories import ClientFactory
-from apps.projects.factories import ProjectFactory, ProjectMemberFactory
+from apps.projects.factories import ProjectAccessFactory, ProjectFactory
+
+
+def _with_edit_own(user):
+    preset = PermissionPreset.objects.create(
+        name=f'EditOwn{user.pk}',
+        access_projects=True,
+        projects_edit_own=True,
+        access_tasks=True,
+    )
+    user.permission_preset = preset
+    user.save(update_fields=['permission_preset'])
+    return user
 
 
 @pytest.mark.django_db
@@ -29,7 +41,7 @@ class TestProjectList:
         user = UserFactory()
         project1 = ProjectFactory(name='My Project')
         ProjectFactory(name='Other Project')
-        ProjectMemberFactory(project=project1, user=user, role='viewer')
+        ProjectAccessFactory(project=project1, user=user)
         # user is NOT a member of project2
         client.force_login(user)
         response = client.get(reverse('project_list'))
@@ -54,7 +66,7 @@ class TestProjectBoard:
     def test_project_board_shows_kanban(self, client):
         user = UserFactory()
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='viewer')
+        ProjectAccessFactory(project=project, user=user)
         client.force_login(user)
         response = client.get(reverse('project_board', args=[project.pk]))
         assert response.status_code == 200
@@ -62,7 +74,7 @@ class TestProjectBoard:
     def test_project_board_htmx_returns_partial(self, client):
         user = UserFactory()
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='viewer')
+        ProjectAccessFactory(project=project, user=user)
         client.force_login(user)
         response = client.get(
             reverse('project_board', args=[project.pk]),
@@ -128,7 +140,7 @@ class TestStatusManagement:
         """Only managers can create statuses."""
         user = UserFactory()
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='viewer')
+        ProjectAccessFactory(project=project, user=user)
         client.force_login(user)
         response = client.post(
             reverse('status_create', args=[project.pk]),
@@ -137,9 +149,9 @@ class TestStatusManagement:
         assert response.status_code == 403
 
     def test_create_status_with_manager_role(self, client):
-        user = UserFactory()
+        user = _with_edit_own(UserFactory())
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='manager')
+        ProjectAccessFactory(project=project, user=user)
         initial_count = project.statuses.count()
         client.force_login(user)
         response = client.post(
@@ -150,9 +162,9 @@ class TestStatusManagement:
         assert project.statuses.count() == initial_count + 1
 
     def test_delete_empty_status(self, client):
-        user = UserFactory()
+        user = _with_edit_own(UserFactory())
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='manager')
+        ProjectAccessFactory(project=project, user=user)
         status = project.statuses.first()
         client.force_login(user)
         response = client.post(
@@ -161,9 +173,9 @@ class TestStatusManagement:
         assert response.status_code == 200
 
     def test_cannot_delete_status_with_tasks(self, client):
-        user = UserFactory()
+        user = _with_edit_own(UserFactory())
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='manager')
+        ProjectAccessFactory(project=project, user=user)
         status = project.statuses.first()
         from apps.tasks.factories import TaskFactory
         TaskFactory(project=project, status=status)
@@ -178,9 +190,9 @@ class TestStatusManagement:
 @pytest.mark.race
 class TestReorderStatuses:
     def test_reorder_statuses(self, client):
-        user = UserFactory()
+        user = _with_edit_own(UserFactory())
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='manager')
+        ProjectAccessFactory(project=project, user=user)
         statuses = list(project.statuses.all())
         new_order = [s.pk for s in reversed(statuses)]
         client.force_login(user)
@@ -237,7 +249,7 @@ class TestProjectDetail:
     def test_project_detail_shows_project_info(self, client):
         user = UserFactory()
         project = ProjectFactory(name='Test Project', description='Test description')
-        ProjectMemberFactory(project=project, user=user, role='viewer')
+        ProjectAccessFactory(project=project, user=user)
         client.force_login(user)
         response = client.get(reverse('project_detail', args=[project.pk]))
         assert response.status_code == 200
@@ -253,7 +265,7 @@ class TestProjectDetail:
     def test_project_detail_shows_task_count(self, client):
         user = UserFactory()
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='viewer')
+        ProjectAccessFactory(project=project, user=user)
         from apps.tasks.factories import TaskFactory
         status = project.statuses.first()
         TaskFactory(project=project, status=status)
@@ -309,7 +321,7 @@ class TestBoardVisibility:
         """Only managers can toggle status visibility."""
         user = UserFactory()
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='viewer')
+        ProjectAccessFactory(project=project, user=user)
         status = project.statuses.first()
         client.force_login(user)
         response = client.post(
@@ -319,9 +331,9 @@ class TestBoardVisibility:
 
     def test_toggle_visibility_hides_status(self, client):
         """POSTing to toggle endpoint should flip visible_on_board."""
-        user = UserFactory()
+        user = _with_edit_own(UserFactory())
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='manager')
+        ProjectAccessFactory(project=project, user=user)
         status = project.statuses.first()
         assert status.visible_on_board is True
         client.force_login(user)
@@ -334,9 +346,9 @@ class TestBoardVisibility:
 
     def test_toggle_visibility_shows_status(self, client):
         """Toggling a hidden status makes it visible again."""
-        user = UserFactory()
+        user = _with_edit_own(UserFactory())
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='manager')
+        ProjectAccessFactory(project=project, user=user)
         status = project.statuses.first()
         status.visible_on_board = False
         status.save()
@@ -397,7 +409,7 @@ class TestClientNameVisibility:
         preset = PermissionPreset.objects.get(name='Developer')
         user = UserFactory(permission_preset=preset)
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='viewer')
+        ProjectAccessFactory(project=project, user=user)
         client.force_login(user)
         response = client.get(reverse('project_list'))
         content = response.content.decode()
@@ -411,8 +423,8 @@ class TestClientNameVisibility:
         client_b = ClientFactory(name='Hidden Filter B')
         project_a = ProjectFactory(name='Visible A', client=client_a)
         project_b = ProjectFactory(name='Visible B', client=client_b)
-        ProjectMemberFactory(project=project_a, user=user, role='viewer')
-        ProjectMemberFactory(project=project_b, user=user, role='viewer')
+        ProjectAccessFactory(project=project_a, user=user)
+        ProjectAccessFactory(project=project_b, user=user)
         client.force_login(user)
 
         response = client.get(reverse('project_list'), {'client': client_a.pk})
@@ -427,7 +439,7 @@ class TestClientNameVisibility:
     def test_project_list_hides_add_for_non_admin(self, client):
         user = UserFactory()
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='viewer')
+        ProjectAccessFactory(project=project, user=user)
         client.force_login(user)
         content = client.get(reverse('project_list')).content.decode()
         assert 'Add Project' not in content
@@ -437,7 +449,7 @@ class TestClientNameVisibility:
         preset = PermissionPreset.objects.get(name='Developer')
         user = UserFactory(permission_preset=preset)
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='viewer')
+        ProjectAccessFactory(project=project, user=user)
         client.force_login(user)
         response = client.get(reverse('project_list'))
         content = response.content.decode()
@@ -455,7 +467,7 @@ class TestClientNameVisibility:
         preset = PermissionPreset.objects.get(name='Developer')
         user = UserFactory(permission_preset=preset)
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='viewer')
+        ProjectAccessFactory(project=project, user=user)
         client.force_login(user)
         response = client.get(reverse('project_detail', args=[project.pk]))
         content = response.content.decode()
@@ -466,7 +478,7 @@ class TestClientNameVisibility:
         preset = PermissionPreset.objects.get(name='Developer')
         user = UserFactory(permission_preset=preset)
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='viewer')
+        ProjectAccessFactory(project=project, user=user)
         client.force_login(user)
         response = client.get(reverse('project_board', args=[project.pk]))
         content = response.content.decode()
@@ -477,9 +489,9 @@ class TestClientNameVisibility:
 @pytest.mark.django_db
 class TestProjectDeleteButton:
     def test_manager_does_not_see_delete(self, client):
-        user = UserFactory()
+        user = _with_edit_own(UserFactory())
         project = ProjectFactory()
-        ProjectMemberFactory(project=project, user=user, role='manager')
+        ProjectAccessFactory(project=project, user=user)
         client.force_login(user)
         content = client.get(reverse('project_settings', args=[project.pk])).content.decode()
         assert 'Delete Project' not in content

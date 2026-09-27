@@ -10,7 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from apps.accounts.decorators import require_permission
-from apps.projects.models import Project, can_access_project
+from apps.projects.models import Project, can_edit_project
 
 from .github import (
     process_webhook_issue,
@@ -98,12 +98,13 @@ def github_webhook(request):
 def github_sync(request, project_pk):
     """Manually trigger GitHub sync for a project.
 
-    ``access_projects`` is required first. The manager check below is unchanged.
+    ``access_projects`` is required first. Editing the repo settings needs
+    ``can_edit_project``: admin, edit-all, or edit-own plus a ProjectAccess row.
     """
     project = get_object_or_404(Project, pk=project_pk)
 
-    if not can_access_project(request.user, project, 'manager'):
-        return JsonResponse({'error': 'Manager access required'}, status=403)
+    if not can_edit_project(request.user, project):
+        return JsonResponse({'error': "You can't edit this project"}, status=403)
 
     if not project.github_repo_url:
         return JsonResponse({'error': 'No GitHub repo configured'}, status=400)

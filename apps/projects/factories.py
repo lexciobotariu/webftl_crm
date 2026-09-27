@@ -2,7 +2,7 @@ import factory
 
 from apps.accounts.factories import UserFactory
 from apps.clients.factories import ClientFactory
-from apps.projects.models import Project, ProjectMember, Status
+from apps.projects.models import Project, ProjectAccess, Status
 
 
 class ProjectFactory(factory.django.DjangoModelFactory):
@@ -25,10 +25,9 @@ class StatusFactory(factory.django.DjangoModelFactory):
     order = factory.Sequence(lambda n: n)
 
 
-class ProjectMemberFactory(factory.django.DjangoModelFactory):
+class ProjectAccessFactory(factory.django.DjangoModelFactory):
     class Meta:
-        model = ProjectMember
+        model = ProjectAccess
 
     project = factory.SubFactory(ProjectFactory)
     user = factory.SubFactory(UserFactory)
-    role = 'editor'

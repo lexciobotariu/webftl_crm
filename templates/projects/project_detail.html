@@ -42,11 +42,13 @@
                     <i data-lucide="kanban" class="w-3.5 h-3.5"></i>
                     Open Board
                 </a>
+                {% if can_edit_project %}
                 <a href="{% url 'project_settings' project.pk %}?next=detail"
                    class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-300 hover:bg-hover transition-colors">
                     <i data-lucide="settings" class="w-3.5 h-3.5"></i>
                     Settings
                 </a>
+                {% endif %}
             </div>
         </div>
     </div>

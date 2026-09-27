@@ -21,7 +21,7 @@ from django.db.models import DateTimeField, ExpressionWrapper, F, Max, Q
 from django.utils import timezone
 from django.utils.text import get_valid_filename
 
-from apps.projects.models import can_access_project
+from apps.projects.models import can_work_on_project
 
 from .models import Attachment, Subtask, TaskActivity, TimeEntry
 
@@ -50,20 +50,13 @@ class TimeEntryValidationError(ValueError):
     """A logged time range breaks the manual-entry rules."""
 
 
-def require_access(user, project, level='editor'):
-    """
-    Check if user has required access level to a project.
+def require_access(user, project):
+    """Tasks, comments, and the user's own time need a ProjectAccess row.
 
-    Args:
-        user: The user attempting the action
-        project: The project being accessed
-        level: Required role - 'viewer', 'editor', or 'manager'
-
-    Raises:
-        TaskPermissionError: If user lacks required access
+    Admins pass. View-all alone does not. The edit flags do not grant this.
     """
-    if not can_access_project(user, project, level):
-        raise TaskPermissionError(f"{level.title()} access required")
+    if not can_work_on_project(user, project):
+        raise TaskPermissionError('Project access required')
 
 
 def update_task_field(task, field, value, user):
@@ -82,7 +75,7 @@ def update_task_field(task, field, value, user):
     Raises:
         TaskPermissionError: If user lacks editor access
     """
-    require_access(user, task.project, 'editor')
+    require_access(user, task.project)
 
     setattr(task, field, value)
     task._changed_by = user
@@ -108,7 +101,7 @@ def move_task(task, new_status, user, position=None):
     Raises:
         TaskPermissionError: If user lacks editor access
     """
-    require_access(user, task.project, 'editor')
+    require_access(user, task.project)
 
     from apps.tasks.models import Task
 
@@ -190,7 +183,7 @@ def create_subtask(task, title, user):
     Raises:
         TaskPermissionError: If user lacks editor access
     """
-    require_access(user, task.project, 'editor')
+    require_access(user, task.project)
 
     max_order = task.subtasks.aggregate(Max('order'))['order__max']
     next_order = 0 if max_order is None else max_order + 1
@@ -219,7 +212,7 @@ def toggle_subtask(subtask, user):
     Raises:
         TaskPermissionError: If user lacks editor access
     """
-    require_access(user, subtask.task.project, 'editor')
+    require_access(user, subtask.task.project)
 
     locked = Subtask.objects.select_for_update().get(pk=subtask.pk)
     locked.completed = not locked.completed
@@ -240,7 +233,7 @@ def delete_subtask(subtask, user):
     Raises:
         TaskPermissionError: If user lacks editor access
     """
-    require_access(user, subtask.task.project, 'editor')
+    require_access(user, subtask.task.project)
     subtask.delete()
 
 
@@ -262,7 +255,7 @@ def add_comment(task, content, user):
     Raises:
         TaskPermissionError: If user lacks editor access
     """
-    require_access(user, task.project, 'editor')
+    require_access(user, task.project)
 
     return TaskActivity.objects.create(
         task=task,
@@ -313,7 +306,7 @@ def upload_attachment(task, file, user):
         TaskPermissionError: If user lacks editor access
         ValueError: If file validation fails
     """
-    require_access(user, task.project, 'editor')
+    require_access(user, task.project)
 
     error = validate_upload(file)
     if error:
@@ -338,7 +331,7 @@ def delete_task(task, user):
     Raises:
         TaskPermissionError: If user lacks editor access
     """
-    require_access(user, task.project, 'editor')
+    require_access(user, task.project)
     task.delete()
 
 
@@ -354,7 +347,7 @@ def toggle_label(task, label, user):
     Raises:
         TaskPermissionError: If user lacks editor access
     """
-    require_access(user, task.project, 'editor')
+    require_access(user, task.project)
 
     if label in task.labels.all():
         task.labels.remove(label)
@@ -427,12 +420,12 @@ def _close_user_open_timer(user, now):
 
 
 def require_entry_edit(user, entry):
-    """Owner-editors and admins may change an entry. Managers may not edit others."""
+    """The owner, with a ProjectAccess row, and admins may change an entry."""
     if user.is_admin:
         return
     if entry.user_id != user.pk:
         raise TaskPermissionError('You can only change your own time entries')
-    require_access(user, entry.task.project, 'editor')
+    require_access(user, entry.task.project)
 
 
 def _validate_closed_range(started_at, ended_at, now=None):
@@ -466,7 +459,7 @@ def start_timer(task, user):
     Editors only. Any other open timer for this person is closed first:
     at now, or at the 12-hour mark if that timer is already past it.
     """
-    require_access(user, task.project, 'editor')
+    require_access(user, task.project)
     now = timezone.now()
     _close_user_open_timer(user, now)
     try:
@@ -502,7 +495,7 @@ def log_manual(task, user, started_at, ended_at, note=''):
     The span may be longer than 12 hours. It must end after it starts
     and cannot end in the future.
     """
-    require_access(user, task.project, 'editor')
+    require_access(user, task.project)
     _validate_closed_range(started_at, ended_at)
     return TimeEntry.objects.create(
         task=task,
@@ -536,9 +529,9 @@ def delete_entry(entry, user):
 def entries_for_week(user, week_start, project=None):
     """Entries that started in the seven days from ``week_start``.
 
-    Without a project, this is the user's own week. With a project, a
-    manager or admin sees every entry on that project; everyone else
-    still sees only their own.
+    Without a project, this is the user's own week. With a project, only
+    ``role=admin`` sees every entry on that project; everyone else still
+    sees only their own.
     """
     start, end = _week_bounds(week_start)
     entries = (
@@ -548,7 +541,7 @@ def entries_for_week(user, week_start, project=None):
     )
     if project is not None:
         entries = entries.filter(task__project=project)
-        if can_access_project(user, project, 'manager'):
+        if user.is_admin:
             return entries
     return entries.filter(user=user)
 
@@ -556,10 +549,10 @@ def entries_for_week(user, week_start, project=None):
 def entries_on_task(user, task):
     """Entries visible on a task screen.
 
-    Managers and admins see everyone's time on the task. Everyone else
+    Only ``role=admin`` sees everyone's time on the task. Everyone else
     sees only their own.
     """
     entries = task.time_entries.select_related('user')
-    if can_access_project(user, task.project, 'manager'):
+    if user.is_admin:
         return entries
     return entries.filter(user=user)

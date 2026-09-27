@@ -61,20 +61,18 @@ class Status(models.Model):
         return self.tasks.count()
 
 
-class ProjectMember(models.Model):
-    """
-    Tracks user membership and roles within projects.
-    Admins bypass this check and have access to all projects.
-    """
-    ROLE_CHOICES = [
-        ('viewer', 'Viewer'),      # Can view project and tasks
-        ('editor', 'Editor'),      # Can edit tasks, create subtasks
-        ('manager', 'Manager'),    # Can manage project settings, statuses, labels
-    ]
+class ProjectAccess(models.Model):
+    """One row means this person has access to that project.
 
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='members')
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='project_memberships')
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='viewer')
+    The row opens the project and, until a later pass, allows tasks, comments,
+    and the person's own time. It does not grant settings edits. Admins bypass
+    the row through ``is_admin`` and ``has_app_permission``.
+    """
+
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='access')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='project_access'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -82,58 +80,68 @@ class ProjectMember(models.Model):
         ordering = ['project', 'user__name']
 
     def __str__(self):
-        return f"{self.user.name} - {self.project.name} ({self.role})"
+        return f"{self.user.name} - {self.project.name}"
+
+
+def _has_access_row(user, project):
+    return ProjectAccess.objects.filter(project=project, user=user).exists()
 
 
 def visible_projects(user):
     """Projects this user may see on the dashboard and in the project list.
 
     ``projects_view_all`` is every project. Without it, projects where ``user``
-    is a member. ``role=admin`` bypasses the flag through
+    has a ProjectAccess row. ``role=admin`` bypasses the flag through
     ``User.has_app_permission``.
     """
     if user.has_app_permission('projects_view_all'):
         return Project.objects.all()
-    return Project.objects.filter(members__user=user).distinct()
+    return Project.objects.filter(access__user=user).distinct()
 
 
-def can_access_project(user, project, required_role='viewer'):
-    """
-    Check if user has access to a project with at least the required role.
+def can_access_project(user, project):
+    """Whether the user may open this project.
 
-    Admins always have full access.
-    Role hierarchy: viewer < editor < manager
-
-    ``projects_view_all`` grants viewer on every project. Editor and manager
-    still require a membership at that role. A membership is never lowered:
-    an editor who can also view all stays an editor.
+    Admin, a ProjectAccess row, ``projects_view_all``, or ``projects_edit_all``.
     """
     if user.is_admin:
         return True
-
-    role_levels = {'viewer': 0, 'editor': 1, 'manager': 2}
-    required_level = role_levels.get(required_role, 0)
-
-    try:
-        membership = ProjectMember.objects.get(project=project, user=user)
-    except ProjectMember.DoesNotExist:
-        membership = None
-
-    if membership is not None:
-        user_level = role_levels.get(membership.role, 0)
-        if user_level >= required_level:
-            return True
-
-    if required_level <= role_levels['viewer'] and user.has_app_permission('projects_view_all'):
+    if _has_access_row(user, project):
         return True
-    return False
+    return user.has_app_permission('projects_view_all') or user.has_app_permission(
+        'projects_edit_all'
+    )
+
+
+def can_edit_project(user, project):
+    """Settings, statuses, labels, and the GitHub repo settings.
+
+    Admin, ``projects_edit_all``, or ``projects_edit_own`` plus a ProjectAccess row.
+    A row by itself does not grant edit.
+    """
+    if user.is_admin:
+        return True
+    if user.has_app_permission('projects_edit_all'):
+        return True
+    return user.has_app_permission('projects_edit_own') and _has_access_row(user, project)
+
+
+def can_work_on_project(user, project):
+    """Tasks, comments, and the user's own time.
+
+    What an editor could do: admin, or a ProjectAccess row. View-all alone is
+    not enough, and neither edit flag adds this.
+    """
+    if user.is_admin:
+        return True
+    return _has_access_row(user, project)
 
 
 def get_assignable_users(project):
-    """Users who can be assigned tasks on this project (members + admins)."""
+    """Users who can be assigned tasks on this project (access rows + admins)."""
     from apps.accounts.models import User
 
-    member_ids = ProjectMember.objects.filter(project=project).values_list('user_id', flat=True)
+    access_ids = ProjectAccess.objects.filter(project=project).values_list('user_id', flat=True)
     return User.objects.filter(is_active=True).filter(
-        models.Q(pk__in=member_ids) | models.Q(role='admin')
+        models.Q(pk__in=access_ids) | models.Q(role='admin')
     )
