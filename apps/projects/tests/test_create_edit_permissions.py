@@ -8,7 +8,7 @@ from apps.accounts.factories import AdminUserFactory, UserFactory
 from apps.accounts.permissions import PermissionPreset
 from apps.clients.factories import ClientFactory
 from apps.projects.factories import ProjectAccessFactory, ProjectFactory
-from apps.projects.models import Project, ProjectAccess
+from apps.projects.models import Project, ProjectAccess, get_assignable_users
 from apps.tasks.factories import TaskFactory, TimeEntryFactory
 from apps.tasks.models import TaskActivity
 from apps.tasks.services import entries_for_week, entries_on_task
@@ -301,3 +301,251 @@ class TestTimeVisibility:
         assert 'owner-note' in admin_week
         admin_detail = client.get(reverse('task_detail', args=[task.pk])).content.decode()
         assert 'owner-note' in admin_detail
+
+
+def _team(project):
+    return reverse('project_detail_team', args=[project.pk])
+
+
+@pytest.mark.django_db
+class TestProjectTeam:
+    def test_a_row_with_no_edit_flag_sees_the_list_only(self, client):
+        viewer = _user('Viewer')
+        viewer.name = 'Viewer Person'
+        viewer.save()
+        amy = _user('Amy')
+        amy.name = 'Amy Lane'
+        amy.email = 'amy@example.com'
+        amy.save()
+        zoe = AdminUserFactory(name='Zoe Park', email='zoe@example.com')
+        project = ProjectFactory()
+        ProjectAccessFactory(project=project, user=zoe)
+        ProjectAccessFactory(project=project, user=amy)
+        ProjectAccessFactory(project=project, user=viewer)
+        client.force_login(viewer)
+
+        page = client.get(_team(project))
+        assert page.status_code == 200
+        assert page.context['active_tab'] == 'team'
+        html = page.content.decode()
+        assert amy.name in html
+        assert amy.email in html
+        assert amy.get_role_display() in html
+        assert zoe.name in html
+        assert zoe.email in html
+        assert zoe.get_role_display() in html
+        assert html.index(amy.name) < html.index(zoe.name)
+        assert 'name="user"' not in html
+        assert reverse('project_team_add', args=[project.pk]) not in html
+        assert reverse('project_team_remove', args=[project.pk, amy.pk]) not in html
+
+        assert client.post(
+            reverse('project_team_add', args=[project.pk]),
+            {'user': amy.pk},
+        ).status_code == 403
+        assert client.post(
+            reverse('project_team_remove', args=[project.pk, amy.pk]),
+        ).status_code == 403
+        assert ProjectAccess.objects.filter(project=project, user=amy).exists()
+
+    def test_view_all_sees_the_list_and_cannot_change_it(self, client):
+        watcher = _user('ViewAll', projects_view_all=True)
+        member = _user('Listed')
+        member.name = 'Listed Person'
+        member.email = 'listed@example.com'
+        member.save()
+        project = ProjectFactory()
+        ProjectAccessFactory(project=project, user=member)
+        assert not ProjectAccess.objects.filter(project=project, user=watcher).exists()
+        client.force_login(watcher)
+
+        page = client.get(_team(project))
+        assert page.status_code == 200
+        html = page.content.decode()
+        assert member.name in html
+        assert member.email in html
+        assert member.get_role_display() in html
+        assert reverse('project_team_add', args=[project.pk]) not in html
+        assert reverse('project_team_remove', args=[project.pk, member.pk]) not in html
+
+        newcomer = _user('Newcomer')
+        assert client.post(
+            reverse('project_team_add', args=[project.pk]),
+            {'user': newcomer.pk},
+        ).status_code == 403
+        assert client.post(
+            reverse('project_team_remove', args=[project.pk, member.pk]),
+        ).status_code == 403
+        assert not ProjectAccess.objects.filter(project=project, user=newcomer).exists()
+        assert ProjectAccess.objects.filter(project=project, user=member).exists()
+
+    def test_edit_own_with_a_row_can_add_and_remove(self, client):
+        editor = _user('EditOwn', projects_edit_own=True)
+        project = ProjectFactory()
+        ProjectAccessFactory(project=project, user=editor)
+        newcomer = _user('Newcomer')
+        newcomer.name = 'New Person'
+        newcomer.save()
+        client.force_login(editor)
+
+        page = client.get(_team(project))
+        assert f'value="{newcomer.pk}"' in page.content.decode()
+        assert not get_assignable_users(project).filter(pk=newcomer.pk).exists()
+
+        added = client.post(reverse('project_team_add', args=[project.pk]), {'user': newcomer.pk})
+        assert added.status_code == 302
+        assert added.url == _team(project)
+        assert ProjectAccess.objects.filter(project=project, user=newcomer).exists()
+        assert get_assignable_users(project).filter(pk=newcomer.pk).exists()
+        assert newcomer.name in client.get(_team(project)).content.decode()
+
+        again = client.post(reverse('project_team_add', args=[project.pk]), {'user': newcomer.pk})
+        assert again.status_code == 302
+        assert ProjectAccess.objects.filter(project=project, user=newcomer).count() == 1
+
+        removed = client.post(reverse('project_team_remove', args=[project.pk, newcomer.pk]))
+        assert removed.status_code == 302
+        assert not ProjectAccess.objects.filter(project=project, user=newcomer).exists()
+
+        left = client.post(reverse('project_team_remove', args=[project.pk, editor.pk]))
+        assert left.status_code == 302
+        assert not ProjectAccess.objects.filter(project=project).exists()
+        assert client.post(
+            reverse('project_team_add', args=[project.pk]),
+            {'user': newcomer.pk},
+        ).status_code == 403
+        assert not ProjectAccess.objects.filter(project=project, user=newcomer).exists()
+
+    def test_edit_own_without_a_row_cannot_edit(self, client):
+        editor = _user('EditOwn', projects_edit_own=True)
+        member = _user('Member')
+        newcomer = _user('Newcomer')
+        project = ProjectFactory()
+        ProjectAccessFactory(project=project, user=member)
+        client.force_login(editor)
+
+        assert client.get(_team(project)).status_code == 403
+        assert client.post(
+            reverse('project_team_add', args=[project.pk]),
+            {'user': newcomer.pk},
+        ).status_code == 403
+        assert client.post(
+            reverse('project_team_remove', args=[project.pk, member.pk]),
+        ).status_code == 403
+        assert not ProjectAccess.objects.filter(project=project, user=newcomer).exists()
+        assert ProjectAccess.objects.filter(project=project, user=member).exists()
+
+    def test_edit_all_can_add_and_remove_with_no_row(self, client):
+        editor = _user('EditAll', projects_edit_all=True, projects_edit_own=False)
+        member = _user('Member')
+        newcomer = _user('Newcomer')
+        project = ProjectFactory()
+        ProjectAccessFactory(project=project, user=member)
+        assert not ProjectAccess.objects.filter(project=project, user=editor).exists()
+        client.force_login(editor)
+
+        added = client.post(reverse('project_team_add', args=[project.pk]), {'user': newcomer.pk})
+        assert added.status_code == 302
+        assert ProjectAccess.objects.filter(project=project, user=newcomer).exists()
+        removed = client.post(reverse('project_team_remove', args=[project.pk, member.pk]))
+        assert removed.status_code == 302
+        assert not ProjectAccess.objects.filter(project=project, user=member).exists()
+        assert not ProjectAccess.objects.filter(project=project, user=editor).exists()
+
+    def test_admin_can_add_and_remove(self, client):
+        admin = AdminUserFactory()
+        bypass = AdminUserFactory(
+            permission_preset=_preset('AdminNoProjects', access_projects=False),
+        )
+        member = _user('OnTheProject')
+        project = ProjectFactory()
+        ProjectAccessFactory(project=project, user=member)
+        client.force_login(admin)
+
+        page = client.get(_team(project)).content.decode()
+        assert f'value="{bypass.pk}"' in page
+        added = client.post(reverse('project_team_add', args=[project.pk]), {'user': bypass.pk})
+        assert added.status_code == 302
+        assert ProjectAccess.objects.filter(project=project, user=bypass).exists()
+        removed = client.post(reverse('project_team_remove', args=[project.pk, member.pk]))
+        assert removed.status_code == 302
+        assert not ProjectAccess.objects.filter(project=project, user=member).exists()
+
+    def test_add_rejects_inactive_users_and_people_without_projects(self, client):
+        editor = _user('EditOwn', projects_edit_own=True)
+        project = ProjectFactory()
+        ProjectAccessFactory(project=project, user=editor)
+        inactive = _user('Inactive')
+        inactive.is_active = False
+        inactive.save()
+        outsider = UserFactory(
+            name='No Projects',
+            permission_preset=_preset('NoProjects', access_projects=False),
+        )
+        client.force_login(editor)
+
+        html = client.get(_team(project)).content.decode()
+        assert f'value="{inactive.pk}"' not in html
+        assert f'value="{outsider.pk}"' not in html
+
+        denied_inactive = client.post(
+            reverse('project_team_add', args=[project.pk]),
+            {'user': inactive.pk},
+        )
+        denied_outsider = client.post(
+            reverse('project_team_add', args=[project.pk]),
+            {'user': outsider.pk},
+        )
+        assert denied_inactive.status_code == 400
+        assert denied_outsider.status_code == 400
+        assert not ProjectAccess.objects.filter(project=project, user=inactive).exists()
+        assert not ProjectAccess.objects.filter(project=project, user=outsider).exists()
+
+    def test_remove_clears_the_assignee_on_this_project(self, client):
+        editor = _user('EditOwn', projects_edit_own=True)
+        departing = _user('Departing')
+        project = ProjectFactory()
+        other = ProjectFactory()
+        ProjectAccessFactory(project=project, user=editor)
+        ProjectAccessFactory(project=project, user=departing)
+        ProjectAccessFactory(project=other, user=departing)
+        task = TaskFactory(project=project, assignee=departing, title='On this project')
+        kept = TaskFactory(project=other, assignee=departing, title='On the other project')
+        client.force_login(editor)
+
+        removed = client.post(reverse('project_team_remove', args=[project.pk, departing.pk]))
+        assert removed.status_code == 302
+        assert not ProjectAccess.objects.filter(project=project, user=departing).exists()
+        task.refresh_from_db()
+        kept.refresh_from_db()
+        assert task.assignee_id is None
+        assert kept.assignee_id == departing.id
+
+    def test_hidden_project_is_forbidden(self, client):
+        stranger = _user('Stranger')
+        project = ProjectFactory()
+        client.force_login(stranger)
+        assert client.get(_team(project)).status_code == 403
+        assert client.post(
+            reverse('project_team_add', args=[project.pk]),
+            {'user': stranger.pk},
+        ).status_code == 403
+        assert client.post(
+            reverse('project_team_remove', args=[project.pk, stranger.pk]),
+        ).status_code == 403
+        assert not ProjectAccess.objects.filter(project=project).exists()
+
+    def test_team_link_is_in_navigation_and_documents_stay_coming_soon(self, client):
+        user = _user('Viewer')
+        project = ProjectFactory()
+        ProjectAccessFactory(project=project, user=user)
+        client.force_login(user)
+
+        content = client.get(reverse('project_detail', args=[project.pk])).content.decode()
+        before, after = content.split('Coming Soon', 1)
+        team_url = _team(project)
+        assert f'href="{team_url}"' in before
+        assert before.index('Notes') < before.index(team_url) < before.index('Time Tracking')
+        assert 'Documents' in after
+        assert 'Team' not in after
+        assert 'file-text' in after

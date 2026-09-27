@@ -300,17 +300,18 @@ class TestWeekAndProjectViews:
         response = client.get(reverse('time_week'), {'project': task.project.pk})
         assert response.status_code == 403
 
-    def test_project_sidebar_links_time_tracking_and_leaves_the_others_disabled(self, client):
+    def test_project_sidebar_links_time_tracking_and_team(self, client):
         user, task = _member('viewer')
         client.force_login(user)
         content = client.get(reverse('project_detail', args=[task.project.pk])).content.decode()
         assert f'href="{reverse("time_week")}?project={task.project.pk}"' in content
         assert 'Time Tracking' in content
+        assert f'href="{reverse("project_detail_team", args=[task.project.pk])}"' in content
         disabled_icons = re.findall(
             r'cursor-not-allowed">\s*<i data-lucide="([^"]+)"',
             content,
         )
-        assert disabled_icons == ['users', 'file-text']
+        assert disabled_icons == ['file-text']
 
 
 @pytest.mark.django_db

@@ -76,6 +76,10 @@
                     <div class="text-zinc-500">Loading notes...</div>
                 </div>
             </div>
+            {% elif active_tab == 'team' %}
+            <div class="pb-6" id="team-content">
+                {% include "projects/partials/team_content.html" %}
+            </div>
             {% endif %}
         </div>
 
@@ -102,6 +106,11 @@
                         <i data-lucide="sticky-note" class="w-4 h-4"></i>
                         Notes
                     </a>
+                    <a href="{% url 'project_detail_team' project.pk %}"
+                       class="w-full flex items-center gap-3 px-3 py-2 rounded-card text-sm transition-colors {% if active_tab == 'team' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:bg-elevated/50{% endif %}">
+                        <i data-lucide="users" class="w-4 h-4"></i>
+                        Team
+                    </a>
                     <a href="{% url 'time_week' %}?project={{ project.pk }}"
                        class="w-full flex items-center gap-3 px-3 py-2 rounded-card text-sm text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50 transition-colors">
                         <i data-lucide="clock" class="w-4 h-4"></i>
@@ -112,10 +121,6 @@
                 <!-- Coming Soon placeholders -->
                 <div class="text-[10px] uppercase tracking-wider text-zinc-600 px-2 mb-2 mt-6">Coming Soon</div>
                 <nav class="space-y-1">
-                    <div class="w-full flex items-center gap-3 px-3 py-2 rounded-card text-sm text-zinc-600 cursor-not-allowed">
-                        <i data-lucide="users" class="w-4 h-4"></i>
-                        Team
-                    </div>
                     <div class="w-full flex items-center gap-3 px-3 py-2 rounded-card text-sm text-zinc-600 cursor-not-allowed">
                         <i data-lucide="file-text" class="w-4 h-4"></i>
                         Documents
