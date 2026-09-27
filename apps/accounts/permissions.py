@@ -4,6 +4,8 @@ PERMISSION_KEYS = [
     'access_dashboard',
     'access_clients',
     'clients_view_all',
+    'clients_create',
+    'clients_edit',
     'access_projects',
     'projects_view_all',
     'access_tasks',
@@ -31,6 +33,10 @@ class PermissionPreset(models.Model):
     # Unchecked means view own. Admins still see everything via has_app_permission.
     clients_view_all = models.BooleanField(default=False)
     projects_view_all = models.BooleanField(default=False)
+
+    # Create and edit are separate from view. Delete stays role=admin.
+    clients_create = models.BooleanField(default=False)
+    clients_edit = models.BooleanField(default=False)
 
     is_system = models.BooleanField(default=False, help_text="System presets cannot be deleted")
 

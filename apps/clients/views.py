@@ -21,6 +21,18 @@ def _visible_projects(user, client):
     return visible_projects(user).filter(client=client)
 
 
+def _visible_client_or_404(user, pk):
+    """A client outside ``visible_clients`` is a 404, including a known address."""
+    return get_object_or_404(visible_clients(user), pk=pk)
+
+
+def _save_new_client(form, user):
+    client = form.save(commit=False)
+    client.created_by = user
+    client.save()
+    return client
+
+
 @login_required
 @require_permission('access_clients')
 def client_list(request):
@@ -38,13 +50,13 @@ def client_list(request):
 @login_required
 @require_permission('access_clients')
 def client_create(request):
-    if not request.user.is_admin:
-        return HttpResponseForbidden("Admin access required to create clients")
+    if not request.user.has_app_permission('clients_create'):
+        return HttpResponseForbidden("Permission required to create clients")
 
     if request.method == 'POST':
         form = ClientForm(request.POST)
         if form.is_valid():
-            client = form.save()
+            client = _save_new_client(form, request.user)
             return redirect('client_detail', pk=client.pk)
     else:
         form = ClientForm()
@@ -55,13 +67,13 @@ def client_create(request):
 @require_permission('access_clients')
 def client_create_drawer(request):
     """Create client via drawer (HTMX)."""
-    if not request.user.is_admin:
-        return HttpResponseForbidden("Admin access required to create clients")
+    if not request.user.has_app_permission('clients_create'):
+        return HttpResponseForbidden("Permission required to create clients")
 
     if request.method == 'POST':
         form = ClientDrawerForm(request.POST)
         if form.is_valid():
-            form.save()
+            _save_new_client(form, request.user)
             response = HttpResponse('')
             response['HX-Trigger'] = json.dumps({
                 'closeSlideOver': True,
@@ -76,7 +88,7 @@ def client_create_drawer(request):
 @login_required
 @require_permission('access_clients')
 def client_detail(request, pk):
-    client = get_object_or_404(Client, pk=pk)
+    client = _visible_client_or_404(request.user, pk)
 
     # Determine active tab from URL
     url_name = request.resolver_match.url_name
@@ -110,10 +122,9 @@ def client_detail(request, pk):
 @login_required
 @require_permission('access_clients')
 def client_edit(request, pk):
-    if not request.user.is_admin:
-        return HttpResponseForbidden("Admin access required to edit clients")
-
-    client = get_object_or_404(Client, pk=pk)
+    client = _visible_client_or_404(request.user, pk)
+    if not request.user.has_app_permission('clients_edit'):
+        return HttpResponseForbidden("Permission required to edit clients")
     if request.method == 'POST':
         form = ClientForm(request.POST, instance=client)
         if form.is_valid():
@@ -128,10 +139,9 @@ def client_edit(request, pk):
 @require_permission('access_clients')
 def client_edit_drawer(request, pk):
     """Edit client profile via drawer (HTMX)."""
-    if not request.user.is_admin:
-        return HttpResponseForbidden("Admin access required to edit clients")
-
-    client = get_object_or_404(Client, pk=pk)
+    client = _visible_client_or_404(request.user, pk)
+    if not request.user.has_app_permission('clients_edit'):
+        return HttpResponseForbidden("Permission required to edit clients")
 
     if request.method == 'POST':
         form = ClientDrawerForm(request.POST, instance=client)
@@ -244,9 +254,10 @@ def client_profile_notes(request, pk):
 @require_permission('access_clients')
 @require_POST
 def client_delete(request, pk):
+    # Visibility first: a hidden client is 404, not 403, even when the caller knows the address.
+    client = _visible_client_or_404(request.user, pk)
     if not request.user.is_admin:
         return HttpResponseForbidden("Admin access required")
-    client = get_object_or_404(Client, pk=pk)
     client.delete()
     if request.htmx:
         response = HttpResponse('')

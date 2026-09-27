@@ -12,6 +12,7 @@
                 <h1 class="text-sm font-medium text-zinc-100">Clients</h1>
                 <span id="client-count" class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ total_count }}</span>
             </div>
+            {% if perms_map.clients_create %}
             <button hx-get="{% url 'client_create_drawer' %}"
                     hx-target="#slide-over"
                     hx-swap="innerHTML"
@@ -19,6 +20,7 @@
                 <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                 Add Client
             </button>
+            {% endif %}
         </div>
     </div>
 
@@ -44,8 +46,12 @@
             </tbody>
         </table>
         {% else %}
+        {% if perms_map.clients_create %}
         {% url 'client_create_drawer' as client_create_url %}
         {% include "components/empty_state.html" with icon="users" message="No clients yet" action_hx_get=client_create_url action_label="Add your first client" %}
+        {% else %}
+        {% include "components/empty_state.html" with icon="users" message="No clients yet" %}
+        {% endif %}
         {% endif %}
         </div>
         {% include "components/pagination.html" %}
