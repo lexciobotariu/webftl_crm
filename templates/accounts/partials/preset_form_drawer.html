@@ -57,112 +57,154 @@
             <div>
                 <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-3">Permissions</label>
                 <div class="space-y-2">
-                    <label class="flex items-center justify-between p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
-                        <div class="flex items-center gap-2">
+                    <label data-module="dashboard" class="flex items-center justify-between gap-3 p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
+                        <span class="flex items-center gap-2">
                             <i data-lucide="layout-dashboard" class="w-4 h-4 text-zinc-500"></i>
                             <span class="text-sm text-zinc-300">Dashboard</span>
-                        </div>
-                        <input type="checkbox" name="access_dashboard" {% if preset %}{% if preset.access_dashboard %}checked{% endif %}{% else %}checked{% endif %}
-                               class="w-4 h-4 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                        </span>
+                        <input type="checkbox" name="access_dashboard" {% if not preset or preset.access_dashboard %}checked{% endif %}
+                               class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
                     </label>
 
-                    <label class="flex items-center justify-between p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
-                        <div class="flex items-center gap-2">
-                            <i data-lucide="building-2" class="w-4 h-4 text-zinc-500"></i>
-                            <span class="text-sm text-zinc-300">Clients</span>
+                    <div data-module="clients"
+                         class="bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors"
+                         x-data="{
+                            open: {% if not preset or preset.access_clients %}true{% else %}false{% endif %},
+                            enabled: {% if not preset or preset.access_clients %}true{% else %}false{% endif %},
+                            init() {
+                                this.$watch('enabled', (on) => {
+                                    this.open = on;
+                                    if (!on) {
+                                        this.$root.querySelectorAll('[data-extra]').forEach((box) => {
+                                            box.checked = false;
+                                        });
+                                    }
+                                });
+                            }
+                         }">
+                        <div class="flex items-center justify-between gap-3 p-3">
+                            <button type="button"
+                                    class="flex items-center gap-2 min-w-0 text-left"
+                                    @click="open = !open"
+                                    :aria-expanded="open">
+                                <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-500 transition-transform" :class="{ 'rotate-90': open }"></i>
+                                <i data-lucide="building-2" class="w-4 h-4 text-zinc-500"></i>
+                                <span class="text-sm text-zinc-300">Clients</span>
+                            </button>
+                            <input type="checkbox" name="access_clients" {% if not preset or preset.access_clients %}checked{% endif %}
+                                   class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent"
+                                   x-model="enabled"
+                                   @click.stop>
                         </div>
-                        <input type="checkbox" name="access_clients" {% if preset %}{% if preset.access_clients %}checked{% endif %}{% else %}checked{% endif %}
-                               class="w-4 h-4 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
-                    </label>
-
-                    <label class="flex items-center justify-between p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
-                        <div class="flex items-center gap-2">
-                            <i data-lucide="eye" class="w-4 h-4 text-zinc-500"></i>
-                            <span class="text-sm text-zinc-300">Clients: view all</span>
+                        <div x-show="open" x-collapse {% if preset and not preset.access_clients %}x-cloak{% endif %}>
+                            <div class="grid grid-cols-2 gap-x-3 gap-y-2 pt-0 px-3 pb-3 ml-12" :class="{ 'opacity-40': !enabled }">
+                                <label class="flex items-center gap-2 min-w-0">
+                                    <input type="checkbox" name="clients_view_all"{% if preset.access_clients and preset.clients_view_all %} checked{% endif %}{% if preset and not preset.access_clients %} disabled{% endif %}
+                                           data-extra :disabled="!enabled"
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                    <span class="text-sm text-zinc-300">View all</span>
+                                </label>
+                                <label class="flex items-center gap-2 min-w-0">
+                                    <input type="checkbox" name="clients_create"{% if preset.access_clients and preset.clients_create %} checked{% endif %}{% if preset and not preset.access_clients %} disabled{% endif %}
+                                           data-extra :disabled="!enabled"
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                    <span class="text-sm text-zinc-300">Create</span>
+                                </label>
+                                <label class="flex items-center gap-2 min-w-0">
+                                    <input type="checkbox" name="clients_edit"{% if preset.access_clients and preset.clients_edit %} checked{% endif %}{% if preset and not preset.access_clients %} disabled{% endif %}
+                                           data-extra :disabled="!enabled"
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                    <span class="text-sm text-zinc-300">Edit</span>
+                                </label>
+                            </div>
                         </div>
-                        <input type="checkbox" name="clients_view_all" {% if preset and preset.clients_view_all %}checked{% endif %}
-                               class="w-4 h-4 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
-                    </label>
+                    </div>
 
-                    <label class="flex items-center justify-between p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
-                        <div class="flex items-center gap-2">
-                            <i data-lucide="plus" class="w-4 h-4 text-zinc-500"></i>
-                            <span class="text-sm text-zinc-300">Clients: create</span>
+                    <div data-module="projects"
+                         class="bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors"
+                         x-data="{
+                            open: {% if not preset or preset.access_projects %}true{% else %}false{% endif %},
+                            enabled: {% if not preset or preset.access_projects %}true{% else %}false{% endif %},
+                            init() {
+                                this.$watch('enabled', (on) => {
+                                    this.open = on;
+                                    if (!on) {
+                                        this.$root.querySelectorAll('[data-extra]').forEach((box) => {
+                                            box.checked = false;
+                                        });
+                                    }
+                                });
+                            }
+                         }">
+                        <div class="flex items-center justify-between gap-3 p-3">
+                            <button type="button"
+                                    class="flex items-center gap-2 min-w-0 text-left"
+                                    @click="open = !open"
+                                    :aria-expanded="open">
+                                <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-500 transition-transform" :class="{ 'rotate-90': open }"></i>
+                                <i data-lucide="folder-kanban" class="w-4 h-4 text-zinc-500"></i>
+                                <span class="text-sm text-zinc-300">Projects</span>
+                            </button>
+                            <input type="checkbox" name="access_projects" {% if not preset or preset.access_projects %}checked{% endif %}
+                                   class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent"
+                                   x-model="enabled"
+                                   @click.stop>
                         </div>
-                        <input type="checkbox" name="clients_create" {% if preset and preset.clients_create %}checked{% endif %}
-                               class="w-4 h-4 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
-                    </label>
-
-                    <label class="flex items-center justify-between p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
-                        <div class="flex items-center gap-2">
-                            <i data-lucide="pencil" class="w-4 h-4 text-zinc-500"></i>
-                            <span class="text-sm text-zinc-300">Clients: edit</span>
+                        <div x-show="open" x-collapse {% if preset and not preset.access_projects %}x-cloak{% endif %}>
+                            <div class="grid grid-cols-2 gap-x-3 gap-y-2 pt-0 px-3 pb-3 ml-12" :class="{ 'opacity-40': !enabled }">
+                                <label class="flex items-center gap-2 min-w-0">
+                                    <input type="checkbox" name="projects_view_all"{% if preset.access_projects and preset.projects_view_all %} checked{% endif %}{% if preset and not preset.access_projects %} disabled{% endif %}
+                                           data-extra :disabled="!enabled"
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                    <span class="text-sm text-zinc-300">View all</span>
+                                </label>
+                            </div>
                         </div>
-                        <input type="checkbox" name="clients_edit" {% if preset and preset.clients_edit %}checked{% endif %}
-                               class="w-4 h-4 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
-                    </label>
+                    </div>
 
-                    <label class="flex items-center justify-between p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
-                        <div class="flex items-center gap-2">
-                            <i data-lucide="folder-kanban" class="w-4 h-4 text-zinc-500"></i>
-                            <span class="text-sm text-zinc-300">Projects</span>
-                        </div>
-                        <input type="checkbox" name="access_projects" {% if preset %}{% if preset.access_projects %}checked{% endif %}{% else %}checked{% endif %}
-                               class="w-4 h-4 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
-                    </label>
-
-                    <label class="flex items-center justify-between p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
-                        <div class="flex items-center gap-2">
-                            <i data-lucide="eye" class="w-4 h-4 text-zinc-500"></i>
-                            <span class="text-sm text-zinc-300">Projects: view all</span>
-                        </div>
-                        <input type="checkbox" name="projects_view_all" {% if preset and preset.projects_view_all %}checked{% endif %}
-                               class="w-4 h-4 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
-                    </label>
-
-                    <label class="flex items-center justify-between p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
-                        <div class="flex items-center gap-2">
+                    <label data-module="tasks" class="flex items-center justify-between gap-3 p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
+                        <span class="flex items-center gap-2">
                             <i data-lucide="user-check" class="w-4 h-4 text-zinc-500"></i>
                             <span class="text-sm text-zinc-300">Tasks</span>
-                        </div>
-                        <input type="checkbox" name="access_tasks" {% if preset %}{% if preset.access_tasks %}checked{% endif %}{% else %}checked{% endif %}
-                               class="w-4 h-4 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                        </span>
+                        <input type="checkbox" name="access_tasks" {% if not preset or preset.access_tasks %}checked{% endif %}
+                               class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
                     </label>
 
-                    <label class="flex items-center justify-between p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
-                        <div class="flex items-center gap-2">
+                    <label data-module="todos" class="flex items-center justify-between gap-3 p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
+                        <span class="flex items-center gap-2">
                             <i data-lucide="circle-check" class="w-4 h-4 text-zinc-500"></i>
                             <span class="text-sm text-zinc-300">Todos</span>
-                        </div>
-                        <input type="checkbox" name="access_todos" {% if preset %}{% if preset.access_todos %}checked{% endif %}{% else %}checked{% endif %}
-                               class="w-4 h-4 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                        </span>
+                        <input type="checkbox" name="access_todos" {% if not preset or preset.access_todos %}checked{% endif %}
+                               class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
                     </label>
 
-                    <label class="flex items-center justify-between p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
-                        <div class="flex items-center gap-2">
+                    <label data-module="notes" class="flex items-center justify-between gap-3 p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
+                        <span class="flex items-center gap-2">
                             <i data-lucide="sticky-note" class="w-4 h-4 text-zinc-500"></i>
                             <span class="text-sm text-zinc-300">Notes</span>
-                        </div>
-                        <input type="checkbox" name="access_notes" {% if preset %}{% if preset.access_notes %}checked{% endif %}{% else %}checked{% endif %}
-                               class="w-4 h-4 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                        </span>
+                        <input type="checkbox" name="access_notes" {% if not preset or preset.access_notes %}checked{% endif %}
+                               class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
                     </label>
 
-                    <label class="flex items-center justify-between p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
-                        <div class="flex items-center gap-2">
+                    <label data-module="salaries" class="flex items-center justify-between gap-3 p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
+                        <span class="flex items-center gap-2">
                             <i data-lucide="wallet" class="w-4 h-4 text-zinc-500"></i>
                             <span class="text-sm text-zinc-300">Salaries</span>
-                        </div>
-                        <input type="checkbox" name="access_salaries" {% if preset %}{% if preset.access_salaries %}checked{% endif %}{% else %}checked{% endif %}
-                               class="w-4 h-4 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                        </span>
+                        <input type="checkbox" name="access_salaries" {% if not preset or preset.access_salaries %}checked{% endif %}
+                               class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
                     </label>
 
-                    <label class="flex items-center justify-between p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
-                        <div class="flex items-center gap-2">
+                    <label data-module="team" class="flex items-center justify-between gap-3 p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
+                        <span class="flex items-center gap-2">
                             <i data-lucide="users" class="w-4 h-4 text-zinc-500"></i>
                             <span class="text-sm text-zinc-300">Team</span>
-                        </div>
-                        <input type="checkbox" name="access_team" {% if preset %}{% if preset.access_team %}checked{% endif %}{% else %}checked{% endif %}
-                               class="w-4 h-4 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                        </span>
+                        <input type="checkbox" name="access_team" {% if not preset or preset.access_team %}checked{% endif %}
+                               class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
                     </label>
                 </div>
             </div>

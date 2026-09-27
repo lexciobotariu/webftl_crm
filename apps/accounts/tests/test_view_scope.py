@@ -240,8 +240,10 @@ class TestPresetFlags:
         client.force_login(admin)
 
         create_html = client.get(reverse('preset_create')).content.decode()
-        assert 'Clients: view all' in create_html
-        assert 'Projects: view all' in create_html
+        clients = create_html.split('data-module="clients"', 1)[1].split('data-module="projects"', 1)[0]
+        projects = create_html.split('data-module="projects"', 1)[1].split('data-module="tasks"', 1)[0]
+        assert 'View all' in clients
+        assert 'View all' in projects
         assert _checkbox_checked(create_html, 'clients_view_all') is False
         assert _checkbox_checked(create_html, 'projects_view_all') is False
 
@@ -258,6 +260,8 @@ class TestPresetFlags:
         response = client.post(reverse('preset_create'), {
             'name': 'ViewAllCustom',
             'access_dashboard': 'on',
+            'access_clients': 'on',
+            'access_projects': 'on',
             'clients_view_all': 'on',
             'projects_view_all': 'on',
         })
@@ -265,4 +269,5 @@ class TestPresetFlags:
         saved = PermissionPreset.objects.get(name='ViewAllCustom')
         assert saved.clients_view_all is True
         assert saved.projects_view_all is True
-        assert saved.access_clients is False
+        assert saved.access_clients is True
+        assert saved.access_projects is True
