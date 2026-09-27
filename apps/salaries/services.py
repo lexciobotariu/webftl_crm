@@ -43,9 +43,13 @@ def set_salary_triggers(response, *, close=False):
 # EmployeeSalary Services
 # =============================================================================
 
-def get_salary_list_data():
+def get_salary_list_data(salaries=None):
     """
     Get all data needed for the salary list view.
+
+    Args:
+        salaries: EmployeeSalary queryset to list. Defaults to every row.
+            The list view passes ``visible_salaries``.
 
     Returns:
         Tuple of (salary_data, current_year, current_month, has_available_users, has_any_users)
@@ -65,7 +69,9 @@ def get_salary_list_data():
         year=current_year, month=current_month
     ).annotate(total_paid_sum=Sum('payments__amount'))
 
-    salaries = EmployeeSalary.objects.select_related('user').prefetch_related(
+    if salaries is None:
+        salaries = EmployeeSalary.objects.all()
+    salaries = salaries.select_related('user').prefetch_related(
         Prefetch('months', queryset=current_month_qs)
     )
 
@@ -127,12 +133,14 @@ def delete_employee_salary(salary):
 # SalaryMonth Services
 # =============================================================================
 
-def get_salary_detail_data(salary_pk):
+def get_salary_detail_data(salary_pk, salaries=None):
     """
     Get all data needed for the salary detail view.
 
     Args:
         salary_pk: Primary key of the EmployeeSalary
+        salaries: Queryset to load from. Defaults to every row. A pk that
+            exists only outside this queryset raises DoesNotExist.
 
     Returns:
         Tuple of (salary, months, current_year, current_month)
@@ -144,7 +152,9 @@ def get_salary_detail_data(salary_pk):
     Raises:
         EmployeeSalary.DoesNotExist: If salary with given pk not found
     """
-    salary = EmployeeSalary.objects.select_related('user').get(pk=salary_pk)
+    if salaries is None:
+        salaries = EmployeeSalary.objects.all()
+    salary = salaries.select_related('user').get(pk=salary_pk)
     months = (
         salary.months.prefetch_related('payments')
         .annotate(total_paid_sum=Sum('payments__amount'))

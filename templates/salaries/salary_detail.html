@@ -32,6 +32,7 @@
     </div>
 
     <!-- Actions -->
+    {% if perms_map.salaries_edit %}
     <div class="flex items-center gap-2">
         <button hx-get="{% url 'payment_create' salary.id %}"
                 hx-target="#slide-over"
@@ -58,6 +59,7 @@
             Settings
         </button>
     </div>
+    {% endif %}
 
     <!-- Months List -->
     <div id="months-list-content"
@@ -76,6 +78,7 @@
         <div class="flex flex-col items-center justify-center py-12 text-zinc-500">
             <i data-lucide="calendar" class="w-10 h-10 mb-3 opacity-30"></i>
             <p class="text-sm mb-2">No salary months recorded yet</p>
+            {% if perms_map.salaries_edit %}
             <button hx-get="{% url 'month_create' salary.id %}"
                     hx-target="#slide-over"
                     hx-swap="innerHTML"
@@ -83,6 +86,7 @@
                     class="text-accent hover:text-accent-hover text-sm">
                 Add the first month
             </button>
+            {% endif %}
         </div>
         {% endif %}
     </div>

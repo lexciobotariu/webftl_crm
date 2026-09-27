@@ -32,6 +32,8 @@ class TestPermissionPreset:
         assert 'tasks_create' in PERMISSION_KEYS
         assert 'tasks_edit_own' in PERMISSION_KEYS
         assert 'tasks_edit_all' in PERMISSION_KEYS
+        assert 'salaries_view_all' in PERMISSION_KEYS
+        assert 'salaries_edit' in PERMISSION_KEYS
 
     def test_create_preset(self):
         """Can create a preset with specific permissions."""
@@ -131,6 +133,8 @@ class TestDefaultPresets:
         assert preset.tasks_create is False
         assert preset.tasks_edit_own is False
         assert preset.tasks_edit_all is False
+        assert preset.salaries_view_all is False
+        assert preset.salaries_edit is False
 
 
 @pytest.mark.django_db
@@ -521,6 +525,8 @@ class TestPresetCreate:
         assert preset.access_notes is False
         assert preset.notes_view_all is False
         assert preset.notes_edit_public is False
+        assert preset.salaries_view_all is False
+        assert preset.salaries_edit is False
 
     def test_create_preset_returns_item(self, client):
         admin = AdminUserFactory()
@@ -780,6 +786,66 @@ class TestPresetModuleCards:
             assert 'checked' not in attrs.split()
             assert 'disabled' in attrs.split()
 
+    def test_salaries_access_off_clears_posted_extras(self, client):
+        admin = AdminUserFactory()
+        client.force_login(admin)
+
+        created = client.post(reverse('preset_create'), {
+            'name': 'No Salary Access',
+            'access_projects': 'on',
+            'projects_view_all': 'on',
+            'salaries_view_all': 'on',
+            'salaries_edit': 'on',
+        })
+        assert created.status_code == 200
+        preset = PermissionPreset.objects.get(name='No Salary Access')
+        assert preset.access_salaries is False
+        assert preset.salaries_view_all is False
+        assert preset.salaries_edit is False
+        assert preset.access_projects is True
+        assert preset.projects_view_all is True
+
+        existing = PermissionPreset.objects.create(
+            name='Payroll Writers',
+            access_salaries=True,
+            salaries_view_all=True,
+            salaries_edit=True,
+            access_projects=True,
+            projects_view_all=True,
+        )
+        edited = client.post(reverse('preset_edit', args=[existing.pk]), {
+            'name': 'Payroll Writers',
+            'access_projects': 'on',
+            'projects_view_all': 'on',
+            'salaries_view_all': 'on',
+            'salaries_edit': 'on',
+        })
+        assert edited.status_code == 200
+        existing.refresh_from_db()
+        assert existing.access_salaries is False
+        assert existing.salaries_view_all is False
+        assert existing.salaries_edit is False
+        assert existing.projects_view_all is True
+
+        saved = client.post(reverse('preset_create'), {
+            'name': 'Salary Flags On',
+            'access_salaries': 'on',
+            'salaries_view_all': 'on',
+            'salaries_edit': 'on',
+        })
+        assert saved.status_code == 200
+        writers = PermissionPreset.objects.get(name='Salary Flags On')
+        assert writers.access_salaries is True
+        assert writers.salaries_view_all is True
+        assert writers.salaries_edit is True
+
+        off = PermissionPreset.objects.create(name='Salaries Closed', access_salaries=False)
+        html = client.get(reverse('preset_edit', args=[off.pk])).content.decode()
+        for name in ('salaries_view_all', 'salaries_edit'):
+            attrs = _checkbox_attrs(html, name)
+            assert 'checked' not in attrs.split()
+            assert 'disabled' in attrs.split()
+
     def test_drawer_renders_extras_under_their_modules(self, client):
         admin = AdminUserFactory()
         client.force_login(admin)
@@ -829,7 +895,16 @@ class TestPresetModuleCards:
         assert 'name="clients_view_all"' not in notes
         assert 'grid-cols-2' in notes
 
-        for module in ('dashboard', 'todos', 'salaries', 'team'):
+        salaries = _card(html, 'salaries')
+        assert salaries.index('>Salaries<') < salaries.index('name="salaries_view_all"')
+        assert salaries.index('name="salaries_view_all"') < salaries.index('name="salaries_edit"')
+        assert 'View all' in salaries
+        assert 'Edit' in salaries
+        assert 'Create' not in salaries
+        assert 'name="tasks_view_all"' not in salaries
+        assert 'grid-cols-2' in salaries
+
+        for module in ('dashboard', 'todos', 'team'):
             card = _card(html, module)
             assert 'chevron-right' not in card
             assert 'data-extra' not in card
@@ -859,6 +934,8 @@ class TestPresetModuleCards:
             'tasks_edit_all',
             'notes_view_all',
             'notes_edit_public',
+            'salaries_view_all',
+            'salaries_edit',
         ):
             attrs = _checkbox_attrs(html, name)
             assert 'checked' not in attrs.split()
@@ -892,6 +969,17 @@ class TestPresetModuleCards:
             note_attrs = _checkbox_attrs(developer_html, name)
             assert 'checked' not in note_attrs.split()
             assert 'disabled' not in note_attrs.split()
+        for name in ('salaries_view_all', 'salaries_edit'):
+            salary_attrs = _checkbox_attrs(developer_html, name)
+            assert 'checked' not in salary_attrs.split()
+            assert 'disabled' in salary_attrs.split()
+
+        admin_preset = PermissionPreset.objects.get(name='Admin')
+        admin_html = client.get(reverse('preset_edit', args=[admin_preset.pk])).content.decode()
+        for name in ('salaries_view_all', 'salaries_edit'):
+            admin_attrs = _checkbox_attrs(admin_html, name)
+            assert 'checked' in admin_attrs.split()
+            assert 'disabled' not in admin_attrs.split()
 
     def test_notes_access_off_clears_posted_extras(self, client):
         admin = AdminUserFactory()
@@ -952,6 +1040,7 @@ class TestPresetModuleCards:
             attrs = _checkbox_attrs(html, name)
             assert 'checked' not in attrs.split()
             assert 'disabled' in attrs.split()
+
 
 
 @pytest.mark.django_db

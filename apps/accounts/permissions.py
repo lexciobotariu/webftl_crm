@@ -21,6 +21,8 @@ PERMISSION_KEYS = [
     'notes_view_all',
     'notes_edit_public',
     'access_salaries',
+    'salaries_view_all',
+    'salaries_edit',
     'access_team',
 ]
 
@@ -60,6 +62,10 @@ class PermissionPreset(models.Model):
     # These never reach a private note. There is no create flag.
     notes_view_all = models.BooleanField(default=False)
     notes_edit_public = models.BooleanField(default=False)
+
+    # View own is access_salaries. There is no edit-own flag.
+    salaries_view_all = models.BooleanField(default=False)
+    salaries_edit = models.BooleanField(default=False)
 
     is_system = models.BooleanField(default=False, help_text="System presets cannot be deleted")
 

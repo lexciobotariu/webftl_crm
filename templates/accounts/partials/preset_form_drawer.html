@@ -297,14 +297,53 @@
                         </div>
                     </div>
 
-                    <label data-module="salaries" class="flex items-center justify-between gap-3 p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
-                        <span class="flex items-center gap-2">
-                            <i data-lucide="wallet" class="w-4 h-4 text-zinc-500"></i>
-                            <span class="text-sm text-zinc-300">Salaries</span>
-                        </span>
-                        <input type="checkbox" name="access_salaries" {% if not preset or preset.access_salaries %}checked{% endif %}
-                               class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
-                    </label>
+                    <div data-module="salaries"
+                         class="bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors"
+                         x-data="{
+                            open: {% if not preset or preset.access_salaries %}true{% else %}false{% endif %},
+                            enabled: {% if not preset or preset.access_salaries %}true{% else %}false{% endif %},
+                            init() {
+                                this.$watch('enabled', (on) => {
+                                    this.open = on;
+                                    if (!on) {
+                                        this.$root.querySelectorAll('[data-extra]').forEach((box) => {
+                                            box.checked = false;
+                                        });
+                                    }
+                                });
+                            }
+                         }">
+                        <div class="flex items-center justify-between gap-3 p-3">
+                            <button type="button"
+                                    class="flex items-center gap-2 min-w-0 text-left"
+                                    @click="open = !open"
+                                    :aria-expanded="open">
+                                <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-500 transition-transform" :class="{ 'rotate-90': open }"></i>
+                                <i data-lucide="wallet" class="w-4 h-4 text-zinc-500"></i>
+                                <span class="text-sm text-zinc-300">Salaries</span>
+                            </button>
+                            <input type="checkbox" name="access_salaries" {% if not preset or preset.access_salaries %}checked{% endif %}
+                                   class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent"
+                                   x-model="enabled"
+                                   @click.stop>
+                        </div>
+                        <div x-show="open" x-collapse {% if preset and not preset.access_salaries %}x-cloak{% endif %}>
+                            <div class="grid grid-cols-2 gap-x-3 gap-y-2 pt-0 px-3 pb-3 ml-12" :class="{ 'opacity-40': !enabled }">
+                                <label class="flex items-center gap-2 min-w-0">
+                                    <input type="checkbox" name="salaries_view_all"{% if preset.access_salaries and preset.salaries_view_all %} checked{% endif %}{% if preset and not preset.access_salaries %} disabled{% endif %}
+                                           data-extra :disabled="!enabled"
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                    <span class="text-sm text-zinc-300">View all</span>
+                                </label>
+                                <label class="flex items-center gap-2 min-w-0">
+                                    <input type="checkbox" name="salaries_edit"{% if preset.access_salaries and preset.salaries_edit %} checked{% endif %}{% if preset and not preset.access_salaries %} disabled{% endif %}
+                                           data-extra :disabled="!enabled"
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                    <span class="text-sm text-zinc-300">Edit</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
 
                     <label data-module="team" class="flex items-center justify-between gap-3 p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
                         <span class="flex items-center gap-2">

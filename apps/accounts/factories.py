@@ -31,6 +31,8 @@ SYSTEM_PRESET_DEFAULTS = {
         'notes_view_all': True,
         'notes_edit_public': True,
         'access_salaries': True,
+        'salaries_view_all': True,
+        'salaries_edit': True,
         'access_team': True,
     },
     'Developer': {
@@ -56,6 +58,8 @@ SYSTEM_PRESET_DEFAULTS = {
         'notes_view_all': False,
         'notes_edit_public': False,
         'access_salaries': False,
+        'salaries_view_all': False,
+        'salaries_edit': False,
         'access_team': False,
     },
 }
