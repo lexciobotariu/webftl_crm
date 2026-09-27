@@ -274,6 +274,21 @@ def user_update(request, pk):
     return response
 
 
+def _apply_module_gates(values):
+    """Clear extras whose module checkbox is off.
+
+    ``values`` is one bool per ``PERMISSION_KEYS`` entry, read from the POST
+    body. A disabled extra is omitted from that body; this also rejects a
+    request that posts the extra without its module.
+    """
+    if not values['access_clients']:
+        for key in ('clients_view_all', 'clients_create', 'clients_edit'):
+            values[key] = False
+    if not values['access_projects']:
+        values['projects_view_all'] = False
+    return values
+
+
 @login_required
 @require_permission('access_team')
 def preset_list(request):
@@ -310,7 +325,7 @@ def preset_create(request):
             PermissionPreset.objects.create(
                 name=name,
                 description=description,
-                **{key: key in request.POST for key in PERMISSION_KEYS},
+                **_apply_module_gates({key: key in request.POST for key in PERMISSION_KEYS}),
             )
         except IntegrityError:
             return render(request, 'accounts/partials/preset_form_drawer.html', {
@@ -345,8 +360,9 @@ def preset_edit(request, pk):
                 })
             preset.name = new_name
         preset.description = request.POST.get('description', '').strip()
+        posted = _apply_module_gates({key: key in request.POST for key in PERMISSION_KEYS})
         for key in PERMISSION_KEYS:
-            setattr(preset, key, key in request.POST)
+            setattr(preset, key, posted[key])
         try:
             preset.save()
         except IntegrityError:

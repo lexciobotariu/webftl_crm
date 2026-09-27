@@ -555,6 +555,160 @@ class TestPresetEdit:
         assert preset.name == 'Developer'
 
 
+def _card(html, module):
+    marker = f'data-module="{module}"'
+    start = html.index(marker)
+    nxt = html.find('data-module="', start + len(marker))
+    return html[start:] if nxt == -1 else html[start:nxt]
+
+
+def _checkbox_attrs(html, name):
+    needle = f'<input type="checkbox" name="{name}"'
+    start = html.index(needle) + len(needle)
+    return html[start:html.index('>', start)]
+
+
+@pytest.mark.django_db
+class TestPresetModuleCards:
+    def test_clients_access_off_clears_posted_extras(self, client):
+        admin = AdminUserFactory()
+        client.force_login(admin)
+
+        created = client.post(reverse('preset_create'), {
+            'name': 'No Client Access',
+            'access_projects': 'on',
+            'projects_view_all': 'on',
+            'clients_view_all': 'on',
+            'clients_create': 'on',
+            'clients_edit': 'on',
+        })
+        assert created.status_code == 200
+        preset = PermissionPreset.objects.get(name='No Client Access')
+        assert preset.access_clients is False
+        assert preset.clients_view_all is False
+        assert preset.clients_create is False
+        assert preset.clients_edit is False
+        assert preset.access_projects is True
+        assert preset.projects_view_all is True
+
+        existing = PermissionPreset.objects.create(
+            name='Client Writers',
+            access_clients=True,
+            clients_view_all=True,
+            clients_create=True,
+            clients_edit=True,
+            access_projects=True,
+            projects_view_all=True,
+        )
+        edited = client.post(reverse('preset_edit', args=[existing.pk]), {
+            'name': 'Client Writers',
+            'access_projects': 'on',
+            'projects_view_all': 'on',
+            'clients_view_all': 'on',
+            'clients_create': 'on',
+            'clients_edit': 'on',
+        })
+        assert edited.status_code == 200
+        existing.refresh_from_db()
+        assert existing.access_clients is False
+        assert existing.clients_view_all is False
+        assert existing.clients_create is False
+        assert existing.clients_edit is False
+        assert existing.projects_view_all is True
+
+    def test_projects_access_off_clears_posted_view_all(self, client):
+        admin = AdminUserFactory()
+        client.force_login(admin)
+
+        created = client.post(reverse('preset_create'), {
+            'name': 'No Project Access',
+            'access_clients': 'on',
+            'clients_view_all': 'on',
+            'clients_create': 'on',
+            'clients_edit': 'on',
+            'projects_view_all': 'on',
+        })
+        assert created.status_code == 200
+        preset = PermissionPreset.objects.get(name='No Project Access')
+        assert preset.access_projects is False
+        assert preset.projects_view_all is False
+        assert preset.access_clients is True
+        assert preset.clients_view_all is True
+        assert preset.clients_create is True
+        assert preset.clients_edit is True
+
+        existing = PermissionPreset.objects.create(
+            name='Project Viewers',
+            access_projects=True,
+            projects_view_all=True,
+            access_clients=True,
+            clients_view_all=True,
+        )
+        edited = client.post(reverse('preset_edit', args=[existing.pk]), {
+            'name': 'Project Viewers',
+            'access_clients': 'on',
+            'clients_view_all': 'on',
+            'projects_view_all': 'on',
+        })
+        assert edited.status_code == 200
+        existing.refresh_from_db()
+        assert existing.access_projects is False
+        assert existing.projects_view_all is False
+        assert existing.clients_view_all is True
+
+    def test_drawer_renders_extras_under_their_modules(self, client):
+        admin = AdminUserFactory()
+        client.force_login(admin)
+        html = client.get(reverse('preset_create')).content.decode()
+
+        clients = _card(html, 'clients')
+        projects = _card(html, 'projects')
+        assert clients.index('>Clients<') < clients.index('name="clients_view_all"')
+        assert clients.index('name="clients_view_all"') < clients.index('name="clients_create"')
+        assert clients.index('name="clients_create"') < clients.index('name="clients_edit"')
+        assert 'View all' in clients
+        assert 'Create' in clients
+        assert 'Edit' in clients
+        assert 'name="projects_view_all"' not in clients
+
+        assert projects.index('>Projects<') < projects.index('name="projects_view_all"')
+        assert 'View all' in projects
+        assert 'name="clients_view_all"' not in projects
+        assert 'name="clients_create"' not in projects
+        assert 'name="clients_edit"' not in projects
+
+        for module in ('dashboard', 'tasks', 'todos', 'notes', 'salaries', 'team'):
+            card = _card(html, module)
+            assert 'chevron-right' not in card
+            assert 'data-extra' not in card
+
+        for name in (
+            'access_dashboard',
+            'access_clients',
+            'access_projects',
+            'access_tasks',
+            'access_todos',
+            'access_notes',
+            'access_salaries',
+            'access_team',
+        ):
+            assert 'checked' in _checkbox_attrs(html, name)
+        for name in ('clients_view_all', 'clients_create', 'clients_edit', 'projects_view_all'):
+            attrs = _checkbox_attrs(html, name)
+            assert 'checked' not in attrs.split()
+            assert 'disabled' not in attrs.split()
+
+        developer = PermissionPreset.objects.get(name='Developer')
+        developer_html = client.get(reverse('preset_edit', args=[developer.pk])).content.decode()
+        for name in ('clients_view_all', 'clients_create', 'clients_edit'):
+            attrs = _checkbox_attrs(developer_html, name)
+            assert 'checked' not in attrs.split()
+            assert 'disabled' in attrs.split()
+        project_attrs = _checkbox_attrs(developer_html, 'projects_view_all')
+        assert 'checked' not in project_attrs.split()
+        assert 'disabled' not in project_attrs.split()
+
+
 @pytest.mark.django_db
 class TestPresetDelete:
     def test_delete_custom_preset(self, client):

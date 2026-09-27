@@ -57,8 +57,9 @@ class TestPresetFlags:
         client.force_login(admin)
 
         create_html = client.get(reverse('preset_create')).content.decode()
-        assert 'Clients: create' in create_html
-        assert 'Clients: edit' in create_html
+        clients = create_html.split('data-module="clients"', 1)[1].split('data-module="projects"', 1)[0]
+        assert 'Create' in clients
+        assert 'Edit' in clients
         assert _checkbox_checked(create_html, 'clients_create') is False
         assert _checkbox_checked(create_html, 'clients_edit') is False
 
