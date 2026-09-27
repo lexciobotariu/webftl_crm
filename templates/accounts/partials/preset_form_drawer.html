@@ -180,14 +180,65 @@
                         </div>
                     </div>
 
-                    <label data-module="tasks" class="flex items-center justify-between gap-3 p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
-                        <span class="flex items-center gap-2">
-                            <i data-lucide="user-check" class="w-4 h-4 text-zinc-500"></i>
-                            <span class="text-sm text-zinc-300">Tasks</span>
-                        </span>
-                        <input type="checkbox" name="access_tasks" {% if not preset or preset.access_tasks %}checked{% endif %}
-                               class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
-                    </label>
+                    <div data-module="tasks"
+                         class="bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors"
+                         x-data="{
+                            open: {% if not preset or preset.access_tasks %}true{% else %}false{% endif %},
+                            enabled: {% if not preset or preset.access_tasks %}true{% else %}false{% endif %},
+                            init() {
+                                this.$watch('enabled', (on) => {
+                                    this.open = on;
+                                    if (!on) {
+                                        this.$root.querySelectorAll('[data-extra]').forEach((box) => {
+                                            box.checked = false;
+                                        });
+                                    }
+                                });
+                            }
+                         }">
+                        <div class="flex items-center justify-between gap-3 p-3">
+                            <button type="button"
+                                    class="flex items-center gap-2 min-w-0 text-left"
+                                    @click="open = !open"
+                                    :aria-expanded="open">
+                                <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-500 transition-transform" :class="{ 'rotate-90': open }"></i>
+                                <i data-lucide="user-check" class="w-4 h-4 text-zinc-500"></i>
+                                <span class="text-sm text-zinc-300">Tasks</span>
+                            </button>
+                            <input type="checkbox" name="access_tasks" {% if not preset or preset.access_tasks %}checked{% endif %}
+                                   class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent"
+                                   x-model="enabled"
+                                   @click.stop>
+                        </div>
+                        <div x-show="open" x-collapse {% if preset and not preset.access_tasks %}x-cloak{% endif %}>
+                            <div class="grid grid-cols-2 gap-x-3 gap-y-2 pt-0 px-3 pb-3 ml-12" :class="{ 'opacity-40': !enabled }">
+                                <label class="flex items-center gap-2 min-w-0">
+                                    <input type="checkbox" name="tasks_view_all"{% if preset.access_tasks and preset.tasks_view_all %} checked{% endif %}{% if preset and not preset.access_tasks %} disabled{% endif %}
+                                           data-extra :disabled="!enabled"
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                    <span class="text-sm text-zinc-300">View all</span>
+                                </label>
+                                <label class="flex items-center gap-2 min-w-0">
+                                    <input type="checkbox" name="tasks_create"{% if preset.access_tasks and preset.tasks_create %} checked{% endif %}{% if preset and not preset.access_tasks %} disabled{% endif %}
+                                           data-extra :disabled="!enabled"
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                    <span class="text-sm text-zinc-300">Create</span>
+                                </label>
+                                <label class="flex items-center gap-2 min-w-0">
+                                    <input type="checkbox" name="tasks_edit_own"{% if preset.access_tasks and preset.tasks_edit_own %} checked{% endif %}{% if preset and not preset.access_tasks %} disabled{% endif %}
+                                           data-extra :disabled="!enabled"
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                    <span class="text-sm text-zinc-300">Edit own</span>
+                                </label>
+                                <label class="flex items-center gap-2 min-w-0">
+                                    <input type="checkbox" name="tasks_edit_all"{% if preset.access_tasks and preset.tasks_edit_all %} checked{% endif %}{% if preset and not preset.access_tasks %} disabled{% endif %}
+                                           data-extra :disabled="!enabled"
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                    <span class="text-sm text-zinc-300">Edit all</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
 
                     <label data-module="todos" class="flex items-center justify-between gap-3 p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
                         <span class="flex items-center gap-2">

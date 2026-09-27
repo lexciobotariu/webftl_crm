@@ -292,6 +292,14 @@ def _apply_module_gates(values):
             'projects_edit_all',
         ):
             values[key] = False
+    if not values['access_tasks']:
+        for key in (
+            'tasks_view_all',
+            'tasks_create',
+            'tasks_edit_own',
+            'tasks_edit_all',
+        ):
+            values[key] = False
     return values
 
 

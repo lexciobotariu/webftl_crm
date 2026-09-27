@@ -26,6 +26,10 @@ class TestPermissionPreset:
         assert 'projects_create' in PERMISSION_KEYS
         assert 'projects_edit_own' in PERMISSION_KEYS
         assert 'projects_edit_all' in PERMISSION_KEYS
+        assert 'tasks_view_all' in PERMISSION_KEYS
+        assert 'tasks_create' in PERMISSION_KEYS
+        assert 'tasks_edit_own' in PERMISSION_KEYS
+        assert 'tasks_edit_all' in PERMISSION_KEYS
 
     def test_create_preset(self):
         """Can create a preset with specific permissions."""
@@ -117,6 +121,10 @@ class TestDefaultPresets:
         assert preset.projects_create is False
         assert preset.projects_edit_own is False
         assert preset.projects_edit_all is False
+        assert preset.tasks_view_all is False
+        assert preset.tasks_create is False
+        assert preset.tasks_edit_own is False
+        assert preset.tasks_edit_all is False
 
 
 @pytest.mark.django_db
@@ -500,6 +508,10 @@ class TestPresetCreate:
         assert preset.projects_create is False
         assert preset.projects_edit_own is False
         assert preset.projects_edit_all is False
+        assert preset.tasks_view_all is False
+        assert preset.tasks_create is False
+        assert preset.tasks_edit_own is False
+        assert preset.tasks_edit_all is False
 
     def test_create_preset_returns_item(self, client):
         admin = AdminUserFactory()
@@ -680,6 +692,85 @@ class TestPresetModuleCards:
         assert existing.projects_edit_all is False
         assert existing.clients_view_all is True
 
+    def test_tasks_access_off_clears_posted_extras(self, client):
+        admin = AdminUserFactory()
+        client.force_login(admin)
+
+        created = client.post(reverse('preset_create'), {
+            'name': 'No Task Access',
+            'access_projects': 'on',
+            'projects_view_all': 'on',
+            'tasks_view_all': 'on',
+            'tasks_create': 'on',
+            'tasks_edit_own': 'on',
+            'tasks_edit_all': 'on',
+        })
+        assert created.status_code == 200
+        preset = PermissionPreset.objects.get(name='No Task Access')
+        assert preset.access_tasks is False
+        assert preset.tasks_view_all is False
+        assert preset.tasks_create is False
+        assert preset.tasks_edit_own is False
+        assert preset.tasks_edit_all is False
+        assert preset.access_projects is True
+        assert preset.projects_view_all is True
+
+        existing = PermissionPreset.objects.create(
+            name='Task Writers',
+            access_tasks=True,
+            tasks_view_all=True,
+            tasks_create=True,
+            tasks_edit_own=True,
+            tasks_edit_all=True,
+            access_projects=True,
+            projects_view_all=True,
+        )
+        edited = client.post(reverse('preset_edit', args=[existing.pk]), {
+            'name': 'Task Writers',
+            'access_projects': 'on',
+            'projects_view_all': 'on',
+            'tasks_view_all': 'on',
+            'tasks_create': 'on',
+            'tasks_edit_own': 'on',
+            'tasks_edit_all': 'on',
+        })
+        assert edited.status_code == 200
+        existing.refresh_from_db()
+        assert existing.access_tasks is False
+        assert existing.tasks_view_all is False
+        assert existing.tasks_create is False
+        assert existing.tasks_edit_own is False
+        assert existing.tasks_edit_all is False
+        assert existing.projects_view_all is True
+
+        saved = client.post(reverse('preset_create'), {
+            'name': 'Task Flags On',
+            'access_tasks': 'on',
+            'tasks_view_all': 'on',
+            'tasks_create': 'on',
+            'tasks_edit_own': 'on',
+            'tasks_edit_all': 'on',
+        })
+        assert saved.status_code == 200
+        writers = PermissionPreset.objects.get(name='Task Flags On')
+        assert writers.access_tasks is True
+        assert writers.tasks_view_all is True
+        assert writers.tasks_create is True
+        assert writers.tasks_edit_own is True
+        assert writers.tasks_edit_all is True
+
+        off = PermissionPreset.objects.create(name='Tasks Closed', access_tasks=False)
+        html = client.get(reverse('preset_edit', args=[off.pk])).content.decode()
+        for name in (
+            'tasks_view_all',
+            'tasks_create',
+            'tasks_edit_own',
+            'tasks_edit_all',
+        ):
+            attrs = _checkbox_attrs(html, name)
+            assert 'checked' not in attrs.split()
+            assert 'disabled' in attrs.split()
+
     def test_drawer_renders_extras_under_their_modules(self, client):
         admin = AdminUserFactory()
         client.force_login(admin)
@@ -707,7 +798,20 @@ class TestPresetModuleCards:
         assert 'name="clients_create"' not in projects
         assert 'name="clients_edit"' not in projects
 
-        for module in ('dashboard', 'tasks', 'todos', 'notes', 'salaries', 'team'):
+        tasks = _card(html, 'tasks')
+        assert tasks.index('>Tasks<') < tasks.index('name="tasks_view_all"')
+        assert tasks.index('name="tasks_view_all"') < tasks.index('name="tasks_create"')
+        assert tasks.index('name="tasks_create"') < tasks.index('name="tasks_edit_own"')
+        assert tasks.index('name="tasks_edit_own"') < tasks.index('name="tasks_edit_all"')
+        assert 'View all' in tasks
+        assert 'Create' in tasks
+        assert 'Edit own' in tasks
+        assert 'Edit all' in tasks
+        assert 'name="projects_view_all"' not in tasks
+        assert 'name="clients_view_all"' not in tasks
+        assert 'grid-cols-2' in tasks
+
+        for module in ('dashboard', 'todos', 'notes', 'salaries', 'team'):
             card = _card(html, module)
             assert 'chevron-right' not in card
             assert 'data-extra' not in card
@@ -731,6 +835,10 @@ class TestPresetModuleCards:
             'projects_create',
             'projects_edit_own',
             'projects_edit_all',
+            'tasks_view_all',
+            'tasks_create',
+            'tasks_edit_own',
+            'tasks_edit_all',
         ):
             attrs = _checkbox_attrs(html, name)
             assert 'checked' not in attrs.split()
@@ -751,6 +859,15 @@ class TestPresetModuleCards:
             project_attrs = _checkbox_attrs(developer_html, name)
             assert 'checked' not in project_attrs.split()
             assert 'disabled' not in project_attrs.split()
+        for name in (
+            'tasks_view_all',
+            'tasks_create',
+            'tasks_edit_own',
+            'tasks_edit_all',
+        ):
+            task_attrs = _checkbox_attrs(developer_html, name)
+            assert 'checked' not in task_attrs.split()
+            assert 'disabled' not in task_attrs.split()
 
 
 @pytest.mark.django_db

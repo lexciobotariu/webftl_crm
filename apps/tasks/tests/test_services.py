@@ -20,7 +20,7 @@ class TestPermissions:
         with pytest.raises(PermissionDenied) as exc_info:
             services.require_access(user, project)
 
-        assert 'Project access required' in str(exc_info.value)
+        assert 'cannot edit this task' in str(exc_info.value)
 
     def test_require_access_passes_for_editor(self):
         user = UserFactory()
@@ -403,22 +403,25 @@ class TestAttachmentService:
 
 @pytest.mark.django_db
 class TestDeleteTask:
-    def test_delete_task(self):
-        user = UserFactory()
+    def test_admin_can_delete_task(self):
+        from apps.accounts.factories import AdminUserFactory
+
+        admin = AdminUserFactory()
         task = TaskFactory()
         task_pk = task.pk
-        ProjectAccessFactory(project=task.project, user=user)
 
-        services.delete_task(task, user)
+        services.delete_task(task, admin)
 
         assert not Task.objects.filter(pk=task_pk).exists()
 
-    def test_delete_task_requires_editor(self):
+    def test_delete_task_requires_admin(self):
         user = UserFactory()
         task = TaskFactory()
+        ProjectAccessFactory(project=task.project, user=user)
 
         with pytest.raises(PermissionDenied):
             services.delete_task(task, user)
+        assert Task.objects.filter(pk=task.pk).exists()
 
 
 @pytest.mark.django_db

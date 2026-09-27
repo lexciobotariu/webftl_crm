@@ -113,7 +113,7 @@ class TestClientsViewAll:
 @pytest.mark.django_db
 class TestProjectsViewAll:
     def test_every_project_opens_as_viewer_only(self, client):
-        user = _user('ProjectsAll', projects_view_all=True)
+        user = _user('ProjectsAll', projects_view_all=True, tasks_edit_own=True)
         mine_client = ClientFactory(name='Mine Client')
         other_client = ClientFactory(name='Other Client')
         mine = ProjectFactory(client=mine_client, name='Mine Project')

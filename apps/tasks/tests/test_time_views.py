@@ -49,12 +49,12 @@ class TestTimerViews:
 
         task = TaskFactory()
         preset = PermissionPreset.objects.create(
-            name='ViewAllTimer',
+            name='TaskViewerTimer',
             access_projects=True,
             access_tasks=True,
-            projects_view_all=True,
         )
         user = UserFactory(permission_preset=preset)
+        ProjectAccessFactory(project=task.project, user=user)
         client.force_login(user)
 
         assert client.post(reverse('timer_start', args=[task.pk])).status_code == 403

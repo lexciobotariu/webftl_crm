@@ -17,10 +17,9 @@ from apps.projects.models import (
     Project,
     Status,
     can_access_project,
-    can_work_on_project,
     get_assignable_users,
 )
-from apps.tasks.models import Label
+from apps.tasks.models import Label, can_create_task, can_edit_task, can_view_task
 
 from .forms import SubtaskForm, TaskForm, TimeEntryForm
 from .models import Subtask, Task, TimeEntry
@@ -35,7 +34,7 @@ def _time_context(user, task):
     services.close_expired_timers()
     return {
         'time_entries': services.entries_on_task(user, task),
-        'can_log_time': can_work_on_project(user, task.project),
+        'can_log_time': can_edit_task(user, task),
         'logged_label': _format_duration(
             services.logged_seconds_on_task(task),
             empty='0h',
@@ -113,8 +112,8 @@ def my_tasks(request):
 @require_permission('access_tasks')
 def task_create(request, project_pk):
     project = get_object_or_404(Project, pk=project_pk)
-    if not can_work_on_project(request.user, project):
-        return HttpResponseForbidden("Editor access required to create tasks")
+    if not can_create_task(request.user, project):
+        return HttpResponseForbidden("You can't create tasks on this project")
 
     # Get status from query param or default to first status
     status_pk = request.GET.get('status') or request.POST.get('status_id')
@@ -187,7 +186,7 @@ def task_detail(request, pk):
         .prefetch_related('subtasks', 'activities__user', 'attachments', 'labels', 'project__labels'),
         pk=pk
     )
-    if not can_access_project(request.user, task.project):
+    if not can_view_task(request.user, task):
         return HttpResponseForbidden("You don't have access to this task")
     subtask_form = SubtaskForm()
     team_members = get_assignable_users(task.project)
@@ -207,8 +206,8 @@ def task_detail(request, pk):
 @require_permission('access_tasks')
 def task_edit(request, pk):
     task = get_object_or_404(Task, pk=pk)
-    if not can_work_on_project(request.user, task.project):
-        return HttpResponseForbidden("Editor access required to edit tasks")
+    if not can_edit_task(request.user, task):
+        return HttpResponseForbidden("You can't edit this task")
     if request.method == 'POST':
         form = TaskForm(task.project, request.POST, instance=task)
         if form.is_valid():
@@ -385,7 +384,7 @@ def comment_create(request, pk):
 def task_activity_list(request, pk):
     """Return just the activity list for a task (for HTMX refresh)."""
     task = get_object_or_404(Task, pk=pk)
-    if not can_access_project(request.user, task.project):
+    if not can_view_task(request.user, task):
         return HttpResponseForbidden("You don't have access to this task")
     return render(request, 'tasks/partials/activity_list.html', {'task': task})
 
@@ -414,7 +413,7 @@ def task_full_page(request, project_pk, task_pk):
         .prefetch_related('subtasks', 'activities__user', 'labels', 'project__labels'),
         pk=task_pk, project_id=project_pk
     )
-    if not can_access_project(request.user, task.project):
+    if not can_view_task(request.user, task):
         return HttpResponseForbidden("You don't have access to this task")
     team_members = get_assignable_users(task.project)
     project_labels = task.project.labels.all()
@@ -545,8 +544,8 @@ def task_toggle_label(request, pk, label_pk):
 @require_permission('access_tasks')
 def task_edit_description(request, pk):
     task = get_object_or_404(Task, pk=pk)
-    if not can_work_on_project(request.user, task.project):
-        return HttpResponseForbidden("Editor access required to edit tasks")
+    if not can_edit_task(request.user, task):
+        return HttpResponseForbidden("You can't edit this task")
     # Return display template if cancel=1
     if request.GET.get('cancel') == '1':
         return render(request, 'tasks/partials/description_display.html', {'task': task})
@@ -562,8 +561,8 @@ def task_edit_description(request, pk):
 @require_permission('access_tasks')
 def task_edit_title(request, pk):
     task = get_object_or_404(Task, pk=pk)
-    if not can_work_on_project(request.user, task.project):
-        return HttpResponseForbidden("Editor access required to edit tasks")
+    if not can_edit_task(request.user, task):
+        return HttpResponseForbidden("You can't edit this task")
     is_full = request.GET.get('full') == '1' or request.POST.get('full') == '1'
     # Return display template if cancel=1
     if request.GET.get('cancel') == '1':
@@ -591,7 +590,7 @@ def task_card(request, pk):
         Task.objects.select_related('project', 'status', 'assignee').prefetch_related('labels'),
         pk=pk
     )
-    if not can_access_project(request.user, task.project):
+    if not can_view_task(request.user, task):
         return HttpResponseForbidden("You don't have access to this task")
     return render(request, 'projects/partials/task_card.html', {'task': task})
 
@@ -602,7 +601,7 @@ def _timer_changed(response):
 
 
 def _require_task_viewer(user, task):
-    if not can_access_project(user, task.project):
+    if not can_view_task(user, task):
         return HttpResponseForbidden("You don't have access to this task")
     return None
 
@@ -636,17 +635,11 @@ def time_week(request):
             return HttpResponseForbidden("You don't have access to this project")
 
     entries = list(services.entries_for_week(request.user, week_date, project=project))
-    if request.user.is_admin:
-        open_project_ids = None
-    else:
-        open_project_ids = set(
-            Project.objects.filter(access__user=request.user).values_list('pk', flat=True)
-        )
     for entry in entries:
-        entry.can_open_task = (
-            open_project_ids is None or entry.task.project_id in open_project_ids
-        )
-    sees_everyone = project is not None and request.user.is_admin
+        entry.can_open_task = can_view_task(request.user, entry.task)
+    sees_everyone = project is not None and (
+        request.user.is_admin or request.user.has_app_permission('tasks_view_all')
+    )
     return render(request, 'tasks/time_week.html', {
         'entries': entries,
         'week_start': week_date,
@@ -736,8 +729,8 @@ def time_log(request, pk):
     denied = _require_task_viewer(request.user, task)
     if denied:
         return denied
-    if not can_work_on_project(request.user, task.project):
-        return HttpResponseForbidden('Editor access required')
+    if not can_edit_task(request.user, task):
+        return HttpResponseForbidden("You can't edit this task")
 
     if request.method == 'POST':
         form = TimeEntryForm(request.POST)

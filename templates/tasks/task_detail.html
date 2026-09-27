@@ -124,6 +124,7 @@
             {% include "tasks/partials/activity_panel.html" %}
         </div>
 
+        {% if request.user.is_admin %}
         <!-- Danger zone -->
         <div class="border-t border-border-subtle pt-4">
             <button hx-post="{% url 'task_delete' task.pk %}"
@@ -134,6 +135,7 @@
                 Delete task
             </button>
         </div>
+        {% endif %}
     </div>
 </div>
 <script>

@@ -7,6 +7,7 @@
                 <span class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ total_tasks }}</span>
             </div>
             <div class="flex items-center gap-2">
+                {% if can_create_task %}
                 <button hx-get="{% url 'task_create' project.pk %}"
                         hx-target="#slide-over"
                         hx-swap="innerHTML"
@@ -15,6 +16,7 @@
                     <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                     New Task
                 </button>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -89,6 +91,7 @@
     <div class="flex flex-col items-center justify-center py-12 text-zinc-500">
         <i data-lucide="check-square" class="w-10 h-10 mb-3 opacity-30"></i>
         <p class="text-sm mb-2">No tasks yet</p>
+        {% if can_create_task %}
         <button hx-get="{% url 'task_create' project.pk %}"
                 hx-target="#slide-over"
                 hx-swap="innerHTML"
@@ -96,6 +99,7 @@
                 class="text-accent hover:text-accent-hover text-sm">
             Create the first task
         </button>
+        {% endif %}
     </div>
     {% endif %}
 </div>

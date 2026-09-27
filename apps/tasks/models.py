@@ -3,7 +3,7 @@ from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 
-from apps.projects.models import Project, Status
+from apps.projects.models import Project, ProjectAccess, Status
 
 
 class Label(models.Model):
@@ -39,15 +39,13 @@ class TaskQuerySet(models.QuerySet):
         return self.active().filter(due_date__lt=today)
 
     def open_for(self, user):
-        """Tasks assigned to ``user`` that they can still open.
+        """Tasks assigned to ``user`` that they can still view.
 
-        Admins see every task assigned to them. Everyone else only sees
-        tasks on projects they belong to.
+        Same rule as :func:`visible_tasks`: admin, ``tasks_view_all``, or
+        ``access_tasks`` plus a ProjectAccess row. Assigned tasks on a
+        project they cannot view stay out.
         """
-        qs = self.filter(assignee=user)
-        if user.is_admin:
-            return qs
-        return qs.filter(project__access__user=user)
+        return visible_tasks(user).filter(assignee=user)
 
 
 class Task(models.Model):
@@ -112,6 +110,71 @@ class Task(models.Model):
             return None
         completed = self.subtasks.filter(completed=True).count()
         return f"{completed}/{total}"
+
+
+def _on_project(user, project):
+    return ProjectAccess.objects.filter(project=project, user=user).exists()
+
+
+def can_view_tasks_on(user, project):
+    """Whether this person may see tasks on ``project``.
+
+    Admin, ``tasks_view_all``, or ``access_tasks`` plus a ProjectAccess row.
+    Project view and project edit do not grant this.
+    """
+    if user.is_admin or user.has_app_permission('tasks_view_all'):
+        return True
+    return user.has_app_permission('access_tasks') and _on_project(user, project)
+
+
+def can_view_task(user, task):
+    """Whether this person may open ``task``."""
+    return can_view_tasks_on(user, task.project)
+
+
+def can_create_task(user, project):
+    """New tasks and subtasks.
+
+    Admin, or ``tasks_create`` plus a ProjectAccess row. View-all is not enough.
+    """
+    if user.is_admin:
+        return True
+    return user.has_app_permission('tasks_create') and _on_project(user, project)
+
+
+def can_edit_tasks_on(user, project):
+    """Title, description, status, assignee, priority, due date, estimate,
+    labels, subtasks, comments, attachments, and the person's own time.
+
+    Admin, ``tasks_edit_all``, or ``tasks_edit_own`` plus a ProjectAccess row.
+    Project edit flags do not grant this.
+    """
+    if user.is_admin or user.has_app_permission('tasks_edit_all'):
+        return True
+    return user.has_app_permission('tasks_edit_own') and _on_project(user, project)
+
+
+def can_edit_task(user, task):
+    """Whether this person may change ``task``."""
+    return can_edit_tasks_on(user, task.project)
+
+
+def visible_tasks(user, project=None):
+    """Tasks ``user`` may see.
+
+    ``tasks_view_all`` is every task. Without it, tasks on projects where
+    ``user`` has a ProjectAccess row, and only when ``access_tasks`` is on.
+    ``role=admin`` bypasses the flags through ``User.has_app_permission``
+    and the admin check.
+    """
+    qs = Task.objects.all()
+    if project is not None:
+        qs = qs.filter(project=project)
+    if user.is_admin or user.has_app_permission('tasks_view_all'):
+        return qs
+    if user.has_app_permission('access_tasks'):
+        return qs.filter(project__access__user=user)
+    return qs.none()
 
 
 class Subtask(models.Model):
