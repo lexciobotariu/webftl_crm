@@ -1,0 +1,72 @@
+<div class="border border-border-subtle rounded-card overflow-hidden">
+    <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center gap-3">
+            <i data-lucide="users" class="w-4 h-4 text-zinc-500"></i>
+            <h2 class="text-sm font-medium text-zinc-100">Team</h2>
+            <span class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ access_rows|length }}</span>
+        </div>
+    </div>
+
+    {% if can_edit_project %}
+    <form method="post" action="{% url 'project_team_add' project.pk %}" class="flex items-end gap-2 px-4 py-3 border-b border-border-subtle">
+        {% csrf_token %}
+        <div class="flex-1 min-w-0">
+            <label for="team-add-user" class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Person</label>
+            <select name="user" id="team-add-user" required
+                    class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                <option value="">Select a person</option>
+                {% for person in addable_users %}
+                <option value="{{ person.pk }}">{{ person.name }} ({{ person.email }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit"
+                class="inline-flex items-center gap-1.5 bg-accent text-white px-3 py-2 rounded-card text-xs font-medium hover:bg-accent-hover transition-colors">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            Add
+        </button>
+    </form>
+    {% endif %}
+
+    {% if access_rows %}
+    <table class="w-full">
+        <thead class="bg-panel border-b border-border-subtle">
+            <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
+                <th class="px-4 py-2 font-medium">Name</th>
+                <th class="px-4 py-2 font-medium">Email</th>
+                <th class="px-4 py-2 font-medium">Role</th>
+                {% if can_edit_project %}
+                <th class="px-4 py-2 font-medium w-24"></th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-border-subtle">
+            {% for row in access_rows %}
+            <tr>
+                <td class="px-4 py-3">
+                    <span class="font-medium text-sm text-zinc-100">{{ row.user.name }}</span>
+                </td>
+                <td class="px-4 py-3">
+                    <span class="text-sm text-zinc-400">{{ row.user.email }}</span>
+                </td>
+                <td class="px-4 py-3">
+                    <span class="text-sm text-zinc-300">{{ row.user.get_role_display }}</span>
+                </td>
+                {% if can_edit_project %}
+                <td class="px-4 py-3 text-right">
+                    <form method="post" action="{% url 'project_team_remove' project.pk row.user.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="text-xs text-zinc-400 hover:text-red-400 transition-colors">
+                            Remove
+                        </button>
+                    </form>
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="px-4 py-8 text-center text-sm text-zinc-500">No one has access to this project.</div>
+    {% endif %}
+</div>

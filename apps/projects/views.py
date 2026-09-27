@@ -10,6 +10,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.accounts.decorators import require_permission
+from apps.accounts.models import User
 from apps.clients.models import Client, visible_clients
 from apps.tasks.models import Label, TaskActivity, can_create_task, visible_tasks
 
@@ -24,6 +25,25 @@ from .models import (
 )
 
 PROJECTS_PER_PAGE = 20
+
+
+def _can_join_project(user):
+    """Active people who can open the projects module.
+
+    Admins qualify without a preset because ``has_app_permission`` bypasses it.
+    """
+    return user.is_active and user.has_app_permission('access_projects')
+
+
+def _addable_users(project):
+    """Active users with the projects module who are not already on the project."""
+    on_project = ProjectAccess.objects.filter(project=project).values('user_id')
+    return (
+        User.objects.filter(is_active=True)
+        .filter(Q(role='admin') | Q(permission_preset__access_projects=True))
+        .exclude(pk__in=on_project)
+        .order_by('name', 'email')
+    )
 
 
 @login_required
@@ -74,7 +94,7 @@ def project_create(request):
 @login_required
 @require_permission('access_projects')
 def project_detail(request, pk):
-    """Project detail page with overview and tasks tabs."""
+    """Project detail page with overview, tasks, notes, and team tabs."""
     project = get_object_or_404(Project, pk=pk)
     if not can_access_project(request.user, project):
         return HttpResponseForbidden("You don't have access to this project")
@@ -97,8 +117,17 @@ def project_detail(request, pk):
     tab_mapping = {
         'project_detail_tasks': 'tasks',
         'project_detail_notes': 'notes',
+        'project_detail_team': 'team',
     }
     active_tab = tab_mapping.get(url_name, 'overview')
+    editable = can_edit_project(request.user, project)
+
+    access_rows = []
+    addable_users = []
+    if active_tab == 'team':
+        access_rows = project.access.select_related('user').order_by('user__name', 'user__email')
+        if editable:
+            addable_users = _addable_users(project)
 
     return render(request, 'projects/project_detail.html', {
         'project': project,
@@ -109,9 +138,58 @@ def project_detail(request, pk):
         'overdue_tasks': overdue_tasks,
         'recent_activities': recent_activities,
         'active_tab': active_tab,
-        'can_edit_project': can_edit_project(request.user, project),
+        'can_edit_project': editable,
         'can_create_task': can_create_task(request.user, project),
+        'access_rows': access_rows,
+        'addable_users': addable_users,
     })
+
+
+@login_required
+@require_permission('access_projects')
+@require_POST
+def project_team_add(request, pk):
+    """Add a ProjectAccess row. Same person twice is already on the project."""
+    project = get_object_or_404(Project, pk=pk)
+    if not can_access_project(request.user, project):
+        return HttpResponseForbidden("You don't have access to this project")
+    if not can_edit_project(request.user, project):
+        return HttpResponseForbidden("You can't edit this project")
+
+    raw_id = (request.POST.get('user') or '').strip()
+    try:
+        user_id = int(raw_id)
+    except (TypeError, ValueError):
+        return HttpResponse('That person cannot be added to this project', status=400)
+
+    target = User.objects.filter(pk=user_id).first()
+    if target is None or not _can_join_project(target):
+        return HttpResponse('That person cannot be added to this project', status=400)
+
+    try:
+        with transaction.atomic():
+            ProjectAccess.objects.create(project=project, user=target)
+    except IntegrityError:
+        # unique_together: a second add is already on the project.
+        pass
+    return redirect('project_detail_team', pk=project.pk)
+
+
+@login_required
+@require_permission('access_projects')
+@require_POST
+def project_team_remove(request, pk, user_pk):
+    """Delete one ProjectAccess row, including your own and the last one."""
+    project = get_object_or_404(Project, pk=pk)
+    if not can_access_project(request.user, project):
+        return HttpResponseForbidden("You don't have access to this project")
+    if not can_edit_project(request.user, project):
+        return HttpResponseForbidden("You can't edit this project")
+
+    access = get_object_or_404(ProjectAccess, project=project, user_id=user_pk)
+    # Instance delete so the post_delete signal in signals.py still runs.
+    access.delete()
+    return redirect('project_detail_team', pk=project.pk)
 
 
 @login_required
