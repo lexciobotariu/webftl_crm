@@ -23,13 +23,17 @@ TASKS_PER_PAGE = 20
 
 
 def _time_context(user, task):
-    """Close expired timers, then the entries and edit flag for a task screen."""
+    """Close expired timers, then the entries, edit flag, and logged total."""
     from apps.tasks import services
 
     services.close_expired_timers()
     return {
         'time_entries': services.entries_on_task(user, task),
         'can_log_time': can_access_project(user, task.project, 'editor'),
+        'logged_label': _format_duration(
+            services.logged_seconds_on_task(task),
+            empty='0h',
+        ),
     }
 
 
@@ -37,14 +41,22 @@ def _monday(day):
     return day - timedelta(days=day.weekday())
 
 
+def _format_duration(total_seconds, *, empty=None):
+    """Week-total shape (``3h 05m``). ``empty`` replaces a zero total."""
+    total_seconds = max(int(total_seconds), 0)
+    if total_seconds == 0 and empty is not None:
+        return empty
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes = remainder // 60
+    return f'{hours}h {minutes:02d}m'
+
+
 def _format_total(entries):
     total_seconds = 0
     for entry in entries:
         if entry.duration is not None:
             total_seconds += max(int(entry.duration.total_seconds()), 0)
-    hours, remainder = divmod(total_seconds, 3600)
-    minutes = remainder // 60
-    return f'{hours}h {minutes:02d}m'
+    return _format_duration(total_seconds)
 
 
 @login_required
@@ -647,6 +659,20 @@ def task_time_section(request, pk):
     if denied:
         return denied
     return render(request, 'tasks/partials/time_section.html', {
+        'task': task,
+        **_time_context(request.user, task),
+    })
+
+
+@login_required
+@require_permission('access_tasks')
+def task_logged_total(request, pk):
+    """Read-only logged-hours row. Viewers and above."""
+    task = get_object_or_404(Task.objects.select_related('project'), pk=pk)
+    denied = _require_task_viewer(request.user, task)
+    if denied:
+        return denied
+    return render(request, 'tasks/partials/logged_total.html', {
         'task': task,
         **_time_context(request.user, task),
     })

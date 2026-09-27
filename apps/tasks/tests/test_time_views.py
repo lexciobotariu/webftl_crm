@@ -305,6 +305,69 @@ class TestWeekAndProjectViews:
 
 
 @pytest.mark.django_db
+class TestLoggedHoursRow:
+    def test_no_entries_shows_zero_hours(self, client):
+        user, task = _member('viewer')
+        client.force_login(user)
+
+        detail = client.get(reverse('task_detail', args=[task.pk])).content.decode()
+        full = client.get(
+            reverse('task_full_page', args=[task.project.pk, task.pk])
+        ).content.decode()
+        row = client.get(reverse('task_logged_total', args=[task.pk]))
+
+        assert row.status_code == 200
+        for page in (detail, full, row.content.decode()):
+            assert f'id="prop-logged-{task.pk}"' in page
+            assert 'Logged' in page
+            assert '0h' in page
+            assert '0h 00m' not in page
+
+    def test_drawer_and_full_page_render_the_logged_row_for_a_viewer(self, client):
+        viewer, task = _member('viewer')
+        owner = UserFactory()
+        other = UserFactory()
+        now = timezone.now()
+        TimeEntryFactory(
+            user=owner, task=task, note='owner-private-note',
+            started_at=now - timedelta(hours=3),
+            ended_at=now - timedelta(hours=1),
+        )
+        TimeEntryFactory(
+            user=other, task=task, note='other-private-note',
+            started_at=now - timedelta(hours=2, minutes=5),
+            ended_at=now - timedelta(hours=1),
+        )
+        client.force_login(viewer)
+
+        detail = client.get(reverse('task_detail', args=[task.pk])).content.decode()
+        full = client.get(
+            reverse('task_full_page', args=[task.project.pk, task.pk])
+        ).content.decode()
+
+        for page in (detail, full):
+            assert f'id="prop-logged-{task.pk}"' in page
+            assert 'Logged' in page
+            assert '3h 05m' in page
+            assert 'timerChanged from:body' in page
+            assert 'owner-private-note' not in page
+            assert 'other-private-note' not in page
+
+    def test_logged_total_endpoint_is_viewer_only(self, client):
+        viewer, task = _member('viewer')
+        outsider = UserFactory()
+        client.force_login(viewer)
+        allowed = client.get(reverse('task_logged_total', args=[task.pk]))
+        assert allowed.status_code == 200
+        body = allowed.content.decode()
+        assert 'timerChanged from:body' in body
+        assert reverse('task_logged_total', args=[task.pk]) in body
+
+        client.force_login(outsider)
+        assert client.get(reverse('task_logged_total', args=[task.pk])).status_code == 403
+
+
+@pytest.mark.django_db
 class TestCloseExpiredCommand:
     def test_command_closes_with_the_same_twelve_hour_mark(self):
         user, task = _member()

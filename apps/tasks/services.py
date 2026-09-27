@@ -383,6 +383,30 @@ def close_expired_timers(now=None):
     )
 
 
+def logged_seconds_on_task(task, now=None):
+    """Seconds logged on ``task`` by everyone.
+
+    Closes timers past 12 hours first. A closed row counts
+    ``ended_at - started_at``. A timer that is still running counts
+    elapsed time so far, and never more than 12 hours.
+    """
+    if now is None:
+        now = timezone.now()
+    close_expired_timers(now=now)
+    limit = int(TIMER_LIMIT.total_seconds())
+    total = 0
+    for entry in task.time_entries.all():
+        if entry.ended_at is None:
+            elapsed = int((now - entry.started_at).total_seconds())
+            if elapsed > limit:
+                elapsed = limit
+            total += max(elapsed, 0)
+        else:
+            span = int((entry.ended_at - entry.started_at).total_seconds())
+            total += max(span, 0)
+    return total
+
+
 def _close_open_entry(entry, now):
     """Close one running row at ``now``, or at the 12-hour mark if past it."""
     cap = entry.started_at + TIMER_LIMIT

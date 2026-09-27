@@ -14,6 +14,7 @@ urlpatterns = [
     path('project/<int:project_pk>/create/', views.task_create, name='task_create'),
     path('<int:pk>/', views.task_detail, name='task_detail'),
     path('<int:pk>/time/', views.task_time_section, name='task_time_section'),
+    path('<int:pk>/logged/', views.task_logged_total, name='task_logged_total'),
     path('<int:pk>/timer/start/', views.timer_start, name='timer_start'),
     path('<int:pk>/time/log/', views.time_log, name='time_log'),
     path('<int:pk>/edit/', views.task_edit, name='task_edit'),

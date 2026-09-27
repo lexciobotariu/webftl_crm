@@ -160,6 +160,66 @@ class TestTwelveHourClose:
 
 
 @pytest.mark.django_db
+class TestLoggedSeconds:
+    def test_two_closed_entries_sum_including_another_person(self):
+        user, task = _member()
+        other = UserFactory()
+        now = timezone.now()
+        TimeEntryFactory(
+            user=user, task=task,
+            started_at=now - timedelta(hours=3),
+            ended_at=now - timedelta(hours=1),
+        )
+        TimeEntryFactory(
+            user=other, task=task,
+            started_at=now - timedelta(hours=2, minutes=5),
+            ended_at=now - timedelta(hours=1),
+        )
+        elsewhere = TaskFactory(project=task.project, status=task.status)
+        TimeEntryFactory(
+            user=user, task=elsewhere,
+            started_at=now - timedelta(hours=8),
+            ended_at=now - timedelta(hours=4),
+        )
+
+        assert services.logged_seconds_on_task(task, now=now) == (2 * 3600) + (3600 + 5 * 60)
+
+    def test_a_closed_entry_longer_than_twelve_hours_counts_in_full(self):
+        user, task = _member()
+        now = timezone.now()
+        TimeEntryFactory(
+            user=user, task=task,
+            started_at=now - timedelta(hours=30),
+            ended_at=now - timedelta(hours=1),
+        )
+
+        assert services.logged_seconds_on_task(task, now=now) == 29 * 3600
+
+    def test_running_timer_counts_elapsed_and_not_past_twelve_hours(self):
+        user, task = _member()
+        now = timezone.now()
+        TimeEntryFactory(
+            user=user, task=task,
+            started_at=now - timedelta(hours=2, minutes=5),
+            ended_at=None,
+        )
+
+        assert services.logged_seconds_on_task(task, now=now) == 2 * 3600 + 5 * 60
+
+        long_start = now - timedelta(hours=15)
+        TimeEntryFactory(
+            user=UserFactory(), task=task,
+            started_at=long_start, ended_at=None,
+        )
+
+        assert services.logged_seconds_on_task(task, now=now) == (2 * 3600 + 5 * 60) + 12 * 3600
+
+    def test_no_entries_is_zero(self):
+        _, task = _member()
+        assert services.logged_seconds_on_task(task) == 0
+
+
+@pytest.mark.django_db
 class TestManualValidation:
     def test_manual_entry_may_exceed_twelve_hours(self):
         user, task = _member()
