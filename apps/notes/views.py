@@ -7,7 +7,7 @@ from django.views.decorators.http import require_POST
 
 from apps.accounts.decorators import require_permission
 from apps.clients.models import Client
-from apps.projects.models import Project, can_access_project
+from apps.projects.models import Project
 
 from .forms import NoteForm
 from .models import Note, can_create_note, can_modify_note, can_view_note, notes_visible_to_user
@@ -29,9 +29,6 @@ def client_notes_list(request, client_pk):
     """Render notes table for client detail page"""
     client = get_object_or_404(Client, pk=client_pk)
 
-    if not request.user.is_admin:
-        return HttpResponseForbidden("Admin access required")
-
     notes = notes_visible_to_user(
         request.user,
         client.note_objects.select_related('created_by', 'modified_by')
@@ -52,9 +49,6 @@ def client_notes_list(request, client_pk):
 def project_notes_list(request, project_pk):
     """Render notes table for project detail page"""
     project = get_object_or_404(Project, pk=project_pk)
-
-    if not can_access_project(request.user, project):
-        return HttpResponseForbidden("Access denied")
 
     notes = notes_visible_to_user(
         request.user,
@@ -81,8 +75,8 @@ def note_create_drawer(request, client_pk=None, project_pk=None):
     if client_pk:
         parent = get_object_or_404(Client, pk=client_pk)
         parent_type = 'client'
-        if not request.user.is_admin:
-            return HttpResponseForbidden("Admin access required")
+        if not can_create_note(request.user, client=parent):
+            return HttpResponseForbidden("Access denied")
     elif project_pk:
         parent = get_object_or_404(Project, pk=project_pk)
         parent_type = 'project'

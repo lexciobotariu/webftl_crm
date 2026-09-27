@@ -128,11 +128,11 @@ def can_edit_project(user, project):
 
 
 def can_work_on_project(user, project):
-    """Project notes.
+    """Admin, or a ProjectAccess row.
 
-    Admin, or a ProjectAccess row. Task view, create, and edit use the task
-    flags instead of this. Project view-all and the project edit flags do not
-    grant this.
+    Task view, create, and edit use the task flags. Notes use ``access_notes``
+    and :func:`can_access_project` instead. Project view-all and the project
+    edit flags do not grant this.
     """
     if user.is_admin:
         return True

@@ -206,10 +206,11 @@ def client_create_project(request, pk):
 @login_required
 @require_permission('access_clients')
 def client_profile_notes(request, pk):
-    """Return unified notes table for client profile (client + project notes)."""
-    if not request.user.is_admin:
-        return HttpResponseForbidden("Admin access required")
+    """Unified notes table for the client profile (this client and its projects).
 
+    The rows are ``notes_visible_to_user``, the same rules as the notes list
+    and opening a note by id.
+    """
     client = get_object_or_404(Client, pk=pk)
 
     from apps.notes.models import Note, notes_visible_to_user

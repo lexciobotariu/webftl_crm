@@ -18,6 +18,8 @@ class TestPermissionPreset:
         assert 'access_tasks' in PERMISSION_KEYS
         assert 'access_todos' in PERMISSION_KEYS
         assert 'access_notes' in PERMISSION_KEYS
+        assert 'notes_view_all' in PERMISSION_KEYS
+        assert 'notes_edit_public' in PERMISSION_KEYS
         assert 'access_dashboard' in PERMISSION_KEYS
         assert 'clients_view_all' in PERMISSION_KEYS
         assert 'clients_create' in PERMISSION_KEYS
@@ -43,6 +45,8 @@ class TestPermissionPreset:
         assert preset.access_salaries is False
         assert preset.access_projects is True
         assert preset.access_dashboard is True
+        assert preset.notes_view_all is False
+        assert preset.notes_edit_public is False
 
     def test_preset_str(self):
         preset = PermissionPreset.objects.create(name='Test Role')
@@ -111,6 +115,8 @@ class TestDefaultPresets:
         assert preset.access_tasks is True
         assert preset.access_todos is True
         assert preset.access_notes is True
+        assert preset.notes_view_all is False
+        assert preset.notes_edit_public is False
         assert preset.access_clients is False
         assert preset.access_salaries is False
         assert preset.access_team is False
@@ -512,6 +518,9 @@ class TestPresetCreate:
         assert preset.tasks_create is False
         assert preset.tasks_edit_own is False
         assert preset.tasks_edit_all is False
+        assert preset.access_notes is False
+        assert preset.notes_view_all is False
+        assert preset.notes_edit_public is False
 
     def test_create_preset_returns_item(self, client):
         admin = AdminUserFactory()
@@ -811,7 +820,16 @@ class TestPresetModuleCards:
         assert 'name="clients_view_all"' not in tasks
         assert 'grid-cols-2' in tasks
 
-        for module in ('dashboard', 'todos', 'notes', 'salaries', 'team'):
+        notes = _card(html, 'notes')
+        assert notes.index('>Notes<') < notes.index('name="notes_view_all"')
+        assert notes.index('name="notes_view_all"') < notes.index('name="notes_edit_public"')
+        assert 'View all' in notes
+        assert 'Edit public' in notes
+        assert 'name="tasks_view_all"' not in notes
+        assert 'name="clients_view_all"' not in notes
+        assert 'grid-cols-2' in notes
+
+        for module in ('dashboard', 'todos', 'salaries', 'team'):
             card = _card(html, module)
             assert 'chevron-right' not in card
             assert 'data-extra' not in card
@@ -839,6 +857,8 @@ class TestPresetModuleCards:
             'tasks_create',
             'tasks_edit_own',
             'tasks_edit_all',
+            'notes_view_all',
+            'notes_edit_public',
         ):
             attrs = _checkbox_attrs(html, name)
             assert 'checked' not in attrs.split()
@@ -868,6 +888,70 @@ class TestPresetModuleCards:
             task_attrs = _checkbox_attrs(developer_html, name)
             assert 'checked' not in task_attrs.split()
             assert 'disabled' not in task_attrs.split()
+        for name in ('notes_view_all', 'notes_edit_public'):
+            note_attrs = _checkbox_attrs(developer_html, name)
+            assert 'checked' not in note_attrs.split()
+            assert 'disabled' not in note_attrs.split()
+
+    def test_notes_access_off_clears_posted_extras(self, client):
+        admin = AdminUserFactory()
+        client.force_login(admin)
+
+        created = client.post(reverse('preset_create'), {
+            'name': 'No Notes Access',
+            'access_clients': 'on',
+            'clients_view_all': 'on',
+            'notes_view_all': 'on',
+            'notes_edit_public': 'on',
+        })
+        assert created.status_code == 200
+        preset = PermissionPreset.objects.get(name='No Notes Access')
+        assert preset.access_notes is False
+        assert preset.notes_view_all is False
+        assert preset.notes_edit_public is False
+        assert preset.access_clients is True
+        assert preset.clients_view_all is True
+
+        existing = PermissionPreset.objects.create(
+            name='Note Editors',
+            access_notes=True,
+            notes_view_all=True,
+            notes_edit_public=True,
+            access_clients=True,
+            clients_view_all=True,
+        )
+        edited = client.post(reverse('preset_edit', args=[existing.pk]), {
+            'name': 'Note Editors',
+            'access_clients': 'on',
+            'clients_view_all': 'on',
+            'notes_view_all': 'on',
+            'notes_edit_public': 'on',
+        })
+        assert edited.status_code == 200
+        existing.refresh_from_db()
+        assert existing.access_notes is False
+        assert existing.notes_view_all is False
+        assert existing.notes_edit_public is False
+        assert existing.clients_view_all is True
+
+        saved = client.post(reverse('preset_create'), {
+            'name': 'Note Flags On',
+            'access_notes': 'on',
+            'notes_view_all': 'on',
+            'notes_edit_public': 'on',
+        })
+        assert saved.status_code == 200
+        writers = PermissionPreset.objects.get(name='Note Flags On')
+        assert writers.access_notes is True
+        assert writers.notes_view_all is True
+        assert writers.notes_edit_public is True
+
+        off = PermissionPreset.objects.create(name='Notes Closed', access_notes=False)
+        html = client.get(reverse('preset_edit', args=[off.pk])).content.decode()
+        for name in ('notes_view_all', 'notes_edit_public'):
+            attrs = _checkbox_attrs(html, name)
+            assert 'checked' not in attrs.split()
+            assert 'disabled' in attrs.split()
 
 
 @pytest.mark.django_db
