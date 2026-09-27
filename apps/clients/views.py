@@ -8,29 +8,23 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.accounts.decorators import require_permission
+from apps.projects.models import visible_projects
 
 from .forms import ClientDrawerForm, ClientForm
-from .models import Client
+from .models import Client, visible_clients
 
 CLIENTS_PER_PAGE = 20
 
 
 def _visible_projects(user, client):
-    """Projects on this client that ``user`` can open.
-
-    Admins see every project. Everyone else only sees projects
-    ``can_access_project`` would allow, which is membership.
-    """
-    projects = client.projects.all()
-    if user.is_admin:
-        return projects
-    return projects.filter(members__user=user).distinct()
+    """Projects on this client from the same queryset as the project list."""
+    return visible_projects(user).filter(client=client)
 
 
 @login_required
 @require_permission('access_clients')
 def client_list(request):
-    clients_qs = Client.objects.all().order_by('name')
+    clients_qs = visible_clients(request.user).order_by('name')
     paginator = Paginator(clients_qs, CLIENTS_PER_PAGE)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)

@@ -1,7 +1,7 @@
 import pytest
 from django.urls import reverse
 
-from apps.accounts.factories import AdminUserFactory, UserFactory, admin_preset
+from apps.accounts.factories import AdminUserFactory, UserFactory
 from apps.accounts.permissions import PermissionPreset
 from apps.clients.factories import ClientFactory
 from apps.projects.factories import ProjectFactory, ProjectMemberFactory
@@ -158,8 +158,13 @@ class TestClientDetailTabs:
         assert response.context['active_tab'] == 'projects'
 
     def test_member_sees_only_accessible_projects(self, client):
-        """A non-member does not see another project's name on the client."""
-        user = UserFactory(permission_preset=admin_preset())
+        """A non-member does not see another project's name on the client.
+
+        The Admin preset has projects_view_all, so this uses a view-own preset
+        that can still open the client section.
+        """
+        preset = PermissionPreset.objects.create(name='ClientAccess', access_clients=True)
+        user = UserFactory(permission_preset=preset)
         client_obj = ClientFactory()
         mine = ProjectFactory(client=client_obj, name='Mine Project')
         ProjectFactory(client=client_obj, name='Secret Project')

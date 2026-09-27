@@ -3,7 +3,9 @@ from django.db import models
 PERMISSION_KEYS = [
     'access_dashboard',
     'access_clients',
+    'clients_view_all',
     'access_projects',
+    'projects_view_all',
     'access_tasks',
     'access_todos',
     'access_notes',
@@ -25,6 +27,10 @@ class PermissionPreset(models.Model):
     access_notes = models.BooleanField(default=True)
     access_salaries = models.BooleanField(default=True)
     access_team = models.BooleanField(default=True)
+
+    # Unchecked means view own. Admins still see everything via has_app_permission.
+    clients_view_all = models.BooleanField(default=False)
+    projects_view_all = models.BooleanField(default=False)
 
     is_system = models.BooleanField(default=False, help_text="System presets cannot be deleted")
 

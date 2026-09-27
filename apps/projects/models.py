@@ -85,12 +85,28 @@ class ProjectMember(models.Model):
         return f"{self.user.name} - {self.project.name} ({self.role})"
 
 
+def visible_projects(user):
+    """Projects this user may see on the dashboard and in the project list.
+
+    ``projects_view_all`` is every project. Without it, projects where ``user``
+    is a member. ``role=admin`` bypasses the flag through
+    ``User.has_app_permission``.
+    """
+    if user.has_app_permission('projects_view_all'):
+        return Project.objects.all()
+    return Project.objects.filter(members__user=user).distinct()
+
+
 def can_access_project(user, project, required_role='viewer'):
     """
     Check if user has access to a project with at least the required role.
 
     Admins always have full access.
     Role hierarchy: viewer < editor < manager
+
+    ``projects_view_all`` grants viewer on every project. Editor and manager
+    still require a membership at that role. A membership is never lowered:
+    an editor who can also view all stays an editor.
     """
     if user.is_admin:
         return True
@@ -100,10 +116,17 @@ def can_access_project(user, project, required_role='viewer'):
 
     try:
         membership = ProjectMember.objects.get(project=project, user=user)
-        user_level = role_levels.get(membership.role, 0)
-        return user_level >= required_level
     except ProjectMember.DoesNotExist:
-        return False
+        membership = None
+
+    if membership is not None:
+        user_level = role_levels.get(membership.role, 0)
+        if user_level >= required_level:
+            return True
+
+    if required_level <= role_levels['viewer'] and user.has_app_permission('projects_view_all'):
+        return True
+    return False
 
 
 def get_assignable_users(project):
