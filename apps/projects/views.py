@@ -10,11 +10,11 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.accounts.decorators import require_permission
-from apps.clients.models import Client
+from apps.clients.models import Client, visible_clients
 from apps.tasks.models import Label, Task, TaskActivity
 
 from .forms import LabelForm, ProjectForm, StatusForm
-from .models import Project, Status, can_access_project
+from .models import Project, Status, can_access_project, visible_projects
 
 PROJECTS_PER_PAGE = 20
 
@@ -22,22 +22,14 @@ PROJECTS_PER_PAGE = 20
 @login_required
 @require_permission('access_projects')
 def project_list(request):
-    # Admins see all projects, others see only their memberships
-    if request.user.is_admin:
-        projects_qs = Project.objects.select_related('client').all()
-    else:
-        projects_qs = Project.objects.select_related('client').filter(
-            members__user=request.user
-        ).distinct()
-
-    projects_qs = projects_qs.order_by('name')
+    projects_qs = visible_projects(request.user).select_related('client').order_by('name')
     clients = Client.objects.none()
     client_filter = None
     if request.user.has_app_permission('access_clients'):
         client_filter = request.GET.get('client')
         if client_filter:
             projects_qs = projects_qs.filter(client_id=client_filter)
-        clients = Client.objects.all().order_by('name')
+        clients = visible_clients(request.user).order_by('name')
 
     paginator = Paginator(projects_qs, PROJECTS_PER_PAGE)
     page_number = request.GET.get('page', 1)

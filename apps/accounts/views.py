@@ -61,15 +61,12 @@ def dashboard(request):
     }
 
     if request.user.has_app_permission('access_clients'):
-        from apps.clients.models import Client
-        context['client_count'] = Client.objects.count()
+        from apps.clients.models import visible_clients
+        context['client_count'] = visible_clients(request.user).count()
 
     if request.user.has_app_permission('access_projects'):
-        from apps.projects.models import Project
-        if request.user.is_admin:
-            context['project_count'] = Project.objects.count()
-        else:
-            context['project_count'] = Project.objects.filter(members__user=request.user).count()
+        from apps.projects.models import visible_projects
+        context['project_count'] = visible_projects(request.user).count()
 
     if request.user.has_app_permission('access_tasks'):
         from apps.tasks.models import Task

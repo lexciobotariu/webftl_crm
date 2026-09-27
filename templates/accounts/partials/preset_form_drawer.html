@@ -77,10 +77,28 @@
 
                     <label class="flex items-center justify-between p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
                         <div class="flex items-center gap-2">
+                            <i data-lucide="eye" class="w-4 h-4 text-zinc-500"></i>
+                            <span class="text-sm text-zinc-300">Clients: view all</span>
+                        </div>
+                        <input type="checkbox" name="clients_view_all" {% if preset and preset.clients_view_all %}checked{% endif %}
+                               class="w-4 h-4 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                    </label>
+
+                    <label class="flex items-center justify-between p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
+                        <div class="flex items-center gap-2">
                             <i data-lucide="folder-kanban" class="w-4 h-4 text-zinc-500"></i>
                             <span class="text-sm text-zinc-300">Projects</span>
                         </div>
                         <input type="checkbox" name="access_projects" {% if preset %}{% if preset.access_projects %}checked{% endif %}{% else %}checked{% endif %}
+                               class="w-4 h-4 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                    </label>
+
+                    <label class="flex items-center justify-between p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="eye" class="w-4 h-4 text-zinc-500"></i>
+                            <span class="text-sm text-zinc-300">Projects: view all</span>
+                        </div>
+                        <input type="checkbox" name="projects_view_all" {% if preset and preset.projects_view_all %}checked{% endif %}
                                class="w-4 h-4 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
                     </label>
 
