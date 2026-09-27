@@ -103,11 +103,18 @@ class TestDashboardTodos:
 
 @pytest.mark.django_db
 class TestTeamList:
-    def test_team_list_requires_admin(self, client):
+    def test_team_list_requires_team_permission(self, client):
         user = UserFactory(role='member')
         client.force_login(user)
         response = client.get(reverse('team_list'))
         assert response.status_code == 403
+
+    def test_team_list_open_with_access_team(self, client):
+        preset = PermissionPreset.objects.create(name='TeamOps', access_team=True)
+        user = UserFactory(role='member', permission_preset=preset)
+        client.force_login(user)
+        response = client.get(reverse('team_list'))
+        assert response.status_code == 200
 
     def test_team_list_accessible_by_admin(self, client):
         admin = AdminUserFactory()
@@ -127,9 +134,15 @@ class TestTeamList:
 @pytest.mark.django_db
 @pytest.mark.security
 class TestUserCreate:
-    def test_drawer_requires_admin(self, client):
-        """A member with access_team still cannot reach the create drawer."""
+    def test_drawer_open_with_access_team(self, client):
+        """A member with access_team can reach the create drawer."""
         member = UserFactory(role='member', permission_preset=admin_preset())
+        client.force_login(member)
+        response = client.get(reverse('user_create'))
+        assert response.status_code == 200
+
+    def test_drawer_requires_team_permission(self, client):
+        member = UserFactory(role='member', permission_preset=developer_preset())
         client.force_login(member)
         response = client.get(reverse('user_create'))
         assert response.status_code == 403
@@ -589,6 +602,34 @@ class TestUserDelete:
         assert not User.objects.filter(pk=target_pk).exists()
         from apps.todos.models import Todo
         assert Todo.objects.filter(owner_id=target_pk).count() == 0
+
+    def test_cannot_delete_last_inactive_admin(self, client):
+        """Deletion is refused when it would leave zero role=admin users."""
+        actor = UserFactory(permission_preset=admin_preset())
+        last = AdminUserFactory(is_active=False)
+        client.force_login(actor)
+        response = client.post(reverse('user_delete', args=[last.pk]))
+        assert response.status_code == 400
+        assert User.objects.filter(pk=last.pk, role='admin').exists()
+
+    def test_cannot_delete_last_active_admin_while_inactive_remains(self, client):
+        actor = UserFactory(permission_preset=admin_preset())
+        active = AdminUserFactory()
+        inactive = AdminUserFactory(is_active=False)
+        client.force_login(actor)
+        response = client.post(reverse('user_delete', args=[active.pk]))
+        assert response.status_code == 400
+        assert User.objects.filter(pk=active.pk).exists()
+        assert User.objects.filter(pk=inactive.pk).exists()
+
+    def test_can_delete_inactive_admin_when_another_admin_remains(self, client):
+        actor = AdminUserFactory()
+        AdminUserFactory()
+        target = AdminUserFactory(is_active=False)
+        client.force_login(actor)
+        response = client.post(reverse('user_delete', args=[target.pk]))
+        assert response.status_code == 200
+        assert not User.objects.filter(pk=target.pk).exists()
 
     def test_cannot_delete_self(self, client):
         admin = AdminUserFactory()

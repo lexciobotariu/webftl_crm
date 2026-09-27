@@ -115,9 +115,15 @@ def can_create_note(user, project=None, client=None):
 
 
 def can_modify_note(user, note):
-    """Check if user can edit/delete this note"""
+    """Check if user can edit/delete this note.
+
+    Admins can. Anyone else must have written it. A project note also
+    requires access to that project, so a former member cannot edit it.
+    """
     if user.is_admin:
         return True
-
-    # Only creator can modify their own notes
-    return note.created_by == user
+    if note.created_by_id != user.id:
+        return False
+    if note.project_id:
+        return can_access_project(user, note.project)
+    return True

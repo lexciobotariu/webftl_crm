@@ -15,6 +15,18 @@ from .models import Client
 CLIENTS_PER_PAGE = 20
 
 
+def _visible_projects(user, client):
+    """Projects on this client that ``user`` can open.
+
+    Admins see every project. Everyone else only sees projects
+    ``can_access_project`` would allow, which is membership.
+    """
+    projects = client.projects.all()
+    if user.is_admin:
+        return projects
+    return projects.filter(members__user=user).distinct()
+
+
 @login_required
 @require_permission('access_clients')
 def client_list(request):
@@ -87,9 +99,11 @@ def client_detail(request, pk):
     todo_count = todos_qs.count()
 
     notes_count = notes_visible_to_user(request.user, client.note_objects.all()).count()
+    projects = _visible_projects(request.user, client)
 
     return render(request, 'clients/client_detail.html', {
         'client': client,
+        'projects': projects,
         'todo_count': todo_count,
         'todos': todos_qs,
         'notes_count': notes_count,

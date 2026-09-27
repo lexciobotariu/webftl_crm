@@ -315,7 +315,7 @@ class TestCommentService:
     def test_add_comment(self):
         user = UserFactory()
         task = TaskFactory()
-        ProjectMemberFactory(project=task.project, user=user, role='viewer')
+        ProjectMemberFactory(project=task.project, user=user, role='editor')
 
         activity = services.add_comment(task, 'This is a comment', user)
 
@@ -323,6 +323,14 @@ class TestCommentService:
         assert activity.user == user
         assert activity.activity_type == 'comment'
         assert activity.content == 'This is a comment'
+
+    def test_viewer_cannot_comment(self):
+        user = UserFactory()
+        task = TaskFactory()
+        ProjectMemberFactory(project=task.project, user=user, role='viewer')
+
+        with pytest.raises(PermissionDenied):
+            services.add_comment(task, 'Comment', user)
 
     def test_add_comment_requires_viewer(self):
         user = UserFactory()

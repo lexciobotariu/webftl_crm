@@ -294,14 +294,14 @@ class TestUserDetailDrawer:
         response = client.get(reverse('user_detail_drawer', args=[target.pk]))
         assert response.status_code == 403
 
-    def test_drawer_requires_admin_role(self, client):
-        """Non-admin user with access_team permission should still get 403."""
+    def test_drawer_open_with_access_team(self, client):
+        """A preset with access_team can open the user drawer. Role is not required."""
         preset = PermissionPreset.objects.create(name='TeamViewer', access_team=True)
         user = UserFactory(permission_preset=preset)
         target = UserFactory()
         client.force_login(user)
         response = client.get(reverse('user_detail_drawer', args=[target.pk]))
-        assert response.status_code == 403
+        assert response.status_code == 200
 
     def test_drawer_shows_user_info(self, client):
         """Drawer should display user name, email, and current preset."""
@@ -356,8 +356,8 @@ class TestUpdatePreset:
         target.refresh_from_db()
         assert target.permission_preset is None
 
-    def test_update_preset_requires_admin(self, client):
-        """Only admins can update presets."""
+    def test_update_preset_with_access_team(self, client):
+        """A preset with access_team can assign presets."""
         preset = PermissionPreset.objects.create(name='WithTeam', access_team=True)
         user = UserFactory(permission_preset=preset)
         target = UserFactory()
@@ -367,7 +367,9 @@ class TestUpdatePreset:
             reverse('user_update', args=[target.pk]),
             {'name': target.name, 'email': target.email, 'role': target.role, 'preset_id': dev_preset.pk},
         )
-        assert response.status_code == 403
+        assert response.status_code == 200
+        target.refresh_from_db()
+        assert target.permission_preset == dev_preset
 
     def test_update_preset_returns_updated_row(self, client):
         """After updating preset, response should contain the new preset name."""
@@ -571,11 +573,21 @@ class TestPresetDelete:
         assert response.status_code == 400
         assert PermissionPreset.objects.filter(name='InUse').exists()
 
-    def test_delete_requires_admin(self, client):
-        """Non-admin cannot delete presets."""
+    def test_delete_with_access_team(self, client):
+        """A preset with access_team can delete an unused preset."""
         preset_obj = PermissionPreset.objects.create(name='WithTeam', access_team=True)
         user = UserFactory(permission_preset=preset_obj)
         target = PermissionPreset.objects.create(name='ToDelete')
         client.force_login(user)
         response = client.post(reverse('preset_delete', args=[target.pk]))
+        assert response.status_code == 200
+        assert not PermissionPreset.objects.filter(name='ToDelete').exists()
+
+    def test_delete_requires_team_permission(self, client):
+        """A member without access_team cannot delete presets."""
+        user = UserFactory(permission_preset=PermissionPreset.objects.get(name='Developer'))
+        target = PermissionPreset.objects.create(name='ToDelete')
+        client.force_login(user)
+        response = client.post(reverse('preset_delete', args=[target.pk]))
         assert response.status_code == 403
+        assert PermissionPreset.objects.filter(name='ToDelete').exists()

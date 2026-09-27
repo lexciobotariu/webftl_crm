@@ -4,8 +4,9 @@
             <div class="flex items-center gap-3">
                 <i data-lucide="folder-kanban" class="w-4 h-4 text-zinc-500"></i>
                 <h2 class="text-sm font-medium text-zinc-100">Projects</h2>
-                <span class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ client.projects.count }}</span>
+                <span class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ projects.count }}</span>
             </div>
+            {% if request.user.is_admin %}
             <button hx-get="{% url 'client_create_project' client.pk %}"
                     hx-target="#slide-over"
                     hx-swap="innerHTML"
@@ -14,9 +15,10 @@
                 <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                 Add Project
             </button>
+            {% endif %}
         </div>
     </div>
-    {% if client.projects.exists %}
+    {% if projects %}
     <table class="w-full">
         <thead class="bg-panel border-b border-border-subtle">
             <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
@@ -27,7 +29,7 @@
             </tr>
         </thead>
         <tbody class="divide-y divide-border-subtle">
-            {% for project in client.projects.all %}
+            {% for project in projects %}
             <tr class="hover:bg-elevated/50 transition-colors">
                 <td class="px-4 py-3">
                     <a href="{% url 'project_detail' project.pk %}" class="font-medium text-sm text-zinc-100 hover:text-accent transition-colors">
@@ -61,6 +63,7 @@
     <div class="flex flex-col items-center justify-center py-12 text-zinc-500">
         <i data-lucide="folder-kanban" class="w-10 h-10 mb-3 opacity-30"></i>
         <p class="text-sm mb-2">No projects yet</p>
+        {% if request.user.is_admin %}
         <button hx-get="{% url 'client_create_project' client.pk %}"
                 hx-target="#slide-over"
                 hx-swap="innerHTML"
@@ -68,6 +71,7 @@
                 class="text-accent hover:text-accent-hover text-sm">
             Create the first project
         </button>
+        {% endif %}
     </div>
     {% endif %}
 </div>

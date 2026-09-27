@@ -7,7 +7,8 @@ from django.test import override_settings
 from django.urls import reverse
 
 from apps.accounts.factories import AdminUserFactory, UserFactory
-from apps.projects.factories import ProjectFactory
+from apps.accounts.permissions import PermissionPreset
+from apps.projects.factories import ProjectFactory, ProjectMemberFactory
 
 
 def generate_signature(payload: bytes, secret: str) -> str:
@@ -142,6 +143,15 @@ class TestGitHubSync:
         project = ProjectFactory()
         response = client.post(reverse('github_sync', args=[project.pk]))
         assert response.status_code == 302
+
+    def test_sync_requires_access_projects(self, client):
+        preset = PermissionPreset.objects.create(name='NoProjects', access_projects=False)
+        user = UserFactory(permission_preset=preset, github_token='gh-token')
+        project = ProjectFactory(github_repo_url='https://github.com/test/repo')
+        ProjectMemberFactory(project=project, user=user, role='manager')
+        client.force_login(user)
+        response = client.post(reverse('github_sync', args=[project.pk]))
+        assert response.status_code == 403
 
     def test_sync_requires_manager_access(self, client):
         user = UserFactory(github_token='gh-token')

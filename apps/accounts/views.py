@@ -6,15 +6,28 @@ from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import IntegrityError, models, transaction
 from django.db.models import Q
-from django.http import HttpResponse, HttpResponseForbidden
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
 
-from .decorators import require_admin, require_permission
+from .decorators import require_permission
 from .models import User
 from .permissions import PERMISSION_KEYS, PermissionPreset
 
 TEAM_MEMBERS_PER_PAGE = 20
+
+
+def _lock_role_admins():
+    """Lock every ``role=admin`` row, active or not, and return them.
+
+    Deletion must refuse when it would leave zero admins, including an
+    inactive last admin. Same lock-order rule as :func:`_lock_active_admins`.
+    """
+    return list(
+        User.objects.filter(role='admin')
+        .order_by('pk')
+        .select_for_update()
+    )
 
 
 def _lock_active_admins():
@@ -60,8 +73,9 @@ def dashboard(request):
 
     if request.user.has_app_permission('access_tasks'):
         from apps.tasks.models import Task
-        context['my_task_count'] = Task.objects.filter(assignee=request.user).active().count()
-        context['recent_tasks'] = Task.objects.filter(assignee=request.user).select_related(
+        assigned = Task.objects.open_for(request.user)
+        context['my_task_count'] = assigned.active().count()
+        context['recent_tasks'] = assigned.select_related(
             'project', 'status'
         ).order_by('-updated_at')[:5]
 
@@ -80,8 +94,6 @@ def dashboard(request):
 @login_required
 @require_permission('access_team')
 def team_list(request):
-    if not request.user.is_admin:
-        return HttpResponseForbidden("Admin access required")
     users_qs = User.objects.select_related('permission_preset').order_by('name')
 
     paginator = Paginator(users_qs, TEAM_MEMBERS_PER_PAGE)
@@ -97,7 +109,6 @@ def team_list(request):
 
 @login_required
 @require_permission('access_team')
-@require_admin
 def user_create(request):
     """Create a team member from inside the app, with an admin-set password.
 
@@ -191,8 +202,6 @@ def user_create(request):
 @login_required
 @require_permission('access_team')
 def user_detail_drawer(request, pk):
-    if not request.user.is_admin:
-        return HttpResponseForbidden("Admin access required")
     user_obj = get_object_or_404(User, pk=pk)
     presets = PermissionPreset.objects.all()
     return render(request, 'accounts/partials/user_detail_drawer.html', {
@@ -207,9 +216,6 @@ def user_detail_drawer(request, pk):
 @transaction.atomic
 def user_update(request, pk):
     """Update a user's name, email, role, and preset."""
-    if not request.user.is_admin:
-        return HttpResponseForbidden("Admin access required")
-
     active_admins = _lock_active_admins()
     user_obj = get_object_or_404(User.objects.select_for_update(), pk=pk)
     presets = PermissionPreset.objects.all()
@@ -275,8 +281,6 @@ def user_update(request, pk):
 @require_permission('access_team')
 def preset_list(request):
     """List all permission presets."""
-    if not request.user.is_admin:
-        return HttpResponseForbidden("Admin access required")
     presets = PermissionPreset.objects.annotate(
         user_count=models.Count('users')
     ).order_by('name')
@@ -289,9 +293,6 @@ def preset_list(request):
 @require_permission('access_team')
 def preset_create(request):
     """Create a new permission preset via drawer."""
-    if not request.user.is_admin:
-        return HttpResponseForbidden("Admin access required")
-
     if request.method == 'POST':
         name = request.POST.get('name', '').strip()
         description = request.POST.get('description', '').strip()
@@ -335,9 +336,6 @@ def preset_create(request):
 @require_permission('access_team')
 def preset_edit(request, pk):
     """Edit a permission preset via drawer."""
-    if not request.user.is_admin:
-        return HttpResponseForbidden("Admin access required")
-
     preset = get_object_or_404(PermissionPreset, pk=pk)
 
     if request.method == 'POST':
@@ -375,9 +373,6 @@ def preset_edit(request, pk):
 @require_POST
 def preset_delete(request, pk):
     """Delete a permission preset."""
-    if not request.user.is_admin:
-        return HttpResponseForbidden("Admin access required")
-
     preset = get_object_or_404(PermissionPreset, pk=pk)
 
     if preset.is_system:
@@ -398,9 +393,6 @@ def preset_delete(request, pk):
 @transaction.atomic
 def user_deactivate(request, pk):
     """Toggle a user's active status."""
-    if not request.user.is_admin:
-        return HttpResponseForbidden("Admin access required")
-
     active_admins = _lock_active_admins()
     user_obj = get_object_or_404(User.objects.select_for_update(), pk=pk)
 
@@ -424,9 +416,6 @@ def user_deactivate(request, pk):
 @require_permission('access_team')
 def user_delete_confirm(request, pk):
     """Return deletion confirmation partial with cascade counts."""
-    if not request.user.is_admin:
-        return HttpResponseForbidden("Admin access required")
-
     user_obj = get_object_or_404(User, pk=pk)
 
     if user_obj == request.user:
@@ -476,17 +465,18 @@ def user_delete_confirm(request, pk):
 @transaction.atomic
 def user_delete(request, pk):
     """Permanently delete a user and all associated data."""
-    if not request.user.is_admin:
-        return HttpResponseForbidden("Admin access required")
-
-    active_admins = _lock_active_admins()
+    role_admins = _lock_role_admins()
     user_obj = get_object_or_404(User.objects.select_for_update(), pk=pk)
+    active_admins = [admin for admin in role_admins if admin.is_active]
 
     if user_obj == request.user:
         return HttpResponse('Cannot delete yourself.', status=400)
 
     if user_obj.role == 'admin' and user_obj.is_active and len(active_admins) <= 1:
         return HttpResponse('Cannot delete the last active admin.', status=400)
+
+    if user_obj.role == 'admin' and len(role_admins) <= 1:
+        return HttpResponse('Cannot delete the last admin.', status=400)
 
     from apps.salaries.models import EmployeeSalary
     if EmployeeSalary.objects.filter(user=user_obj).exists():

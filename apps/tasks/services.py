@@ -249,7 +249,7 @@ def add_comment(task, content, user):
     Add a comment to a task.
 
     Comments are stored as TaskActivity with type 'comment'.
-    Viewers can add comments (lower permission than editing).
+    Editors can add comments, same as creating a task or starting a timer.
 
     Args:
         task: Task to comment on
@@ -260,9 +260,9 @@ def add_comment(task, content, user):
         The created TaskActivity instance
 
     Raises:
-        TaskPermissionError: If user lacks viewer access
+        TaskPermissionError: If user lacks editor access
     """
-    require_access(user, task.project, 'viewer')
+    require_access(user, task.project, 'editor')
 
     return TaskActivity.objects.create(
         task=task,

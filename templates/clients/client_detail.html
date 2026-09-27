@@ -24,6 +24,7 @@
                 </div>
             </div>
             <div class="flex items-center gap-2">
+                {% if request.user.is_admin %}
                 <button hx-get="{% url 'client_edit_drawer' client.pk %}"
                         hx-target="#slide-over"
                         hx-swap="innerHTML"
@@ -32,7 +33,6 @@
                     <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                     Edit
                 </button>
-                {% if request.user.is_admin %}
                 <button hx-post="{% url 'client_delete' client.pk %}"
                         hx-confirm="Delete {{ client.name|escapejs }}? This will also delete all projects and tasks."
                         hx-target="body"
@@ -98,7 +98,7 @@
                             <i data-lucide="folder-kanban" class="w-4 h-4"></i>
                             Projects
                         </span>
-                        <span class="text-xs text-zinc-500 bg-panel px-1.5 py-0.5 rounded">{{ client.projects.count }}</span>
+                        <span class="text-xs text-zinc-500 bg-panel px-1.5 py-0.5 rounded">{{ projects.count }}</span>
                     </a>
                     <a href="{% url 'client_detail_todos' client.pk %}"
                        class="w-full flex items-center justify-between px-3 py-2 rounded-card text-sm transition-colors text-left {% if active_tab == 'todos' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">

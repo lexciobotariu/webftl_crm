@@ -404,6 +404,35 @@ class TestClientNameVisibility:
         assert project.client.name in content
         assert f'/clients/{project.client.pk}/' not in content
 
+    def test_project_list_ignores_client_query_without_access(self, client):
+        preset = PermissionPreset.objects.get(name='Developer')
+        user = UserFactory(permission_preset=preset)
+        client_a = ClientFactory(name='Hidden Filter A')
+        client_b = ClientFactory(name='Hidden Filter B')
+        project_a = ProjectFactory(name='Visible A', client=client_a)
+        project_b = ProjectFactory(name='Visible B', client=client_b)
+        ProjectMemberFactory(project=project_a, user=user, role='viewer')
+        ProjectMemberFactory(project=project_b, user=user, role='viewer')
+        client.force_login(user)
+
+        response = client.get(reverse('project_list'), {'client': client_a.pk})
+        content = response.content.decode()
+
+        assert 'Visible A' in content
+        assert 'Visible B' in content
+        assert project_a.client.name in content
+        assert f'/clients/{client_a.pk}/' not in content
+        assert 'All Clients' not in content
+
+    def test_project_list_hides_add_for_non_admin(self, client):
+        user = UserFactory()
+        project = ProjectFactory()
+        ProjectMemberFactory(project=project, user=user, role='viewer')
+        client.force_login(user)
+        content = client.get(reverse('project_list')).content.decode()
+        assert 'Add Project' not in content
+        assert reverse('project_create') not in content
+
     def test_project_list_hides_client_filter_for_developer(self, client):
         preset = PermissionPreset.objects.get(name='Developer')
         user = UserFactory(permission_preset=preset)
@@ -443,3 +472,23 @@ class TestClientNameVisibility:
         content = response.content.decode()
         assert project.client.name in content
         assert f'/clients/{project.client.pk}/' not in content
+
+
+@pytest.mark.django_db
+class TestProjectDeleteButton:
+    def test_manager_does_not_see_delete(self, client):
+        user = UserFactory()
+        project = ProjectFactory()
+        ProjectMemberFactory(project=project, user=user, role='manager')
+        client.force_login(user)
+        content = client.get(reverse('project_settings', args=[project.pk])).content.decode()
+        assert 'Delete Project' not in content
+        assert reverse('project_delete', args=[project.pk]) not in content
+
+    def test_admin_sees_delete(self, client):
+        admin = AdminUserFactory()
+        project = ProjectFactory()
+        client.force_login(admin)
+        content = client.get(reverse('project_settings', args=[project.pk])).content.decode()
+        assert 'Delete Project' in content
+        assert reverse('project_delete', args=[project.pk]) in content

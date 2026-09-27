@@ -38,6 +38,17 @@ class TaskQuerySet(models.QuerySet):
             today = timezone.now().date()
         return self.active().filter(due_date__lt=today)
 
+    def open_for(self, user):
+        """Tasks assigned to ``user`` that they can still open.
+
+        Admins see every task assigned to them. Everyone else only sees
+        tasks on projects they belong to.
+        """
+        qs = self.filter(assignee=user)
+        if user.is_admin:
+            return qs
+        return qs.filter(project__members__user=user)
+
 
 class Task(models.Model):
     PRIORITY_CHOICES = [

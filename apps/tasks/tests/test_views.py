@@ -18,6 +18,7 @@ class TestMyTasks:
         other = UserFactory()
         project = ProjectFactory()
         status = project.statuses.first()
+        ProjectMemberFactory(project=project, user=user, role='editor')
         TaskFactory(project=project, status=status, assignee=user, title='My Task')
         TaskFactory(project=project, status=status, assignee=other, title='Other Task')
         client.force_login(user)
@@ -316,7 +317,19 @@ class TestAttachmentUpload:
 @pytest.mark.django_db
 class TestComments:
     def test_create_comment(self, client):
-        """Viewers can create comments."""
+        """Editors can create comments."""
+        user = UserFactory()
+        task = TaskFactory()
+        ProjectMemberFactory(project=task.project, user=user, role='editor')
+        client.force_login(user)
+        response = client.post(
+            reverse('comment_create', args=[task.pk]),
+            {'content': 'This is a comment'}
+        )
+        assert response.status_code == 200
+        assert task.activities.filter(activity_type='comment').exists()
+
+    def test_viewer_cannot_comment(self, client):
         user = UserFactory()
         task = TaskFactory()
         ProjectMemberFactory(project=task.project, user=user, role='viewer')
@@ -325,8 +338,8 @@ class TestComments:
             reverse('comment_create', args=[task.pk]),
             {'content': 'This is a comment'}
         )
-        assert response.status_code == 200
-        assert task.activities.filter(activity_type='comment').exists()
+        assert response.status_code == 403
+        assert not task.activities.filter(activity_type='comment').exists()
 
     def test_empty_comment_rejected(self, client):
         user = UserFactory()

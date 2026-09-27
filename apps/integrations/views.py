@@ -9,6 +9,7 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
+from apps.accounts.decorators import require_permission
 from apps.projects.models import Project, can_access_project
 
 from .github import (
@@ -92,9 +93,13 @@ def github_webhook(request):
 
 
 @login_required
+@require_permission('access_projects')
 @require_POST
 def github_sync(request, project_pk):
-    """Manually trigger GitHub sync for a project."""
+    """Manually trigger GitHub sync for a project.
+
+    ``access_projects`` is required first. The manager check below is unchanged.
+    """
     project = get_object_or_404(Project, pk=project_pk)
 
     if not can_access_project(request.user, project, 'manager'):
