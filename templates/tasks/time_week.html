@@ -49,8 +49,12 @@
                 {% for entry in entries %}
                 <tr class="text-sm text-zinc-300">
                     <td class="px-4 py-3">
+                        {% if entry.can_open_task %}
                         <a href="{% url 'task_full_page' entry.task.project_id entry.task_id %}"
                            class="hover:text-zinc-100">{{ entry.task.title }}</a>
+                        {% else %}
+                        <span>{{ entry.task.title }}</span>
+                        {% endif %}
                     </td>
                     {% if not project %}
                     <td class="px-4 py-3 text-zinc-400">{{ entry.task.project.name }}</td>

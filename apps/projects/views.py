@@ -31,15 +31,17 @@ def project_list(request):
         ).distinct()
 
     projects_qs = projects_qs.order_by('name')
-    client_filter = request.GET.get('client')
-    if client_filter:
-        projects_qs = projects_qs.filter(client_id=client_filter)
+    clients = Client.objects.none()
+    client_filter = None
+    if request.user.has_app_permission('access_clients'):
+        client_filter = request.GET.get('client')
+        if client_filter:
+            projects_qs = projects_qs.filter(client_id=client_filter)
+        clients = Client.objects.all().order_by('name')
 
     paginator = Paginator(projects_qs, PROJECTS_PER_PAGE)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
-
-    clients = Client.objects.all().order_by('name')
     return render(request, 'projects/project_list.html', {
         'projects': page_obj,
         'page_obj': page_obj,

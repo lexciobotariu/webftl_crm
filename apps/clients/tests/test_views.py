@@ -1,9 +1,10 @@
 import pytest
 from django.urls import reverse
 
-from apps.accounts.factories import AdminUserFactory, UserFactory
+from apps.accounts.factories import AdminUserFactory, UserFactory, admin_preset
 from apps.accounts.permissions import PermissionPreset
 from apps.clients.factories import ClientFactory
+from apps.projects.factories import ProjectFactory, ProjectMemberFactory
 
 
 @pytest.mark.django_db
@@ -155,6 +156,39 @@ class TestClientDetailTabs:
         response = client.get(reverse('client_detail_projects', args=[client_obj.pk]))
         assert response.status_code == 200
         assert response.context['active_tab'] == 'projects'
+
+    def test_member_sees_only_accessible_projects(self, client):
+        """A non-member does not see another project's name on the client."""
+        user = UserFactory(permission_preset=admin_preset())
+        client_obj = ClientFactory()
+        mine = ProjectFactory(client=client_obj, name='Mine Project')
+        ProjectFactory(client=client_obj, name='Secret Project')
+        ProjectMemberFactory(project=mine, user=user, role='viewer')
+        client.force_login(user)
+
+        response = client.get(reverse('client_detail_projects', args=[client_obj.pk]))
+        content = response.content.decode()
+
+        assert response.status_code == 200
+        assert 'Mine Project' in content
+        assert 'Secret Project' not in content
+        assert 'Add Project' not in content
+        assert reverse('client_edit_drawer', args=[client_obj.pk]) not in content
+
+    def test_admin_sees_every_project_and_the_actions(self, client):
+        admin = AdminUserFactory()
+        client_obj = ClientFactory()
+        ProjectFactory(client=client_obj, name='Mine Project')
+        ProjectFactory(client=client_obj, name='Secret Project')
+        client.force_login(admin)
+
+        response = client.get(reverse('client_detail_projects', args=[client_obj.pk]))
+        content = response.content.decode()
+
+        assert 'Mine Project' in content
+        assert 'Secret Project' in content
+        assert 'Add Project' in content
+        assert reverse('client_edit_drawer', args=[client_obj.pk]) in content
 
     def test_client_detail_todos_tab(self, client):
         """GET /clients/<pk>/todos/ should set active_tab to 'todos'"""

@@ -141,6 +141,7 @@
                     </div>
                 </div>
 
+                {% if request.user.is_admin %}
                 <!-- Danger Zone -->
                 <div id="section-danger" class="bg-panel/80 rounded-panel border border-red-500/20 overflow-hidden">
                     <div class="px-5 py-3 border-b border-red-500/20 flex items-center gap-2">
@@ -162,6 +163,7 @@
                         </div>
                     </div>
                 </div>
+                {% endif %}
             </div>
         </div>
 
@@ -184,11 +186,13 @@
                     <i data-lucide="tags" class="w-3.5 h-3.5"></i>
                     Labels
                 </a>
+                {% if request.user.is_admin %}
                 <a href="#section-danger"
                    class="flex items-center gap-2 px-2.5 py-1.5 rounded-card text-[13px] text-red-400/70 hover:text-red-400 hover:bg-red-500/10 transition-colors">
                     <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
                     Danger Zone
                 </a>
+                {% endif %}
             </nav>
         </div>
     </div>

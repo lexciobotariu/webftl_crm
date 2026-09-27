@@ -65,7 +65,11 @@ def my_tasks(request):
     # Determine active tab from URL
     active_tab = 'todos' if request.resolver_match.url_name == 'my_tasks_todos' else 'tasks'
 
-    tasks_qs = Task.objects.filter(assignee=request.user).select_related('project', 'status').order_by('-created_at')
+    tasks_qs = (
+        Task.objects.open_for(request.user)
+        .select_related('project', 'status')
+        .order_by('-created_at')
+    )
     priority = request.GET.get('priority')
     if priority:
         tasks_qs = tasks_qs.filter(priority=priority)
@@ -626,6 +630,16 @@ def time_week(request):
             return HttpResponseForbidden("You don't have access to this project")
 
     entries = list(services.entries_for_week(request.user, week_date, project=project))
+    if request.user.is_admin:
+        open_project_ids = None
+    else:
+        open_project_ids = set(
+            Project.objects.filter(members__user=request.user).values_list('pk', flat=True)
+        )
+    for entry in entries:
+        entry.can_open_task = (
+            open_project_ids is None or entry.task.project_id in open_project_ids
+        )
     sees_everyone = project is not None and can_access_project(
         request.user, project, 'manager'
     )
