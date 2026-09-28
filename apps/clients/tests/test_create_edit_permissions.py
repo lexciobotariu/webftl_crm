@@ -230,6 +230,42 @@ class TestEditWithoutCreate:
 
 
 @pytest.mark.django_db
+class TestBillingEditPermission:
+    def test_member_without_clients_edit_cannot_change_billing_fields(self, client):
+        user = _user('NoBillingEdit', clients_create=True)
+        visible = ClientFactory(
+            name='Visible Client',
+            email='old@client.com',
+            billing_name='Old Billing',
+            billing_email='old-bills@client.com',
+            tax_id='OLD-1',
+        )
+        _attach(user, visible)
+        client.force_login(user)
+        payload = {
+            'name': 'Renamed Client',
+            'email': 'new@client.com',
+            'phone': '555',
+            'address': 'New address',
+            'notes': 'New notes',
+            'billing_name': 'Hacked Billing',
+            'billing_email': 'hack@client.com',
+            'tax_id': 'NEW-9',
+        }
+
+        assert client.post(reverse('client_edit', args=[visible.pk]), payload).status_code == 403
+        assert client.post(
+            reverse('client_edit_drawer', args=[visible.pk]),
+            payload,
+        ).status_code == 403
+        visible.refresh_from_db()
+        assert visible.name == 'Visible Client'
+        assert visible.billing_name == 'Old Billing'
+        assert visible.billing_email == 'old-bills@client.com'
+        assert visible.tax_id == 'OLD-1'
+
+
+@pytest.mark.django_db
 class TestDeleteStaysAdmin:
     def test_either_flag_does_not_allow_delete(self, client):
         user = _user('Writers', clients_create=True, clients_edit=True)

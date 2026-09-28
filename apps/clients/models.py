@@ -7,6 +7,9 @@ class Client(models.Model):
     email = models.EmailField(blank=True)
     phone = models.CharField(max_length=50, blank=True)
     address = models.TextField(blank=True)
+    billing_name = models.CharField(max_length=255, blank=True)
+    billing_email = models.EmailField(blank=True)
+    tax_id = models.CharField(max_length=64, blank=True)
     notes = models.TextField(blank=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -23,6 +26,14 @@ class Client(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def bill_to_name(self):
+        return self.billing_name or self.name
+
+    @property
+    def bill_to_email(self):
+        return self.billing_email or self.email
 
     @property
     def project_count(self):
