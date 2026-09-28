@@ -8,7 +8,11 @@ from apps.crm.models import Currency
 
 
 def _currency(code, symbol, name):
-    return Currency.objects.create(code=code, name=name, symbol=symbol)
+    currency, _created = Currency.objects.get_or_create(
+        code=code,
+        defaults={'name': name, 'symbol': symbol},
+    )
+    return currency
 
 
 @pytest.mark.django_db

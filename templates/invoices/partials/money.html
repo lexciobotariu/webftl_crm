@@ -1,1 +1,1 @@
-{{ invoice.currency_symbol }}{{ amount|floatformat:2 }}
+{% load invoice_format %}{% format_invoice_amount invoice amount %}

@@ -10,7 +10,7 @@ class CompanyAdmin(admin.ModelAdmin):
 
 @admin.register(Currency)
 class CurrencyAdmin(admin.ModelAdmin):
-    list_display = ('code', 'name', 'symbol')
+    list_display = ('code', 'name', 'symbol', 'symbol_before')
     search_fields = ('code', 'name')
 
     def get_readonly_fields(self, request, obj=None):

@@ -23,6 +23,21 @@ def money(value):
     return Decimal(value).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
 
 
+def format_money(amount, symbol='', symbol_before=True):
+    """Place a currency symbol on an amount.
+
+    Before the amount there is no space (``£1.00``). After the amount there
+    is one space (``1.00 €``). A blank symbol stays a plain number, which is
+    how an invoice with no currency snapshot still prints.
+    """
+    figure = f'{money(amount):.2f}'
+    if not symbol:
+        return figure
+    if symbol_before:
+        return f'{symbol}{figure}'
+    return f'{figure} {symbol}'
+
+
 _LOCKED_AFTER_SEND = (
     'client_id',
     'issue_date',
@@ -39,6 +54,7 @@ _LOCKED_AFTER_SEND = (
     'company_tax_id',
     'currency_code',
     'currency_symbol',
+    'symbol_before',
     'number',
     'sent_at',
 )
@@ -55,8 +71,9 @@ class Invoice(models.Model):
     """One invoice for one client.
 
     Totals and status are derived. ``sent_at`` empty means draft. Bill-to,
-    company, and currency are a snapshot from create time. Older rows have no
-    currency snapshot, so those fields stay blank.
+    company, and currency are a snapshot from create time, including which
+    side the symbol sits on. Older rows have no currency snapshot, so those
+    fields stay blank and amounts print as plain numbers.
     """
 
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='invoices')
@@ -75,6 +92,7 @@ class Invoice(models.Model):
     company_tax_id = models.CharField(max_length=64, blank=True, default='')
     currency_code = models.CharField(max_length=3, blank=True, default='')
     currency_symbol = models.CharField(max_length=16, blank=True, default='')
+    symbol_before = models.BooleanField(default=True)
     sent_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
