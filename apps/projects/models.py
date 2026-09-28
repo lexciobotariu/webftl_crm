@@ -84,6 +84,53 @@ class ProjectAccess(models.Model):
         return f"{self.user.name} - {self.project.name}"
 
 
+class ProjectTaskListFilter(models.Model):
+    """Statuses one person hides on one project's task list.
+
+    Unique per person and project. The board still uses
+    ``Status.visible_on_board``; this row does not change it, and it does not
+    change what anyone else sees. Deleting a status drops it from the set.
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='task_list_filters',
+    )
+    project = models.ForeignKey(
+        Project, on_delete=models.CASCADE, related_name='task_list_filters'
+    )
+    hidden_statuses = models.ManyToManyField(
+        Status, blank=True, related_name='hidden_on_task_lists'
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'project'],
+                name='unique_task_list_filter_per_user_project',
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.user} - {self.project.name}"
+
+    def replace_hidden_statuses(self, status_ids):
+        """Replace the hidden set with statuses that belong to this project.
+
+        An id from another project, or a value that is not an id, is ignored.
+        """
+        ids = []
+        for raw in status_ids:
+            try:
+                ids.append(int(raw))
+            except (TypeError, ValueError):
+                continue
+        self.hidden_statuses.set(
+            Status.objects.filter(project_id=self.project_id, pk__in=ids)
+        )
+
+
 def _has_access_row(user, project):
     return ProjectAccess.objects.filter(project=project, user=user).exists()
 
