@@ -5,16 +5,21 @@ from django.views.decorators.http import require_POST
 
 from apps.accounts.decorators import require_admin
 
-from .forms import CompanyForm, CurrencyForm
+from .forms import CompanyForm, CurrencyForm, ThemeForm
 from .models import Company, Currency
 
 
-def _settings_page(request, company_form, currency_form, currency_error='', status=200):
+def _settings_page(
+    request, company_form, currency_form, currency_error='', status=200, theme_form=None
+):
+    if theme_form is None:
+        theme_form = ThemeForm(instance=Company.load())
     return render(
         request,
         'crm/settings.html',
         {
             'company_form': company_form,
+            'theme_form': theme_form,
             'currency_form': currency_form,
             'currencies': Currency.objects.order_by('code'),
             'currency_error': currency_error,
@@ -27,6 +32,17 @@ def _settings_page(request, company_form, currency_form, currency_error='', stat
 @require_admin
 def settings_page(request):
     company = Company.load()
+    if request.method == 'POST' and 'theme' in request.POST:
+        theme_form = ThemeForm(request.POST, instance=company)
+        if theme_form.is_valid():
+            theme_form.save()
+            return redirect('settings')
+        return _settings_page(
+            request,
+            CompanyForm(instance=Company.load()),
+            CurrencyForm(),
+            theme_form=theme_form,
+        )
     if request.method == 'POST':
         company_form = CompanyForm(request.POST, instance=company)
         if company_form.is_valid():

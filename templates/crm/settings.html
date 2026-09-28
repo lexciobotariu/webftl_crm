@@ -38,6 +38,34 @@
 
             <section class="border border-border-subtle rounded-card overflow-hidden">
                 <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
+                    <h2 class="text-sm font-medium text-zinc-100">Appearance</h2>
+                </div>
+                <form method="post" action="{% url 'settings' %}" class="p-4 space-y-4">
+                    {% csrf_token %}
+                    <fieldset>
+                        <legend class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Theme</legend>
+                        <div class="space-y-2">
+                            {% for choice in theme_form.theme %}
+                            <label class="flex items-center gap-2 text-sm text-zinc-100 cursor-pointer">
+                                {{ choice.tag }}
+                                <span>{{ choice.choice_label }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        {% if theme_form.theme.errors %}
+                        <p class="text-error text-sm mt-1">{{ theme_form.theme.errors.0 }}</p>
+                        {% endif %}
+                    </fieldset>
+                    <div class="pt-2">
+                        <button type="submit" class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">
+                            Save appearance
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="border border-border-subtle rounded-card overflow-hidden">
+                <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
                     <h2 class="text-sm font-medium text-zinc-100">Currencies</h2>
                 </div>
                 {% if currency_error %}

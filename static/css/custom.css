@@ -4,34 +4,84 @@
  * - HTMX dynamic states
  */
 
-/* Inter variable features: cv01, ss03, and slashed zero. */
+/* Inter variable features: cv01, ss03, and slashed zero.
+   Dark is the default. Light overrides the same tokens. */
 html {
     font-feature-settings: "cv01" on, "ss03" on, "zero" on;
+    --bg: 8 9 10; /* #08090a */
+    --sidebar: 8 9 10; /* #08090a */
+    --panel: 15 16 17; /* #0f1011 */
+    --card: 22 23 24; /* #161718 */
+    --elevated: 22 23 24; /* #161718 */
+    --border: 35 37 42; /* #23252a */
+    --border-subtle: 35 37 42; /* #23252a */
+    --border-strong: 56 59 63; /* #383b3f */
+    --hover: rgba(255, 255, 255, 0.05);
+    --hover-strong: rgba(255, 255, 255, 0.08);
+    --zinc-50: 255 255 255; /* #ffffff */
+    --zinc-100: 255 255 255; /* #ffffff */
+    --zinc-200: 229 229 230; /* #e5e5e6 */
+    --zinc-300: 208 214 224; /* #d0d6e0 */
+    --zinc-400: 138 143 152; /* #8a8f98 */
+    --zinc-500: 138 143 152; /* #8a8f98 */
+    --zinc-600: 98 102 109; /* #62666d */
+    --zinc-700: 98 102 109; /* #62666d */
+    --zinc-800: 56 59 63; /* #383b3f */
+    --zinc-900: 35 37 42; /* #23252a */
+    --zinc-950: 8 9 10; /* #08090a */
 }
 
-/* Scrollbar: void track, obsidian thumb. */
+html.light {
+    --bg: 246 247 248; /* #f6f7f8 */
+    --sidebar: 255 255 255;
+    --panel: 255 255 255;
+    --card: 255 255 255;
+    --elevated: 243 244 246; /* #f3f4f6 */
+    --border: 230 231 234; /* #e6e7ea */
+    --border-subtle: 230 231 234; /* #e6e7ea */
+    --border-strong: 209 210 213; /* #d1d2d5 */
+    --hover: rgba(22, 23, 24, 0.05);
+    --hover-strong: rgba(22, 23, 24, 0.08);
+    /* text-zinc-100 is the primary text, so the light end of the scale is dark. */
+    --zinc-50: 22 23 24; /* #161718 */
+    --zinc-100: 22 23 24; /* #161718 */
+    --zinc-200: 44 47 52; /* #2c2f34 */
+    --zinc-300: 70 74 80; /* #464a50 */
+    --zinc-400: 98 102 109; /* #62666d */
+    --zinc-500: 98 102 109; /* #62666d */
+    --zinc-600: 138 143 152; /* #8a8f98 */
+    --zinc-700: 212 213 216; /* #d4d5d8 */
+    --zinc-800: 209 210 213; /* #d1d2d5 */
+    --zinc-900: 230 231 234; /* #e6e7ea */
+    --zinc-950: 246 247 248; /* #f6f7f8 */
+    /* Thumb follows the border so it stays visible on the light canvas. */
+    --scrollbar-thumb: var(--border);
+    --scrollbar-thumb-hover: var(--border-strong);
+}
+
+/* Scrollbar follows the theme tokens. */
 ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-    background: #08090a;
+    background: rgb(var(--bg));
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #161718;
+    background: rgb(var(--scrollbar-thumb, var(--elevated)));
     border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #23252a;
+    background: rgb(var(--scrollbar-thumb-hover, var(--border)));
 }
 
 /* Firefox scrollbar */
 * {
     scrollbar-width: thin;
-    scrollbar-color: #161718 #08090a;
+    scrollbar-color: rgb(var(--scrollbar-thumb, var(--elevated))) rgb(var(--bg));
 }
 
 /* HTMX loading states.

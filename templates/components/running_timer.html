@@ -6,7 +6,7 @@
     <div class="flex-shrink-0 flex items-center justify-between gap-3 px-4 py-2 border-b border-border-subtle bg-elevated"
          x-data="runningTimer('{{ running_timer.started_at|date:"c" }}')">
         <a href="{% url 'task_full_page' running_timer.task.project_id running_timer.task_id %}"
-           class="flex items-center gap-2 min-w-0 text-sm text-zinc-100 hover:text-white">
+           class="flex items-center gap-2 min-w-0 text-sm text-zinc-100 hover:text-zinc-100">
             <span class="inline-flex h-2 w-2 rounded-full bg-success animate-soft-pulse"></span>
             <i data-lucide="timer" class="w-3.5 h-3.5 text-zinc-200 flex-shrink-0"></i>
             <span class="truncate">{{ running_timer.task.title }}</span>
