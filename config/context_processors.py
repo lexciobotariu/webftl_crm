@@ -10,6 +10,16 @@ def version(request):
         return {'app_version': 'dev'}
 
 
+def theme(request):
+    """The company theme, dark or light, for every page including login."""
+    from apps.crm.models import Company
+
+    value = Company.load().theme
+    if value not in (Company.THEME_DARK, Company.THEME_LIGHT):
+        value = Company.THEME_DARK
+    return {'theme': value}
+
+
 def permissions(request):
     """Make user's permission map and running timer available to all templates.
 

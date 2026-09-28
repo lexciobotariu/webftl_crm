@@ -5,7 +5,7 @@ from .models import Company, Currency
 
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
-    list_display = ('legal_name', 'email', 'phone', 'tax_id')
+    list_display = ('legal_name', 'email', 'phone', 'tax_id', 'theme')
 
 
 @admin.register(Currency)

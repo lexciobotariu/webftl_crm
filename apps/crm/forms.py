@@ -29,6 +29,33 @@ class CompanyForm(forms.ModelForm):
             'tax_id': forms.TextInput(attrs={'class': INPUT_CLASSES}),
         }
 
+    def save(self, commit=True):
+        company = super().save(commit=False)
+        if commit:
+            company.save(update_fields=['legal_name', 'address', 'email', 'phone', 'tax_id'])
+        return company
+
+
+RADIO_CLASSES = (
+    'w-3.5 h-3.5 border-border-subtle bg-panel accent-zinc-200 '
+    'focus:ring-border-strong focus:ring-offset-0'
+)
+
+
+class ThemeForm(forms.ModelForm):
+    class Meta:
+        model = Company
+        fields = ['theme']
+        widgets = {
+            'theme': forms.RadioSelect(attrs={'class': RADIO_CLASSES}),
+        }
+
+    def save(self, commit=True):
+        company = super().save(commit=False)
+        if commit:
+            company.save(update_fields=['theme'])
+        return company
+
 
 class CurrencyForm(forms.ModelForm):
     symbol_before = forms.TypedChoiceField(

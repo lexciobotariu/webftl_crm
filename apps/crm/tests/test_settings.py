@@ -24,7 +24,9 @@ class TestSettingsAccess:
         }).status_code == 403
         member_home = client.get(reverse('dashboard')).content.decode()
         assert 'href="/settings/"' not in member_home
-        assert Company.objects.count() == 0
+        company = Company.objects.get()
+        assert company.legal_name == ''
+        assert company.theme == 'dark'
         assert Currency.objects.count() == 4
 
         client.force_login(admin_user)
@@ -123,6 +125,11 @@ def _seed_currencies():
     migration.seed_currencies(django_apps, None)
 
 
+def _form_around(html, marker):
+    start = html.rfind('<form', 0, html.index(marker))
+    return html[start:html.index('</form>', start)]
+
+
 def _currency_row(html, code):
     marker = f'>{code}<'
     for row in html.split('<tr'):
@@ -192,3 +199,78 @@ class TestCurrencySymbolPosition:
 
         listed = client.get(reverse('settings')).content.decode()
         assert '>After<' in _currency_row(listed, 'CHF')
+
+
+@pytest.mark.django_db
+class TestTheme:
+    def test_default_theme_is_dark_including_logged_out_login(self, client):
+        assert Company.load().theme == 'dark'
+        login = client.get(reverse('account_login'))
+        assert login.status_code == 200
+        assert 'class="dark h-full"' in login.content.decode()
+
+    def test_admin_saves_light_and_later_pages_including_login_use_it(
+        self, client, admin_user
+    ):
+        company = Company.load()
+        company.legal_name = 'Harbor Studio LLC'
+        company.save(update_fields=['legal_name'])
+        client.force_login(admin_user)
+
+        page = client.get(reverse('settings'))
+        html = page.content.decode()
+        assert page.status_code == 200
+        assert 'Appearance' in html
+        assert 'value="dark"' in html
+        assert 'value="light"' in html
+        assert 'class="dark h-full"' in html
+        company_form = _form_around(html, 'Save company')
+        appearance_form = _form_around(html, 'Save appearance')
+        assert 'name="legal_name"' in company_form
+        assert 'name="theme"' not in company_form
+        assert 'name="theme"' in appearance_form
+        assert 'name="legal_name"' not in appearance_form
+
+        saved = client.post(reverse('settings'), {'theme': 'light'})
+        assert saved.status_code == 302
+        assert saved.url == reverse('settings')
+        company.refresh_from_db()
+        assert company.theme == 'light'
+        assert company.legal_name == 'Harbor Studio LLC'
+
+        again = client.get(reverse('dashboard'))
+        assert 'class="light h-full"' in again.content.decode()
+
+        client.logout()
+        login = client.get(reverse('account_login'))
+        assert login.status_code == 200
+        assert 'class="light h-full"' in login.content.decode()
+
+    def test_member_gets_403_on_settings(self, client, user):
+        client.force_login(user)
+        assert client.get(reverse('settings')).status_code == 403
+        refused = client.post(reverse('settings'), {'theme': 'light'})
+        assert refused.status_code == 403
+        assert not Company.objects.filter(theme='light').exists()
+
+    def test_saving_the_company_does_not_change_the_theme(self, client, admin_user):
+        company = Company.load()
+        company.theme = 'light'
+        company.save(update_fields=['theme'])
+        client.force_login(admin_user)
+
+        saved = client.post(reverse('settings'), {
+            'legal_name': 'Harbor Studio LLC',
+            'address': '4 Quay Street',
+            'email': 'billing@harbor.test',
+            'phone': '555-0100',
+            'tax_id': 'VAT-1',
+        })
+        assert saved.status_code == 302
+        company.refresh_from_db()
+        assert company.legal_name == 'Harbor Studio LLC'
+        assert company.address == '4 Quay Street'
+        assert company.email == 'billing@harbor.test'
+        assert company.phone == '555-0100'
+        assert company.tax_id == 'VAT-1'
+        assert company.theme == 'light'

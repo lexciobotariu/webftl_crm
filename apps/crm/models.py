@@ -8,11 +8,19 @@ class Company(models.Model):
     Fields stay blank until an admin fills them in. There is one row.
     """
 
+    THEME_DARK = 'dark'
+    THEME_LIGHT = 'light'
+    THEME_CHOICES = [
+        (THEME_DARK, 'Dark'),
+        (THEME_LIGHT, 'Light'),
+    ]
+
     legal_name = models.CharField(max_length=255, blank=True)
     address = models.TextField(blank=True)
     email = models.EmailField(blank=True)
     phone = models.CharField(max_length=50, blank=True)
     tax_id = models.CharField(max_length=64, blank=True)
+    theme = models.CharField(max_length=5, choices=THEME_CHOICES, default=THEME_DARK)
 
     class Meta:
         verbose_name_plural = 'company'
