@@ -39,7 +39,7 @@
                 </td>
                 <td class="px-4 py-3 text-sm text-zinc-400">{{ invoice.issue_date|date:"M j, Y" }}</td>
                 <td class="px-4 py-3 text-sm text-zinc-400">{{ invoice.due_date|date:"M j, Y" }}</td>
-                <td class="px-4 py-3 text-sm text-zinc-200 text-right">{{ invoice.total|floatformat:2 }}</td>
+                <td class="px-4 py-3 text-sm text-zinc-200 text-right">{{ invoice.total|floatformat:2 }}{% if invoice.currency_code %} {{ invoice.currency_code }}{% endif %}</td>
                 <td class="px-4 py-3">{% include "invoices/partials/status_badge.html" %}</td>
             </tr>
             {% endfor %}

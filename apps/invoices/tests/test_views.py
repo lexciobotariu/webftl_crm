@@ -36,6 +36,20 @@ def _user(**flags):
     return UserFactory(permission_preset=preset)
 
 
+def _ensure_currency(client):
+    from apps.crm.models import Currency
+
+    if client.currency_id:
+        return client
+    currency, _created = Currency.objects.get_or_create(
+        code='USD',
+        defaults={'name': 'US Dollar', 'symbol': '$'},
+    )
+    client.currency = currency
+    client.save(update_fields=['currency'])
+    return client
+
+
 def _visible_client(user, name='Visible Co'):
     client = ClientFactory(
         name=name,
@@ -47,13 +61,13 @@ def _visible_client(user, name='Visible Co'):
     )
     project = ProjectFactory(client=client, name=f'{name} Project')
     ProjectAccessFactory(project=project, user=user)
-    return client, project
+    return _ensure_currency(client), project
 
 
 def _invoice(client, *, tax_rate='0', due_in=14):
     today = _today()
     return create_invoice(
-        client=client,
+        client=_ensure_currency(client),
         issue_date=today,
         due_date=today + timedelta(days=due_in),
         tax_rate=Decimal(tax_rate),

@@ -7,7 +7,16 @@ from apps.accounts.factories import AdminUserFactory, UserFactory
 from apps.accounts.permissions import PermissionPreset
 from apps.clients.factories import ClientFactory
 from apps.clients.models import Client
+from apps.crm.models import Currency
 from apps.projects.factories import ProjectAccessFactory, ProjectFactory
+
+
+def _currency_id():
+    currency, _created = Currency.objects.get_or_create(
+        code='USD',
+        defaults={'name': 'US Dollar', 'symbol': '$'},
+    )
+    return currency.pk
 
 
 def _preset(name, **overrides):
@@ -145,6 +154,7 @@ class TestCreateWithoutViewAll:
         created = client.post(reverse('client_create'), {
             'name': 'Fresh Client',
             'email': 'fresh@client.com',
+            'currency': _currency_id(),
         })
         assert created.status_code == 302
         fresh = Client.objects.get(name='Fresh Client')
@@ -164,7 +174,10 @@ class TestCreateWithoutViewAll:
         assert client.post(reverse('client_delete', args=[foreign.pk])).status_code == 404
         assert Client.objects.filter(pk=foreign.pk).exists()
 
-        drawer = client.post(reverse('client_create_drawer'), {'name': 'Drawer Client'})
+        drawer = client.post(reverse('client_create_drawer'), {
+            'name': 'Drawer Client',
+            'currency': _currency_id(),
+        })
         assert drawer.status_code == 200
         drawer_client = Client.objects.get(name='Drawer Client')
         assert drawer_client.created_by == user
@@ -202,6 +215,7 @@ class TestEditWithoutCreate:
             'phone': '',
             'address': '',
             'notes': '',
+            'currency': _currency_id(),
         })
         assert page.status_code == 302
         visible.refresh_from_db()
@@ -288,7 +302,10 @@ class TestDeleteStaysAdmin:
         existing = ClientFactory(name='Admin Target')
         client.force_login(admin)
 
-        created = client.post(reverse('client_create'), {'name': 'Admin Created'})
+        created = client.post(reverse('client_create'), {
+            'name': 'Admin Created',
+            'currency': _currency_id(),
+        })
         assert created.status_code == 302
         made = Client.objects.get(name='Admin Created')
         assert made.created_by == admin
@@ -300,6 +317,7 @@ class TestDeleteStaysAdmin:
             'phone': '',
             'address': '',
             'notes': '',
+            'currency': _currency_id(),
         })
         assert edited.status_code == 302
         existing.refresh_from_db()

@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'django_htmx',
     # Local apps
     'apps.accounts',
+    'apps.crm',
     'apps.clients',
     'apps.projects',
     'apps.tasks',

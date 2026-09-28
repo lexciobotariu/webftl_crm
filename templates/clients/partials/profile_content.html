@@ -76,6 +76,16 @@
                     {% endif %}
                 </dd>
             </div>
+            <div>
+                <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Currency</dt>
+                <dd class="text-zinc-300">
+                    {% if client.currency_id %}
+                    {{ client.currency.code }} {{ client.currency.symbol }}
+                    {% else %}
+                    <span class="text-zinc-600">—</span>
+                    {% endif %}
+                </dd>
+            </div>
         </dl>
     </div>
 </div>

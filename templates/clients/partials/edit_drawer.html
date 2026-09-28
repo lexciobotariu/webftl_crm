@@ -91,6 +91,22 @@
                 <p class="text-xs text-red-400 mt-1">{{ form.tax_id.errors.0 }}</p>
                 {% endif %}
             </div>
+
+            {% if client.currency_id %}
+            <div>
+                <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Currency</label>
+                <p class="text-sm text-zinc-100">{{ client.currency.code }} {{ client.currency.symbol }}</p>
+            </div>
+            {% else %}
+            <div>
+                <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5" for="{{ form.currency.id_for_label }}">Currency</label>
+                {{ form.currency }}
+                <p class="text-xs text-zinc-500 mt-1">Choose once. It stays after the first save.</p>
+                {% if form.currency.errors %}
+                <p class="text-xs text-red-400 mt-1">{{ form.currency.errors.0 }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
         </div>
 
         <div class="flex gap-3 mt-6 pt-4 border-t border-border-subtle">

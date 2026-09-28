@@ -67,7 +67,28 @@
 
     <div class="flex-1 overflow-y-auto p-6">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-            <div class="bg-elevated/40 border border-border-subtle rounded-card p-4 lg:col-span-2">
+            {% if invoice.currency_code %}
+            <div class="bg-elevated/40 border border-border-subtle rounded-card p-4">
+                <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Company</div>
+                {% if invoice.company_legal_name %}
+                <div class="text-sm font-medium text-zinc-100">{{ invoice.company_legal_name }}</div>
+                {% endif %}
+                {% if invoice.company_email %}
+                <div class="text-sm text-zinc-400 mt-1">{{ invoice.company_email }}</div>
+                {% endif %}
+                {% if invoice.company_phone %}
+                <div class="text-sm text-zinc-400 mt-1">{{ invoice.company_phone }}</div>
+                {% endif %}
+                {% if invoice.company_address %}
+                <div class="text-sm text-zinc-400 mt-1 whitespace-pre-line">{{ invoice.company_address }}</div>
+                {% endif %}
+                {% if invoice.company_tax_id %}
+                <div class="text-sm text-zinc-400 mt-1">Tax ID {{ invoice.company_tax_id }}</div>
+                {% endif %}
+                <p class="text-xs text-zinc-600 mt-3">Copied when the invoice was created.</p>
+            </div>
+            {% endif %}
+            <div class="bg-elevated/40 border border-border-subtle rounded-card p-4 {% if not invoice.currency_code %}lg:col-span-2{% endif %}">
                 <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Bill to</div>
                 <div class="text-sm font-medium text-zinc-100">{{ invoice.bill_to_name }}</div>
                 {% if invoice.bill_to_email %}
@@ -138,8 +159,8 @@
                             {% endif %}
                         </td>
                         <td class="px-4 py-3 text-sm text-zinc-400 text-right">{{ line.quantity|floatformat:2 }}</td>
-                        <td class="px-4 py-3 text-sm text-zinc-400 text-right">{{ line.unit_price|floatformat:2 }}</td>
-                        <td class="px-4 py-3 text-sm text-zinc-200 text-right">{{ line.amount|floatformat:2 }}</td>
+                        <td class="px-4 py-3 text-sm text-zinc-400 text-right">{% include "invoices/partials/money.html" with amount=line.unit_price %}</td>
+                        <td class="px-4 py-3 text-sm text-zinc-200 text-right">{% include "invoices/partials/money.html" with amount=line.amount %}</td>
                         {% if invoice.is_draft and perms_map.invoices_edit %}
                         <td class="px-4 py-3 text-right">
                             <button hx-get="{% url 'invoice_line_edit' invoice.pk line.pk %}"
@@ -168,23 +189,23 @@
             <div class="border-t border-border-subtle px-4 py-3 space-y-1">
                 <div class="flex justify-end gap-8 text-sm">
                     <span class="text-zinc-500">Subtotal</span>
-                    <span class="text-zinc-200 w-24 text-right">{{ invoice.subtotal|floatformat:2 }}</span>
+                    <span class="text-zinc-200 w-24 text-right">{% include "invoices/partials/money.html" with amount=invoice.subtotal %}</span>
                 </div>
                 <div class="flex justify-end gap-8 text-sm">
                     <span class="text-zinc-500">Tax {{ invoice.tax_rate|floatformat:2 }}%</span>
-                    <span class="text-zinc-200 w-24 text-right">{{ invoice.tax_amount|floatformat:2 }}</span>
+                    <span class="text-zinc-200 w-24 text-right">{% include "invoices/partials/money.html" with amount=invoice.tax_amount %}</span>
                 </div>
                 <div class="flex justify-end gap-8 text-sm font-medium">
                     <span class="text-zinc-300">Total</span>
-                    <span class="text-zinc-100 w-24 text-right">{{ invoice.total|floatformat:2 }}</span>
+                    <span class="text-zinc-100 w-24 text-right">{% include "invoices/partials/money.html" with amount=invoice.total %}</span>
                 </div>
                 <div class="flex justify-end gap-8 text-sm">
                     <span class="text-zinc-500">Paid</span>
-                    <span class="text-zinc-200 w-24 text-right">{{ invoice.amount_paid|floatformat:2 }}</span>
+                    <span class="text-zinc-200 w-24 text-right">{% include "invoices/partials/money.html" with amount=invoice.amount_paid %}</span>
                 </div>
                 <div class="flex justify-end gap-8 text-sm font-medium">
                     <span class="text-zinc-300">Balance</span>
-                    <span class="text-zinc-100 w-24 text-right">{{ invoice.balance|floatformat:2 }}</span>
+                    <span class="text-zinc-100 w-24 text-right">{% include "invoices/partials/money.html" with amount=invoice.balance %}</span>
                 </div>
             </div>
         </div>
@@ -207,7 +228,7 @@
                     <tr>
                         <td class="px-4 py-3 text-sm text-zinc-300">{{ payment.date|date:"M j, Y" }}</td>
                         <td class="px-4 py-3 text-sm text-zinc-400">{{ payment.note|default:"—" }}</td>
-                        <td class="px-4 py-3 text-sm text-zinc-200 text-right">{{ payment.amount|floatformat:2 }}</td>
+                        <td class="px-4 py-3 text-sm text-zinc-200 text-right">{% include "invoices/partials/money.html" with amount=payment.amount %}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
