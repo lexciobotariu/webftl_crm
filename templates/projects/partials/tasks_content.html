@@ -4,9 +4,50 @@
             <div class="flex items-center gap-3">
                 <i data-lucide="check-square" class="w-4 h-4 text-zinc-500"></i>
                 <h2 class="text-sm font-medium text-zinc-100">Tasks</h2>
-                <span class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ total_tasks }}</span>
+                <span class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ list_task_count }}</span>
+                {% if hidden_by_filter_count %}
+                <span class="text-xs text-zinc-500">{{ hidden_by_filter_count }} task{{ hidden_by_filter_count|pluralize }} hidden</span>
+                {% endif %}
             </div>
             <div class="flex items-center gap-2">
+                <div class="relative" x-data="dropdown">
+                    <button type="button" @click="toggle()"
+                            class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-300 hover:bg-hover transition-colors">
+                        <i data-lucide="filter" class="w-3.5 h-3.5"></i>
+                        Filter
+                    </button>
+                    <div x-show="open" x-cloak @click.away="close()"
+                         x-transition
+                         class="absolute right-0 top-full mt-1 w-64 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 p-3">
+                        <form method="post" action="{% url 'project_task_list_filter' project.pk %}">
+                            {% csrf_token %}
+                            <div class="space-y-1">
+                                {% for status in project.statuses.all %}
+                                <label class="flex items-center justify-between gap-2 py-1 text-sm text-zinc-300">
+                                    <span class="truncate">{{ status.name }}</span>
+                                    <span class="flex items-center gap-1.5 text-xs text-zinc-500 flex-shrink-0">
+                                        Hide
+                                        <input type="checkbox" name="hidden_statuses" value="{{ status.pk }}"
+                                               {% if status.pk in hidden_status_ids %}checked{% endif %}
+                                               class="accent-accent w-4 h-4">
+                                    </span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                            <div class="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-border-subtle">
+                                <button type="submit"
+                                        formaction="{% url 'project_task_list_filter_clear' project.pk %}"
+                                        class="inline-flex items-center bg-panel border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-300 hover:bg-hover transition-colors">
+                                    Clear
+                                </button>
+                                <button type="submit"
+                                        class="inline-flex items-center bg-accent text-white px-3 py-1.5 rounded-card text-xs font-medium hover:bg-accent-hover transition-colors">
+                                    Apply
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
                 {% if can_create_task %}
                 <button hx-get="{% url 'task_create' project.pk %}"
                         hx-target="#slide-over"
@@ -87,6 +128,17 @@
             {% endfor %}
         </tbody>
     </table>
+    {% elif hidden_by_filter_count %}
+    <div class="flex flex-col items-center justify-center py-12 text-zinc-500">
+        <i data-lucide="filter" class="w-10 h-10 mb-3 opacity-30"></i>
+        <p class="text-sm mb-2">Nothing matches this filter</p>
+        <form method="post" action="{% url 'project_task_list_filter_clear' project.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="text-accent hover:text-accent-hover text-sm">
+                Clear filter
+            </button>
+        </form>
+    </div>
     {% else %}
     <div class="flex flex-col items-center justify-center py-12 text-zinc-500">
         <i data-lucide="check-square" class="w-10 h-10 mb-3 opacity-30"></i>

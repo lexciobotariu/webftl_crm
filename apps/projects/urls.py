@@ -8,6 +8,16 @@ urlpatterns = [
     path('create/', views.project_create, name='project_create'),
     path('<int:pk>/overview/', views.project_detail, name='project_detail'),
     path('<int:pk>/tasks/', views.project_detail, name='project_detail_tasks'),
+    path(
+        '<int:pk>/tasks/filter/',
+        views.project_task_list_filter_apply,
+        name='project_task_list_filter',
+    ),
+    path(
+        '<int:pk>/tasks/filter/clear/',
+        views.project_task_list_filter_clear,
+        name='project_task_list_filter_clear',
+    ),
     path('<int:pk>/notes/', views.project_detail, name='project_detail_notes'),
     path('<int:pk>/team/', views.project_detail, name='project_detail_team'),
     path('<int:pk>/team/add/', views.project_team_add, name='project_team_add'),

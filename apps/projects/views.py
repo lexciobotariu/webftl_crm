@@ -18,6 +18,7 @@ from .forms import LabelForm, ProjectForm, StatusForm
 from .models import (
     Project,
     ProjectAccess,
+    ProjectTaskListFilter,
     Status,
     can_access_project,
     can_edit_project,
@@ -100,7 +101,8 @@ def project_detail(request, pk):
         return HttpResponseForbidden("You don't have access to this project")
 
     # Calculate stats. "Done" is whatever the project marks with Status.is_done,
-    # so renaming a column cannot break these numbers.
+    # so renaming a column cannot break these numbers. These counts stay on every
+    # visible task; the personal list filter below applies only on the Tasks tab.
     tasks = visible_tasks(request.user, project).select_related('status', 'assignee')
     total_tasks = tasks.count()
     completed_tasks = tasks.done().count()
@@ -129,10 +131,26 @@ def project_detail(request, pk):
         if editable:
             addable_users = _addable_users(project)
 
+    list_tasks = tasks
+    hidden_status_ids = []
+    hidden_by_filter_count = 0
+    if active_tab == 'tasks':
+        saved_filter = ProjectTaskListFilter.objects.filter(
+            user=request.user, project=project
+        ).first()
+        if saved_filter is not None:
+            hidden_status_ids = list(saved_filter.hidden_statuses.values_list('pk', flat=True))
+        if hidden_status_ids:
+            hidden_by_filter_count = tasks.filter(status_id__in=hidden_status_ids).count()
+            list_tasks = tasks.exclude(status_id__in=hidden_status_ids)
+
     return render(request, 'projects/project_detail.html', {
         'project': project,
-        'tasks': tasks,
+        'tasks': list_tasks,
         'total_tasks': total_tasks,
+        'list_task_count': total_tasks - hidden_by_filter_count,
+        'hidden_by_filter_count': hidden_by_filter_count,
+        'hidden_status_ids': hidden_status_ids,
         'completed_tasks': completed_tasks,
         'active_tasks': active_tasks,
         'overdue_tasks': overdue_tasks,
@@ -143,6 +161,43 @@ def project_detail(request, pk):
         'access_rows': access_rows,
         'addable_users': addable_users,
     })
+
+
+def _project_for_task_list(request, pk):
+    """The project, when this person may open it and keep their own list filter."""
+    project = get_object_or_404(Project, pk=pk)
+    if not can_access_project(request.user, project):
+        return None
+    return project
+
+
+@login_required
+@require_permission('access_projects')
+@require_POST
+def project_task_list_filter_apply(request, pk):
+    """Replace this person's hidden statuses. No project-edit permission."""
+    project = _project_for_task_list(request, pk)
+    if project is None:
+        return HttpResponseForbidden("You don't have access to this project")
+
+    task_filter, _created = ProjectTaskListFilter.objects.get_or_create(
+        user=request.user, project=project
+    )
+    task_filter.replace_hidden_statuses(request.POST.getlist('hidden_statuses'))
+    return redirect('project_detail_tasks', pk=project.pk)
+
+
+@login_required
+@require_permission('access_projects')
+@require_POST
+def project_task_list_filter_clear(request, pk):
+    """Delete this person's filter row so the task list shows every visible task."""
+    project = _project_for_task_list(request, pk)
+    if project is None:
+        return HttpResponseForbidden("You don't have access to this project")
+
+    ProjectTaskListFilter.objects.filter(user=request.user, project=project).delete()
+    return redirect('project_detail_tasks', pk=project.pk)
 
 
 @login_required
