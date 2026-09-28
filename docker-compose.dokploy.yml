@@ -8,6 +8,7 @@
 # Postgres is a separate Dokploy database. The Environment tab is written to a
 # .env file next to this compose file and is not injected unless referenced
 # below. Set DATABASE_URL to that database's internal connection URL.
+# The image entrypoint runs migrate --noinput once, then execs gunicorn.
 
 services:
   web:

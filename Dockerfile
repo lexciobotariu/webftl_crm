@@ -24,6 +24,11 @@ RUN SECRET_KEY=build-only-not-a-runtime-secret \
     SECURE_SSL_REDIRECT=False \
     python manage.py collectstatic --noinput
 
+# Migrate once on container start, before gunicorn workers. Copy and mark
+# executable as root; the running process is still appuser.
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
 # Run as an unprivileged user.
 RUN useradd --create-home --uid 10001 appuser \
     && chown -R appuser:appuser /app
@@ -31,6 +36,7 @@ USER appuser
 
 EXPOSE 8000
 
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["gunicorn", "config.wsgi:application", \
      "--bind", "0.0.0.0:8000", \
      "--workers", "3", \
