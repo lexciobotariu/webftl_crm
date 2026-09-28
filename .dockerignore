@@ -17,3 +17,5 @@ screenshots
 !README.md
 # config/views.py reads CHANGELOG.md at request time for the in-app changelog page.
 !CHANGELOG.md
+# SQL dumps left next to the code must not be copied into the image.
+*.sql
