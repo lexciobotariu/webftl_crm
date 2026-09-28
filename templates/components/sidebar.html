@@ -18,7 +18,7 @@
         <a href="{% url 'dashboard' %}"
            class="flex items-center gap-2.5 px-3 py-2 rounded-control text-[13px] font-medium transition-colors duration-150
                   {% if request.resolver_match.url_name == 'dashboard' %}
-                  bg-elevated text-zinc-100 border border-border-subtle shadow-nav
+                  bg-elevated text-zinc-100 border border-border-subtle
                   {% else %}
                   text-zinc-400 hover:text-zinc-200 hover:bg-hover
                   {% endif %}">
@@ -30,7 +30,7 @@
         <a href="{% url 'client_list' %}"
            class="flex items-center gap-2.5 px-3 py-2 rounded-control text-[13px] font-medium transition-colors duration-150
                   {% if 'client' in request.resolver_match.url_name %}
-                  bg-elevated text-zinc-100 border border-border-subtle shadow-nav
+                  bg-elevated text-zinc-100 border border-border-subtle
                   {% else %}
                   text-zinc-400 hover:text-zinc-200 hover:bg-hover
                   {% endif %}">
@@ -42,7 +42,7 @@
         <a href="{% url 'project_list' %}"
            class="flex items-center gap-2.5 px-3 py-2 rounded-control text-[13px] font-medium transition-colors duration-150
                   {% if 'project' in request.resolver_match.url_name %}
-                  bg-elevated text-zinc-100 border border-border-subtle shadow-nav
+                  bg-elevated text-zinc-100 border border-border-subtle
                   {% else %}
                   text-zinc-400 hover:text-zinc-200 hover:bg-hover
                   {% endif %}">
@@ -54,7 +54,7 @@
         <a href="{% url 'my_tasks' %}"
            class="flex items-center gap-2.5 px-3 py-2 rounded-control text-[13px] font-medium transition-colors duration-150
                   {% if request.resolver_match.url_name == 'my_tasks' %}
-                  bg-elevated text-zinc-100 border border-border-subtle shadow-nav
+                  bg-elevated text-zinc-100 border border-border-subtle
                   {% else %}
                   text-zinc-400 hover:text-zinc-200 hover:bg-hover
                   {% endif %}">
@@ -64,7 +64,7 @@
         <a href="{% url 'time_week' %}"
            class="flex items-center gap-2.5 pl-9 pr-3 py-1.5 rounded-control text-[13px] font-medium transition-colors duration-150
                   {% if request.resolver_match.url_name == 'time_week' %}
-                  bg-elevated text-zinc-100 border border-border-subtle shadow-nav
+                  bg-elevated text-zinc-100 border border-border-subtle
                   {% else %}
                   text-zinc-400 hover:text-zinc-200 hover:bg-hover
                   {% endif %}">
@@ -82,7 +82,7 @@
         <a href="{% url 'salary_list' %}"
            class="flex items-center gap-2.5 px-3 py-2 rounded-control text-[13px] font-medium transition-colors duration-150
                   {% if 'salary' in request.resolver_match.url_name %}
-                  bg-elevated text-zinc-100 border border-border-subtle shadow-nav
+                  bg-elevated text-zinc-100 border border-border-subtle
                   {% else %}
                   text-zinc-400 hover:text-zinc-200 hover:bg-hover
                   {% endif %}">
@@ -94,7 +94,7 @@
         <a href="{% url 'invoice_list' %}"
            class="flex items-center gap-2.5 px-3 py-2 rounded-control text-[13px] font-medium transition-colors duration-150
                   {% if request.resolver_match.url_name == 'invoice_list' or request.resolver_match.url_name == 'invoice_detail' %}
-                  bg-elevated text-zinc-100 border border-border-subtle shadow-nav
+                  bg-elevated text-zinc-100 border border-border-subtle
                   {% else %}
                   text-zinc-400 hover:text-zinc-200 hover:bg-hover
                   {% endif %}">
@@ -106,7 +106,7 @@
         <a href="{% url 'team_list' %}"
            class="flex items-center gap-2.5 px-3 py-2 rounded-control text-[13px] font-medium transition-colors duration-150
                   {% if 'team' in request.resolver_match.url_name %}
-                  bg-elevated text-zinc-100 border border-border-subtle shadow-nav
+                  bg-elevated text-zinc-100 border border-border-subtle
                   {% else %}
                   text-zinc-400 hover:text-zinc-200 hover:bg-hover
                   {% endif %}">
@@ -121,7 +121,7 @@
         <a href="{% url 'settings' %}"
            class="flex items-center gap-2.5 px-3 py-2 rounded-control text-[13px] font-medium transition-colors duration-150
                   {% if request.resolver_match.url_name == 'settings' or request.resolver_match.url_name == 'currency_add' or request.resolver_match.url_name == 'currency_delete' %}
-                  bg-elevated text-zinc-100 border border-border-subtle shadow-nav
+                  bg-elevated text-zinc-100 border border-border-subtle
                   {% else %}
                   text-zinc-400 hover:text-zinc-200 hover:bg-hover
                   {% endif %}">
