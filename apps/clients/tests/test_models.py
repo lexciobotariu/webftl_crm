@@ -29,3 +29,25 @@ class TestClientModel:
         clients = list(Client.objects.all())
         assert clients[0].name == 'Alpha Inc'
         assert clients[1].name == 'Zebra Corp'
+
+    def test_blank_billing_name_and_email_use_contact(self):
+        client = ClientFactory(
+            name='Acme Corp',
+            email='acme@client.com',
+            billing_name='',
+            billing_email='',
+        )
+        assert client.bill_to_name == 'Acme Corp'
+        assert client.bill_to_email == 'acme@client.com'
+        assert client.billing_name == ''
+        assert client.billing_email == ''
+
+    def test_set_billing_name_and_email_override_contact(self):
+        client = ClientFactory(
+            name='Acme Corp',
+            email='acme@client.com',
+            billing_name='Acme Billing LLC',
+            billing_email='billing@acme.com',
+        )
+        assert client.bill_to_name == 'Acme Billing LLC'
+        assert client.bill_to_email == 'billing@acme.com'

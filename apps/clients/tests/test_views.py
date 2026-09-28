@@ -71,6 +71,157 @@ class TestClientCreate:
 
 
 @pytest.mark.django_db
+class TestClientBillingFields:
+    def test_create_and_edit_save_tax_id_and_overrides(self, client):
+        from apps.clients.models import Client
+
+        admin = AdminUserFactory()
+        client.force_login(admin)
+
+        created = client.post(reverse('client_create'), {
+            'name': 'Billed Client',
+            'email': 'contact@client.com',
+            'phone': '',
+            'address': '1 Billing St',
+            'notes': '',
+            'billing_name': 'Billed Client LLC',
+            'billing_email': 'ap@client.com',
+            'tax_id': 'EIN-42',
+        })
+        assert created.status_code == 302
+        saved = Client.objects.get(name='Billed Client')
+        assert saved.billing_name == 'Billed Client LLC'
+        assert saved.billing_email == 'ap@client.com'
+        assert saved.tax_id == 'EIN-42'
+        assert saved.name == 'Billed Client'
+        assert saved.email == 'contact@client.com'
+
+        edited = client.post(reverse('client_edit', args=[saved.pk]), {
+            'name': 'Billed Client',
+            'email': 'contact@client.com',
+            'phone': '',
+            'address': '1 Billing St',
+            'notes': '',
+            'billing_name': 'Billed Client Inc',
+            'billing_email': 'finance@client.com',
+            'tax_id': 'EIN-99',
+        })
+        assert edited.status_code == 302
+        saved.refresh_from_db()
+        assert saved.billing_name == 'Billed Client Inc'
+        assert saved.billing_email == 'finance@client.com'
+        assert saved.tax_id == 'EIN-99'
+
+        drawer = client.post(reverse('client_edit_drawer', args=[saved.pk]), {
+            'name': 'Billed Client',
+            'email': 'contact@client.com',
+            'phone': '',
+            'address': '1 Billing St',
+            'billing_name': 'Drawer Billing',
+            'billing_email': 'drawer-ap@client.com',
+            'tax_id': 'TAX-7',
+        })
+        assert drawer.status_code == 200
+        saved.refresh_from_db()
+        assert saved.billing_name == 'Drawer Billing'
+        assert saved.billing_email == 'drawer-ap@client.com'
+        assert saved.tax_id == 'TAX-7'
+
+    def test_blank_billing_fields_are_not_copied_from_contact(self, client):
+        from apps.clients.models import Client
+
+        admin = AdminUserFactory()
+        client.force_login(admin)
+        created = client.post(reverse('client_create'), {
+            'name': 'Plain Client',
+            'email': 'plain@client.com',
+            'phone': '',
+            'address': '',
+            'notes': '',
+            'billing_name': '',
+            'billing_email': '',
+            'tax_id': '',
+        })
+        assert created.status_code == 302
+        saved = Client.objects.get(name='Plain Client')
+        assert saved.billing_name == ''
+        assert saved.billing_email == ''
+        assert saved.bill_to_name == 'Plain Client'
+        assert saved.bill_to_email == 'plain@client.com'
+
+        drawer = client.post(reverse('client_create_drawer'), {
+            'name': 'Drawer Plain',
+            'email': 'drawer-plain@client.com',
+            'phone': '',
+            'address': '',
+        })
+        assert drawer.status_code == 200
+        drawer_client = Client.objects.get(name='Drawer Plain')
+        assert drawer_client.billing_name == ''
+        assert drawer_client.billing_email == ''
+        assert drawer_client.tax_id == ''
+
+    def test_forms_list_billing_fields(self, client):
+        admin = AdminUserFactory()
+        client.force_login(admin)
+        existing = ClientFactory(
+            billing_name='Kept Billing',
+            billing_email='kept@client.com',
+            tax_id='KEEP-1',
+        )
+
+        create_html = client.get(reverse('client_create')).content.decode()
+        drawer_html = client.get(reverse('client_create_drawer')).content.decode()
+        edit_html = client.get(reverse('client_edit', args=[existing.pk])).content.decode()
+        edit_drawer = client.get(reverse('client_edit_drawer', args=[existing.pk])).content.decode()
+
+        for html in (create_html, drawer_html, edit_html, edit_drawer):
+            assert 'name="billing_name"' in html
+            assert 'name="billing_email"' in html
+            assert 'name="tax_id"' in html
+            assert 'A blank value uses the contact name.' in html
+            assert 'A blank value uses the contact email.' in html
+            assert '>Billing<' in html
+
+        assert 'value="Kept Billing"' in edit_drawer
+        assert 'value="kept@client.com"' in edit_drawer
+        assert 'value="KEEP-1"' in edit_drawer
+
+    def test_profile_shows_resolved_billing_name_and_tax_id(self, client):
+        admin = AdminUserFactory()
+        client.force_login(admin)
+
+        fallback = ClientFactory(
+            name='Fallback Co',
+            email='fallback@client.com',
+            billing_name='',
+            billing_email='',
+            tax_id='',
+        )
+        html = client.get(reverse('client_detail', args=[fallback.pk])).content.decode()
+        billing = html.split('>Billing</h2>', 1)[1].split('>Notes</h2>', 1)[0]
+        assert 'Fallback Co' in billing
+        assert 'fallback@client.com' in billing
+        assert '—' in billing
+
+        overridden = ClientFactory(
+            name='Contact Co',
+            email='contact@client.com',
+            billing_name='Invoice Co',
+            billing_email='invoice@client.com',
+            tax_id='RO123456',
+        )
+        html = client.get(reverse('client_detail', args=[overridden.pk])).content.decode()
+        billing = html.split('>Billing</h2>', 1)[1].split('>Notes</h2>', 1)[0]
+        contact = html.split('>Contact Information</h2>', 1)[1].split('>Billing</h2>', 1)[0]
+        assert 'Invoice Co' in billing
+        assert 'invoice@client.com' in billing
+        assert 'RO123456' in billing
+        assert '>Address<' in contact
+        assert 'Invoice Co' not in contact
+
+
+@pytest.mark.django_db
 class TestClientDetail:
     def test_client_detail_shows_info(self, client):
         preset = PermissionPreset.objects.get(name='Admin')

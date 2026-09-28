@@ -11,9 +11,17 @@
         {% csrf_token %}
 
         {% for field in form %}
+        {% if field.name == 'billing_name' %}
+        <div class="pt-2 border-t border-border-subtle">
+            <h2 class="text-[11px] uppercase tracking-[0.18em] text-zinc-500">Billing</h2>
+        </div>
+        {% endif %}
         <div>
-            <label class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">{{ field.label }}</label>
+            <label class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2" for="{{ field.id_for_label }}">{{ field.label }}</label>
             {{ field }}
+            {% if field.help_text %}
+            <p class="text-xs text-zinc-500 mt-1">{{ field.help_text }}</p>
+            {% endif %}
             {% if field.errors %}
             <p class="text-red-500 text-sm mt-1">{{ field.errors.0 }}</p>
             {% endif %}
