@@ -13,7 +13,7 @@
     <form method="post" action="{% url 'account_logout' %}" class="space-y-6">
         {% csrf_token %}
         <button type="submit"
-                class="w-full py-3 px-4 bg-accent hover:bg-accent-hover text-white font-medium rounded-card transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg">
+                class="w-full py-3 px-4 bg-accent hover:bg-accent-hover text-on-accent font-medium rounded-control transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-100 focus:ring-offset-2 focus:ring-offset-bg">
             Sign out
         </button>
         <a href="/"

@@ -1,10 +1,10 @@
 <div class="relative" x-data="{ open: false, selectedId: '{{ form.assignee.value|default:'' }}', selectedName: '{% if form.assignee.value %}{{ form.instance.assignee.name|default:''|escapejs }}{% endif %}' }">
     <input type="hidden" name="assignee" :value="selectedId">
     <button type="button" @click="open = !open"
-            class="flex items-center gap-2 px-2 py-1.5 rounded-card text-sm text-zinc-300 hover:bg-elevated transition-colors w-full">
+            class="flex items-center gap-2 px-2 py-1.5 rounded-control text-sm text-zinc-300 hover:bg-elevated transition-colors w-full">
         <template x-if="selectedId">
             <span class="flex items-center gap-2">
-                <span class="w-5 h-5 rounded-full bg-accent/30 flex items-center justify-center text-[10px] text-accent"
+                <span class="w-5 h-5 rounded-full bg-elevated flex items-center justify-center text-[10px] text-zinc-200"
                       x-text="selectedName.charAt(0).toUpperCase()"></span>
                 <span x-text="selectedName"></span>
             </span>
@@ -23,7 +23,7 @@
         {% for user in team_members %}
         <button type="button" @click="selectedId = '{{ user.pk }}'; selectedName = '{{ user.name|escapejs }}'; open = false"
                 class="w-full text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors flex items-center gap-2 text-zinc-300">
-            <span class="w-5 h-5 rounded-full bg-accent/30 flex items-center justify-center text-[10px] text-accent">
+            <span class="w-5 h-5 rounded-full bg-elevated flex items-center justify-center text-[10px] text-zinc-200">
                 {{ user.name|slice:":1"|upper }}
             </span>
             {{ user.name }}

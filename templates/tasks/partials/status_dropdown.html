@@ -1,6 +1,6 @@
 <div class="relative" id="status-dropdown-{{ task.pk }}" x-data="dropdown">
     <button @click="toggle()"
-            class="flex items-center gap-2 px-2 py-1 rounded-card text-sm text-zinc-300 hover:bg-elevated transition-colors">
+            class="flex items-center gap-2 px-2 py-1 rounded-control text-sm text-zinc-300 hover:bg-elevated transition-colors">
         <i data-lucide="circle" class="w-3.5 h-3.5 text-zinc-500"></i>
         <span>{{ task.status.name }}</span>
     </button>
@@ -13,7 +13,7 @@
                 hx-target="#status-dropdown-{{ task.pk }}"
                 hx-swap="outerHTML"
                 @click="close()"
-                class="w-full text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors {% if status.pk == task.status.pk %}text-accent{% else %}text-zinc-300{% endif %}">
+                class="w-full text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors {% if status.pk == task.status.pk %}text-zinc-200{% else %}text-zinc-300{% endif %}">
             {{ status.name }}
         </button>
         {% endfor %}

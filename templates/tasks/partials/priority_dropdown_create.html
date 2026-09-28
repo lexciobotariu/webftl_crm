@@ -1,11 +1,11 @@
 <div class="relative" x-data="{ open: false, selected: '{{ form.priority.value|default:'' }}' }">
     <input type="hidden" name="priority" :value="selected">
     <button type="button" @click="open = !open"
-            class="flex items-center gap-2 px-2 py-1.5 rounded-card text-sm hover:bg-elevated transition-colors w-full"
+            class="flex items-center gap-2 px-2 py-1.5 rounded-control text-sm hover:bg-elevated transition-colors w-full"
             :class="{
-                'text-red-400': selected === 'urgent',
-                'text-orange-400': selected === 'high',
-                'text-yellow-400': selected === 'medium',
+                'text-error': selected === 'urgent',
+                'text-error': selected === 'high',
+                'text-zinc-400': selected === 'medium',
                 'text-zinc-400': selected === 'low' || selected === ''
             }">
         <template x-if="selected">
@@ -28,7 +28,7 @@
         {% for value, label in priority_choices %}
         <button type="button" @click="selected = '{{ value }}'; open = false"
                 class="w-full text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors
-                       {% if value == 'urgent' %}text-red-400{% elif value == 'high' %}text-orange-400{% elif value == 'medium' %}text-yellow-400{% else %}text-zinc-300{% endif %}">
+                       {% if value == 'urgent' %}text-error{% elif value == 'high' %}text-error{% elif value == 'medium' %}text-zinc-400{% else %}text-zinc-300{% endif %}">
             {{ label }}
         </button>
         {% endfor %}

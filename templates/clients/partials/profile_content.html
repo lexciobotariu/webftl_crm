@@ -12,7 +12,7 @@
                 <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Email</dt>
                 <dd class="text-zinc-300">
                     {% if client.email %}
-                    <a href="mailto:{{ client.email }}" class="hover:text-accent transition-colors">{{ client.email }}</a>
+                    <a href="mailto:{{ client.email }}" class="hover:text-zinc-50 transition-colors">{{ client.email }}</a>
                     {% else %}
                     <span class="text-zinc-600">—</span>
                     {% endif %}
@@ -22,7 +22,7 @@
                 <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Phone</dt>
                 <dd class="text-zinc-300">
                     {% if client.phone %}
-                    <a href="tel:{{ client.phone }}" class="hover:text-accent transition-colors">{{ client.phone }}</a>
+                    <a href="tel:{{ client.phone }}" class="hover:text-zinc-50 transition-colors">{{ client.phone }}</a>
                     {% else %}
                     <span class="text-zinc-600">—</span>
                     {% endif %}
@@ -60,7 +60,7 @@
                 <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Billing email</dt>
                 <dd class="text-zinc-300">
                     {% if client.bill_to_email %}
-                    <a href="mailto:{{ client.bill_to_email }}" class="hover:text-accent transition-colors">{{ client.bill_to_email }}</a>
+                    <a href="mailto:{{ client.bill_to_email }}" class="hover:text-zinc-50 transition-colors">{{ client.bill_to_email }}</a>
                     {% else %}
                     <span class="text-zinc-600">—</span>
                     {% endif %}

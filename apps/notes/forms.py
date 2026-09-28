@@ -16,21 +16,21 @@ class NoteForm(forms.ModelForm):
         fields = ['title', 'description', 'is_private']
         widgets = {
             'title': forms.TextInput(attrs={
-                'class': 'w-full px-3 py-2 bg-elevated border border-border-subtle rounded-card '
+                'class': 'w-full px-3 py-2 bg-elevated border border-border-subtle rounded-control '
                          'text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none '
-                         'focus:ring-2 focus:ring-purple-500',
+                         'focus:ring-2 focus:ring-border-strong',
                 'placeholder': 'Enter note title',
             }),
             'description': forms.Textarea(attrs={
                 'rows': 8,
-                'class': 'w-full px-3 py-2 bg-elevated border border-border-subtle rounded-card '
+                'class': 'w-full px-3 py-2 bg-elevated border border-border-subtle rounded-control '
                          'text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none '
-                         'focus:ring-2 focus:ring-purple-500 resize-none',
+                         'focus:ring-2 focus:ring-border-strong resize-none',
                 'placeholder': 'Enter note description...',
             }),
             'is_private': forms.CheckboxInput(attrs={
-                'class': 'w-4 h-4 bg-elevated border-border-subtle rounded text-purple-600 '
-                         'focus:ring-2 focus:ring-purple-500',
+                'class': 'w-4 h-4 bg-elevated border-border-subtle rounded accent-zinc-200 '
+                         'focus:ring-2 focus:ring-border-strong',
             }),
         }
 

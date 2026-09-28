@@ -1,9 +1,9 @@
 <div class="relative" x-data="dropdown">
     <button @click="toggle()"
-            class="flex items-center gap-2 px-2 py-1 rounded-card text-sm hover:bg-elevated transition-colors
-                   {% if task.priority == 'urgent' %}text-red-400
-                   {% elif task.priority == 'high' %}text-orange-400
-                   {% elif task.priority == 'medium' %}text-yellow-400
+            class="flex items-center gap-2 px-2 py-1 rounded-control text-sm hover:bg-elevated transition-colors
+                   {% if task.priority == 'urgent' %}text-error
+                   {% elif task.priority == 'high' %}text-error
+                   {% elif task.priority == 'medium' %}text-zinc-400
                    {% else %}text-zinc-400{% endif %}">
         {% if task.priority %}
         <i data-lucide="signal" class="w-3.5 h-3.5"></i>
@@ -30,7 +30,7 @@
                 hx-swap="innerHTML"
                 @click="close()"
                 class="w-full text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors
-                       {% if value == task.priority %}text-accent{% elif value == 'urgent' %}text-red-400{% elif value == 'high' %}text-orange-400{% elif value == 'medium' %}text-yellow-400{% else %}text-zinc-300{% endif %}">
+                       {% if value == task.priority %}text-zinc-200{% elif value == 'urgent' %}text-error{% elif value == 'high' %}text-error{% elif value == 'medium' %}text-zinc-400{% else %}text-zinc-300{% endif %}">
             {{ label }}
         </button>
         {% endfor %}

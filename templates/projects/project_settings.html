@@ -84,8 +84,8 @@
                             {% csrf_token %}
                             <div class="flex gap-3">
                                 <input type="text" name="name" required placeholder="New status name..."
-                                       class="flex-1 bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
-                                <button type="submit" class="bg-elevated border border-border-subtle text-zinc-300 px-4 py-2 rounded-card text-sm hover:bg-hover hover:border-border-strong transition-colors flex items-center gap-2">
+                                       class="flex-1 bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
+                                <button type="submit" class="bg-elevated border border-border-subtle text-zinc-300 px-4 py-2 rounded-control text-sm hover:bg-hover hover:border-border-strong transition-colors flex items-center gap-2">
                                     <i data-lucide="plus" class="w-4 h-4"></i>
                                     Add Status
                                 </button>
@@ -94,7 +94,7 @@
                                 <input type="checkbox" name="is_done" value="true" class="accent-accent w-3.5 h-3.5">
                                 Tasks in this status count as done
                             </label>
-                            <div id="status-form-error" class="text-xs text-red-400 mt-2"></div>
+                            <div id="status-form-error" class="text-xs text-error mt-2"></div>
                         </form>
                     </div>
                 </div>
@@ -128,13 +128,13 @@
                               class="flex gap-3 items-center pt-3 border-t border-border-subtle">
                             {% csrf_token %}
                             <input type="text" name="name" required placeholder="Label name..."
-                                   class="flex-1 bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                                   class="flex-1 bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
                             <div class="flex items-center gap-2">
                                 <label class="text-[11px] text-zinc-500 uppercase tracking-wider">Color</label>
                                 <input type="color" name="color" value="#8b5cf6"
-                                       class="w-10 h-9 bg-elevated border border-border-subtle rounded-card cursor-pointer p-0.5">
+                                       class="w-10 h-9 bg-elevated border border-border-subtle rounded-control cursor-pointer p-0.5">
                             </div>
-                            <button type="submit" class="bg-elevated border border-border-subtle text-zinc-300 px-4 py-2 rounded-card text-sm hover:bg-hover hover:border-border-strong transition-colors flex items-center gap-2">
+                            <button type="submit" class="bg-elevated border border-border-subtle text-zinc-300 px-4 py-2 rounded-control text-sm hover:bg-hover hover:border-border-strong transition-colors flex items-center gap-2">
                                 <i data-lucide="plus" class="w-4 h-4"></i>
                                 Add Label
                             </button>
@@ -145,10 +145,10 @@
 
                 {% if request.user.is_admin %}
                 <!-- Danger Zone -->
-                <div id="section-danger" class="bg-panel/80 rounded-panel border border-red-500/20 overflow-hidden">
-                    <div class="px-5 py-3 border-b border-red-500/20 flex items-center gap-2">
-                        <i data-lucide="alert-triangle" class="w-4 h-4 text-red-400"></i>
-                        <h2 class="text-xs font-semibold text-red-400 uppercase tracking-wider">Danger Zone</h2>
+                <div id="section-danger" class="bg-panel/80 rounded-panel border border-error/20 overflow-hidden">
+                    <div class="px-5 py-3 border-b border-error/20 flex items-center gap-2">
+                        <i data-lucide="alert-triangle" class="w-4 h-4 text-error"></i>
+                        <h2 class="text-xs font-semibold text-error uppercase tracking-wider">Danger Zone</h2>
                     </div>
                     <div class="p-5">
                         <div class="flex items-center justify-between">
@@ -158,7 +158,7 @@
                             </div>
                             <button hx-post="{% url 'project_delete' project.pk %}"
                                     hx-confirm="Are you sure you want to delete '{{ project.name }}'? This will permanently delete all tasks, statuses, and labels. This action cannot be undone."
-                                    class="bg-red-500/10 text-red-400 px-4 py-2 rounded-card text-sm hover:bg-red-500/20 border border-red-500/30 hover:border-red-500/50 transition-colors flex items-center gap-2">
+                                    class="bg-error/10 text-error px-4 py-2 rounded-control text-sm hover:bg-error/20 border border-error/30 hover:border-error/50 transition-colors flex items-center gap-2">
                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                                 Delete Project
                             </button>
@@ -174,23 +174,23 @@
             <div class="text-[10px] uppercase tracking-[0.2em] text-zinc-600 mb-3">Sections</div>
             <nav class="space-y-1">
                 <a href="#section-general"
-                   class="flex items-center gap-2 px-2.5 py-1.5 rounded-card text-[13px] text-zinc-400 hover:text-zinc-200 hover:bg-hover transition-colors">
+                   class="flex items-center gap-2 px-2.5 py-1.5 rounded-control text-[13px] text-zinc-400 hover:text-zinc-200 hover:bg-hover transition-colors">
                     <i data-lucide="folder" class="w-3.5 h-3.5"></i>
                     General
                 </a>
                 <a href="#section-statuses"
-                   class="flex items-center gap-2 px-2.5 py-1.5 rounded-card text-[13px] text-zinc-400 hover:text-zinc-200 hover:bg-hover transition-colors">
+                   class="flex items-center gap-2 px-2.5 py-1.5 rounded-control text-[13px] text-zinc-400 hover:text-zinc-200 hover:bg-hover transition-colors">
                     <i data-lucide="columns" class="w-3.5 h-3.5"></i>
                     Statuses
                 </a>
                 <a href="#section-labels"
-                   class="flex items-center gap-2 px-2.5 py-1.5 rounded-card text-[13px] text-zinc-400 hover:text-zinc-200 hover:bg-hover transition-colors">
+                   class="flex items-center gap-2 px-2.5 py-1.5 rounded-control text-[13px] text-zinc-400 hover:text-zinc-200 hover:bg-hover transition-colors">
                     <i data-lucide="tags" class="w-3.5 h-3.5"></i>
                     Labels
                 </a>
                 {% if request.user.is_admin %}
                 <a href="#section-danger"
-                   class="flex items-center gap-2 px-2.5 py-1.5 rounded-card text-[13px] text-red-400/70 hover:text-red-400 hover:bg-red-500/10 transition-colors">
+                   class="flex items-center gap-2 px-2.5 py-1.5 rounded-control text-[13px] text-error/70 hover:text-error hover:bg-error/10 transition-colors">
                     <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
                     Danger Zone
                 </a>

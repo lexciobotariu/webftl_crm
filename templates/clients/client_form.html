@@ -23,7 +23,7 @@
             <p class="text-xs text-zinc-500 mt-1">{{ field.help_text }}</p>
             {% endif %}
             {% if field.errors %}
-            <p class="text-red-500 text-sm mt-1">{{ field.errors.0 }}</p>
+            <p class="text-error text-sm mt-1">{{ field.errors.0 }}</p>
             {% endif %}
         </div>
         {% if field.name == 'tax_id' and client.currency_id %}
@@ -35,7 +35,7 @@
         {% endfor %}
 
         <div class="flex gap-4 pt-4">
-            <button type="submit" class="bg-accent text-white px-4 py-2 rounded-card hover:bg-accent/90 transition-colors">
+            <button type="submit" class="bg-accent text-on-accent px-4 py-2 rounded-control hover:bg-accent-hover transition-colors">
                 {% if client %}Save Changes{% else %}Create Client{% endif %}
             </button>
             <a href="{% if client %}{% url 'client_detail' client.pk %}{% else %}{% url 'client_list' %}{% endif %}"

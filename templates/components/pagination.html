@@ -23,7 +23,7 @@
         <div class="flex items-center gap-1 mx-2">
             {% for num in page_obj.paginator.page_range %}
                 {% if page_obj.number == num %}
-                <span class="px-3 py-1 text-sm font-medium text-zinc-100 bg-accent rounded">{{ num }}</span>
+                <span class="px-3 py-1 text-sm font-medium text-zinc-100 bg-elevated border border-border-strong rounded">{{ num }}</span>
                 {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
                 <a href="{% querystring page=num %}" class="px-3 py-1 text-sm text-zinc-400 hover:text-zinc-200 hover:bg-elevated rounded transition-colors">{{ num }}</a>
                 {% elif num == 1 or num == page_obj.paginator.num_pages %}

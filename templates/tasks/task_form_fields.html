@@ -3,7 +3,7 @@
     <label class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500">{{ form.title.label }}</label>
     {{ form.title }}
     {% if form.title.errors %}
-    <p class="text-red-500 text-sm mt-1">{{ form.title.errors.0 }}</p>
+    <p class="text-error text-sm mt-1">{{ form.title.errors.0 }}</p>
     {% endif %}
 </div>
 
@@ -12,7 +12,7 @@
     <label class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500">{{ form.description.label }}</label>
     {{ form.description }}
     {% if form.description.errors %}
-    <p class="text-red-500 text-sm mt-1">{{ form.description.errors.0 }}</p>
+    <p class="text-error text-sm mt-1">{{ form.description.errors.0 }}</p>
     {% endif %}
 </div>
 

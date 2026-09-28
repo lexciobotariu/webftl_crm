@@ -12,7 +12,7 @@
                         id="time-stop-{{ task.pk }}"
                         hx-post="{% url 'timer_stop' %}"
                         hx-swap="none"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-red-300 bg-elevated border border-border-subtle rounded-full hover:text-red-200 hover:border-zinc-600 transition-colors">
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-error bg-elevated border border-border-subtle rounded-full hover:text-error hover:border-zinc-600 transition-colors">
                     <i data-lucide="square" class="w-3.5 h-3.5"></i>
                     Stop
                 </button>
@@ -50,18 +50,18 @@
                 <label class="block text-xs text-zinc-500">
                     Start
                     <input type="datetime-local" name="started_at" required
-                           class="mt-1 w-full bg-panel border border-border-subtle rounded-card px-2 py-1.5 text-sm text-zinc-100 focus:border-accent focus:outline-none">
+                           class="mt-1 w-full bg-panel border border-border-subtle rounded-control px-2 py-1.5 text-sm text-zinc-100 focus:border-border-strong focus:outline-none">
                 </label>
                 <label class="block text-xs text-zinc-500">
                     End
                     <input type="datetime-local" name="ended_at" required
-                           class="mt-1 w-full bg-panel border border-border-subtle rounded-card px-2 py-1.5 text-sm text-zinc-100 focus:border-accent focus:outline-none">
+                           class="mt-1 w-full bg-panel border border-border-subtle rounded-control px-2 py-1.5 text-sm text-zinc-100 focus:border-border-strong focus:outline-none">
                 </label>
             </div>
             <input type="text" name="note" placeholder="Note (optional)"
-                   class="w-full bg-panel border border-border-subtle rounded-card px-2 py-1.5 text-sm text-zinc-100 placeholder-zinc-500 focus:border-accent focus:outline-none">
+                   class="w-full bg-panel border border-border-subtle rounded-control px-2 py-1.5 text-sm text-zinc-100 placeholder-zinc-500 focus:border-border-strong focus:outline-none">
             <div class="flex items-center gap-3">
-                <button type="submit" class="text-sm text-accent hover:text-accent-hover font-medium">Save</button>
+                <button type="submit" class="text-sm text-zinc-200 hover:text-zinc-50 font-medium">Save</button>
                 <button type="button"
                         onclick="this.closest('form').classList.add('hidden')"
                         class="text-sm text-zinc-500 hover:text-zinc-300">Cancel</button>

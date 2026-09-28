@@ -19,7 +19,7 @@
     </template>
 
     <button type="button" @click="open = !open"
-            class="flex items-center gap-1 px-2 py-1.5 rounded-card text-sm hover:bg-elevated transition-colors w-full flex-wrap">
+            class="flex items-center gap-1 px-2 py-1.5 rounded-control text-sm hover:bg-elevated transition-colors w-full flex-wrap">
         <template x-if="selectedLabels.length > 0">
             <span class="flex flex-wrap gap-1">
                 {% for label in project_labels %}
@@ -42,8 +42,8 @@
         <button type="button" @click="toggleLabel({{ label.pk }})"
                 class="w-full text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors flex items-center gap-2">
             <span class="w-3 h-3 rounded" style="background-color: {{ label.color }}"></span>
-            <span :class="isSelected({{ label.pk }}) ? 'text-accent' : 'text-zinc-300'">{{ label.name }}</span>
-            <i x-show="isSelected({{ label.pk }})" data-lucide="check" class="w-3 h-3 text-accent ml-auto"></i>
+            <span :class="isSelected({{ label.pk }}) ? 'text-zinc-200' : 'text-zinc-300'">{{ label.name }}</span>
+            <i x-show="isSelected({{ label.pk }})" data-lucide="check" class="w-3 h-3 text-zinc-200 ml-auto"></i>
         </button>
         {% empty %}
         <div class="px-3 py-2 text-sm text-zinc-500">No labels defined</div>

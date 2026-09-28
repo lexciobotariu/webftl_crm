@@ -4,29 +4,34 @@
  * - HTMX dynamic states
  */
 
-/* Dark scrollbar */
+/* Inter variable features: cv01, ss03, and slashed zero. */
+html {
+    font-feature-settings: "cv01" on, "ss03" on, "zero" on;
+}
+
+/* Scrollbar: void track, obsidian thumb. */
 ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-    background: #0A0A0A;
+    background: #08090a;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #1B1C20;
+    background: #161718;
     border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #2a2b30;
+    background: #23252a;
 }
 
 /* Firefox scrollbar */
 * {
     scrollbar-width: thin;
-    scrollbar-color: #1B1C20 #0A0A0A;
+    scrollbar-color: #161718 #08090a;
 }
 
 /* HTMX loading states.

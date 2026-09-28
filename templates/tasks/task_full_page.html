@@ -19,7 +19,7 @@
                         @click="navigator.clipboard.writeText(window.location.origin + '{% url 'task_full_page' task.project.pk task.pk %}'); copied = true; setTimeout(() => copied = false, 2000); $nextTick(() => lucide.createIcons())"
                         x-effect="if (copied !== undefined) $nextTick(() => lucide.createIcons())"
                         :title="copied ? 'Copied!' : 'Copy link'"
-                        :class="copied ? 'text-green-400 hover:text-green-300' : 'text-zinc-500 hover:text-zinc-300'"
+                        :class="copied ? 'text-success hover:text-success' : 'text-zinc-500 hover:text-zinc-300'"
                         class="p-1.5 hover:bg-elevated rounded-card transition-colors">
                     <i data-lucide="link" :data-lucide="copied ? 'check' : 'link'" class="w-4 h-4"></i>
                 </button>
@@ -28,7 +28,7 @@
                         hx-confirm="Delete this task?"
                         hx-target="#task-{{ task.pk }}"
                         hx-swap="delete"
-                        class="text-zinc-500 hover:text-red-400 p-1.5 hover:bg-elevated rounded-card" title="Delete">
+                        class="text-zinc-500 hover:text-error p-1.5 hover:bg-elevated rounded-control" title="Delete">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
                 {% endif %}
@@ -113,7 +113,7 @@
                     <i data-lucide="corner-down-right" class="w-4 h-4 text-zinc-500"></i>
                     <input type="text" name="title" placeholder="Sub-task title..."
                            class="flex-1 bg-transparent text-sm text-zinc-300 placeholder-zinc-500 focus:outline-none">
-                    <button type="submit" class="text-accent hover:text-accent-hover text-sm font-medium">Add</button>
+                    <button type="submit" class="text-zinc-200 hover:text-zinc-50 text-sm font-medium">Add</button>
                     <button type="button" onclick="this.closest('form').classList.add('hidden')" class="text-zinc-500 hover:text-zinc-300">
                         <i data-lucide="x" class="w-4 h-4"></i>
                     </button>

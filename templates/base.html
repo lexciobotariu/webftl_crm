@@ -5,38 +5,62 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}WebFTL CRM{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        // Linear-inspired neutrals
-                        'bg': '#0A0A0A',
-                        'sidebar': '#0A0A0A',
-                        'panel': '#0E0F0F',
-                        'card': '#1B1C20',
-                        'elevated': '#1E1F22',
-                        // Borders - very subtle
-                        'border': 'rgba(255, 255, 255, 0.08)',
-                        'border-subtle': 'rgba(255, 255, 255, 0.05)',
-                        'border-strong': 'rgba(255, 255, 255, 0.12)',
-                        // Interactive states
+                        'bg': '#08090a',
+                        'sidebar': '#08090a',
+                        'panel': '#0f1011',
+                        'card': '#161718',
+                        'elevated': '#161718',
+                        'border': '#23252a',
+                        'border-subtle': '#23252a',
+                        'border-strong': '#383b3f',
                         'hover': 'rgba(255, 255, 255, 0.05)',
                         'hover-strong': 'rgba(255, 255, 255, 0.08)',
-                        // Accent
                         'accent': {
-                            DEFAULT: '#8b5cf6',
-                            hover: '#a78bfa',
-                            muted: 'rgba(139, 92, 246, 0.16)',
-                        }
+                            DEFAULT: '#e4f222',
+                            hover: '#d4e61c',
+                            muted: 'rgba(228, 242, 34, 0.16)',
+                        },
+                        'on-accent': '#08090a',
+                        'success': '#27a644',
+                        'error': '#eb5757',
+                        // Document grays, so existing zinc utilities pick up the palette.
+                        'zinc': {
+                            50: '#ffffff',
+                            100: '#ffffff',
+                            200: '#e5e5e6',
+                            300: '#d0d6e0',
+                            400: '#8a8f98',
+                            500: '#8a8f98',
+                            600: '#62666d',
+                            700: '#62666d',
+                            800: '#383b3f',
+                            900: '#23252a',
+                            950: '#08090a',
+                        },
                     },
                     fontFamily: {
-                        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                    },
+                    fontWeight: {
+                        medium: '510',
                     },
                     borderRadius: {
-                        'card': '4px',
-                        'panel': '6px',
+                        'badge': '4px',
+                        'control': '6px',
+                        'card': '12px',
+                        'panel': '12px',
+                    },
+                    boxShadow: {
+                        nav: 'inset 2px 0 0 #e4f222',
                     },
                     keyframes: {
                         'slide-in-right': {
@@ -86,7 +110,7 @@
     <link rel="stylesheet" href="{% static 'css/custom.css' %}">
     <style>[x-cloak] { display: none !important; }</style>
 </head>
-<body class="h-full bg-bg text-zinc-100 antialiased selection:bg-accent/30" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' hx-indicator="#htmx-indicator">
+<body class="h-full bg-bg text-zinc-100 antialiased selection:bg-border-strong selection:text-zinc-50" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' hx-indicator="#htmx-indicator">
     {% if user.is_authenticated %}
     <div class="h-full flex overflow-hidden">
         {% include "components/sidebar.html" %}
@@ -117,7 +141,7 @@
     <div id="slide-over" class="fixed inset-y-0 right-0 w-full max-w-xl bg-panel border-l border-border-subtle z-50 overflow-y-auto hidden animate-slide-in-right"></div>
 
     <!-- Global HTMX loading indicator -->
-    <div id="htmx-indicator" class="htmx-indicator fixed top-3 right-3 z-[60] flex items-center gap-2 px-3 py-1.5 bg-elevated border border-border-subtle rounded-card text-xs text-zinc-400">
+    <div id="htmx-indicator" class="htmx-indicator fixed top-3 right-3 z-[60] flex items-center gap-2 px-3 py-1.5 bg-elevated border border-border-subtle rounded-control text-xs text-zinc-400">
         <svg class="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
@@ -126,7 +150,7 @@
     </div>
 
     <!-- Error toast for failed HTMX requests -->
-    <div id="htmx-error-toast" class="hidden fixed bottom-4 right-4 z-[60] max-w-sm px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-card text-sm text-red-300 shadow-lg"></div>
+    <div id="htmx-error-toast" class="hidden fixed bottom-4 right-4 z-[60] max-w-sm px-4 py-3 bg-error/10 border border-error/30 rounded-card text-sm text-error shadow-lg"></div>
 
     <!-- Initialize Lucide icons and event handlers -->
     <script>

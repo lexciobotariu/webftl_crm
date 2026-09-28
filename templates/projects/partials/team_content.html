@@ -13,7 +13,7 @@
         <div class="flex-1 min-w-0">
             <label for="team-add-user" class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Person</label>
             <select name="user" id="team-add-user" required
-                    class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                    class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
                 <option value="">Select a person</option>
                 {% for person in addable_users %}
                 <option value="{{ person.pk }}">{{ person.name }} ({{ person.email }})</option>
@@ -21,7 +21,7 @@
             </select>
         </div>
         <button type="submit"
-                class="inline-flex items-center gap-1.5 bg-accent text-white px-3 py-2 rounded-card text-xs font-medium hover:bg-accent-hover transition-colors">
+                class="inline-flex items-center gap-1.5 bg-accent text-on-accent px-3 py-2 rounded-control text-xs font-medium hover:bg-accent-hover transition-colors">
             <i data-lucide="plus" class="w-3.5 h-3.5"></i>
             Add
         </button>
@@ -56,7 +56,7 @@
                 <td class="px-4 py-3 text-right">
                     <form method="post" action="{% url 'project_team_remove' project.pk row.user.pk %}">
                         {% csrf_token %}
-                        <button type="submit" class="text-xs text-zinc-400 hover:text-red-400 transition-colors">
+                        <button type="submit" class="text-xs text-zinc-400 hover:text-error transition-colors">
                             Remove
                         </button>
                     </form>

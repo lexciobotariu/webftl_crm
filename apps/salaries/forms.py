@@ -6,7 +6,7 @@ from .models import EmployeeSalary, Payment, SalaryMonth
 
 User = get_user_model()
 
-INPUT_CLASSES = 'w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none'
+INPUT_CLASSES = 'w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none'
 
 MONTH_CHOICES = [
     (1, 'January'),

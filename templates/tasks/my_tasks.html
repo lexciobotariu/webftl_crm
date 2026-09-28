@@ -11,12 +11,12 @@
                 <i data-lucide="check-square" class="w-4 h-4 text-zinc-500"></i>
                 <h1 class="text-sm font-medium text-zinc-100">My Tasks</h1>
                 <a href="{% url 'my_tasks' %}"
-                   class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-card text-xs font-medium transition-colors {% if active_tab == 'tasks' %}bg-accent text-white{% else %}bg-elevated border border-border-subtle text-zinc-400 hover:text-zinc-200 hover:bg-hover{% endif %}">
+                   class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-control text-xs font-medium transition-colors {% if active_tab == 'tasks' %}bg-elevated text-zinc-100 border border-border-subtle{% else %}bg-elevated border border-border-subtle text-zinc-400 hover:text-zinc-200 hover:bg-hover{% endif %}">
                     Assigned Tasks
                     <span class="{% if active_tab == 'tasks' %}bg-white/20{% else %}bg-elevated{% endif %} text-xs px-1.5 py-0.5 rounded">{{ total_count }}</span>
                 </a>
                 <a href="{% url 'my_tasks_todos' %}"
-                   class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-card text-xs font-medium transition-colors {% if active_tab == 'todos' %}bg-accent text-white{% else %}bg-elevated border border-border-subtle text-zinc-400 hover:text-zinc-200 hover:bg-hover{% endif %}">
+                   class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-control text-xs font-medium transition-colors {% if active_tab == 'todos' %}bg-elevated text-zinc-100 border border-border-subtle{% else %}bg-elevated border border-border-subtle text-zinc-400 hover:text-zinc-200 hover:bg-hover{% endif %}">
                     To-Dos
                     <span class="{% if active_tab == 'todos' %}bg-white/20{% else %}bg-elevated{% endif %} text-xs px-1.5 py-0.5 rounded">{{ todo_count }}</span>
                 </a>
@@ -33,7 +33,7 @@
             <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/40">
                 <div class="flex items-center gap-4">
                     <select onchange="window.location.href='?priority=' + this.value"
-                            class="bg-elevated border border-border-subtle rounded px-2 py-1 text-xs text-zinc-400 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                            class="bg-elevated border border-border-subtle rounded px-2 py-1 text-xs text-zinc-400 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
                         <option value="">All Priorities</option>
                         <option value="urgent" {% if priority_filter == "urgent" %}selected{% endif %}>Urgent</option>
                         <option value="high" {% if priority_filter == "high" %}selected{% endif %}>High</option>

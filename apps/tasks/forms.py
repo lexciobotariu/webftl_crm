@@ -6,7 +6,7 @@ from apps.projects.models import get_assignable_users
 
 from .models import Label, Subtask, Task
 
-INPUT_CLASSES = 'w-full bg-panel border border-border-subtle rounded-card px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none transition-colors'
+INPUT_CLASSES = 'w-full bg-panel border border-border-subtle rounded-control px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none transition-colors'
 
 
 class TaskForm(forms.ModelForm):
@@ -40,8 +40,8 @@ DATETIME_INPUT_FORMATS = [
 ]
 
 DRAWER_INPUT = (
-    'w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm '
-    'text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none'
+    'w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm '
+    'text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none'
 )
 
 

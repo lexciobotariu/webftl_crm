@@ -9,7 +9,7 @@
                 hx-swap="outerHTML"
                 class="flex-shrink-0 w-4 h-4 rounded border border-border-subtle bg-card hover:border-border-strong transition-colors flex items-center justify-center">
             {% if todo.is_completed %}
-                <i data-lucide="check" class="w-3 h-3 text-accent"></i>
+                <i data-lucide="check" class="w-3 h-3 text-success"></i>
             {% endif %}
         </button>
     </td>
@@ -20,7 +20,7 @@
                 hx-target="#slide-over"
                 hx-swap="innerHTML"
                 hx-on::after-request="openSlideOver(event)"
-                class="text-left font-medium text-sm hover:text-accent transition-colors {% if todo.is_completed %}line-through text-zinc-500{% else %}text-zinc-100{% endif %}">
+                class="text-left font-medium text-sm hover:text-zinc-50 transition-colors {% if todo.is_completed %}line-through text-zinc-500{% else %}text-zinc-100{% endif %}">
             {{ todo.title }}
         </button>
     </td>
@@ -37,7 +37,7 @@
     <!-- Due Date -->
     <td class="px-4 py-3">
         {% if todo.due_date %}
-            <span class="text-sm {% if todo.due_date < today and not todo.is_completed %}text-red-400{% else %}text-zinc-500{% endif %}">
+            <span class="text-sm {% if todo.due_date < today and not todo.is_completed %}text-error{% else %}text-zinc-500{% endif %}">
                 {{ todo.due_date|date:"M d" }}
                 {% if todo.due_date < today and not todo.is_completed %}
                     <span class="text-xs">(overdue)</span>
@@ -51,7 +51,7 @@
     <!-- Status -->
     <td class="px-4 py-3">
         {% if todo.is_completed %}
-            <span class="px-2 py-0.5 text-xs rounded-full border bg-green-500/15 text-green-300 border-green-500/30">
+            <span class="px-2 py-0.5 text-xs rounded-full border bg-success/15 text-success border-success/30">
                 Completed
             </span>
         {% else %}
@@ -76,7 +76,7 @@
                     hx-target="#todo-{{ todo.id }}"
                     hx-swap="outerHTML swap:0.3s"
                     hx-confirm="Delete this to-do?"
-                    class="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                    class="p-1.5 text-zinc-500 hover:text-error hover:bg-error/10 rounded transition-colors"
                     title="Delete">
                 <i data-lucide="trash-2" class="w-4 h-4"></i>
             </button>

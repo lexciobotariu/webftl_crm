@@ -5,12 +5,12 @@
     {% endif %}
     <p class="mb-2 text-sm">{{ message }}</p>
     {% if action_url %}
-    <a href="{{ action_url }}" class="text-accent hover:text-accent-hover text-sm">{{ action_label }}</a>
+    <a href="{{ action_url }}" class="text-zinc-200 hover:text-zinc-50 text-sm">{{ action_label }}</a>
     {% elif action_hx_get %}
     <button hx-get="{{ action_hx_get }}"
             hx-target="#slide-over"
             hx-swap="innerHTML"
-            class="text-accent hover:text-accent-hover text-sm">
+            class="text-zinc-200 hover:text-zinc-50 text-sm">
         {{ action_label }}
     </button>
     {% endif %}

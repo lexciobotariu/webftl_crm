@@ -22,7 +22,7 @@
                 <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Client</dt>
                 <dd class="text-zinc-300">
                     {% if perms_map.access_clients %}
-                    <a href="{% url 'client_detail' project.client.pk %}" class="hover:text-accent transition-colors">
+                    <a href="{% url 'client_detail' project.client.pk %}" class="hover:text-zinc-50 transition-colors">
                         {{ project.client.name }}
                     </a>
                     {% else %}
@@ -38,7 +38,7 @@
                 <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">GitHub Repository</dt>
                 <dd class="text-zinc-300">
                     {% if project.github_repo_url %}
-                    <a href="{{ project.github_repo_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 hover:text-accent transition-colors">
+                    <a href="{{ project.github_repo_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 hover:text-zinc-50 transition-colors">
                         <iconify-icon icon="simple-icons:github" width="14" height="14" class="text-current"></iconify-icon>
                         {{ project.github_repo_url|truncatechars:40 }}
                         <i data-lucide="external-link" class="w-3 h-3"></i>
@@ -52,7 +52,7 @@
                 <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">GitHub Sync</dt>
                 <dd class="text-zinc-300">
                     {% if project.github_sync_enabled %}
-                    <span class="inline-flex items-center gap-1.5 text-green-400">
+                    <span class="inline-flex items-center gap-1.5 text-success">
                         <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
                         Enabled
                     </span>
@@ -79,8 +79,8 @@
 
     <div class="border border-border-subtle rounded-card p-4 bg-panel/50">
         <div class="flex items-center gap-3 mb-2">
-            <div class="p-2 rounded-card bg-green-500/10">
-                <i data-lucide="check-circle" class="w-4 h-4 text-green-400"></i>
+            <div class="p-2 rounded-card bg-success/10">
+                <i data-lucide="check-circle" class="w-4 h-4 text-success"></i>
             </div>
         </div>
         <div class="text-2xl font-semibold text-zinc-100">{{ completed_tasks }}</div>
@@ -89,8 +89,8 @@
 
     <div class="border border-border-subtle rounded-card p-4 bg-panel/50">
         <div class="flex items-center gap-3 mb-2">
-            <div class="p-2 rounded-card bg-yellow-500/10">
-                <i data-lucide="loader" class="w-4 h-4 text-yellow-400"></i>
+            <div class="p-2 rounded-card bg-zinc-500/10">
+                <i data-lucide="loader" class="w-4 h-4 text-zinc-400"></i>
             </div>
         </div>
         <div class="text-2xl font-semibold text-zinc-100">{{ active_tasks }}</div>
@@ -99,8 +99,8 @@
 
     <div class="border border-border-subtle rounded-card p-4 bg-panel/50">
         <div class="flex items-center gap-3 mb-2">
-            <div class="p-2 rounded-card bg-red-500/10">
-                <i data-lucide="alert-circle" class="w-4 h-4 text-red-400"></i>
+            <div class="p-2 rounded-card bg-error/10">
+                <i data-lucide="alert-circle" class="w-4 h-4 text-error"></i>
             </div>
         </div>
         <div class="text-2xl font-semibold text-zinc-100">{{ overdue_tasks }}</div>
@@ -127,9 +127,9 @@
                         {% elif activity.activity_type == 'status_change' %}
                         <i data-lucide="arrow-right-circle" class="w-4 h-4 text-purple-400"></i>
                         {% elif activity.activity_type == 'created' %}
-                        <i data-lucide="plus-circle" class="w-4 h-4 text-green-400"></i>
+                        <i data-lucide="plus-circle" class="w-4 h-4 text-success"></i>
                         {% elif activity.activity_type == 'assignee_change' %}
-                        <i data-lucide="user-check" class="w-4 h-4 text-yellow-400"></i>
+                        <i data-lucide="user-check" class="w-4 h-4 text-zinc-400"></i>
                         {% else %}
                         <i data-lucide="edit" class="w-4 h-4 text-zinc-400"></i>
                         {% endif %}
@@ -140,7 +140,7 @@
                             <span class="text-xs text-zinc-600">{{ activity.get_activity_type_display }}</span>
                         </div>
                         <div class="text-sm text-zinc-400 truncate">
-                            on <a href="{% url 'task_full_page' activity.task.project.pk activity.task.pk %}" class="text-zinc-300 hover:text-accent transition-colors">{{ activity.task.title }}</a>
+                            on <a href="{% url 'task_full_page' activity.task.project.pk activity.task.pk %}" class="text-zinc-300 hover:text-zinc-50 transition-colors">{{ activity.task.title }}</a>
                         </div>
                         {% if activity.content %}
                         <div class="text-xs text-zinc-500 mt-1 truncate">{{ activity.content|truncatechars:100 }}</div>

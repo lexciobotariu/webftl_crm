@@ -1,6 +1,6 @@
 <div class="relative" x-data="dropdown">
     <button @click="toggle()"
-            class="flex items-center gap-2 px-2 py-1 rounded-card text-sm text-zinc-300 hover:bg-elevated transition-colors">
+            class="flex items-center gap-2 px-2 py-1 rounded-control text-sm text-zinc-300 hover:bg-elevated transition-colors">
         {% if task.time_estimate %}
         {{ task.time_estimate }}h
         {% else %}
@@ -17,8 +17,8 @@
             {% csrf_token %}
             <input type="number" name="time_estimate" value="{{ task.time_estimate }}" step="0.5" min="0"
                    placeholder="Hours"
-                   class="w-24 bg-panel border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:outline-none">
-            <button type="submit" class="bg-accent text-white px-3 py-1 rounded-card text-xs ml-2">Save</button>
+                   class="w-24 bg-panel border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:outline-none">
+            <button type="submit" class="bg-accent text-on-accent px-3 py-1 rounded-control text-xs ml-2">Save</button>
         </form>
     </div>
 </div>
