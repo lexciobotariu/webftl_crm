@@ -66,13 +66,17 @@ def invoice_create(request):
     if request.method == 'POST':
         form = InvoiceForm(request.POST, user=request.user)
         if form.is_valid():
-            invoice = create_invoice(
-                client=form.cleaned_data['client'],
-                issue_date=form.cleaned_data['issue_date'],
-                due_date=form.cleaned_data['due_date'],
-                tax_rate=form.cleaned_data['tax_rate'],
-            )
-            return _redirect_to('invoice_detail', invoice.pk)
+            try:
+                invoice = create_invoice(
+                    client=form.cleaned_data['client'],
+                    issue_date=form.cleaned_data['issue_date'],
+                    due_date=form.cleaned_data['due_date'],
+                    tax_rate=form.cleaned_data['tax_rate'],
+                )
+            except ValidationError as exc:
+                form.add_error('client', _validation_message(exc))
+            else:
+                return _redirect_to('invoice_detail', invoice.pk)
     else:
         form = InvoiceForm(user=request.user, initial=initial)
 

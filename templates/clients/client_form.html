@@ -26,6 +26,12 @@
             <p class="text-red-500 text-sm mt-1">{{ field.errors.0 }}</p>
             {% endif %}
         </div>
+        {% if field.name == 'tax_id' and client.currency_id %}
+        <div>
+            <label class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Currency</label>
+            <p class="text-sm text-zinc-100">{{ client.currency.code }} {{ client.currency.symbol }}</p>
+        </div>
+        {% endif %}
         {% endfor %}
 
         <div class="flex gap-4 pt-4">

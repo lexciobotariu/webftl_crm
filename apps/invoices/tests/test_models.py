@@ -21,10 +21,24 @@ def _today():
     return timezone.localdate()
 
 
+def _ensure_currency(client):
+    from apps.crm.models import Currency
+
+    if client.currency_id:
+        return client
+    currency, _created = Currency.objects.get_or_create(
+        code='USD',
+        defaults={'name': 'US Dollar', 'symbol': '$'},
+    )
+    client.currency = currency
+    client.save(update_fields=['currency'])
+    return client
+
+
 def _invoice(client=None, *, tax_rate='0', due_in=14):
     today = _today()
     return create_invoice(
-        client=client or ClientFactory(),
+        client=_ensure_currency(client or ClientFactory()),
         issue_date=today,
         due_date=today + timedelta(days=due_in),
         tax_rate=Decimal(tax_rate),
@@ -213,7 +227,9 @@ class TestSentLock:
 
     def test_changing_client_on_a_draft_refreshes_bill_to(self):
         first = ClientFactory(billing_name='First Billing', address='First St', tax_id='F-1')
-        second = ClientFactory(billing_name='Second Billing', address='Second St', tax_id='S-2')
+        second = _ensure_currency(
+            ClientFactory(billing_name='Second Billing', address='Second St', tax_id='S-2')
+        )
         invoice = _invoice(first)
         updated = update_invoice(
             invoice,

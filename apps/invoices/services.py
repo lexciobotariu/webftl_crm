@@ -2,6 +2,8 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
+from apps.crm.models import Company
+
 from .models import Invoice, InvoiceLine, Payment, money
 
 
@@ -15,14 +17,43 @@ def bill_to_snapshot(client):
     }
 
 
+def company_snapshot():
+    """Copy the company row. A later settings edit does not rewrite invoices."""
+    company = Company.load()
+    return {
+        'company_legal_name': company.legal_name,
+        'company_address': company.address,
+        'company_email': company.email,
+        'company_phone': company.phone,
+        'company_tax_id': company.tax_id,
+    }
+
+
+def currency_snapshot(client):
+    """Copy the client's currency. A client with none cannot be invoiced."""
+    currency = client.currency
+    if currency is None:
+        raise ValidationError(
+            'Choose a currency for this client before creating an invoice.'
+        )
+    return {
+        'currency_code': currency.code,
+        'currency_symbol': currency.symbol,
+    }
+
+
 def _next_number():
     last = Invoice.objects.select_for_update().order_by('-number').first()
     return (last.number if last else 0) + 1
 
 
 def create_invoice(*, client, issue_date, due_date, tax_rate):
-    """Allocate the next number and store the bill-to snapshot."""
-    snapshot = bill_to_snapshot(client)
+    """Allocate the next number and store bill-to, company, and currency."""
+    snapshot = {
+        **currency_snapshot(client),
+        **company_snapshot(),
+        **bill_to_snapshot(client),
+    }
     rate = money(tax_rate)
     for _ in range(5):
         try:
@@ -41,7 +72,7 @@ def create_invoice(*, client, issue_date, due_date, tax_rate):
 
 
 def update_invoice(invoice, *, client, issue_date, due_date, tax_rate):
-    """Update a draft. Changing the client refreshes the bill-to snapshot."""
+    """Update a draft. Changing the client refreshes bill-to and currency."""
     with transaction.atomic():
         locked = Invoice.objects.select_for_update().get(pk=invoice.pk)
         if client.pk != locked.client_id:
@@ -54,6 +85,8 @@ def update_invoice(invoice, *, client, issue_date, due_date, tax_rate):
                 )
             locked.client = client
             for key, value in bill_to_snapshot(client).items():
+                setattr(locked, key, value)
+            for key, value in currency_snapshot(client).items():
                 setattr(locked, key, value)
         locked.issue_date = issue_date
         locked.due_date = due_date

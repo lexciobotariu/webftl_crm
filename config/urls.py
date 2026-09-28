@@ -24,6 +24,7 @@ urlpatterns = [
     path('notes/', include('apps.notes.urls')),
     path('salaries/', include('apps.salaries.urls')),
     path('invoices/', include('apps.invoices.urls')),
+    path('settings/', include('apps.crm.urls')),
 ]
 
 if settings.DEBUG:

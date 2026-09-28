@@ -10,6 +10,13 @@ class Client(models.Model):
     billing_name = models.CharField(max_length=255, blank=True)
     billing_email = models.EmailField(blank=True)
     tax_id = models.CharField(max_length=64, blank=True)
+    currency = models.ForeignKey(
+        'crm.Currency',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='clients',
+    )
     notes = models.TextField(blank=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

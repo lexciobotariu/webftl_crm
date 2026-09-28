@@ -11,7 +11,7 @@ HUNDRED = Decimal('100')
 
 
 class InvoiceLocked(Exception):
-    """Lines, tax, dates, client, and bill-to stay as they are after send."""
+    """Lines, tax, dates, client, bill-to, company, and currency stay after send."""
 
 
 class InvoiceHasPayments(Exception):
@@ -21,6 +21,27 @@ class InvoiceHasPayments(Exception):
 def money(value):
     """Round a money figure to cents, half up."""
     return Decimal(value).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+
+
+_LOCKED_AFTER_SEND = (
+    'client_id',
+    'issue_date',
+    'due_date',
+    'tax_rate',
+    'bill_to_name',
+    'bill_to_email',
+    'bill_to_address',
+    'bill_to_tax_id',
+    'company_legal_name',
+    'company_address',
+    'company_email',
+    'company_phone',
+    'company_tax_id',
+    'currency_code',
+    'currency_symbol',
+    'number',
+    'sent_at',
+)
 
 
 def invoice_is_sent(invoice_id):
@@ -33,8 +54,9 @@ def invoice_is_sent(invoice_id):
 class Invoice(models.Model):
     """One invoice for one client.
 
-    Totals and status are derived. ``sent_at`` empty means draft. The bill-to
-    fields are a snapshot from create time.
+    Totals and status are derived. ``sent_at`` empty means draft. Bill-to,
+    company, and currency are a snapshot from create time. Older rows have no
+    currency snapshot, so those fields stay blank.
     """
 
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='invoices')
@@ -46,6 +68,13 @@ class Invoice(models.Model):
     bill_to_email = models.EmailField(blank=True)
     bill_to_address = models.TextField(blank=True)
     bill_to_tax_id = models.CharField(max_length=64, blank=True)
+    company_legal_name = models.CharField(max_length=255, blank=True, default='')
+    company_address = models.TextField(blank=True, default='')
+    company_email = models.EmailField(blank=True, default='')
+    company_phone = models.CharField(max_length=50, blank=True, default='')
+    company_tax_id = models.CharField(max_length=64, blank=True, default='')
+    currency_code = models.CharField(max_length=3, blank=True, default='')
+    currency_symbol = models.CharField(max_length=16, blank=True, default='')
     sent_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -126,33 +155,12 @@ class Invoice(models.Model):
     def save(self, *args, **kwargs):
         if self.pk:
             previous = (
-                Invoice.objects.filter(pk=self.pk)
-                .only(
-                    'sent_at',
-                    'client_id',
-                    'issue_date',
-                    'due_date',
-                    'tax_rate',
-                    'bill_to_name',
-                    'bill_to_email',
-                    'bill_to_address',
-                    'bill_to_tax_id',
-                    'number',
-                )
-                .first()
+                Invoice.objects.filter(pk=self.pk).only(*_LOCKED_AFTER_SEND).first()
             )
             if previous and previous.sent_at is not None:
-                locked_changed = (
-                    self.client_id != previous.client_id
-                    or self.issue_date != previous.issue_date
-                    or self.due_date != previous.due_date
-                    or self.tax_rate != previous.tax_rate
-                    or self.bill_to_name != previous.bill_to_name
-                    or self.bill_to_email != previous.bill_to_email
-                    or self.bill_to_address != previous.bill_to_address
-                    or self.bill_to_tax_id != previous.bill_to_tax_id
-                    or self.number != previous.number
-                    or self.sent_at != previous.sent_at
+                locked_changed = any(
+                    getattr(self, name) != getattr(previous, name)
+                    for name in _LOCKED_AFTER_SEND
                 )
                 if locked_changed:
                     raise InvoiceLocked('This invoice has been sent.')

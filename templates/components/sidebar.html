@@ -116,6 +116,21 @@
         {% endif %}
     </nav>
 
+    {% if request.user.is_admin %}
+    <div class="px-2 pb-2">
+        <a href="{% url 'settings' %}"
+           class="flex items-center gap-2.5 px-3 py-2 rounded-card text-[13px] font-medium transition-colors duration-150
+                  {% if request.resolver_match.url_name == 'settings' or request.resolver_match.url_name == 'currency_add' or request.resolver_match.url_name == 'currency_delete' %}
+                  bg-elevated text-zinc-100 border border-border-subtle
+                  {% else %}
+                  text-zinc-400 hover:text-zinc-200 hover:bg-hover
+                  {% endif %}">
+            <i data-lucide="settings" class="w-4 h-4"></i>
+            Settings
+        </a>
+    </div>
+    {% endif %}
+
     <!-- Version -->
     <div class="px-4 py-2 border-t border-border-subtle">
         <a href="{% url 'changelog' %}" class="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors" title="View changelog">v{{ app_version }}</a>

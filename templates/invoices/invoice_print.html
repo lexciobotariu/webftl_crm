@@ -27,6 +27,16 @@
     <h1>{{ invoice.number_label }}</h1>
     <p class="muted">{{ invoice.status_label }}</p>
     <div class="meta">
+        {% if invoice.currency_code %}
+        <div>
+            <div class="muted">Company</div>
+            {% if invoice.company_legal_name %}<strong>{{ invoice.company_legal_name }}</strong>{% endif %}
+            {% if invoice.company_email %}<div>{{ invoice.company_email }}</div>{% endif %}
+            {% if invoice.company_phone %}<div>{{ invoice.company_phone }}</div>{% endif %}
+            {% if invoice.company_address %}<div style="white-space: pre-line;">{{ invoice.company_address }}</div>{% endif %}
+            {% if invoice.company_tax_id %}<div>Tax ID {{ invoice.company_tax_id }}</div>{% endif %}
+        </div>
+        {% endif %}
         <div>
             <div class="muted">Bill to</div>
             <strong>{{ invoice.bill_to_name }}</strong>
@@ -53,18 +63,18 @@
             <tr>
                 <td>{{ line.description }}</td>
                 <td class="right">{{ line.quantity|floatformat:2 }}</td>
-                <td class="right">{{ line.unit_price|floatformat:2 }}</td>
-                <td class="right">{{ line.amount|floatformat:2 }}</td>
+                <td class="right">{% include "invoices/partials/money.html" with amount=line.unit_price %}</td>
+                <td class="right">{% include "invoices/partials/money.html" with amount=line.amount %}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
     <div class="totals">
-        <div><span>Subtotal</span><span>{{ invoice.subtotal|floatformat:2 }}</span></div>
-        <div><span>Tax {{ invoice.tax_rate|floatformat:2 }}%</span><span>{{ invoice.tax_amount|floatformat:2 }}</span></div>
-        <div><strong>Total</strong><strong>{{ invoice.total|floatformat:2 }}</strong></div>
-        <div><span>Paid</span><span>{{ invoice.amount_paid|floatformat:2 }}</span></div>
-        <div><strong>Balance</strong><strong>{{ invoice.balance|floatformat:2 }}</strong></div>
+        <div><span>Subtotal</span><span>{% include "invoices/partials/money.html" with amount=invoice.subtotal %}</span></div>
+        <div><span>Tax {{ invoice.tax_rate|floatformat:2 }}%</span><span>{% include "invoices/partials/money.html" with amount=invoice.tax_amount %}</span></div>
+        <div><strong>Total</strong><strong>{% include "invoices/partials/money.html" with amount=invoice.total %}</strong></div>
+        <div><span>Paid</span><span>{% include "invoices/partials/money.html" with amount=invoice.amount_paid %}</span></div>
+        <div><strong>Balance</strong><strong>{% include "invoices/partials/money.html" with amount=invoice.balance %}</strong></div>
     </div>
     {% if invoice.payments.all %}
     <h2>Payments</h2>
@@ -81,7 +91,7 @@
             <tr>
                 <td>{{ payment.date|date:"M j, Y" }}</td>
                 <td>{{ payment.note }}</td>
-                <td class="right">{{ payment.amount|floatformat:2 }}</td>
+                <td class="right">{% include "invoices/partials/money.html" with amount=payment.amount %}</td>
             </tr>
             {% endfor %}
         </tbody>

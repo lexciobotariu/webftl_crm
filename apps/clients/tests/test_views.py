@@ -4,7 +4,16 @@ from django.urls import reverse
 from apps.accounts.factories import AdminUserFactory, UserFactory
 from apps.accounts.permissions import PermissionPreset
 from apps.clients.factories import ClientFactory
+from apps.crm.models import Currency
 from apps.projects.factories import ProjectAccessFactory, ProjectFactory
+
+
+def _currency_id():
+    currency, _created = Currency.objects.get_or_create(
+        code='USD',
+        defaults={'name': 'US Dollar', 'symbol': '$'},
+    )
+    return currency.pk
 
 
 @pytest.mark.django_db
@@ -54,6 +63,7 @@ class TestClientCreate:
             'phone': '555-1234',
             'address': '123 Main St',
             'notes': 'Important client',
+            'currency': _currency_id(),
         })
         assert response.status_code == 302
         from apps.clients.models import Client
@@ -87,6 +97,7 @@ class TestClientBillingFields:
             'billing_name': 'Billed Client LLC',
             'billing_email': 'ap@client.com',
             'tax_id': 'EIN-42',
+            'currency': _currency_id(),
         })
         assert created.status_code == 302
         saved = Client.objects.get(name='Billed Client')
@@ -141,6 +152,7 @@ class TestClientBillingFields:
             'billing_name': '',
             'billing_email': '',
             'tax_id': '',
+            'currency': _currency_id(),
         })
         assert created.status_code == 302
         saved = Client.objects.get(name='Plain Client')
@@ -154,6 +166,7 @@ class TestClientBillingFields:
             'email': 'drawer-plain@client.com',
             'phone': '',
             'address': '',
+            'currency': _currency_id(),
         })
         assert drawer.status_code == 200
         drawer_client = Client.objects.get(name='Drawer Plain')
