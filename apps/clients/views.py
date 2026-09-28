@@ -96,9 +96,13 @@ def client_detail(request, pk):
         'client_detail_todos': 'todos',
         'client_detail_projects': 'projects',
         'client_detail_notes': 'notes',
+        'client_detail_invoices': 'invoices',
     }
     active_tab = tab_mapping.get(url_name, 'profile')
+    if active_tab == 'invoices' and not request.user.has_app_permission('access_invoices'):
+        return HttpResponseForbidden("You don't have access to this section")
 
+    from apps.invoices.models import visible_invoices
     from apps.notes.models import notes_visible_to_user
     from apps.todos.models import Todo
     todos_qs = Todo.objects.filter(owner=request.user, client=client, is_completed=False).select_related('client')
@@ -106,6 +110,11 @@ def client_detail(request, pk):
 
     notes_count = notes_visible_to_user(request.user, client.note_objects.all()).count()
     projects = _visible_projects(request.user, client)
+    client_invoices = []
+    invoice_count = 0
+    if request.user.has_app_permission('access_invoices'):
+        client_invoices = visible_invoices(request.user).filter(client=client)
+        invoice_count = client_invoices.count()
 
     return render(request, 'clients/client_detail.html', {
         'client': client,
@@ -113,6 +122,8 @@ def client_detail(request, pk):
         'todo_count': todo_count,
         'todos': todos_qs,
         'notes_count': notes_count,
+        'client_invoices': client_invoices,
+        'invoice_count': invoice_count,
         'show_completed': False,
         'today': timezone.now().date(),
         'active_tab': active_tab,

@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     'apps.todos',
     'apps.notes',
     'apps.salaries',
+    'apps.invoices',
     'apps.integrations',
 ]
 

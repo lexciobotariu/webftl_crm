@@ -24,6 +24,9 @@ Usage: {% include "components/permission_badges.html" with preset=some_preset %}
     {% if preset.access_salaries %}
     <span class="px-2 py-0.5 text-[10px] rounded bg-green-500/10 text-green-400 border border-green-500/20">Salaries</span>
     {% endif %}
+    {% if preset.access_invoices %}
+    <span class="px-2 py-0.5 text-[10px] rounded bg-green-500/10 text-green-400 border border-green-500/20">Invoices</span>
+    {% endif %}
     {% if preset.access_team %}
     <span class="px-2 py-0.5 text-[10px] rounded bg-green-500/10 text-green-400 border border-green-500/20">Team</span>
     {% endif %}

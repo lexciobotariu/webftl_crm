@@ -23,6 +23,7 @@ urlpatterns = [
     path('integrations/', include('apps.integrations.urls')),
     path('notes/', include('apps.notes.urls')),
     path('salaries/', include('apps.salaries.urls')),
+    path('invoices/', include('apps.invoices.urls')),
 ]
 
 if settings.DEBUG:

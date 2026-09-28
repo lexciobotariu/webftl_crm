@@ -23,6 +23,10 @@ PERMISSION_KEYS = [
     'access_salaries',
     'salaries_view_all',
     'salaries_edit',
+    'access_invoices',
+    'invoices_view_all',
+    'invoices_create',
+    'invoices_edit',
     'access_team',
     'team_create',
     'team_edit',
@@ -41,6 +45,7 @@ class PermissionPreset(models.Model):
     access_todos = models.BooleanField(default=True)
     access_notes = models.BooleanField(default=True)
     access_salaries = models.BooleanField(default=True)
+    access_invoices = models.BooleanField(default=True)
     access_team = models.BooleanField(default=True)
 
     # Unchecked means view own. Admins still see everything via has_app_permission.
@@ -68,6 +73,12 @@ class PermissionPreset(models.Model):
     # View own is access_salaries. There is no edit-own flag.
     salaries_view_all = models.BooleanField(default=False)
     salaries_edit = models.BooleanField(default=False)
+
+    # View own is access_invoices plus a client this person can already see.
+    # Delete stays role=admin.
+    invoices_view_all = models.BooleanField(default=False)
+    invoices_create = models.BooleanField(default=False)
+    invoices_edit = models.BooleanField(default=False)
 
     # One company, so access_team is the directory. Role changes, user delete,
     # and preset editing stay role=admin.

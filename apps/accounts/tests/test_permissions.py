@@ -34,6 +34,10 @@ class TestPermissionPreset:
         assert 'tasks_edit_all' in PERMISSION_KEYS
         assert 'salaries_view_all' in PERMISSION_KEYS
         assert 'salaries_edit' in PERMISSION_KEYS
+        assert 'access_invoices' in PERMISSION_KEYS
+        assert 'invoices_view_all' in PERMISSION_KEYS
+        assert 'invoices_create' in PERMISSION_KEYS
+        assert 'invoices_edit' in PERMISSION_KEYS
         assert 'team_create' in PERMISSION_KEYS
         assert 'team_edit' in PERMISSION_KEYS
 
@@ -137,6 +141,10 @@ class TestDefaultPresets:
         assert preset.tasks_edit_all is False
         assert preset.salaries_view_all is False
         assert preset.salaries_edit is False
+        assert preset.access_invoices is False
+        assert preset.invoices_view_all is False
+        assert preset.invoices_create is False
+        assert preset.invoices_edit is False
         assert preset.team_create is False
         assert preset.team_edit is False
 
@@ -540,6 +548,10 @@ class TestPresetCreate:
         assert preset.notes_edit_public is False
         assert preset.salaries_view_all is False
         assert preset.salaries_edit is False
+        assert preset.access_invoices is False
+        assert preset.invoices_view_all is False
+        assert preset.invoices_create is False
+        assert preset.invoices_edit is False
         assert preset.team_create is False
         assert preset.team_edit is False
 
@@ -861,6 +873,73 @@ class TestPresetModuleCards:
             assert 'checked' not in attrs.split()
             assert 'disabled' in attrs.split()
 
+    def test_invoices_access_off_clears_posted_extras(self, client):
+        admin = AdminUserFactory()
+        client.force_login(admin)
+
+        created = client.post(reverse('preset_create'), {
+            'name': 'No Invoice Access',
+            'access_projects': 'on',
+            'projects_view_all': 'on',
+            'invoices_view_all': 'on',
+            'invoices_create': 'on',
+            'invoices_edit': 'on',
+        })
+        assert created.status_code == 200
+        preset = PermissionPreset.objects.get(name='No Invoice Access')
+        assert preset.access_invoices is False
+        assert preset.invoices_view_all is False
+        assert preset.invoices_create is False
+        assert preset.invoices_edit is False
+        assert preset.access_projects is True
+        assert preset.projects_view_all is True
+
+        existing = PermissionPreset.objects.create(
+            name='Invoice Writers',
+            access_invoices=True,
+            invoices_view_all=True,
+            invoices_create=True,
+            invoices_edit=True,
+            access_projects=True,
+            projects_view_all=True,
+        )
+        edited = client.post(reverse('preset_edit', args=[existing.pk]), {
+            'name': 'Invoice Writers',
+            'access_projects': 'on',
+            'projects_view_all': 'on',
+            'invoices_view_all': 'on',
+            'invoices_create': 'on',
+            'invoices_edit': 'on',
+        })
+        assert edited.status_code == 200
+        existing.refresh_from_db()
+        assert existing.access_invoices is False
+        assert existing.invoices_view_all is False
+        assert existing.invoices_create is False
+        assert existing.invoices_edit is False
+        assert existing.projects_view_all is True
+
+        saved = client.post(reverse('preset_create'), {
+            'name': 'Invoice Flags On',
+            'access_invoices': 'on',
+            'invoices_view_all': 'on',
+            'invoices_create': 'on',
+            'invoices_edit': 'on',
+        })
+        assert saved.status_code == 200
+        writers = PermissionPreset.objects.get(name='Invoice Flags On')
+        assert writers.access_invoices is True
+        assert writers.invoices_view_all is True
+        assert writers.invoices_create is True
+        assert writers.invoices_edit is True
+
+        off = PermissionPreset.objects.create(name='Invoices Closed', access_invoices=False)
+        html = client.get(reverse('preset_edit', args=[off.pk])).content.decode()
+        for name in ('invoices_view_all', 'invoices_create', 'invoices_edit'):
+            attrs = _checkbox_attrs(html, name)
+            assert 'checked' not in attrs.split()
+            assert 'disabled' in attrs.split()
+
     def test_team_access_off_clears_posted_extras(self, client):
         admin = AdminUserFactory()
         client.force_login(admin)
@@ -972,6 +1051,16 @@ class TestPresetModuleCards:
         assert 'name="tasks_view_all"' not in salaries
         assert 'grid-cols-2' in salaries
 
+        invoices = _card(html, 'invoices')
+        assert invoices.index('>Invoices<') < invoices.index('name="invoices_view_all"')
+        assert invoices.index('name="invoices_view_all"') < invoices.index('name="invoices_create"')
+        assert invoices.index('name="invoices_create"') < invoices.index('name="invoices_edit"')
+        assert 'View all' in invoices
+        assert '>Create<' in invoices
+        assert '>Edit<' in invoices
+        assert 'name="salaries_view_all"' not in invoices
+        assert 'grid-cols-2' in invoices
+
         team = _card(html, 'team')
         assert team.index('>Team<') < team.index('name="team_create"')
         assert team.index('name="team_create"') < team.index('name="team_edit"')
@@ -994,6 +1083,7 @@ class TestPresetModuleCards:
             'access_todos',
             'access_notes',
             'access_salaries',
+            'access_invoices',
             'access_team',
         ):
             assert 'checked' in _checkbox_attrs(html, name)
@@ -1013,6 +1103,9 @@ class TestPresetModuleCards:
             'notes_edit_public',
             'salaries_view_all',
             'salaries_edit',
+            'invoices_view_all',
+            'invoices_create',
+            'invoices_edit',
             'team_create',
             'team_edit',
         ):
@@ -1052,6 +1145,10 @@ class TestPresetModuleCards:
             salary_attrs = _checkbox_attrs(developer_html, name)
             assert 'checked' not in salary_attrs.split()
             assert 'disabled' in salary_attrs.split()
+        for name in ('invoices_view_all', 'invoices_create', 'invoices_edit'):
+            invoice_attrs = _checkbox_attrs(developer_html, name)
+            assert 'checked' not in invoice_attrs.split()
+            assert 'disabled' in invoice_attrs.split()
         for name in ('team_create', 'team_edit'):
             team_attrs = _checkbox_attrs(developer_html, name)
             assert 'checked' not in team_attrs.split()
@@ -1059,7 +1156,15 @@ class TestPresetModuleCards:
 
         admin_preset = PermissionPreset.objects.get(name='Admin')
         admin_html = client.get(reverse('preset_edit', args=[admin_preset.pk])).content.decode()
-        for name in ('salaries_view_all', 'salaries_edit', 'team_create', 'team_edit'):
+        for name in (
+            'salaries_view_all',
+            'salaries_edit',
+            'invoices_view_all',
+            'invoices_create',
+            'invoices_edit',
+            'team_create',
+            'team_edit',
+        ):
             admin_attrs = _checkbox_attrs(admin_html, name)
             assert 'checked' in admin_attrs.split()
             assert 'disabled' not in admin_attrs.split()
