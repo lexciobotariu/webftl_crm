@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block title %}{{ invoice.number_label }} - Invoices - WebFTL CRM{% endblock %}
+
+{% block full_content %}
+<div class="flex flex-col h-full">
+    <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+                <a href="{% url 'invoice_list' %}" class="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors" title="Back to Invoices">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                </a>
+                <div class="flex items-center gap-2 text-sm min-w-0">
+                    <a href="{% url 'invoice_list' %}" class="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 transition-colors">
+                        <i data-lucide="receipt" class="w-3.5 h-3.5"></i>
+                        <span>Invoices</span>
+                    </a>
+                    <span class="text-zinc-600">/</span>
+                    <span class="text-zinc-100 font-medium">{{ invoice.number_label }}</span>
+                    {% include "invoices/partials/status_badge.html" %}
+                </div>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <a href="{% url 'invoice_print' invoice.pk %}"
+                   target="_blank"
+                   class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-300 hover:bg-hover transition-colors">
+                    <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                    Print
+                </a>
+                {% if invoice.is_draft and perms_map.invoices_edit %}
+                <button hx-get="{% url 'invoice_edit' invoice.pk %}"
+                        hx-target="#slide-over"
+                        hx-swap="innerHTML"
+                        hx-on::after-request="openSlideOver(event)"
+                        class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-300 hover:bg-hover transition-colors">
+                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                    Edit
+                </button>
+                <button hx-post="{% url 'invoice_mark_sent' invoice.pk %}"
+                        hx-confirm="Mark {{ invoice.number_label }} sent? Lines, tax, dates, and bill-to stay as they are."
+                        class="inline-flex items-center gap-1.5 bg-accent text-white px-3 py-1.5 rounded-card text-xs font-medium hover:bg-accent-hover transition-colors">
+                    <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                    Mark sent
+                </button>
+                {% endif %}
+                {% if perms_map.invoices_edit and invoice.balance > 0 %}
+                <button hx-get="{% url 'invoice_payment_create' invoice.pk %}"
+                        hx-target="#slide-over"
+                        hx-swap="innerHTML"
+                        hx-on::after-request="openSlideOver(event)"
+                        class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-300 hover:bg-hover transition-colors">
+                    <i data-lucide="banknote" class="w-3.5 h-3.5"></i>
+                    Record payment
+                </button>
+                {% endif %}
+                {% if request.user.is_admin and not invoice.payments.all %}
+                <button hx-post="{% url 'invoice_delete' invoice.pk %}"
+                        hx-confirm="Delete {{ invoice.number_label }}?"
+                        class="inline-flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 text-red-300 px-3 py-1.5 rounded-card text-xs hover:bg-red-500/20 transition-colors">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    Delete
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+            <div class="bg-elevated/40 border border-border-subtle rounded-card p-4 lg:col-span-2">
+                <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Bill to</div>
+                <div class="text-sm font-medium text-zinc-100">{{ invoice.bill_to_name }}</div>
+                {% if invoice.bill_to_email %}
+                <div class="text-sm text-zinc-400 mt-1">{{ invoice.bill_to_email }}</div>
+                {% endif %}
+                {% if invoice.bill_to_address %}
+                <div class="text-sm text-zinc-400 mt-1 whitespace-pre-line">{{ invoice.bill_to_address }}</div>
+                {% endif %}
+                {% if invoice.bill_to_tax_id %}
+                <div class="text-sm text-zinc-400 mt-1">Tax ID {{ invoice.bill_to_tax_id }}</div>
+                {% endif %}
+                <p class="text-xs text-zinc-600 mt-3">Copied when the invoice was created.</p>
+            </div>
+            <div class="bg-elevated/40 border border-border-subtle rounded-card p-4 space-y-2">
+                <div class="flex items-center justify-between text-sm">
+                    <span class="text-zinc-500">Client</span>
+                    <a href="{% url 'client_detail' invoice.client_id %}" class="text-zinc-200 hover:text-accent">{{ invoice.client.name }}</a>
+                </div>
+                <div class="flex items-center justify-between text-sm">
+                    <span class="text-zinc-500">Issued</span>
+                    <span class="text-zinc-200">{{ invoice.issue_date|date:"M j, Y" }}</span>
+                </div>
+                <div class="flex items-center justify-between text-sm">
+                    <span class="text-zinc-500">Due</span>
+                    <span class="text-zinc-200">{{ invoice.due_date|date:"M j, Y" }}</span>
+                </div>
+                <div class="flex items-center justify-between text-sm">
+                    <span class="text-zinc-500">Tax rate</span>
+                    <span class="text-zinc-200">{{ invoice.tax_rate|floatformat:2 }}%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="border border-border-subtle rounded-card overflow-hidden mb-6">
+            <div class="px-4 py-2 border-b border-border-subtle bg-panel/80 flex items-center justify-between">
+                <h2 class="text-sm font-medium text-zinc-100">Lines</h2>
+                {% if invoice.is_draft and perms_map.invoices_edit %}
+                <button hx-get="{% url 'invoice_line_create' invoice.pk %}"
+                        hx-target="#slide-over"
+                        hx-swap="innerHTML"
+                        hx-on::after-request="openSlideOver(event)"
+                        class="inline-flex items-center gap-1.5 bg-accent text-white px-3 py-1.5 rounded-card text-xs font-medium hover:bg-accent-hover transition-colors">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                    Add line
+                </button>
+                {% endif %}
+            </div>
+            {% if invoice.lines.all %}
+            <table class="w-full">
+                <thead class="bg-panel border-b border-border-subtle">
+                    <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
+                        <th class="px-4 py-2 font-medium">Description</th>
+                        <th class="px-4 py-2 font-medium text-right">Qty</th>
+                        <th class="px-4 py-2 font-medium text-right">Price</th>
+                        <th class="px-4 py-2 font-medium text-right">Amount</th>
+                        {% if invoice.is_draft and perms_map.invoices_edit %}
+                        <th class="px-4 py-2 font-medium w-16"></th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-border-subtle">
+                    {% for line in invoice.lines.all %}
+                    <tr>
+                        <td class="px-4 py-3 text-sm text-zinc-200">
+                            {{ line.description }}
+                            {% if line.project_id %}
+                            <span class="block text-xs text-zinc-500">Project</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-sm text-zinc-400 text-right">{{ line.quantity|floatformat:2 }}</td>
+                        <td class="px-4 py-3 text-sm text-zinc-400 text-right">{{ line.unit_price|floatformat:2 }}</td>
+                        <td class="px-4 py-3 text-sm text-zinc-200 text-right">{{ line.amount|floatformat:2 }}</td>
+                        {% if invoice.is_draft and perms_map.invoices_edit %}
+                        <td class="px-4 py-3 text-right">
+                            <button hx-get="{% url 'invoice_line_edit' invoice.pk line.pk %}"
+                                    hx-target="#slide-over"
+                                    hx-swap="innerHTML"
+                                    hx-on::after-request="openSlideOver(event)"
+                                    class="p-1.5 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded transition-colors"
+                                    title="Edit line">
+                                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button hx-post="{% url 'invoice_line_delete' invoice.pk line.pk %}"
+                                    hx-confirm="Remove this line?"
+                                    class="p-1.5 text-zinc-500 hover:text-red-300 hover:bg-elevated rounded transition-colors"
+                                    title="Remove line">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="px-4 py-6 text-sm text-zinc-500">No lines yet.</p>
+            {% endif %}
+            <div class="border-t border-border-subtle px-4 py-3 space-y-1">
+                <div class="flex justify-end gap-8 text-sm">
+                    <span class="text-zinc-500">Subtotal</span>
+                    <span class="text-zinc-200 w-24 text-right">{{ invoice.subtotal|floatformat:2 }}</span>
+                </div>
+                <div class="flex justify-end gap-8 text-sm">
+                    <span class="text-zinc-500">Tax {{ invoice.tax_rate|floatformat:2 }}%</span>
+                    <span class="text-zinc-200 w-24 text-right">{{ invoice.tax_amount|floatformat:2 }}</span>
+                </div>
+                <div class="flex justify-end gap-8 text-sm font-medium">
+                    <span class="text-zinc-300">Total</span>
+                    <span class="text-zinc-100 w-24 text-right">{{ invoice.total|floatformat:2 }}</span>
+                </div>
+                <div class="flex justify-end gap-8 text-sm">
+                    <span class="text-zinc-500">Paid</span>
+                    <span class="text-zinc-200 w-24 text-right">{{ invoice.amount_paid|floatformat:2 }}</span>
+                </div>
+                <div class="flex justify-end gap-8 text-sm font-medium">
+                    <span class="text-zinc-300">Balance</span>
+                    <span class="text-zinc-100 w-24 text-right">{{ invoice.balance|floatformat:2 }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="border border-border-subtle rounded-card overflow-hidden">
+            <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
+                <h2 class="text-sm font-medium text-zinc-100">Payments</h2>
+            </div>
+            {% if invoice.payments.all %}
+            <table class="w-full">
+                <thead class="bg-panel border-b border-border-subtle">
+                    <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
+                        <th class="px-4 py-2 font-medium">Date</th>
+                        <th class="px-4 py-2 font-medium">Note</th>
+                        <th class="px-4 py-2 font-medium text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-border-subtle">
+                    {% for payment in invoice.payments.all %}
+                    <tr>
+                        <td class="px-4 py-3 text-sm text-zinc-300">{{ payment.date|date:"M j, Y" }}</td>
+                        <td class="px-4 py-3 text-sm text-zinc-400">{{ payment.note|default:"—" }}</td>
+                        <td class="px-4 py-3 text-sm text-zinc-200 text-right">{{ payment.amount|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="px-4 py-6 text-sm text-zinc-500">No payments yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

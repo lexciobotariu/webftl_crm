@@ -72,11 +72,13 @@
             My Week
         </a>
         {% endif %}
+        {% if perms_map.access_salaries or perms_map.access_invoices %}
         <!-- Finances -->
-        {% if perms_map.access_salaries %}
         <div class="mt-4 pt-3 border-t border-border-subtle">
             <span class="px-3 text-[10px] uppercase tracking-wider text-zinc-600 font-medium">Finances</span>
         </div>
+        {% endif %}
+        {% if perms_map.access_salaries %}
         <a href="{% url 'salary_list' %}"
            class="flex items-center gap-2.5 px-3 py-2 rounded-card text-[13px] font-medium transition-colors duration-150
                   {% if 'salary' in request.resolver_match.url_name %}
@@ -86,6 +88,18 @@
                   {% endif %}">
             <i data-lucide="wallet" class="w-4 h-4"></i>
             Salaries
+        </a>
+        {% endif %}
+        {% if perms_map.access_invoices %}
+        <a href="{% url 'invoice_list' %}"
+           class="flex items-center gap-2.5 px-3 py-2 rounded-card text-[13px] font-medium transition-colors duration-150
+                  {% if request.resolver_match.url_name == 'invoice_list' or request.resolver_match.url_name == 'invoice_detail' %}
+                  bg-elevated text-zinc-100 border border-border-subtle
+                  {% else %}
+                  text-zinc-400 hover:text-zinc-200 hover:bg-hover
+                  {% endif %}">
+            <i data-lucide="receipt" class="w-4 h-4"></i>
+            Invoices
         </a>
         {% endif %}
         {% if perms_map.access_team %}

@@ -311,6 +311,9 @@ def _apply_module_gates(values):
     if not values['access_salaries']:
         for key in ('salaries_view_all', 'salaries_edit'):
             values[key] = False
+    if not values['access_invoices']:
+        for key in ('invoices_view_all', 'invoices_create', 'invoices_edit'):
+            values[key] = False
     if not values['access_team']:
         for key in ('team_create', 'team_edit'):
             values[key] = False

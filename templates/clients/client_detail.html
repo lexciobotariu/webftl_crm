@@ -83,6 +83,16 @@
                         </span>
                         <span id="notes-count" class="text-xs text-zinc-500 bg-panel px-1.5 py-0.5 rounded">{{ notes_count }}</span>
                     </a>
+                    {% if perms_map.access_invoices %}
+                    <a href="{% url 'client_detail_invoices' client.pk %}"
+                       class="w-full flex items-center justify-between px-3 py-2 rounded-card text-sm transition-colors text-left {% if active_tab == 'invoices' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
+                        <span class="flex items-center gap-3">
+                            <i data-lucide="receipt" class="w-4 h-4"></i>
+                            Invoices
+                        </span>
+                        <span class="text-xs text-zinc-500 bg-panel px-1.5 py-0.5 rounded">{{ invoice_count }}</span>
+                    </a>
+                    {% endif %}
                 </nav>
             </div>
         </div>
@@ -108,6 +118,12 @@
             <div class="h-full">
                 <div id="todos-content">
                     {% include "clients/partials/todos_content.html" %}
+                </div>
+            </div>
+            {% elif active_tab == 'invoices' %}
+            <div class="h-full">
+                <div id="invoices-content">
+                    {% include "clients/partials/invoices_content.html" %}
                 </div>
             </div>
             {% elif active_tab == 'notes' %}
