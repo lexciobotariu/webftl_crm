@@ -13,7 +13,7 @@
         <span class="text-sm text-zinc-400">{{ user.email }}</span>
     </td>
     <td class="px-4 py-3">
-        <span class="px-2 py-0.5 text-xs rounded-full border {% if user.role == 'admin' %}bg-accent/15 text-accent border-accent/30{% else %}bg-elevated text-zinc-300 border-border-subtle{% endif %}">
+        <span class="px-2 py-0.5 text-xs rounded-full border {% if user.role == 'admin' %}bg-elevated text-zinc-200 border-border-subtle{% else %}bg-elevated text-zinc-300 border-border-subtle{% endif %}">
             {{ user.get_role_display }}
         </span>
     </td>

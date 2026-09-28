@@ -24,12 +24,12 @@
                         <label class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2" for="{{ field.id_for_label }}">{{ field.label }}</label>
                         {{ field }}
                         {% if field.errors %}
-                        <p class="text-red-400 text-sm mt-1">{{ field.errors.0 }}</p>
+                        <p class="text-error text-sm mt-1">{{ field.errors.0 }}</p>
                         {% endif %}
                     </div>
                     {% endfor %}
                     <div class="pt-2">
-                        <button type="submit" class="bg-accent text-white px-4 py-2 rounded-card text-sm font-medium hover:bg-accent-hover transition-colors">
+                        <button type="submit" class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">
                             Save company
                         </button>
                     </div>
@@ -41,7 +41,7 @@
                     <h2 class="text-sm font-medium text-zinc-100">Currencies</h2>
                 </div>
                 {% if currency_error %}
-                <p class="px-4 pt-4 text-sm text-red-400">{{ currency_error }}</p>
+                <p class="px-4 pt-4 text-sm text-error">{{ currency_error }}</p>
                 {% endif %}
                 {% if currencies %}
                 <table class="w-full">
@@ -64,7 +64,7 @@
                             <td class="px-4 py-3 text-right">
                                 <form method="post" action="{% url 'currency_delete' currency.pk %}">
                                     {% csrf_token %}
-                                    <button type="submit" class="text-xs text-zinc-500 hover:text-red-300 transition-colors">
+                                    <button type="submit" class="text-xs text-zinc-500 hover:text-error transition-colors">
                                         Delete
                                     </button>
                                 </form>
@@ -85,12 +85,12 @@
                             <label class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2" for="{{ field.id_for_label }}">{{ field.label }}</label>
                             {{ field }}
                             {% if field.errors %}
-                            <p class="text-red-400 text-sm mt-1">{{ field.errors.0 }}</p>
+                            <p class="text-error text-sm mt-1">{{ field.errors.0 }}</p>
                             {% endif %}
                         </div>
                         {% endfor %}
                     </div>
-                    <button type="submit" class="bg-elevated border border-border-subtle px-4 py-2 rounded-card text-sm text-zinc-200 hover:bg-hover transition-colors">
+                    <button type="submit" class="bg-elevated border border-border-subtle px-4 py-2 rounded-control text-sm text-zinc-200 hover:bg-hover transition-colors">
                         Add currency
                     </button>
                 </form>

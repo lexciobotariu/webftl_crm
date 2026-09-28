@@ -26,11 +26,11 @@
             <label for="new-name" class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Name</label>
             <input type="text" name="name" id="new-name"
                    value="{{ form_data.name|default:'' }}"
-                   class="w-full bg-elevated border {% if errors.name %}border-red-500{% else %}border-border-subtle{% endif %} rounded-card px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+                   class="w-full bg-elevated border {% if errors.name %}border-error{% else %}border-border-subtle{% endif %} rounded-control px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none"
                    placeholder="e.g. Ada Lovelace"
                    required>
             {% if errors.name %}
-            <p class="mt-1 text-xs text-red-400">{{ errors.name }}</p>
+            <p class="mt-1 text-xs text-error">{{ errors.name }}</p>
             {% endif %}
         </div>
 
@@ -39,11 +39,11 @@
             <label for="new-email" class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Email</label>
             <input type="email" name="email" id="new-email"
                    value="{{ form_data.email|default:'' }}"
-                   class="w-full bg-elevated border {% if errors.email %}border-red-500{% else %}border-border-subtle{% endif %} rounded-card px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+                   class="w-full bg-elevated border {% if errors.email %}border-error{% else %}border-border-subtle{% endif %} rounded-control px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none"
                    placeholder="name@example.com"
                    required>
             {% if errors.email %}
-            <p class="mt-1 text-xs text-red-400">{{ errors.email }}</p>
+            <p class="mt-1 text-xs text-error">{{ errors.email }}</p>
             {% endif %}
         </div>
 
@@ -51,14 +51,14 @@
         <div class="mb-4">
             <label for="new-role" class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Role</label>
             <select name="role" id="new-role"
-                    class="w-full bg-elevated border {% if errors.role %}border-red-500{% else %}border-border-subtle{% endif %} rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                    class="w-full bg-elevated border {% if errors.role %}border-error{% else %}border-border-subtle{% endif %} rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
                 <option value="member" {% if form_data.role != 'admin' %}selected{% endif %}>Member</option>
                 {% if request.user.is_admin %}
                 <option value="admin" {% if form_data.role == 'admin' %}selected{% endif %}>Admin</option>
                 {% endif %}
             </select>
             {% if errors.role %}
-            <p class="mt-1 text-xs text-red-400">{{ errors.role }}</p>
+            <p class="mt-1 text-xs text-error">{{ errors.role }}</p>
             {% endif %}
         </div>
 
@@ -66,7 +66,7 @@
         <div class="mb-4">
             <label for="new-preset" class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Permission Preset</label>
             <select name="preset_id" id="new-preset"
-                    class="w-full bg-elevated border {% if errors.preset_id %}border-red-500{% else %}border-border-subtle{% endif %} rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                    class="w-full bg-elevated border {% if errors.preset_id %}border-error{% else %}border-border-subtle{% endif %} rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
                 <option value="" {% if not form_data.preset_id %}selected{% endif %}>No preset</option>
                 {% for preset in presets %}
                 <option value="{{ preset.pk }}" {% if form_data.preset_id == preset.pk|stringformat:"s" %}selected{% endif %}>
@@ -75,7 +75,7 @@
                 {% endfor %}
             </select>
             {% if errors.preset_id %}
-            <p class="mt-1 text-xs text-red-400">{{ errors.preset_id }}</p>
+            <p class="mt-1 text-xs text-error">{{ errors.preset_id }}</p>
             {% else %}
             <p class="mt-1 text-xs text-zinc-500">Admins bypass presets and always see everything.</p>
             {% endif %}
@@ -86,10 +86,10 @@
             <label for="new-password1" class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Password</label>
             <input type="password" name="password1" id="new-password1"
                    autocomplete="new-password"
-                   class="w-full bg-elevated border {% if errors.password1 %}border-red-500{% else %}border-border-subtle{% endif %} rounded-card px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+                   class="w-full bg-elevated border {% if errors.password1 %}border-error{% else %}border-border-subtle{% endif %} rounded-control px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none"
                    required>
             {% if errors.password1 %}
-            <p class="mt-1 text-xs text-red-400">{{ errors.password1 }}</p>
+            <p class="mt-1 text-xs text-error">{{ errors.password1 }}</p>
             {% else %}
             <p class="mt-1 text-xs text-zinc-500">Share this with the new member — they should change it after their first login.</p>
             {% endif %}
@@ -100,21 +100,21 @@
             <label for="new-password2" class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Confirm Password</label>
             <input type="password" name="password2" id="new-password2"
                    autocomplete="new-password"
-                   class="w-full bg-elevated border {% if errors.password2 %}border-red-500{% else %}border-border-subtle{% endif %} rounded-card px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+                   class="w-full bg-elevated border {% if errors.password2 %}border-error{% else %}border-border-subtle{% endif %} rounded-control px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none"
                    required>
             {% if errors.password2 %}
-            <p class="mt-1 text-xs text-red-400">{{ errors.password2 }}</p>
+            <p class="mt-1 text-xs text-error">{{ errors.password2 }}</p>
             {% endif %}
         </div>
 
         <div class="flex gap-3 mt-6 pt-4 border-t border-border-subtle">
             <button type="submit"
-                    class="bg-accent text-white px-4 py-2 rounded-card text-sm font-medium hover:bg-accent-hover transition-colors">
+                    class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">
                 Create member
             </button>
             <button type="button"
                     onclick="closeSlideOver()"
-                    class="bg-elevated border border-border-subtle px-4 py-2 rounded-card text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
+                    class="bg-elevated border border-border-subtle px-4 py-2 rounded-control text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
                 Cancel
             </button>
         </div>

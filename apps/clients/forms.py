@@ -4,7 +4,7 @@ from apps.crm.models import Currency
 
 from .models import Client
 
-INPUT_CLASSES = 'w-full bg-panel border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none'
+INPUT_CLASSES = 'w-full bg-panel border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none'
 
 
 class ClientForm(forms.ModelForm):

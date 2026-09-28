@@ -6,13 +6,13 @@
           class="space-y-2">
         {% csrf_token %}
         <textarea name="description" rows="4"
-                  class="w-full bg-panel border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-accent focus:outline-none resize-none"
+                  class="w-full bg-panel border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-border-strong focus:outline-none resize-none"
                   placeholder="Add a description..."
                   autofocus>{{ task.description|default:"" }}</textarea>
         <div class="flex items-center gap-2">
             <button type="submit"
                     :disabled="saving"
-                    class="bg-accent text-white px-3 py-1.5 rounded-card text-xs font-medium hover:bg-accent-hover transition-colors disabled:opacity-50">
+                    class="bg-accent text-on-accent px-3 py-1.5 rounded-control text-xs font-medium hover:bg-accent-hover transition-colors disabled:opacity-50">
                 <span x-show="!saving">Save</span>
                 <span x-show="saving" x-cloak>Saving...</span>
             </button>

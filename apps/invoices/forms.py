@@ -10,9 +10,9 @@ from apps.projects.models import Project
 from .models import money
 
 INPUT_CLASSES = (
-    'w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm '
-    'text-zinc-100 placeholder-zinc-500 focus:border-accent focus:ring-1 '
-    'focus:ring-accent focus:outline-none'
+    'w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm '
+    'text-zinc-100 placeholder-zinc-500 focus:border-border-strong focus:ring-1 '
+    'focus:ring-border-strong focus:outline-none'
 )
 
 

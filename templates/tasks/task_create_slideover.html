@@ -11,7 +11,7 @@
             </div>
         </div>
         <button onclick="closeSlideOver()"
-                class="w-8 h-8 flex items-center justify-center rounded-card bg-panel border border-border-subtle text-zinc-400 hover:text-zinc-200 hover:border-border-strong">&times;</button>
+                class="w-8 h-8 flex items-center justify-center rounded-control bg-panel border border-border-subtle text-zinc-400 hover:text-zinc-200 hover:border-border-strong">&times;</button>
     </div>
 
     <form method="post" hx-post="{% url 'task_create' project.pk %}"
@@ -25,11 +25,11 @@
         {% include "tasks/task_form_fields.html" %}
 
         <div class="flex gap-3 pt-2">
-            <button type="submit" class="bg-accent text-white px-4 py-2 rounded-card text-sm hover:bg-accent-hover transition-colors">
+            <button type="submit" class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm hover:bg-accent-hover transition-colors">
                 Create Task
             </button>
             <button type="button" onclick="closeSlideOver()"
-                    class="bg-elevated border border-border-subtle px-4 py-2 rounded-card text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
+                    class="bg-elevated border border-border-subtle px-4 py-2 rounded-control text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
                 Cancel
             </button>
         </div>

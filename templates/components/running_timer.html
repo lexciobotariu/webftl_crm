@@ -3,12 +3,12 @@
      hx-trigger="timerChanged from:body"
      hx-swap="outerHTML">
     {% if running_timer %}
-    <div class="flex-shrink-0 flex items-center justify-between gap-3 px-4 py-2 border-b border-border-subtle bg-accent-muted"
+    <div class="flex-shrink-0 flex items-center justify-between gap-3 px-4 py-2 border-b border-border-subtle bg-elevated"
          x-data="runningTimer('{{ running_timer.started_at|date:"c" }}')">
         <a href="{% url 'task_full_page' running_timer.task.project_id running_timer.task_id %}"
            class="flex items-center gap-2 min-w-0 text-sm text-zinc-100 hover:text-white">
-            <span class="inline-flex h-2 w-2 rounded-full bg-accent animate-soft-pulse"></span>
-            <i data-lucide="timer" class="w-3.5 h-3.5 text-accent flex-shrink-0"></i>
+            <span class="inline-flex h-2 w-2 rounded-full bg-success animate-soft-pulse"></span>
+            <i data-lucide="timer" class="w-3.5 h-3.5 text-zinc-200 flex-shrink-0"></i>
             <span class="truncate">{{ running_timer.task.title }}</span>
         </a>
         <div class="flex items-center gap-3 flex-shrink-0">
@@ -16,7 +16,7 @@
             <button type="button"
                     hx-post="{% url 'timer_stop' %}"
                     hx-swap="none"
-                    class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-zinc-100 bg-elevated border border-border-subtle rounded-card hover:bg-hover">
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-zinc-100 bg-elevated border border-border-subtle rounded-control hover:bg-hover">
                 <i data-lucide="square" class="w-3 h-3"></i>
                 Stop
             </button>

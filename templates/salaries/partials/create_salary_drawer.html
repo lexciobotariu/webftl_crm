@@ -27,7 +27,7 @@
                     <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Employee</label>
                     <select name="user"
                             required
-                            class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                            class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
                         <option value="">Select an employee</option>
                         {% for user_choice in form.user.field.queryset %}
                             <option value="{{ user_choice.id }}" {% if form.user.value == user_choice.id|stringformat:"s" %}selected{% endif %}>
@@ -36,7 +36,7 @@
                         {% endfor %}
                     </select>
                     {% if form.user.errors %}
-                        <p class="mt-1 text-xs text-red-400">{{ form.user.errors.0 }}</p>
+                        <p class="mt-1 text-xs text-error">{{ form.user.errors.0 }}</p>
                     {% endif %}
                 </div>
 
@@ -49,10 +49,10 @@
                            min="0"
                            required
                            value="{{ form.base_salary.value|default:'' }}"
-                           class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+                           class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none"
                            placeholder="0.00">
                     {% if form.base_salary.errors %}
-                        <p class="mt-1 text-xs text-red-400">{{ form.base_salary.errors.0 }}</p>
+                        <p class="mt-1 text-xs text-error">{{ form.base_salary.errors.0 }}</p>
                     {% endif %}
                 </div>
 
@@ -61,7 +61,7 @@
                     <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Currency</label>
                     <select name="currency"
                             required
-                            class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                            class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
                         {% for value, label in form.currency.field.choices %}
                             <option value="{{ value }}" {% if form.currency.value == value or value == 'EUR' and not form.currency.value %}selected{% endif %}>
                                 {{ label }}
@@ -69,19 +69,19 @@
                         {% endfor %}
                     </select>
                     {% if form.currency.errors %}
-                        <p class="mt-1 text-xs text-red-400">{{ form.currency.errors.0 }}</p>
+                        <p class="mt-1 text-xs text-error">{{ form.currency.errors.0 }}</p>
                     {% endif %}
                 </div>
             </div>
 
             <div class="flex gap-3 mt-6 pt-4 border-t border-border-subtle">
                 <button type="submit"
-                        class="bg-accent text-white px-4 py-2 rounded-card text-sm font-medium hover:bg-accent-hover transition-colors">
+                        class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">
                     Add Employee
                 </button>
                 <button type="button"
                         onclick="closeSlideOver()"
-                        class="bg-elevated border border-border-subtle px-4 py-2 rounded-card text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
+                        class="bg-elevated border border-border-subtle px-4 py-2 rounded-control text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
                     Cancel
                 </button>
             </div>
@@ -99,7 +99,7 @@
             {% endif %}
             <button type="button"
                     onclick="closeSlideOver()"
-                    class="mt-6 bg-elevated border border-border-subtle px-4 py-2 rounded-card text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
+                    class="mt-6 bg-elevated border border-border-subtle px-4 py-2 rounded-control text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
                 Close
             </button>
         </div>

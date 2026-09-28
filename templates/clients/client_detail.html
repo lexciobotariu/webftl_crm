@@ -29,7 +29,7 @@
                         hx-target="#slide-over"
                         hx-swap="innerHTML"
                         hx-on::after-request="openSlideOver(event)"
-                        class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-300 hover:bg-hover transition-colors">
+                        class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
                     <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                     Edit
                 </button>
@@ -38,7 +38,7 @@
                 <button hx-post="{% url 'client_delete' client.pk %}"
                         hx-confirm="Delete {{ client.name|escapejs }}? This will also delete all projects and tasks."
                         hx-target="body"
-                        class="inline-flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 text-red-300 px-3 py-1.5 rounded-card text-xs hover:bg-red-500/20 transition-colors">
+                        class="inline-flex items-center gap-1.5 bg-error/10 border border-error/20 text-error px-3 py-1.5 rounded-control text-xs hover:bg-error/20 transition-colors">
                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                     Delete
                 </button>
@@ -55,12 +55,12 @@
                 <div class="text-[10px] uppercase tracking-wider text-zinc-600 px-2 mb-2 truncate" title="{{ client.name }}">{{ client.name }}</div>
                 <nav class="space-y-1">
                     <a href="{% url 'client_detail' client.pk %}"
-                       class="w-full flex items-center gap-3 px-3 py-2 rounded-card text-sm transition-colors text-left {% if active_tab == 'profile' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
+                       class="w-full flex items-center gap-3 px-3 py-2 rounded-control text-sm transition-colors text-left {% if active_tab == 'profile' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
                         <i data-lucide="user" class="w-4 h-4"></i>
                         Profile
                     </a>
                     <a href="{% url 'client_detail_projects' client.pk %}"
-                       class="w-full flex items-center justify-between px-3 py-2 rounded-card text-sm transition-colors text-left {% if active_tab == 'projects' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
+                       class="w-full flex items-center justify-between px-3 py-2 rounded-control text-sm transition-colors text-left {% if active_tab == 'projects' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
                         <span class="flex items-center gap-3">
                             <i data-lucide="folder-kanban" class="w-4 h-4"></i>
                             Projects
@@ -68,7 +68,7 @@
                         <span class="text-xs text-zinc-500 bg-panel px-1.5 py-0.5 rounded">{{ projects.count }}</span>
                     </a>
                     <a href="{% url 'client_detail_todos' client.pk %}"
-                       class="w-full flex items-center justify-between px-3 py-2 rounded-card text-sm transition-colors text-left {% if active_tab == 'todos' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
+                       class="w-full flex items-center justify-between px-3 py-2 rounded-control text-sm transition-colors text-left {% if active_tab == 'todos' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
                         <span class="flex items-center gap-3">
                             <i data-lucide="check-square" class="w-4 h-4"></i>
                             To-Dos
@@ -76,7 +76,7 @@
                         <span class="text-xs text-zinc-500 bg-panel px-1.5 py-0.5 rounded">{{ todo_count }}</span>
                     </a>
                     <a href="{% url 'client_detail_notes' client.pk %}"
-                       class="w-full flex items-center justify-between px-3 py-2 rounded-card text-sm transition-colors text-left {% if active_tab == 'notes' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
+                       class="w-full flex items-center justify-between px-3 py-2 rounded-control text-sm transition-colors text-left {% if active_tab == 'notes' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
                         <span class="flex items-center gap-3">
                             <i data-lucide="sticky-note" class="w-4 h-4"></i>
                             Notes
@@ -85,7 +85,7 @@
                     </a>
                     {% if perms_map.access_invoices %}
                     <a href="{% url 'client_detail_invoices' client.pk %}"
-                       class="w-full flex items-center justify-between px-3 py-2 rounded-card text-sm transition-colors text-left {% if active_tab == 'invoices' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
+                       class="w-full flex items-center justify-between px-3 py-2 rounded-control text-sm transition-colors text-left {% if active_tab == 'invoices' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
                         <span class="flex items-center gap-3">
                             <i data-lucide="receipt" class="w-4 h-4"></i>
                             Invoices

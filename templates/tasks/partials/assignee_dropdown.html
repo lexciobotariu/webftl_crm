@@ -1,9 +1,9 @@
 <div class="relative" x-data="dropdown">
     <button @click="toggle()"
             {% if task.assignee %}title="{{ task.assignee.name }}"{% endif %}
-            class="flex items-center gap-2 w-full min-w-0 px-2 py-1 rounded-card text-sm text-zinc-300 hover:bg-elevated transition-colors">
+            class="flex items-center gap-2 w-full min-w-0 px-2 py-1 rounded-control text-sm text-zinc-300 hover:bg-elevated transition-colors">
         {% if task.assignee %}
-        <span class="w-5 h-5 flex-shrink-0 rounded-full bg-accent/30 flex items-center justify-center text-[10px] text-accent">
+        <span class="w-5 h-5 flex-shrink-0 rounded-full bg-elevated flex items-center justify-center text-[10px] text-zinc-200">
             {{ task.assignee.name|slice:":1"|upper }}
         </span>
         <span class="truncate">{{ task.assignee.name }}</span>
@@ -28,8 +28,8 @@
                 hx-target="#assignee-value-{{ task.pk }}"
                 hx-swap="innerHTML"
                 @click="close()"
-                class="w-full text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors flex items-center gap-2 {% if user.pk == task.assignee_id %}text-accent{% else %}text-zinc-300{% endif %}">
-            <span class="w-5 h-5 rounded-full bg-accent/30 flex items-center justify-center text-[10px] text-accent">
+                class="w-full text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors flex items-center gap-2 {% if user.pk == task.assignee_id %}text-zinc-200{% else %}text-zinc-300{% endif %}">
+            <span class="w-5 h-5 rounded-full bg-elevated flex items-center justify-center text-[10px] text-zinc-200">
                 {{ user.name|slice:":1"|upper }}
             </span>
             {{ user.name }}

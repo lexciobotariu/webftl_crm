@@ -16,14 +16,14 @@
             </div>
             <div class="flex items-center gap-1">
                 <a href="?week={{ prev_week|date:'Y-m-d' }}{% if project %}&project={{ project.pk }}{% endif %}"
-                   class="p-1.5 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded-card"
+                   class="p-1.5 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded-control"
                    title="Previous week">
                     <i data-lucide="chevron-left" class="w-4 h-4"></i>
                 </a>
                 <a href="{% url 'time_week' %}{% if project %}?project={{ project.pk }}{% endif %}"
                    class="px-2 py-1 text-xs text-zinc-400 hover:text-zinc-200">This week</a>
                 <a href="?week={{ next_week|date:'Y-m-d' }}{% if project %}&project={{ project.pk }}{% endif %}"
-                   class="p-1.5 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded-card"
+                   class="p-1.5 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded-control"
                    title="Next week">
                     <i data-lucide="chevron-right" class="w-4 h-4"></i>
                 </a>

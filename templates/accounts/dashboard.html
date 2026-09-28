@@ -23,7 +23,7 @@
                 <div class="flex items-center justify-between">
                     <div class="text-xs uppercase tracking-wide text-zinc-500">Clients</div>
                     <div class="w-7 h-7 rounded-full bg-elevated border border-border-subtle flex items-center justify-center">
-                        <i data-lucide="building-2" class="w-4 h-4 text-accent"></i>
+                        <i data-lucide="building-2" class="w-4 h-4 text-zinc-400"></i>
                     </div>
                 </div>
                 <div class="text-2xl font-semibold text-zinc-100 mt-2">{{ client_count }}</div>
@@ -34,7 +34,7 @@
                 <div class="flex items-center justify-between">
                     <div class="text-xs uppercase tracking-wide text-zinc-500">Projects</div>
                     <div class="w-7 h-7 rounded-full bg-elevated border border-border-subtle flex items-center justify-center">
-                        <i data-lucide="folder-kanban" class="w-4 h-4 text-emerald-400"></i>
+                        <i data-lucide="folder-kanban" class="w-4 h-4 text-zinc-400"></i>
                     </div>
                 </div>
                 <div class="text-2xl font-semibold text-zinc-100 mt-2">{{ project_count }}</div>
@@ -44,7 +44,7 @@
                 <div class="flex items-center justify-between">
                     <div class="text-xs uppercase tracking-wide text-zinc-500">My Active Tasks</div>
                     <div class="w-7 h-7 rounded-full bg-elevated border border-border-subtle flex items-center justify-center">
-                        <i data-lucide="check-square" class="w-4 h-4 text-amber-400"></i>
+                        <i data-lucide="check-square" class="w-4 h-4 text-zinc-400"></i>
                     </div>
                 </div>
                 <div class="text-2xl font-semibold text-zinc-100 mt-2">{{ my_task_count }}</div>
@@ -60,7 +60,7 @@
                         <h2 class="text-sm font-medium text-zinc-100">My Recent Tasks</h2>
                         <span class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ recent_tasks|length }}</span>
                     </div>
-                    <a href="{% url 'my_tasks' %}" class="text-xs text-accent hover:text-accent-hover transition-colors">
+                    <a href="{% url 'my_tasks' %}" class="text-xs text-zinc-200 hover:text-zinc-50 transition-colors">
                         View all
                     </a>
                 </div>
@@ -125,7 +125,7 @@
                         <h2 class="text-sm font-medium text-zinc-100">My To-Dos</h2>
                         <span class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ todo_count }}</span>
                     </div>
-                    <a href="{% url 'my_tasks_todos' %}" class="text-xs text-accent hover:text-accent-hover transition-colors">
+                    <a href="{% url 'my_tasks_todos' %}" class="text-xs text-zinc-200 hover:text-zinc-50 transition-colors">
                         View all
                     </a>
                 </div>

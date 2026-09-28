@@ -1,6 +1,6 @@
 <div class="relative" x-data="dropdown">
     <button @click="toggle()"
-            class="flex items-center gap-1 px-2 py-1 rounded-card text-sm hover:bg-elevated transition-colors">
+            class="flex items-center gap-1 px-2 py-1 rounded-control text-sm hover:bg-elevated transition-colors">
         {% if task.labels.exists %}
         {% for label in task.labels.all %}
         <span class="px-2 py-0.5 text-[10px] rounded-full border"
@@ -21,9 +21,9 @@
                 hx-swap="innerHTML"
                 class="w-full text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors flex items-center gap-2">
             <span class="w-3 h-3 rounded" style="background-color: {{ label.color }}"></span>
-            <span class="{% if label in task.labels.all %}text-accent{% else %}text-zinc-300{% endif %}">{{ label.name }}</span>
+            <span class="{% if label in task.labels.all %}text-zinc-200{% else %}text-zinc-300{% endif %}">{{ label.name }}</span>
             {% if label in task.labels.all %}
-            <i data-lucide="check" class="w-3 h-3 text-accent ml-auto"></i>
+            <i data-lucide="check" class="w-3 h-3 text-zinc-200 ml-auto"></i>
             {% endif %}
         </button>
         {% empty %}

@@ -22,9 +22,9 @@
 
         <!-- Non-field errors -->
         {% if form.non_field_errors %}
-            <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-card">
+            <div class="mb-4 p-3 bg-error/10 border border-error/30 rounded-card">
                 {% for error in form.non_field_errors %}
-                    <p class="text-xs text-red-400">{{ error }}</p>
+                    <p class="text-xs text-error">{{ error }}</p>
                 {% endfor %}
             </div>
         {% endif %}
@@ -44,7 +44,7 @@
                 {% if form.salary_month.field.queryset.exists %}
                     <select name="salary_month"
                             required
-                            class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                            class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
                         <option value="">Select a month...</option>
                         {% for month in form.salary_month.field.queryset %}
                             <option value="{{ month.id }}" {% if form.salary_month.value|stringformat:"s" == month.id|stringformat:"s" %}selected{% endif %}>
@@ -53,17 +53,17 @@
                         {% endfor %}
                     </select>
                     {% if form.salary_month.errors %}
-                        <p class="mt-1 text-xs text-red-400">{{ form.salary_month.errors.0 }}</p>
+                        <p class="mt-1 text-xs text-error">{{ form.salary_month.errors.0 }}</p>
                     {% endif %}
                 {% else %}
                     <!-- No months exist warning -->
-                    <div class="p-3 bg-amber-500/10 border border-amber-500/30 rounded-card">
-                        <p class="text-xs text-amber-400 mb-2">No salary months have been added for this employee yet.</p>
+                    <div class="p-3 bg-zinc-500/10 border border-zinc-500/30 rounded-card">
+                        <p class="text-xs text-zinc-400 mb-2">No salary months have been added for this employee yet.</p>
                         <a href="{% url 'month_create' employee_salary.id %}"
                            hx-get="{% url 'month_create' employee_salary.id %}"
                            hx-target="#slide-over"
                            hx-swap="innerHTML"
-                           class="inline-flex items-center gap-1.5 text-xs text-accent hover:text-accent-hover transition-colors">
+                           class="inline-flex items-center gap-1.5 text-xs text-zinc-200 hover:text-zinc-50 transition-colors">
                             <i data-lucide="plus" class="w-3 h-3"></i>
                             Add Month First
                         </a>
@@ -81,10 +81,10 @@
                            min="0"
                            required
                            value="{{ form.amount.value|default:'' }}"
-                           class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+                           class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none"
                            placeholder="0.00">
                     {% if form.amount.errors %}
-                        <p class="mt-1 text-xs text-red-400">{{ form.amount.errors.0 }}</p>
+                        <p class="mt-1 text-xs text-error">{{ form.amount.errors.0 }}</p>
                     {% endif %}
                 </div>
 
@@ -95,9 +95,9 @@
                            name="payment_date"
                            required
                            value="{{ form.payment_date.value|default:'' }}"
-                           class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                           class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
                     {% if form.payment_date.errors %}
-                        <p class="mt-1 text-xs text-red-400">{{ form.payment_date.errors.0 }}</p>
+                        <p class="mt-1 text-xs text-error">{{ form.payment_date.errors.0 }}</p>
                     {% endif %}
                 </div>
 
@@ -106,7 +106,7 @@
                     <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Payment Method</label>
                     <select name="payment_method"
                             required
-                            class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                            class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
                         {% for value, label in form.payment_method.field.choices %}
                             <option value="{{ value }}" {% if form.payment_method.value == value %}selected{% endif %}>
                                 {{ label }}
@@ -114,7 +114,7 @@
                         {% endfor %}
                     </select>
                     {% if form.payment_method.errors %}
-                        <p class="mt-1 text-xs text-red-400">{{ form.payment_method.errors.0 }}</p>
+                        <p class="mt-1 text-xs text-error">{{ form.payment_method.errors.0 }}</p>
                     {% endif %}
                 </div>
 
@@ -123,10 +123,10 @@
                     <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Notes (Optional)</label>
                     <textarea name="notes"
                               rows="3"
-                              class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+                              class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none"
                               placeholder="Optional notes about this payment...">{{ form.notes.value|default:'' }}</textarea>
                     {% if form.notes.errors %}
-                        <p class="mt-1 text-xs text-red-400">{{ form.notes.errors.0 }}</p>
+                        <p class="mt-1 text-xs text-error">{{ form.notes.errors.0 }}</p>
                     {% endif %}
                 </div>
             {% endif %}
@@ -135,12 +135,12 @@
         {% if form.salary_month.field.queryset.exists %}
             <div class="flex gap-3 mt-6 pt-4 border-t border-border-subtle">
                 <button type="submit"
-                        class="bg-accent text-white px-4 py-2 rounded-card text-sm font-medium hover:bg-accent-hover transition-colors">
+                        class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">
                     Record Payment
                 </button>
                 <button type="button"
                         onclick="closeSlideOver()"
-                        class="bg-elevated border border-border-subtle px-4 py-2 rounded-card text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
+                        class="bg-elevated border border-border-subtle px-4 py-2 rounded-control text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
                     Cancel
                 </button>
             </div>
@@ -148,7 +148,7 @@
             <div class="flex gap-3 mt-6 pt-4 border-t border-border-subtle">
                 <button type="button"
                         onclick="closeSlideOver()"
-                        class="bg-elevated border border-border-subtle px-4 py-2 rounded-card text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
+                        class="bg-elevated border border-border-subtle px-4 py-2 rounded-control text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
                     Cancel
                 </button>
             </div>

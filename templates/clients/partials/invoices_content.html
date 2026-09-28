@@ -11,7 +11,7 @@
                     hx-target="#slide-over"
                     hx-swap="innerHTML"
                     hx-on::after-request="openSlideOver(event)"
-                    class="inline-flex items-center gap-1.5 bg-accent text-white px-3 py-1.5 rounded-card text-xs font-medium hover:bg-accent-hover transition-colors">
+                    class="inline-flex items-center gap-1.5 bg-accent text-on-accent px-3 py-1.5 rounded-control text-xs font-medium hover:bg-accent-hover transition-colors">
                 <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                 New Invoice
             </button>
@@ -33,7 +33,7 @@
             {% for invoice in client_invoices %}
             <tr class="hover:bg-elevated/50 transition-colors">
                 <td class="px-4 py-3">
-                    <a href="{% url 'invoice_detail' invoice.pk %}" class="text-sm font-medium text-zinc-100 hover:text-accent transition-colors">
+                    <a href="{% url 'invoice_detail' invoice.pk %}" class="text-sm font-medium text-zinc-100 hover:text-zinc-50 transition-colors">
                         {{ invoice.number_label }}
                     </a>
                 </td>

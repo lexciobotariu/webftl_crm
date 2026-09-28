@@ -23,7 +23,7 @@
             <div class="flex items-center gap-2 flex-shrink-0">
                 <a href="{% url 'invoice_print' invoice.pk %}"
                    target="_blank"
-                   class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-300 hover:bg-hover transition-colors">
+                   class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
                     <i data-lucide="printer" class="w-3.5 h-3.5"></i>
                     Print
                 </a>
@@ -32,13 +32,13 @@
                         hx-target="#slide-over"
                         hx-swap="innerHTML"
                         hx-on::after-request="openSlideOver(event)"
-                        class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-300 hover:bg-hover transition-colors">
+                        class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
                     <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                     Edit
                 </button>
                 <button hx-post="{% url 'invoice_mark_sent' invoice.pk %}"
                         hx-confirm="Mark {{ invoice.number_label }} sent? Lines, tax, dates, and bill-to stay as they are."
-                        class="inline-flex items-center gap-1.5 bg-accent text-white px-3 py-1.5 rounded-card text-xs font-medium hover:bg-accent-hover transition-colors">
+                        class="inline-flex items-center gap-1.5 bg-accent text-on-accent px-3 py-1.5 rounded-control text-xs font-medium hover:bg-accent-hover transition-colors">
                     <i data-lucide="send" class="w-3.5 h-3.5"></i>
                     Mark sent
                 </button>
@@ -48,7 +48,7 @@
                         hx-target="#slide-over"
                         hx-swap="innerHTML"
                         hx-on::after-request="openSlideOver(event)"
-                        class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-card text-xs text-zinc-300 hover:bg-hover transition-colors">
+                        class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
                     <i data-lucide="banknote" class="w-3.5 h-3.5"></i>
                     Record payment
                 </button>
@@ -56,7 +56,7 @@
                 {% if request.user.is_admin and not invoice.payments.all %}
                 <button hx-post="{% url 'invoice_delete' invoice.pk %}"
                         hx-confirm="Delete {{ invoice.number_label }}?"
-                        class="inline-flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 text-red-300 px-3 py-1.5 rounded-card text-xs hover:bg-red-500/20 transition-colors">
+                        class="inline-flex items-center gap-1.5 bg-error/10 border border-error/20 text-error px-3 py-1.5 rounded-control text-xs hover:bg-error/20 transition-colors">
                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                     Delete
                 </button>
@@ -105,7 +105,7 @@
             <div class="bg-elevated/40 border border-border-subtle rounded-card p-4 space-y-2">
                 <div class="flex items-center justify-between text-sm">
                     <span class="text-zinc-500">Client</span>
-                    <a href="{% url 'client_detail' invoice.client_id %}" class="text-zinc-200 hover:text-accent">{{ invoice.client.name }}</a>
+                    <a href="{% url 'client_detail' invoice.client_id %}" class="text-zinc-200 hover:text-zinc-50">{{ invoice.client.name }}</a>
                 </div>
                 <div class="flex items-center justify-between text-sm">
                     <span class="text-zinc-500">Issued</span>
@@ -130,7 +130,7 @@
                         hx-target="#slide-over"
                         hx-swap="innerHTML"
                         hx-on::after-request="openSlideOver(event)"
-                        class="inline-flex items-center gap-1.5 bg-accent text-white px-3 py-1.5 rounded-card text-xs font-medium hover:bg-accent-hover transition-colors">
+                        class="inline-flex items-center gap-1.5 bg-accent text-on-accent px-3 py-1.5 rounded-control text-xs font-medium hover:bg-accent-hover transition-colors">
                     <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                     Add line
                 </button>
@@ -173,7 +173,7 @@
                             </button>
                             <button hx-post="{% url 'invoice_line_delete' invoice.pk line.pk %}"
                                     hx-confirm="Remove this line?"
-                                    class="p-1.5 text-zinc-500 hover:text-red-300 hover:bg-elevated rounded transition-colors"
+                                    class="p-1.5 text-zinc-500 hover:text-error hover:bg-elevated rounded transition-colors"
                                     title="Remove line">
                                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                             </button>

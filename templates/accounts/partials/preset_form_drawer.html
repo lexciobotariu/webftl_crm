@@ -23,8 +23,8 @@
         {% csrf_token %}
 
         {% if error %}
-        <div class="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-card">
-            <p class="text-sm text-red-400">{{ error }}</p>
+        <div class="mb-4 p-3 bg-error/10 border border-error/20 rounded-card">
+            <p class="text-sm text-error">{{ error }}</p>
         </div>
         {% endif %}
 
@@ -39,7 +39,7 @@
                 {% else %}
                 <input type="text" name="name" required
                        value="{% if preset %}{{ preset.name }}{% else %}{{ form_name }}{% endif %}"
-                       class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+                       class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none"
                        placeholder="e.g. Contractor">
                 {% endif %}
             </div>
@@ -49,7 +49,7 @@
                 <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Description</label>
                 <input type="text" name="description"
                        value="{% if preset %}{{ preset.description }}{% else %}{{ form_description }}{% endif %}"
-                       class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+                       class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none"
                        placeholder="Brief description of this role">
             </div>
 
@@ -63,7 +63,7 @@
                             <span class="text-sm text-zinc-300">Dashboard</span>
                         </span>
                         <input type="checkbox" name="access_dashboard" {% if not preset or preset.access_dashboard %}checked{% endif %}
-                               class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                               class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong">
                     </label>
 
                     <div data-module="clients"
@@ -92,7 +92,7 @@
                                 <span class="text-sm text-zinc-300">Clients</span>
                             </button>
                             <input type="checkbox" name="access_clients" {% if not preset or preset.access_clients %}checked{% endif %}
-                                   class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent"
+                                   class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong"
                                    x-model="enabled"
                                    @click.stop>
                         </div>
@@ -101,19 +101,19 @@
                                 <label class="flex items-center gap-2 min-w-0">
                                     <input type="checkbox" name="clients_view_all"{% if preset.access_clients and preset.clients_view_all %} checked{% endif %}{% if preset and not preset.access_clients %} disabled{% endif %}
                                            data-extra :disabled="!enabled"
-                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong">
                                     <span class="text-sm text-zinc-300">View all</span>
                                 </label>
                                 <label class="flex items-center gap-2 min-w-0">
                                     <input type="checkbox" name="clients_create"{% if preset.access_clients and preset.clients_create %} checked{% endif %}{% if preset and not preset.access_clients %} disabled{% endif %}
                                            data-extra :disabled="!enabled"
-                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong">
                                     <span class="text-sm text-zinc-300">Create</span>
                                 </label>
                                 <label class="flex items-center gap-2 min-w-0">
                                     <input type="checkbox" name="clients_edit"{% if preset.access_clients and preset.clients_edit %} checked{% endif %}{% if preset and not preset.access_clients %} disabled{% endif %}
                                            data-extra :disabled="!enabled"
-                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong">
                                     <span class="text-sm text-zinc-300">Edit</span>
                                 </label>
                             </div>
@@ -146,7 +146,7 @@
                                 <span class="text-sm text-zinc-300">Projects</span>
                             </button>
                             <input type="checkbox" name="access_projects" {% if not preset or preset.access_projects %}checked{% endif %}
-                                   class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent"
+                                   class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong"
                                    x-model="enabled"
                                    @click.stop>
                         </div>
@@ -155,25 +155,25 @@
                                 <label class="flex items-center gap-2 min-w-0">
                                     <input type="checkbox" name="projects_view_all"{% if preset.access_projects and preset.projects_view_all %} checked{% endif %}{% if preset and not preset.access_projects %} disabled{% endif %}
                                            data-extra :disabled="!enabled"
-                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong">
                                     <span class="text-sm text-zinc-300">View all</span>
                                 </label>
                                 <label class="flex items-center gap-2 min-w-0">
                                     <input type="checkbox" name="projects_create"{% if preset.access_projects and preset.projects_create %} checked{% endif %}{% if preset and not preset.access_projects %} disabled{% endif %}
                                            data-extra :disabled="!enabled"
-                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong">
                                     <span class="text-sm text-zinc-300">Create</span>
                                 </label>
                                 <label class="flex items-center gap-2 min-w-0">
                                     <input type="checkbox" name="projects_edit_own"{% if preset.access_projects and preset.projects_edit_own %} checked{% endif %}{% if preset and not preset.access_projects %} disabled{% endif %}
                                            data-extra :disabled="!enabled"
-                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong">
                                     <span class="text-sm text-zinc-300">Edit own</span>
                                 </label>
                                 <label class="flex items-center gap-2 min-w-0">
                                     <input type="checkbox" name="projects_edit_all"{% if preset.access_projects and preset.projects_edit_all %} checked{% endif %}{% if preset and not preset.access_projects %} disabled{% endif %}
                                            data-extra :disabled="!enabled"
-                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong">
                                     <span class="text-sm text-zinc-300">Edit all</span>
                                 </label>
                             </div>
@@ -206,7 +206,7 @@
                                 <span class="text-sm text-zinc-300">Tasks</span>
                             </button>
                             <input type="checkbox" name="access_tasks" {% if not preset or preset.access_tasks %}checked{% endif %}
-                                   class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent"
+                                   class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong"
                                    x-model="enabled"
                                    @click.stop>
                         </div>
@@ -215,25 +215,25 @@
                                 <label class="flex items-center gap-2 min-w-0">
                                     <input type="checkbox" name="tasks_view_all"{% if preset.access_tasks and preset.tasks_view_all %} checked{% endif %}{% if preset and not preset.access_tasks %} disabled{% endif %}
                                            data-extra :disabled="!enabled"
-                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong">
                                     <span class="text-sm text-zinc-300">View all</span>
                                 </label>
                                 <label class="flex items-center gap-2 min-w-0">
                                     <input type="checkbox" name="tasks_create"{% if preset.access_tasks and preset.tasks_create %} checked{% endif %}{% if preset and not preset.access_tasks %} disabled{% endif %}
                                            data-extra :disabled="!enabled"
-                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong">
                                     <span class="text-sm text-zinc-300">Create</span>
                                 </label>
                                 <label class="flex items-center gap-2 min-w-0">
                                     <input type="checkbox" name="tasks_edit_own"{% if preset.access_tasks and preset.tasks_edit_own %} checked{% endif %}{% if preset and not preset.access_tasks %} disabled{% endif %}
                                            data-extra :disabled="!enabled"
-                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong">
                                     <span class="text-sm text-zinc-300">Edit own</span>
                                 </label>
                                 <label class="flex items-center gap-2 min-w-0">
                                     <input type="checkbox" name="tasks_edit_all"{% if preset.access_tasks and preset.tasks_edit_all %} checked{% endif %}{% if preset and not preset.access_tasks %} disabled{% endif %}
                                            data-extra :disabled="!enabled"
-                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong">
                                     <span class="text-sm text-zinc-300">Edit all</span>
                                 </label>
                             </div>
@@ -246,7 +246,7 @@
                             <span class="text-sm text-zinc-300">Todos</span>
                         </span>
                         <input type="checkbox" name="access_todos" {% if not preset or preset.access_todos %}checked{% endif %}
-                               class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                               class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong">
                     </label>
 
                     <div data-module="notes"
@@ -275,7 +275,7 @@
                                 <span class="text-sm text-zinc-300">Notes</span>
                             </button>
                             <input type="checkbox" name="access_notes" {% if not preset or preset.access_notes %}checked{% endif %}
-                                   class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent"
+                                   class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong"
                                    x-model="enabled"
                                    @click.stop>
                         </div>
@@ -284,13 +284,13 @@
                                 <label class="flex items-center gap-2 min-w-0">
                                     <input type="checkbox" name="notes_view_all"{% if preset.access_notes and preset.notes_view_all %} checked{% endif %}{% if preset and not preset.access_notes %} disabled{% endif %}
                                            data-extra :disabled="!enabled"
-                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong">
                                     <span class="text-sm text-zinc-300">View all</span>
                                 </label>
                                 <label class="flex items-center gap-2 min-w-0">
                                     <input type="checkbox" name="notes_edit_public"{% if preset.access_notes and preset.notes_edit_public %} checked{% endif %}{% if preset and not preset.access_notes %} disabled{% endif %}
                                            data-extra :disabled="!enabled"
-                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong">
                                     <span class="text-sm text-zinc-300">Edit public</span>
                                 </label>
                             </div>
@@ -323,7 +323,7 @@
                                 <span class="text-sm text-zinc-300">Salaries</span>
                             </button>
                             <input type="checkbox" name="access_salaries" {% if not preset or preset.access_salaries %}checked{% endif %}
-                                   class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent"
+                                   class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong"
                                    x-model="enabled"
                                    @click.stop>
                         </div>
@@ -332,13 +332,13 @@
                                 <label class="flex items-center gap-2 min-w-0">
                                     <input type="checkbox" name="salaries_view_all"{% if preset.access_salaries and preset.salaries_view_all %} checked{% endif %}{% if preset and not preset.access_salaries %} disabled{% endif %}
                                            data-extra :disabled="!enabled"
-                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong">
                                     <span class="text-sm text-zinc-300">View all</span>
                                 </label>
                                 <label class="flex items-center gap-2 min-w-0">
                                     <input type="checkbox" name="salaries_edit"{% if preset.access_salaries and preset.salaries_edit %} checked{% endif %}{% if preset and not preset.access_salaries %} disabled{% endif %}
                                            data-extra :disabled="!enabled"
-                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong">
                                     <span class="text-sm text-zinc-300">Edit</span>
                                 </label>
                             </div>
@@ -371,7 +371,7 @@
                                 <span class="text-sm text-zinc-300">Invoices</span>
                             </button>
                             <input type="checkbox" name="access_invoices" {% if not preset or preset.access_invoices %}checked{% endif %}
-                                   class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent"
+                                   class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong"
                                    x-model="enabled"
                                    @click.stop>
                         </div>
@@ -380,19 +380,19 @@
                                 <label class="flex items-center gap-2 min-w-0">
                                     <input type="checkbox" name="invoices_view_all"{% if preset.access_invoices and preset.invoices_view_all %} checked{% endif %}{% if preset and not preset.access_invoices %} disabled{% endif %}
                                            data-extra :disabled="!enabled"
-                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong">
                                     <span class="text-sm text-zinc-300">View all</span>
                                 </label>
                                 <label class="flex items-center gap-2 min-w-0">
                                     <input type="checkbox" name="invoices_create"{% if preset.access_invoices and preset.invoices_create %} checked{% endif %}{% if preset and not preset.access_invoices %} disabled{% endif %}
                                            data-extra :disabled="!enabled"
-                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong">
                                     <span class="text-sm text-zinc-300">Create</span>
                                 </label>
                                 <label class="flex items-center gap-2 min-w-0">
                                     <input type="checkbox" name="invoices_edit"{% if preset.access_invoices and preset.invoices_edit %} checked{% endif %}{% if preset and not preset.access_invoices %} disabled{% endif %}
                                            data-extra :disabled="!enabled"
-                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong">
                                     <span class="text-sm text-zinc-300">Edit</span>
                                 </label>
                             </div>
@@ -425,7 +425,7 @@
                                 <span class="text-sm text-zinc-300">Team</span>
                             </button>
                             <input type="checkbox" name="access_team" {% if not preset or preset.access_team %}checked{% endif %}
-                                   class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent"
+                                   class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong"
                                    x-model="enabled"
                                    @click.stop>
                         </div>
@@ -434,13 +434,13 @@
                                 <label class="flex items-center gap-2 min-w-0">
                                     <input type="checkbox" name="team_create"{% if preset.access_team and preset.team_create %} checked{% endif %}{% if preset and not preset.access_team %} disabled{% endif %}
                                            data-extra :disabled="!enabled"
-                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong">
                                     <span class="text-sm text-zinc-300">Create</span>
                                 </label>
                                 <label class="flex items-center gap-2 min-w-0">
                                     <input type="checkbox" name="team_edit"{% if preset.access_team and preset.team_edit %} checked{% endif %}{% if preset and not preset.access_team %} disabled{% endif %}
                                            data-extra :disabled="!enabled"
-                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-accent focus:ring-accent">
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong">
                                     <span class="text-sm text-zinc-300">Edit</span>
                                 </label>
                             </div>
@@ -452,12 +452,12 @@
 
         <div class="flex gap-3 mt-6 pt-4 border-t border-border-subtle">
             <button type="submit"
-                    class="bg-accent text-white px-4 py-2 rounded-card text-sm font-medium hover:bg-accent-hover transition-colors">
+                    class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">
                 {% if preset %}Save Changes{% else %}Create Preset{% endif %}
             </button>
             <button type="button"
                     onclick="closeSlideOver()"
-                    class="bg-elevated border border-border-subtle px-4 py-2 rounded-card text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
+                    class="bg-elevated border border-border-subtle px-4 py-2 rounded-control text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
                 Cancel
             </button>
         </div>

@@ -25,37 +25,37 @@
             <div>
                 <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Name</label>
                 <input type="text" name="name" value="{{ form.name.value|default_if_none:'' }}"
-                       class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+                       class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none"
                        required>
                 {% if form.name.errors %}
-                <p class="text-xs text-red-400 mt-1">{{ form.name.errors.0 }}</p>
+                <p class="text-xs text-error mt-1">{{ form.name.errors.0 }}</p>
                 {% endif %}
             </div>
 
             <div>
                 <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Email</label>
                 <input type="email" name="email" value="{{ form.email.value|default_if_none:'' }}"
-                       class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                       class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
                 {% if form.email.errors %}
-                <p class="text-xs text-red-400 mt-1">{{ form.email.errors.0 }}</p>
+                <p class="text-xs text-error mt-1">{{ form.email.errors.0 }}</p>
                 {% endif %}
             </div>
 
             <div>
                 <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Phone</label>
                 <input type="text" name="phone" value="{{ form.phone.value|default_if_none:'' }}"
-                       class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                       class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
                 {% if form.phone.errors %}
-                <p class="text-xs text-red-400 mt-1">{{ form.phone.errors.0 }}</p>
+                <p class="text-xs text-error mt-1">{{ form.phone.errors.0 }}</p>
                 {% endif %}
             </div>
 
             <div>
                 <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Address</label>
                 <textarea name="address" rows="3"
-                          class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none resize-none">{{ form.address.value|default_if_none:'' }}</textarea>
+                          class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none resize-none">{{ form.address.value|default_if_none:'' }}</textarea>
                 {% if form.address.errors %}
-                <p class="text-xs text-red-400 mt-1">{{ form.address.errors.0 }}</p>
+                <p class="text-xs text-error mt-1">{{ form.address.errors.0 }}</p>
                 {% endif %}
             </div>
 
@@ -66,29 +66,29 @@
             <div>
                 <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Billing name</label>
                 <input type="text" name="billing_name" value="{{ form.billing_name.value|default_if_none:'' }}"
-                       class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                       class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
                 <p class="text-xs text-zinc-500 mt-1">A blank value uses the contact name.</p>
                 {% if form.billing_name.errors %}
-                <p class="text-xs text-red-400 mt-1">{{ form.billing_name.errors.0 }}</p>
+                <p class="text-xs text-error mt-1">{{ form.billing_name.errors.0 }}</p>
                 {% endif %}
             </div>
 
             <div>
                 <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Billing email</label>
                 <input type="email" name="billing_email" value="{{ form.billing_email.value|default_if_none:'' }}"
-                       class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                       class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
                 <p class="text-xs text-zinc-500 mt-1">A blank value uses the contact email.</p>
                 {% if form.billing_email.errors %}
-                <p class="text-xs text-red-400 mt-1">{{ form.billing_email.errors.0 }}</p>
+                <p class="text-xs text-error mt-1">{{ form.billing_email.errors.0 }}</p>
                 {% endif %}
             </div>
 
             <div>
                 <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Tax ID</label>
                 <input type="text" name="tax_id" value="{{ form.tax_id.value|default_if_none:'' }}"
-                       class="w-full bg-elevated border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-100 focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                       class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
                 {% if form.tax_id.errors %}
-                <p class="text-xs text-red-400 mt-1">{{ form.tax_id.errors.0 }}</p>
+                <p class="text-xs text-error mt-1">{{ form.tax_id.errors.0 }}</p>
                 {% endif %}
             </div>
 
@@ -103,7 +103,7 @@
                 {{ form.currency }}
                 <p class="text-xs text-zinc-500 mt-1">Choose once. It stays after the first save.</p>
                 {% if form.currency.errors %}
-                <p class="text-xs text-red-400 mt-1">{{ form.currency.errors.0 }}</p>
+                <p class="text-xs text-error mt-1">{{ form.currency.errors.0 }}</p>
                 {% endif %}
             </div>
             {% endif %}
@@ -111,12 +111,12 @@
 
         <div class="flex gap-3 mt-6 pt-4 border-t border-border-subtle">
             <button type="submit"
-                    class="bg-accent text-white px-4 py-2 rounded-card text-sm font-medium hover:bg-accent-hover transition-colors">
+                    class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">
                 Save Changes
             </button>
             <button type="button"
                     onclick="closeSlideOver()"
-                    class="bg-elevated border border-border-subtle px-4 py-2 rounded-card text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
+                    class="bg-elevated border border-border-subtle px-4 py-2 rounded-control text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
                 Cancel
             </button>
         </div>
