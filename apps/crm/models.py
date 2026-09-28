@@ -34,11 +34,14 @@ class Currency(models.Model):
     """A currency an admin allows on clients.
 
     ``code`` is three letters, unique, and stays as it was created.
+    ``symbol_before`` chooses which side of the amount the symbol sits on.
+    It defaults to before the amount.
     """
 
     code = models.CharField(max_length=3, unique=True)
     name = models.CharField(max_length=64)
     symbol = models.CharField(max_length=16)
+    symbol_before = models.BooleanField(default=True)
 
     class Meta:
         ordering = ['code']

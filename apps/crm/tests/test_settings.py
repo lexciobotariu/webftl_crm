@@ -1,4 +1,7 @@
+import importlib
+
 import pytest
+from django.apps import apps as django_apps
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 
@@ -22,7 +25,7 @@ class TestSettingsAccess:
         member_home = client.get(reverse('dashboard')).content.decode()
         assert 'href="/settings/"' not in member_home
         assert Company.objects.count() == 0
-        assert Currency.objects.count() == 0
+        assert Currency.objects.count() == 4
 
         client.force_login(admin_user)
         admin_home = client.get(reverse('dashboard')).content.decode()
@@ -51,18 +54,21 @@ class TestSettingsAccess:
         assert Company.objects.count() == 1
 
         added = client.post(reverse('currency_add'), {
-            'code': 'eur',
-            'name': 'Euro',
-            'symbol': '€',
+            'code': 'chf',
+            'name': 'Swiss Franc',
+            'symbol': 'Fr',
+            'symbol_before': 'before',
         })
         assert added.status_code == 302
-        currency = Currency.objects.get()
-        assert currency.code == 'EUR'
-        assert currency.name == 'Euro'
-        assert currency.symbol == '€'
+        currency = Currency.objects.get(code='CHF')
+        assert currency.name == 'Swiss Franc'
+        assert currency.symbol == 'Fr'
+        assert currency.symbol_before is True
 
         listed = client.get(reverse('settings')).content.decode()
         assert 'Harbor Studio LLC' in listed
+        assert 'CHF' in listed
+        assert 'Swiss Franc' in listed
         assert 'EUR' in listed
         assert 'Euro' in listed
 
@@ -70,8 +76,8 @@ class TestSettingsAccess:
 @pytest.mark.django_db
 class TestCurrencyDelete:
     def test_a_used_currency_cannot_be_deleted_and_an_unused_one_can(self, client, admin_user):
-        used = Currency.objects.create(code='USD', name='US Dollar', symbol='$')
-        unused = Currency.objects.create(code='EUR', name='Euro', symbol='€')
+        used = Currency.objects.get(code='USD')
+        unused = Currency.objects.get(code='EUR')
         ClientFactory(currency=used)
         client.force_login(admin_user)
 
@@ -89,8 +95,8 @@ class TestCurrencyDelete:
 @pytest.mark.django_db
 class TestCurrencyCode:
     def test_code_is_three_letters_and_cannot_change(self):
-        currency = Currency.objects.create(code='usd', name='US Dollar', symbol='$')
-        assert currency.code == 'USD'
+        currency = Currency.objects.create(code='cad', name='Canadian Dollar', symbol='CA$')
+        assert currency.code == 'CAD'
 
         with pytest.raises(ValidationError):
             Currency.objects.create(code='US', name='Short', symbol='$')
@@ -101,12 +107,88 @@ class TestCurrencyCode:
         with pytest.raises(ValidationError):
             currency.save()
         currency.refresh_from_db()
-        assert currency.code == 'USD'
+        assert currency.code == 'CAD'
 
         currency.name = 'Dollar'
-        currency.symbol = 'US$'
+        currency.symbol = 'CA$'
         currency.save()
         currency.refresh_from_db()
-        assert currency.code == 'USD'
+        assert currency.code == 'CAD'
         assert currency.name == 'Dollar'
-        assert currency.symbol == 'US$'
+        assert currency.symbol == 'CA$'
+
+
+def _seed_currencies():
+    migration = importlib.import_module('apps.crm.migrations.0002_currency_symbol_before')
+    migration.seed_currencies(django_apps, None)
+
+
+def _currency_row(html, code):
+    marker = f'>{code}<'
+    for row in html.split('<tr'):
+        if marker in row:
+            return row
+    raise AssertionError(f'{code} is not listed')
+
+
+@pytest.mark.django_db
+class TestCurrencySeed:
+    def test_the_four_seeds_exist_once_when_the_migration_runs_twice(self):
+        Currency.objects.all().delete()
+        _seed_currencies()
+        _seed_currencies()
+
+        assert Currency.objects.count() == 4
+        expected = {
+            'EUR': ('Euro', '€', False),
+            'GBP': ('British Pound', '£', True),
+            'USD': ('US Dollar', '$', True),
+            'RON': ('Romanian Leu', 'lei', False),
+        }
+        for code, (name, symbol, symbol_before) in expected.items():
+            currency = Currency.objects.get(code=code)
+            assert currency.name == name
+            assert currency.symbol == symbol
+            assert currency.symbol_before is symbol_before
+
+        euro = Currency.objects.get(code='EUR')
+        euro.name = 'Old Euro'
+        euro.symbol = 'E'
+        euro.symbol_before = True
+        euro.save()
+        _seed_currencies()
+        euro.refresh_from_db()
+        assert Currency.objects.filter(code='EUR').count() == 1
+        assert euro.name == 'Old Euro'
+        assert euro.symbol == 'E'
+        assert euro.symbol_before is True
+        assert Currency.objects.count() == 4
+
+
+@pytest.mark.django_db
+class TestCurrencySymbolPosition:
+    def test_the_add_form_chooses_before_or_after_and_seeds_show_theirs(
+        self, client, admin_user
+    ):
+        client.force_login(admin_user)
+        page = client.get(reverse('settings')).content.decode()
+        assert 'name="symbol_before"' in page
+        assert 'Before the amount' in page
+        assert 'After the amount' in page
+        assert '>After<' in _currency_row(page, 'EUR')
+        assert '>After<' in _currency_row(page, 'RON')
+        assert '>Before<' in _currency_row(page, 'GBP')
+        assert '>Before<' in _currency_row(page, 'USD')
+
+        added = client.post(reverse('currency_add'), {
+            'code': 'chf',
+            'name': 'Swiss Franc',
+            'symbol': 'Fr',
+            'symbol_before': 'after',
+        })
+        assert added.status_code == 302
+        franc = Currency.objects.get(code='CHF')
+        assert franc.symbol_before is False
+
+        listed = client.get(reverse('settings')).content.decode()
+        assert '>After<' in _currency_row(listed, 'CHF')

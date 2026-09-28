@@ -23,7 +23,7 @@
             <div>
                 <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Balance</label>
                 <div class="w-full bg-elevated/50 border border-border-subtle rounded-card px-3 py-2 text-sm text-zinc-300">
-                    {{ invoice.balance|floatformat:2 }}
+                    {% include "invoices/partials/money.html" with amount=invoice.balance %}
                 </div>
             </div>
             <div>

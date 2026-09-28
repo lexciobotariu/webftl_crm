@@ -30,7 +30,11 @@ def company_snapshot():
 
 
 def currency_snapshot(client):
-    """Copy the client's currency. A client with none cannot be invoiced."""
+    """Copy the client's currency, including which side the symbol sits on.
+
+    A later settings change does not rewrite an invoice already stored.
+    A client with no currency cannot be invoiced.
+    """
     currency = client.currency
     if currency is None:
         raise ValidationError(
@@ -39,6 +43,7 @@ def currency_snapshot(client):
     return {
         'currency_code': currency.code,
         'currency_symbol': currency.symbol,
+        'symbol_before': currency.symbol_before,
     }
 
 
