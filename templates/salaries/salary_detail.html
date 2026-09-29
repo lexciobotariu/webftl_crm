@@ -2,93 +2,162 @@
 
 {% block title %}{{ salary.user.name }} - Salaries - WebFTL CRM{% endblock %}
 
-{% block content %}
-<div class="space-y-4">
-    <!-- Back link -->
-    <a href="{% url 'salary_list' %}"
-       class="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
-        <i data-lucide="arrow-left" class="w-4 h-4"></i>
-        Back to Salaries
-    </a>
-
-    <!-- Header -->
-    <div class="flex items-start justify-between">
-        <div class="flex items-center gap-4">
-            <div class="w-12 h-12 rounded-full bg-elevated flex items-center justify-center">
-                <span class="text-zinc-200 text-lg font-semibold">{{ salary.user.name|slice:":1"|upper }}</span>
+{% block full_content %}
+<div class="flex flex-col h-full">
+    <!-- Compact header -->
+    <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="{% url 'salary_list' %}" class="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors" title="Back to Salaries">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                </a>
+                <div class="flex items-center gap-2 text-sm">
+                    <a href="{% url 'salary_list' %}" class="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 transition-colors">
+                        <i data-lucide="wallet" class="w-3.5 h-3.5"></i>
+                        <span>Salaries</span>
+                    </a>
+                    <span class="text-zinc-600">/</span>
+                    <span class="flex items-center gap-1.5 text-zinc-100 font-medium">
+                        <i data-lucide="user" class="w-3.5 h-3.5"></i>
+                        <span>{{ salary.user.name }}</span>
+                    </span>
+                </div>
             </div>
-            <div>
-                <h1 class="text-lg font-semibold text-zinc-100">{{ salary.user.name }}</h1>
-                <p class="text-sm text-zinc-500">{{ salary.user.email }}</p>
-            </div>
-        </div>
-        <div class="text-right">
-            <div class="text-sm text-zinc-500">Base Salary</div>
-            <div class="text-xl font-semibold text-zinc-100">
-                {{ salary.currency_symbol }}{{ salary.base_salary|floatformat:2 }}
-                <span class="text-sm text-zinc-500 font-normal">/month</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Actions -->
-    {% if perms_map.salaries_edit %}
-    <div class="flex items-center gap-2">
-        <button hx-get="{% url 'payment_create' salary.id %}"
-                hx-target="#slide-over"
-                hx-swap="innerHTML"
-                hx-on::after-request="openSlideOver(event)"
-                class="flex items-center gap-2 px-3 py-1.5 bg-accent text-on-accent text-sm font-medium rounded-control hover:bg-accent-hover transition-colors">
-            <i data-lucide="plus" class="w-4 h-4"></i>
-            Record Payment
-        </button>
-        <button hx-get="{% url 'month_create' salary.id %}"
-                hx-target="#slide-over"
-                hx-swap="innerHTML"
-                hx-on::after-request="openSlideOver(event)"
-                class="flex items-center gap-2 px-3 py-1.5 bg-elevated text-zinc-300 text-sm font-medium rounded-control border border-border-subtle hover:bg-hover transition-colors">
-            <i data-lucide="calendar-plus" class="w-4 h-4"></i>
-            Add Month
-        </button>
-        <button hx-get="{% url 'salary_edit' salary.id %}"
-                hx-target="#slide-over"
-                hx-swap="innerHTML"
-                hx-on::after-request="openSlideOver(event)"
-                class="flex items-center gap-2 px-3 py-1.5 bg-elevated text-zinc-300 text-sm font-medium rounded-control border border-border-subtle hover:bg-hover transition-colors">
-            <i data-lucide="settings" class="w-4 h-4"></i>
-            Settings
-        </button>
-    </div>
-    {% endif %}
-
-    <!-- Months List -->
-    <div id="months-list-content"
-         hx-get="{% url 'salary_detail' salary.id %}"
-         hx-trigger="refreshSalaryList from:body"
-         hx-select="#months-list-content"
-         hx-swap="outerHTML"
-         class="bg-elevated rounded-card border border-border-subtle overflow-hidden">
-        {% if months %}
-        <div class="divide-y divide-border-subtle" x-data="{ expandedMonth: null }">
-            {% for month in months %}
-                {% include 'salaries/partials/month_item.html' %}
-            {% endfor %}
-        </div>
-        {% else %}
-        <div class="flex flex-col items-center justify-center py-12 text-zinc-500">
-            <i data-lucide="calendar" class="w-10 h-10 mb-3 opacity-30"></i>
-            <p class="text-sm mb-2">No salary months recorded yet</p>
             {% if perms_map.salaries_edit %}
-            <button hx-get="{% url 'month_create' salary.id %}"
+            <button hx-get="{% url 'salary_edit' salary.id %}"
                     hx-target="#slide-over"
                     hx-swap="innerHTML"
                     hx-on::after-request="openSlideOver(event)"
-                    class="text-zinc-200 hover:text-zinc-50 text-sm">
-                Add the first month
+                    class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
+                <i data-lucide="settings" class="w-3.5 h-3.5"></i>
+                Settings
             </button>
             {% endif %}
         </div>
-        {% endif %}
+    </div>
+
+    <div class="flex-1 min-h-0 p-6 flex flex-col gap-6">
+        <!-- Details. Refreshed with the list so a salary change shows up here. -->
+        <div id="salary-details"
+             class="flex-shrink-0 border border-border-subtle rounded-card bg-panel/50 overflow-hidden"
+             hx-get="{% url 'salary_detail' salary.id %}"
+             hx-trigger="refreshSalaryList from:body"
+             hx-select="#salary-details"
+             hx-swap="outerHTML"
+             hx-disinherit="*">
+            <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
+                <div class="flex items-center gap-3">
+                    <i data-lucide="wallet" class="w-4 h-4 text-zinc-500"></i>
+                    <h2 class="text-sm font-medium text-zinc-100">Salary Details</h2>
+                </div>
+            </div>
+            <div class="p-4">
+                <dl class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                        <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Employee</dt>
+                        <dd class="flex items-center gap-2 text-zinc-100 font-medium min-w-0">
+                            <span class="w-6 h-6 flex-shrink-0 rounded-full bg-elevated flex items-center justify-center text-zinc-200 text-xs font-semibold">{{ salary.user.name|slice:":1"|upper }}</span>
+                            <span class="truncate">{{ salary.user.name }}</span>
+                        </dd>
+                    </div>
+                    <div class="min-w-0">
+                        <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Email</dt>
+                        <dd class="text-zinc-300 truncate" title="{{ salary.user.email }}">{{ salary.user.email }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Base Salary</dt>
+                        <dd class="text-zinc-100 font-medium">
+                            {{ salary.currency_symbol }}{{ salary.base_salary|floatformat:2 }}
+                            <span class="text-xs text-zinc-500 font-normal">/month</span>
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Currency</dt>
+                        <dd class="text-zinc-300">{{ salary.currency }}</dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Months -->
+        <div id="months-list-content"
+             class="flex-1 min-h-0 flex flex-col border border-border-subtle rounded-card overflow-hidden bg-panel/50"
+             hx-get="{% url 'salary_detail' salary.id %}"
+             hx-trigger="refreshSalaryList from:body"
+             hx-select="#months-list-content"
+             hx-swap="outerHTML"
+             hx-disinherit="*">
+            <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ months|length }}</span>
+                        <span class="text-xs text-zinc-500">month{{ months|length|pluralize }}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        {% if perms_map.salaries_edit %}
+                        <button hx-get="{% url 'month_create' salary.id %}"
+                                hx-target="#slide-over"
+                                hx-swap="innerHTML"
+                                hx-on::after-request="openSlideOver(event)"
+                                class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
+                            <i data-lucide="calendar-plus" class="w-3.5 h-3.5"></i>
+                            Add Month
+                        </button>
+                        <button hx-get="{% url 'payment_create' salary.id %}"
+                                hx-target="#slide-over"
+                                hx-swap="innerHTML"
+                                hx-on::after-request="openSlideOver(event)"
+                                class="inline-flex items-center gap-1.5 bg-accent text-on-accent px-3 py-1.5 rounded-control text-xs font-medium hover:bg-accent-hover transition-colors">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            Record Payment
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% if months %}
+            {# Header and body are separate tables so the scrollbar starts below the header. #}
+            <div class="flex-shrink-0 overflow-y-hidden scrollbar-gutter-stable bg-panel border-b border-border-subtle">
+                <table class="w-full table-fixed">
+                    {% include "salaries/partials/month_cols.html" %}
+                    <thead>
+                        <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
+                            <th class="px-4 py-2 font-medium">Month</th>
+                            <th class="px-4 py-2 font-medium">Expected</th>
+                            <th class="px-4 py-2 font-medium">Paid</th>
+                            <th class="px-4 py-2 font-medium">Remaining</th>
+                            <th class="px-4 py-2 font-medium">Status</th>
+                            <th class="px-4 py-2 font-medium">Payments</th>
+                            <th class="px-4 py-2 font-medium"></th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+            <div class="flex-1 min-h-0 overflow-y-auto scrollbar-gutter-stable">
+                {# One open month at a time: the state sits on the table, each month is its own tbody. #}
+                <table class="w-full table-fixed" x-data="{ expandedMonth: null }">
+                    {% include "salaries/partials/month_cols.html" %}
+                    {% for month in months %}
+                        {% include 'salaries/partials/month_item.html' %}
+                    {% endfor %}
+                </table>
+            </div>
+            {% else %}
+            <div class="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center py-12 text-zinc-500">
+                <i data-lucide="calendar" class="w-10 h-10 mb-3 opacity-30"></i>
+                <p class="text-sm mb-2">No salary months recorded yet</p>
+                {% if perms_map.salaries_edit %}
+                <button hx-get="{% url 'month_create' salary.id %}"
+                        hx-target="#slide-over"
+                        hx-swap="innerHTML"
+                        hx-on::after-request="openSlideOver(event)"
+                        class="text-zinc-200 hover:text-zinc-50 text-sm">
+                    Add the first month
+                </button>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
     </div>
 </div>
 {% endblock %}

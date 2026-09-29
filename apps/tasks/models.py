@@ -18,6 +18,38 @@ class Label(models.Model):
         return self.name
 
 
+# Sentinel a priority filter uses for tasks with no priority (stored as '').
+PRIORITY_NONE = 'none'
+PRIORITY_FILTER_CHOICES = [
+    ('low', 'Low'),
+    ('medium', 'Medium'),
+    ('high', 'High'),
+    ('urgent', 'Urgent'),
+    (PRIORITY_NONE, 'No priority'),
+]
+
+
+def clean_priorities(values):
+    """Keep only known priority filter values, once each, in display order."""
+    wanted = {str(value) for value in values or []}
+    return [value for value, _label in PRIORITY_FILTER_CHOICES if value in wanted]
+
+
+def priorities_to_store(values):
+    """What to save for a set of checked priorities: nothing when it is all of them."""
+    cleaned = clean_priorities(values)
+    return [] if len(cleaned) == len(PRIORITY_FILTER_CHOICES) else cleaned
+
+
+def priority_filter_options(selected):
+    """Checkbox options for a priority filter. An empty selection checks everything."""
+    chosen = set(selected or [])
+    return [
+        {'value': value, 'label': label, 'checked': not chosen or value in chosen}
+        for value, label in PRIORITY_FILTER_CHOICES
+    ]
+
+
 class TaskQuerySet(models.QuerySet):
     """Keeps the definitions of "done", "active" and "overdue" in one place.
 
@@ -37,6 +69,20 @@ class TaskQuerySet(models.QuerySet):
         if today is None:
             today = timezone.now().date()
         return self.active().filter(due_date__lt=today)
+
+    def with_priorities(self, values):
+        """Only tasks with one of ``values``; ``PRIORITY_NONE`` means no priority.
+
+        An empty or unrecognised selection is no filter, so the list never goes
+        blank because of a stale value.
+        """
+        values = clean_priorities(values)
+        if not values:
+            return self
+        query = Q(priority__in=[value for value in values if value != PRIORITY_NONE])
+        if PRIORITY_NONE in values:
+            query |= Q(priority='')
+        return self.filter(query)
 
     def open_for(self, user):
         """Tasks assigned to ``user`` that they can still view.
@@ -293,3 +339,39 @@ class Attachment(models.Model):
         if not self.filename:
             self.filename = self.file.name
         super().save(*args, **kwargs)
+
+
+def my_tasks_status_names(user):
+    """Distinct status names in the projects where ``user`` has assigned tasks.
+
+    My Tasks mixes projects, and every project has its own statuses, so the
+    filter works on names: one "Done" covers the "Done" of every project.
+    Ordered by the column position, then by name.
+    """
+    rows = (
+        Status.objects.filter(project__in=Task.objects.open_for(user).values('project'))
+        .values('name')
+        .annotate(first_order=models.Min('order'))
+        .order_by('first_order', 'name')
+    )
+    return [row['name'] for row in rows]
+
+
+class MyTasksFilter(models.Model):
+    """What one person shows on My Tasks.
+
+    ``shown_priorities``: checked priorities, empty meaning every priority.
+    ``hidden_statuses``: status names left unchecked, so a status that appears
+    later shows up checked and visible.
+    """
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='my_tasks_filter',
+    )
+    shown_priorities = models.JSONField(default=list, blank=True)
+    hidden_statuses = models.JSONField(default=list, blank=True)
+
+    def __str__(self):
+        return f"My Tasks filter - {self.user}"

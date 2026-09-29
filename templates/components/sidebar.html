@@ -41,7 +41,7 @@
         {% if perms_map.access_projects %}
         <a href="{% url 'project_list' %}"
            class="flex items-center gap-2.5 px-3 py-2 rounded-control text-[13px] font-medium transition-colors duration-150
-                  {% if 'project' in request.resolver_match.url_name %}
+                  {% if 'project' in request.resolver_match.url_name and 'client' not in request.resolver_match.url_name %}
                   bg-elevated text-zinc-100 border border-border-subtle
                   {% else %}
                   text-zinc-400 hover:text-zinc-200 hover:bg-hover
@@ -105,7 +105,7 @@
         {% if perms_map.access_team %}
         <a href="{% url 'team_list' %}"
            class="flex items-center gap-2.5 px-3 py-2 rounded-control text-[13px] font-medium transition-colors duration-150
-                  {% if 'team' in request.resolver_match.url_name %}
+                  {% if 'team' in request.resolver_match.url_name and 'project' not in request.resolver_match.url_name %}
                   bg-elevated text-zinc-100 border border-border-subtle
                   {% else %}
                   text-zinc-400 hover:text-zinc-200 hover:bg-hover

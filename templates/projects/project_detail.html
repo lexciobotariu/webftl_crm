@@ -37,11 +37,6 @@
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <a href="{% url 'project_board' project.pk %}"
-                   class="inline-flex items-center gap-1.5 bg-accent text-on-accent px-3 py-1.5 rounded-control text-xs font-medium hover:bg-accent-hover transition-colors">
-                    <i data-lucide="kanban" class="w-3.5 h-3.5"></i>
-                    Open Board
-                </a>
                 {% if can_edit_project %}
                 <a href="{% url 'project_settings' project.pk %}?next=detail"
                    class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">

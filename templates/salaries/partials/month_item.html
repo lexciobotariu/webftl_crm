@@ -1,29 +1,39 @@
 {% load static %}
 
-<div class="bg-elevated">
-    <!-- Month Header (clickable to expand) -->
-    <div class="flex items-center justify-between px-4 py-4 cursor-pointer hover:bg-hover transition-colors"
-         @click="expandedMonth = expandedMonth === {{ month.id }} ? null : {{ month.id }}">
-
-        <!-- Left: Month/Year with Current badge -->
-        <div class="flex items-center gap-3 min-w-[180px]">
-            <div>
-                <div class="text-sm font-medium text-zinc-100">
-                    {{ month.month_name }} {{ month.year }}
-                </div>
-                <div class="text-xs text-zinc-500">
-                    Expected: {{ salary.currency_symbol }}{{ month.expected_amount|floatformat:2 }}
-                </div>
-            </div>
-            {% if month.year == current_year and month.month == current_month %}
+{# One tbody per month: the summary row, then a row that holds its payments when expanded. #}
+<tbody class="border-b border-border-subtle">
+    <tr class="cursor-pointer hover:bg-elevated/50 transition-colors"
+        @click="expandedMonth = expandedMonth === {{ month.id }} ? null : {{ month.id }}">
+        <td class="px-4 py-3">
+            <div class="flex items-center gap-2">
+                <span class="text-sm font-medium text-zinc-100 whitespace-nowrap">{{ month.month_name }} {{ month.year }}</span>
+                {% if month.year == current_year and month.month == current_month %}
                 <span class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-elevated text-zinc-200 border border-border-strong">Current</span>
+                {% endif %}
+            </div>
+        </td>
+        <td class="px-4 py-3 text-sm text-zinc-400">
+            {{ salary.currency_symbol }}{{ month.expected_amount|floatformat:2 }}
+        </td>
+        <td class="px-4 py-3 text-sm">
+            {% if month.total_paid > 0 %}
+            <span class="text-zinc-100">{{ salary.currency_symbol }}{{ month.total_paid|floatformat:2 }}</span>
+            {% else %}
+            <span class="text-zinc-600">—</span>
             {% endif %}
-        </div>
-
-        <!-- Center: Status Badge -->
-        <div class="flex-1 flex justify-center">
+        </td>
+        <td class="px-4 py-3 text-sm">
+            {% if month.remaining > 0 %}
+            <span class="text-zinc-400">{{ salary.currency_symbol }}{{ month.remaining|floatformat:2 }}</span>
+            {% elif month.bonus_amount > 0 %}
+            <span class="text-success">{{ salary.currency_symbol }}{{ month.bonus_amount|floatformat:2 }} bonus</span>
+            {% else %}
+            <span class="text-zinc-600">—</span>
+            {% endif %}
+        </td>
+        <td class="px-4 py-3">
             {% with status=month.status %}
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium
+            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium
                 {% if status == 'unpaid' %}bg-error/10 text-error
                 {% elif status == 'partial' %}bg-zinc-500/10 text-zinc-400
                 {% elif status == 'paid' or status == 'bonus' %}bg-success/10 text-success
@@ -34,28 +44,18 @@
                 {% endif %}
             </span>
             {% endwith %}
-        </div>
-
-        <!-- Right: Payment Summary and expand icon -->
-        <div class="flex items-center gap-6 min-w-[280px] justify-end">
-            <div class="text-sm text-right">
-                {% if month.total_paid > 0 %}
-                    <div class="text-zinc-100">
-                        {{ salary.currency_symbol }}{{ month.total_paid|floatformat:2 }} paid
-                    </div>
-                    {% if month.remaining > 0 %}
-                        <div class="text-xs text-zinc-400">{{ salary.currency_symbol }}{{ month.remaining|floatformat:2 }} remaining</div>
-                    {% elif month.bonus_amount > 0 %}
-                        <div class="text-xs text-success">{{ salary.currency_symbol }}{{ month.bonus_amount|floatformat:2 }} bonus</div>
-                    {% endif %}
-                {% else %}
-                    <span class="text-zinc-500">No payments yet</span>
-                {% endif %}
-            </div>
-            <div class="flex items-center gap-2 text-zinc-500">
-                <span class="text-xs">{{ month.payment_count }} payment{{ month.payment_count|pluralize }}</span>
+        </td>
+        <td class="px-4 py-3 text-xs text-zinc-500 whitespace-nowrap">
+            {{ month.payment_count }} payment{{ month.payment_count|pluralize }}
+        </td>
+        <td class="px-4 py-3">
+            <div class="flex items-center justify-end gap-1 text-zinc-500">
                 {% if perms_map.salaries_edit %}
-                <button onclick="event.stopPropagation(); htmx.ajax('GET', '{% url 'month_edit' salary.id month.id %}', {target:'#slide-over', swap:'innerHTML'}).then(function() { openSlideOver(); })"
+                <button hx-get="{% url 'month_edit' salary.id month.id %}"
+                        hx-target="#slide-over"
+                        hx-swap="innerHTML"
+                        hx-on::after-request="openSlideOver(event)"
+                        @click.stop
                         class="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors"
                         title="Edit month">
                     <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
@@ -64,24 +64,23 @@
                 <i data-lucide="chevron-down" class="w-4 h-4 transition-transform"
                    :class="{ 'rotate-180': expandedMonth === {{ month.id }} }"></i>
             </div>
-        </div>
-    </div>
-
-    <!-- Expanded Payment List -->
-    <div x-show="expandedMonth === {{ month.id }}"
-         x-collapse
-         x-cloak
-         class="border-t border-border-subtle bg-panel/50">
-        {% if month.payments.all %}
-        <div class="divide-y divide-border-subtle">
-            {% for payment in month.payments.all %}
-                {% include 'salaries/partials/payment_item.html' %}
-            {% endfor %}
-        </div>
-        {% else %}
-        <div class="px-4 py-6 text-center text-zinc-500 text-sm">
-            No payments recorded for this month
-        </div>
-        {% endif %}
-    </div>
-</div>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="7" class="p-0">
+            <div x-show="expandedMonth === {{ month.id }}" x-collapse x-cloak class="border-t border-border-subtle">
+                {% if month.payments.all %}
+                <div class="divide-y divide-border-subtle">
+                    {% for payment in month.payments.all %}
+                        {% include 'salaries/partials/payment_item.html' %}
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="px-4 py-6 text-center text-zinc-500 text-sm">
+                    No payments recorded for this month
+                </div>
+                {% endif %}
+            </div>
+        </td>
+    </tr>
+</tbody>

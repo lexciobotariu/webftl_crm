@@ -1,0 +1,13 @@
+{% comment %}A titled group of "show" checkboxes. Checked means shown.
+   Params: title, name (form field), options (list of {value, label, checked}).{% endcomment %}
+<fieldset class="space-y-1">
+    <legend class="text-[10px] uppercase tracking-wider text-zinc-500 font-medium mb-1">{{ title }}</legend>
+    {% for option in options %}
+    <label class="flex items-center gap-2 py-1 text-sm text-zinc-300 cursor-pointer">
+        <input type="checkbox" name="{{ name }}" value="{{ option.value }}"
+               {% if option.checked %}checked{% endif %}
+               class="accent-accent w-4 h-4">
+        <span class="truncate">{{ option.label }}</span>
+    </label>
+    {% endfor %}
+</fieldset>

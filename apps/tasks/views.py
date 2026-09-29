@@ -22,7 +22,16 @@ from apps.projects.models import (
 from apps.tasks.models import Label, can_create_task, can_edit_task, can_view_task
 
 from .forms import SubtaskForm, TaskForm, TimeEntryForm
-from .models import Subtask, Task, TimeEntry
+from .models import (
+    MyTasksFilter,
+    Subtask,
+    Task,
+    TimeEntry,
+    clean_priorities,
+    my_tasks_status_names,
+    priorities_to_store,
+    priority_filter_options,
+)
 
 TASKS_PER_PAGE = 20
 
@@ -66,6 +75,37 @@ def _format_total(entries):
 
 @login_required
 @require_permission('access_tasks')
+@require_POST
+def my_tasks_filter_apply(request):
+    """Save the statuses and priorities this person shows on My Tasks.
+
+    Statuses are stored as the names left unchecked. Nothing checked, or only
+    names that are not on offer, means no status filter, the same as Clear.
+    """
+    names = my_tasks_status_names(request.user)
+    checked = {name for name in request.POST.getlist('shown_statuses') if name in names}
+    hidden = [name for name in names if name not in checked] if checked else []
+    MyTasksFilter.objects.update_or_create(
+        user=request.user,
+        defaults={
+            'shown_priorities': priorities_to_store(request.POST.getlist('shown_priorities')),
+            'hidden_statuses': hidden,
+        },
+    )
+    return redirect('my_tasks')
+
+
+@login_required
+@require_permission('access_tasks')
+@require_POST
+def my_tasks_filter_clear(request):
+    """Show every status and priority on My Tasks again."""
+    MyTasksFilter.objects.filter(user=request.user).delete()
+    return redirect('my_tasks')
+
+
+@login_required
+@require_permission('access_tasks')
 def my_tasks(request):
     # Determine active tab from URL
     active_tab = 'todos' if request.resolver_match.url_name == 'my_tasks_todos' else 'tasks'
@@ -75,12 +115,23 @@ def my_tasks(request):
         .select_related('project', 'status')
         .order_by('-created_at')
     )
-    priority = request.GET.get('priority')
-    if priority:
-        tasks_qs = tasks_qs.filter(priority=priority)
-    status_filter = request.GET.get('status')
-    if status_filter:
-        tasks_qs = tasks_qs.filter(status__name=status_filter)
+    saved_filter = MyTasksFilter.objects.filter(user=request.user).first()
+    shown_priorities = clean_priorities(saved_filter.shown_priorities) if saved_filter else []
+    # Needed on both tabs: the Assigned Tasks count in the top bar must not
+    # change when the To-Dos tab is open.
+    status_names = my_tasks_status_names(request.user)
+    # A stored name that no longer exists (renamed status) must not hide anything.
+    hidden_statuses = (
+        [name for name in saved_filter.hidden_statuses if name in status_names]
+        if saved_filter
+        else []
+    )
+    unfiltered_count = None
+    if shown_priorities or hidden_statuses:
+        unfiltered_count = tasks_qs.count()
+        if hidden_statuses:
+            tasks_qs = tasks_qs.exclude(status__name__in=hidden_statuses)
+        tasks_qs = tasks_qs.with_priorities(shown_priorities)
 
     paginator = Paginator(tasks_qs, TASKS_PER_PAGE)
     page_number = request.GET.get('page', 1)
@@ -98,8 +149,15 @@ def my_tasks(request):
         'tasks': page_obj,
         'page_obj': page_obj,
         'total_count': paginator.count,
-        'priority_filter': priority,
-        'status_filter': status_filter,
+        'priority_options': priority_filter_options(shown_priorities),
+        'status_options': [
+            {'value': name, 'label': name, 'checked': name not in hidden_statuses}
+            for name in status_names
+        ],
+        'active_filter_count': bool(shown_priorities) + bool(hidden_statuses),
+        'hidden_by_filter_count': (
+            unfiltered_count - paginator.count if unfiltered_count is not None else 0
+        ),
         'todos': todos_qs,
         'show_completed': show_completed_todos,
         'todo_count': todo_count,

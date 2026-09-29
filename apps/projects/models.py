@@ -85,7 +85,7 @@ class ProjectAccess(models.Model):
 
 
 class ProjectTaskListFilter(models.Model):
-    """Statuses one person hides on one project's task list.
+    """Statuses one person hides, and priorities they show, on one project's task list.
 
     Unique per person and project. The board still uses
     ``Status.visible_on_board``; this row does not change it, and it does not
@@ -100,9 +100,13 @@ class ProjectTaskListFilter(models.Model):
     project = models.ForeignKey(
         Project, on_delete=models.CASCADE, related_name='task_list_filters'
     )
+    # Stored as the statuses left unchecked, so a status added later shows up
+    # checked and visible instead of vanishing from the list.
     hidden_statuses = models.ManyToManyField(
         Status, blank=True, related_name='hidden_on_task_lists'
     )
+    # Checked priorities (including 'none'); empty means every priority.
+    shown_priorities = models.JSONField(default=list, blank=True)
 
     class Meta:
         constraints = [
@@ -114,6 +118,25 @@ class ProjectTaskListFilter(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.project.name}"
+
+    def replace_shown_statuses(self, checked_ids):
+        """Hide every status of this project that is not among ``checked_ids``.
+
+        Nothing checked means no filter, the same as Clear, so Apply on an empty
+        form cannot leave a blank list.
+        """
+        checked = set()
+        for raw in checked_ids:
+            try:
+                checked.add(int(raw))
+            except (TypeError, ValueError):
+                continue
+        project_ids = set(
+            Status.objects.filter(project_id=self.project_id).values_list('pk', flat=True)
+        )
+        checked &= project_ids
+        hidden = project_ids - checked if checked else set()
+        self.replace_hidden_statuses(hidden)
 
     def replace_hidden_statuses(self, status_ids):
         """Replace the hidden set with statuses that belong to this project.
