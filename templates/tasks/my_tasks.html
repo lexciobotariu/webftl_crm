@@ -5,22 +5,20 @@
 {% block full_content %}
 <div class="flex flex-col h-full">
     <!-- Compact header -->
-    <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <i data-lucide="check-square" class="w-4 h-4 text-zinc-500"></i>
-                <h1 class="text-sm font-medium text-zinc-100">My Tasks</h1>
-                <a href="{% url 'my_tasks' %}"
-                   class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-control text-xs font-medium transition-colors {% if active_tab == 'tasks' %}bg-elevated text-zinc-100 border border-border-subtle{% else %}bg-elevated border border-border-subtle text-zinc-400 hover:text-zinc-200 hover:bg-hover{% endif %}">
-                    Assigned Tasks
-                    <span class="{% if active_tab == 'tasks' %}bg-white/20{% else %}bg-elevated{% endif %} text-xs px-1.5 py-0.5 rounded">{{ total_count }}</span>
-                </a>
-                <a href="{% url 'my_tasks_todos' %}"
-                   class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-control text-xs font-medium transition-colors {% if active_tab == 'todos' %}bg-elevated text-zinc-100 border border-border-subtle{% else %}bg-elevated border border-border-subtle text-zinc-400 hover:text-zinc-200 hover:bg-hover{% endif %}">
-                    To-Dos
-                    <span class="{% if active_tab == 'todos' %}bg-white/20{% else %}bg-elevated{% endif %} text-xs px-1.5 py-0.5 rounded">{{ todo_count }}</span>
-                </a>
-            </div>
+    <div class="flex-shrink-0 flex items-center min-h-[45px] px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center gap-3">
+            <i data-lucide="check-square" class="w-4 h-4 text-zinc-500"></i>
+            <h1 class="text-sm font-medium text-zinc-100">My Tasks</h1>
+            <a href="{% url 'my_tasks' %}"
+               class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-control text-xs font-medium transition-colors {% if active_tab == 'tasks' %}bg-elevated text-zinc-100 border border-border-subtle{% else %}bg-elevated border border-border-subtle text-zinc-400 hover:text-zinc-200 hover:bg-hover{% endif %}">
+                Assigned Tasks
+                <span class="{% if active_tab == 'tasks' %}bg-white/20{% else %}bg-elevated{% endif %} text-xs px-1.5 py-0.5 rounded">{{ total_count }}</span>
+            </a>
+            <a href="{% url 'my_tasks_todos' %}"
+               class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-control text-xs font-medium transition-colors {% if active_tab == 'todos' %}bg-elevated text-zinc-100 border border-border-subtle{% else %}bg-elevated border border-border-subtle text-zinc-400 hover:text-zinc-200 hover:bg-hover{% endif %}">
+                To-Dos
+                <span class="{% if active_tab == 'todos' %}bg-white/20{% else %}bg-elevated{% endif %} text-xs px-1.5 py-0.5 rounded">{{ todo_count }}</span>
+            </a>
         </div>
     </div>
 
@@ -29,53 +27,110 @@
         {% if active_tab == 'tasks' %}
         <!-- Assigned Tasks Tab -->
         <div class="h-full flex flex-col">
-            <!-- Filters -->
-            <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/40">
-                <div class="flex items-center gap-4">
-                    <select onchange="window.location.href='?priority=' + this.value"
-                            class="bg-elevated border border-border-subtle rounded px-2 py-1 text-xs text-zinc-400 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
-                        <option value="">All Priorities</option>
-                        <option value="urgent" {% if priority_filter == "urgent" %}selected{% endif %}>Urgent</option>
-                        <option value="high" {% if priority_filter == "high" %}selected{% endif %}>High</option>
-                        <option value="medium" {% if priority_filter == "medium" %}selected{% endif %}>Medium</option>
-                        <option value="low" {% if priority_filter == "low" %}selected{% endif %}>Low</option>
-                    </select>
+            <!-- Table content. Header and body are separate tables so the scrollbar starts
+                 below the header; pagination stays pinned as the card footer. -->
+            <div class="flex-1 min-h-0 p-6">
+                <div class="h-full flex flex-col border border-border-subtle rounded-card bg-panel/50">
+                    <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80 rounded-t-card">
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ total_count }}</span>
+                                <span class="text-xs text-zinc-500">task{{ total_count|pluralize }}</span>
+                                {% if hidden_by_filter_count %}
+                                <span class="text-xs text-zinc-500">{{ hidden_by_filter_count }} task{{ hidden_by_filter_count|pluralize }} hidden</span>
+                                {% endif %}
+                            </div>
+                            <div class="flex items-center gap-2">
+                        <!-- Status and priority filter -->
+                        <div class="relative" x-data="dropdown">
+                            <button type="button" @click="toggle()"
+                                    class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
+                                <i data-lucide="filter" class="w-3.5 h-3.5"></i>
+                                Filter
+                                {% if active_filter_count %}
+                                <span class="bg-accent text-on-accent text-[10px] leading-none font-medium px-1.5 py-0.5 rounded-full">{{ active_filter_count }}</span>
+                                {% endif %}
+                            </button>
+                            <div x-show="open" x-cloak @click.away="close()"
+                                 x-transition
+                                 class="absolute right-0 top-full mt-1 w-64 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 p-3">
+                                <form method="post" action="{% url 'my_tasks_filter' %}">
+                                    {% csrf_token %}
+                                    <div class="space-y-3">
+                                        {% if status_options %}
+                                        {% include "components/checkbox_filter_group.html" with title="Status" name="shown_statuses" options=status_options %}
+                                        {% endif %}
+                                        {% include "components/checkbox_filter_group.html" with title="Priority" name="shown_priorities" options=priority_options %}
+                                    </div>
+                                    <div class="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-border-subtle">
+                                        <button type="submit"
+                                                formaction="{% url 'my_tasks_filter_clear' %}"
+                                                class="inline-flex items-center bg-panel border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
+                                            Clear
+                                        </button>
+                                        <button type="submit"
+                                                class="inline-flex items-center bg-accent text-on-accent px-3 py-1.5 rounded-control text-xs font-medium hover:bg-accent-hover transition-colors">
+                                            Apply
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                            </div>
+                        </div>
+                    </div>
+                    {# The filter panel hangs below the header, so clip only the list, not the whole card. #}
+                    <div class="flex-1 min-h-0 flex flex-col overflow-hidden rounded-b-card">
+                    {% if tasks %}
+                    <div class="flex-shrink-0 overflow-y-hidden scrollbar-gutter-stable bg-panel border-b border-border-subtle">
+                        <table class="w-full table-fixed">
+                            {% include "tasks/partials/my_task_cols.html" %}
+                            <thead>
+                                <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
+                                    <th class="px-4 py-2 font-medium">Task</th>
+                                    <th class="px-4 py-2 font-medium">Project</th>
+                                    <th class="px-4 py-2 font-medium">Status</th>
+                                    <th class="px-4 py-2 font-medium">Priority</th>
+                                    <th class="px-4 py-2 font-medium">Due</th>
+                                    <th class="px-4 py-2 font-medium text-right">Actions</th>
+                                </tr>
+                            </thead>
+                        </table>
+                    </div>
+                    <div class="flex-1 min-h-0 overflow-y-auto scrollbar-gutter-stable">
+                        <table class="w-full table-fixed">
+                            {% include "tasks/partials/my_task_cols.html" %}
+                            <tbody id="my-tasks-list" class="divide-y divide-border-subtle">
+                                {% for task in tasks %}
+                                {% include "tasks/partials/my_task_row.html" %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="flex-1 min-h-0 overflow-y-auto">
+                        {% if hidden_by_filter_count %}
+                        <div class="flex flex-col items-center justify-center py-16 text-zinc-500">
+                            <i data-lucide="filter" class="w-12 h-12 mb-4 opacity-30"></i>
+                            <p class="text-sm mb-2">Nothing matches this filter</p>
+                            <form method="post" action="{% url 'my_tasks_filter_clear' %}">
+                                {% csrf_token %}
+                                <button type="submit" class="text-zinc-200 hover:text-zinc-50 text-sm">Clear filter</button>
+                            </form>
+                        </div>
+                        {% else %}
+                        {% include "components/empty_state.html" with icon="check-square" message="No tasks assigned to you yet" %}
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    {% include "components/pagination.html" %}
+                    </div>
                 </div>
-            </div>
-
-            <!-- Table content -->
-            <div class="flex-1 overflow-auto">
-                {% if tasks %}
-                <table class="w-full">
-                    <thead class="sticky top-0 bg-panel border-b border-border-subtle">
-                        <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
-                            <th class="px-4 py-3 font-medium">Task</th>
-                            <th class="px-4 py-3 font-medium">Project</th>
-                            <th class="px-4 py-3 font-medium">Status</th>
-                            <th class="px-4 py-3 font-medium">Priority</th>
-                            <th class="px-4 py-3 font-medium">Due</th>
-                            <th class="px-4 py-3 font-medium w-10">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="my-tasks-list" class="divide-y divide-border-subtle">
-                        {% for task in tasks %}
-                        {% include "tasks/partials/my_task_row.html" %}
-                        {% endfor %}
-                    </tbody>
-                </table>
-                {% else %}
-                {% include "components/empty_state.html" with icon="check-square" message="No tasks assigned to you yet" %}
-                {% endif %}
-            </div>
-
-            <!-- Pagination -->
-            <div class="flex-shrink-0">
-                {% include "components/pagination.html" %}
             </div>
         </div>
         {% else %}
         <!-- To-Dos Tab -->
-        <div class="h-full">
+        <div class="h-full overflow-y-auto p-6">
             {% include 'todos/partials/todos_section.html' %}
         </div>
         {% endif %}

@@ -4,64 +4,80 @@
 
 {% block full_content %}
 <div class="flex flex-col h-full">
-    <!-- Compact header -->
-    <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <i data-lucide="users" class="w-4 h-4 text-zinc-500"></i>
-                <h1 class="text-sm font-medium text-zinc-100">Clients</h1>
-                <span id="client-count" class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ total_count }}</span>
-            </div>
-            {% if perms_map.clients_create %}
-            <button hx-get="{% url 'client_create_drawer' %}"
-                    hx-target="#slide-over"
-                    hx-swap="innerHTML"
-                    class="inline-flex items-center gap-1.5 bg-accent text-on-accent px-3 py-1.5 rounded-control text-xs font-medium hover:bg-accent-hover transition-colors">
-                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                Add Client
-            </button>
-            {% endif %}
+    <div class="flex-shrink-0 flex items-center min-h-[45px] px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center gap-3">
+            <i data-lucide="users" class="w-4 h-4 text-zinc-500"></i>
+            <h1 class="text-sm font-medium text-zinc-100">Clients</h1>
         </div>
     </div>
 
     <!-- Table content. Pagination lives inside the refreshed region so it cannot
          go stale, and the refresh re-fetches the current URL so ?page= survives. -->
-    <div class="flex-1 flex flex-col overflow-hidden" id="client-list-content">
-        <div class="flex-1 overflow-auto">
-        {% if clients %}
-        <table class="w-full">
-            <thead class="sticky top-0 bg-panel border-b border-border-subtle">
-                <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
-                    <th class="px-4 py-3 font-medium">Name</th>
-                    <th class="px-4 py-3 font-medium">Email</th>
-                    <th class="px-4 py-3 font-medium">Phone</th>
-                    <th class="px-4 py-3 font-medium text-center">Projects</th>
-                    <th class="px-4 py-3 font-medium w-10">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="client-list" class="divide-y divide-border-subtle">
-                {% for client in clients %}
-                {% include "clients/partials/client_row.html" %}
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        {% if perms_map.clients_create %}
-        {% url 'client_create_drawer' as client_create_url %}
-        {% include "components/empty_state.html" with icon="users" message="No clients yet" action_hx_get=client_create_url action_label="Add your first client" %}
-        {% else %}
-        {% include "components/empty_state.html" with icon="users" message="No clients yet" %}
-        {% endif %}
-        {% endif %}
+    <div class="flex-1 min-h-0 p-6">
+        <div id="client-list-content" class="h-full flex flex-col border border-border-subtle rounded-card overflow-hidden bg-panel/50">
+            <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <span id="client-count" class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ total_count }}</span>
+                        <span class="text-xs text-zinc-500">client{{ total_count|pluralize }}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        {% if perms_map.clients_create %}
+                        <button hx-get="{% url 'client_create_drawer' %}"
+                                hx-target="#slide-over"
+                                hx-swap="innerHTML"
+                                class="inline-flex items-center gap-1.5 bg-accent text-on-accent px-3 py-1.5 rounded-control text-xs font-medium hover:bg-accent-hover transition-colors">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            Add Client
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% if clients %}
+            {# Header and body are separate tables so the scrollbar starts below the header. #}
+            <div class="flex-shrink-0 overflow-y-hidden scrollbar-gutter-stable bg-panel border-b border-border-subtle">
+                <table class="w-full table-fixed">
+                    {% include "clients/partials/client_cols.html" %}
+                    <thead>
+                        <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
+                            <th class="px-4 py-2 font-medium">Name</th>
+                            <th class="px-4 py-2 font-medium">Email</th>
+                            <th class="px-4 py-2 font-medium">Phone</th>
+                            <th class="px-4 py-2 font-medium text-center">Projects</th>
+                            <th class="px-4 py-2 font-medium text-right">Actions</th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+            <div class="flex-1 min-h-0 overflow-y-auto scrollbar-gutter-stable">
+                <table class="w-full table-fixed">
+                    {% include "clients/partials/client_cols.html" %}
+                    <tbody id="client-list" class="divide-y divide-border-subtle">
+                        {% for client in clients %}
+                        {% include "clients/partials/client_row.html" %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="flex-1 min-h-0 overflow-y-auto">
+                {% if perms_map.clients_create %}
+                {% url 'client_create_drawer' as client_create_url %}
+                {% include "components/empty_state.html" with icon="users" message="No clients yet" action_hx_get=client_create_url action_label="Add your first client" %}
+                {% else %}
+                {% include "components/empty_state.html" with icon="users" message="No clients yet" %}
+                {% endif %}
+            </div>
+            {% endif %}
+            {% include "components/pagination.html" %}
         </div>
-        {% include "components/pagination.html" %}
     </div>
 </div>
 
 <script>
     document.body.addEventListener('refreshClientList', () => {
         refreshFragment('#client-list-content');
-        refreshFragment('#client-count');
     });
 </script>
 {% endblock %}

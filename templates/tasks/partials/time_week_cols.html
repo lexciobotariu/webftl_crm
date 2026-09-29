@@ -1,0 +1,10 @@
+{# Task and Note share the leftover width; the other columns are fixed. #}
+<colgroup>
+    <col>
+    {% if not project %}<col>{% endif %}
+    {% if sees_everyone %}<col>{% endif %}
+    <col class="w-[170px]">
+    <col class="w-[90px]">
+    <col class="w-[100px]">
+    <col>
+</colgroup>

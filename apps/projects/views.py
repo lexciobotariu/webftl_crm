@@ -12,7 +12,15 @@ from django.views.decorators.http import require_POST
 from apps.accounts.decorators import require_permission
 from apps.accounts.models import User
 from apps.clients.models import Client, visible_clients
-from apps.tasks.models import Label, TaskActivity, can_create_task, visible_tasks
+from apps.tasks.models import (
+    Label,
+    TaskActivity,
+    can_create_task,
+    clean_priorities,
+    priorities_to_store,
+    priority_filter_options,
+    visible_tasks,
+)
 
 from .forms import LabelForm, ProjectForm, StatusForm
 from .models import (
@@ -132,25 +140,44 @@ def project_detail(request, pk):
             addable_users = _addable_users(project)
 
     list_tasks = tasks
-    hidden_status_ids = []
+    list_task_count = total_tasks
     hidden_by_filter_count = 0
+    status_options = []
+    priority_options = []
+    active_filter_count = 0
     if active_tab == 'tasks':
         saved_filter = ProjectTaskListFilter.objects.filter(
             user=request.user, project=project
         ).first()
+        hidden_status_ids = []
+        shown_priorities = []
         if saved_filter is not None:
             hidden_status_ids = list(saved_filter.hidden_statuses.values_list('pk', flat=True))
+            shown_priorities = clean_priorities(saved_filter.shown_priorities)
         if hidden_status_ids:
-            hidden_by_filter_count = tasks.filter(status_id__in=hidden_status_ids).count()
-            list_tasks = tasks.exclude(status_id__in=hidden_status_ids)
+            list_tasks = list_tasks.exclude(status_id__in=hidden_status_ids)
+        list_tasks = list_tasks.with_priorities(shown_priorities)
+        if hidden_status_ids or shown_priorities:
+            list_task_count = list_tasks.count()
+            hidden_by_filter_count = total_tasks - list_task_count
+        # Checked means shown; a status added after the filter was saved is not
+        # in the hidden set, so it comes up checked.
+        status_options = [
+            {'value': status.pk, 'label': status.name, 'checked': status.pk not in hidden_status_ids}
+            for status in project.statuses.all()
+        ]
+        priority_options = priority_filter_options(shown_priorities)
+        active_filter_count = bool(hidden_status_ids) + bool(shown_priorities)
 
     return render(request, 'projects/project_detail.html', {
         'project': project,
         'tasks': list_tasks,
         'total_tasks': total_tasks,
-        'list_task_count': total_tasks - hidden_by_filter_count,
+        'list_task_count': list_task_count,
         'hidden_by_filter_count': hidden_by_filter_count,
-        'hidden_status_ids': hidden_status_ids,
+        'status_options': status_options,
+        'priority_options': priority_options,
+        'active_filter_count': active_filter_count,
         'completed_tasks': completed_tasks,
         'active_tasks': active_tasks,
         'overdue_tasks': overdue_tasks,
@@ -175,7 +202,7 @@ def _project_for_task_list(request, pk):
 @require_permission('access_projects')
 @require_POST
 def project_task_list_filter_apply(request, pk):
-    """Replace this person's hidden statuses. No project-edit permission."""
+    """Save this person's checked statuses and priorities. No project-edit permission."""
     project = _project_for_task_list(request, pk)
     if project is None:
         return HttpResponseForbidden("You don't have access to this project")
@@ -183,7 +210,9 @@ def project_task_list_filter_apply(request, pk):
     task_filter, _created = ProjectTaskListFilter.objects.get_or_create(
         user=request.user, project=project
     )
-    task_filter.replace_hidden_statuses(request.POST.getlist('hidden_statuses'))
+    task_filter.replace_shown_statuses(request.POST.getlist('shown_statuses'))
+    task_filter.shown_priorities = priorities_to_store(request.POST.getlist('shown_priorities'))
+    task_filter.save(update_fields=['shown_priorities'])
     return redirect('project_detail_tasks', pk=project.pk)
 
 

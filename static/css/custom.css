@@ -78,6 +78,12 @@ html.light {
     background: rgb(var(--scrollbar-thumb-hover, var(--border)));
 }
 
+/* Fixed table header over a scrolling body: reserve the same scrollbar gutter on
+   both so their columns line up and the scrollbar only spans the body rows. */
+.scrollbar-gutter-stable {
+    scrollbar-gutter: stable;
+}
+
 /* Firefox scrollbar */
 * {
     scrollbar-width: thin;

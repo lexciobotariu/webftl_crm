@@ -5,6 +5,8 @@ from . import views
 urlpatterns = [
     path('my/', views.my_tasks, name='my_tasks'),
     path('my/todos/', views.my_tasks, name='my_tasks_todos'),
+    path('my/filter/', views.my_tasks_filter_apply, name='my_tasks_filter'),
+    path('my/filter/clear/', views.my_tasks_filter_clear, name='my_tasks_filter_clear'),
     path('my/week/', views.time_week, name='time_week'),
     path('timer/stop/', views.timer_stop, name='timer_stop'),
     path('timer/indicator/', views.running_timer_indicator, name='running_timer_indicator'),
