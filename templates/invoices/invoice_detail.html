@@ -68,7 +68,7 @@
     <div class="flex-1 overflow-y-auto p-6">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
             {% if invoice.currency_code %}
-            <div class="bg-elevated/40 border border-border-subtle rounded-card p-4">
+            <div class="bg-panel/50 border border-border-subtle rounded-card p-4">
                 <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Company</div>
                 {% if invoice.company_legal_name %}
                 <div class="text-sm font-medium text-zinc-100">{{ invoice.company_legal_name }}</div>
@@ -88,7 +88,7 @@
                 <p class="text-xs text-zinc-600 mt-3">Copied when the invoice was created.</p>
             </div>
             {% endif %}
-            <div class="bg-elevated/40 border border-border-subtle rounded-card p-4 {% if not invoice.currency_code %}lg:col-span-2{% endif %}">
+            <div class="bg-panel/50 border border-border-subtle rounded-card p-4 {% if not invoice.currency_code %}lg:col-span-2{% endif %}">
                 <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Bill to</div>
                 <div class="text-sm font-medium text-zinc-100">{{ invoice.bill_to_name }}</div>
                 {% if invoice.bill_to_email %}
@@ -102,7 +102,7 @@
                 {% endif %}
                 <p class="text-xs text-zinc-600 mt-3">Copied when the invoice was created.</p>
             </div>
-            <div class="bg-elevated/40 border border-border-subtle rounded-card p-4 space-y-2">
+            <div class="bg-panel/50 border border-border-subtle rounded-card p-4 space-y-2">
                 <div class="flex items-center justify-between text-sm">
                     <span class="text-zinc-500">Client</span>
                     <a href="{% url 'client_detail' invoice.client_id %}" class="text-zinc-200 hover:text-zinc-50">{{ invoice.client.name }}</a>
