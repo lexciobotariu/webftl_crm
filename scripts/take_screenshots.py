@@ -66,8 +66,8 @@ def main():
         shot('dashboard', '/')
         shot('client-detail', f'/clients/{CLIENT_PK}/')
         shot('project-overview', f'/projects/{PROJECT_PK}/overview/')
-        shot('task-list', f'/projects/{PROJECT_PK}/tasks/')
-        shot('kanban-board', f'/projects/{PROJECT_PK}/kanban/')
+        shot('task-list', f'/projects/{PROJECT_PK}/tasks/?layout=list')
+        shot('kanban-board', f'/projects/{PROJECT_PK}/tasks/?layout=board')
 
         def open_task_drawer():
             page.evaluate(
@@ -77,7 +77,7 @@ def main():
             )
             page.wait_for_selector('#slide-over:not(.hidden)', timeout=5000)
 
-        shot('task-detail-sidebar', f'/projects/{PROJECT_PK}/kanban/',
+        shot('task-detail-sidebar', f'/projects/{PROJECT_PK}/tasks/?layout=board',
              before=open_task_drawer, settle=800)
         shot('task-detail-fullpage', f'/tasks/project/{PROJECT_PK}/{TASK_PK}/')
 

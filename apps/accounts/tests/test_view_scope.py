@@ -138,7 +138,7 @@ class TestProjectsViewAll:
         assert can_work_on_project(user, foreign) is False
         assert can_edit_project(user, foreign) is False
 
-        assert client.get(reverse('project_board', args=[foreign.pk])).status_code == 200
+        assert client.get(reverse('project_tasks', args=[foreign.pk]) + '?layout=board').status_code == 200
         assert client.get(reverse('project_settings', args=[foreign.pk])).status_code == 403
         assert client.get(reverse('task_edit', args=[foreign_task.pk])).status_code == 403
         comment = client.post(

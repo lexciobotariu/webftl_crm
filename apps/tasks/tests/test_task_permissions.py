@@ -56,7 +56,7 @@ class TestProjectFlagsDoNotGrantTasks:
         client.force_login(closed)
 
         for project, task in ((mine, mine_task), (other, other_task)):
-            board = client.get(reverse('project_board', args=[project.pk]))
+            board = client.get(reverse('project_tasks', args=[project.pk]) + '?layout=board')
             assert board.status_code == 200
             html = board.content.decode()
             assert task.title not in html
@@ -90,7 +90,7 @@ class TestProjectFlagsDoNotGrantTasks:
             projects_edit_all=True,
         )
         client.force_login(watcher)
-        watched = client.get(reverse('project_board', args=[other.pk]))
+        watched = client.get(reverse('project_tasks', args=[other.pk]) + '?layout=board')
         assert watched.status_code == 200
         watched_html = watched.content.decode()
         assert 'Other Task' not in watched_html
@@ -129,10 +129,10 @@ class TestViewOwn:
         TaskFactory(project=other, assignee=user, title='On Their Project')
         client.force_login(user)
 
-        board = client.get(reverse('project_board', args=[mine.pk])).content.decode()
+        board = client.get(reverse('project_tasks', args=[mine.pk]) + '?layout=board').content.decode()
         assert 'On My Project' in board
         assert 'Also On Mine' in board
-        assert client.get(reverse('project_board', args=[other.pk])).status_code == 403
+        assert client.get(reverse('project_tasks', args=[other.pk]) + '?layout=board').status_code == 403
 
         foreign = Task.objects.get(title='On Their Project')
         assert client.get(reverse('task_detail', args=[foreign.pk])).status_code == 403

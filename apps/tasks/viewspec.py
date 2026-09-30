@@ -13,7 +13,7 @@ from urllib.parse import urlencode
 
 from .models import priorities_to_store
 
-LAYOUTS = ('list',)
+LAYOUTS = ('list', 'board')
 GROUPS = ('status', 'assignee', 'priority', 'none')
 SORTS = ('priority', 'due', 'created', 'updated', 'title')
 DIRECTIONS = ('asc', 'desc')

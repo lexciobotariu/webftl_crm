@@ -87,7 +87,7 @@ Used for pages that need to fill the entire viewport height (list pages, kanban 
 - `templates/clients/client_list.html`
 - `templates/clients/client_detail.html`
 - `templates/projects/project_list.html`
-- `templates/projects/project_board.html`
+- `templates/tasks/view/project_tasks.html`
 - `templates/projects/project_settings.html`
 - `templates/tasks/my_tasks.html`
 - `templates/tasks/task_full_page.html`
@@ -383,9 +383,25 @@ paging are never saved).
 
 ## Kanban Board
 
-**Top-nav actions** (`project_board.html`): Add Task (accent) then Task List and
-Settings (secondary). "Task List" is the way back to `project_tasks` — the
-board is a peer view of the task list, not a dead end.
+The board is the `board` layout of the Tasks page above (`tasks/view/_board.html`), not a
+page of its own. `/projects/<pk>/kanban/` (`project_board`) only redirects to
+`/projects/<pk>/tasks/?layout=board`; link to `project_tasks` with no parameters so the
+layout a person last chose wins.
+
+- **Columns** are the statuses with `visible_on_board=True`, minus any the filter hides.
+  The filters apply to the cards; order is always the manual one (grouping and sorting
+  belong to the list). Every card is loaded; there is no paging on the board.
+- **Drag and drop** lives in `Alpine.store('kanban')` in the page shell, outside
+  `#task-view`, so it survives every swap. A drop sends `after_id` (the card it landed
+  under; empty for the top of the column) because with filters on, `$position` is an index
+  among the visible cards only. `task_move` passes it to `services.move_task(after_id=...)`:
+  absent keeps the old `position`/append behaviour, empty is first, a pk is right after
+  that card, and an anchor no longer in the column appends. After a move the page calls
+  `refreshFragment('#task-view')`, so filters stay.
+- Known limit: with filters on, dropping above the first visible card puts the task first
+  in the whole column, even if hidden cards sit above it.
+- **Hidden columns:** the strip above the board counts filtered tasks that sit in statuses
+  hidden from the board (`hidden_task_count`).
 
 **Card drag handle** (`partials/task_card.html`): the `x-sort:handle` grip is
 always visible and sits to the *right* of the title block, as the last child of
@@ -393,9 +409,10 @@ the card's `flex items-start gap-2` row. It is not hover-revealed — a handle y
 cannot see is a handle you do not know exists. The title block keeps
 `flex-1 min-w-0` so it shrinks instead of pushing the grip out.
 
-**URLs:** `/projects/<pk>/overview/`, `/tasks/`, `/notes/` for the detail tabs and
-`/projects/<pk>/kanban/` for the board. A bare `/projects/<pk>/` redirects to the
-overview tab. Always link by URL *name*, never by literal path.
+**URLs:** `/projects/<pk>/overview/`, `/notes/`, `/team/` for the detail tabs,
+`/projects/<pk>/tasks/` for the Tasks page (list and board layouts). A bare
+`/projects/<pk>/` redirects to the overview tab. Always link by URL *name*, never by
+literal path.
 
 ---
 

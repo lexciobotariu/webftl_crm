@@ -6,7 +6,7 @@ from apps.accounts.factories import UserFactory
 from apps.projects.factories import ProjectAccessFactory, ProjectFactory, StatusFactory
 from apps.projects.models import Status
 from apps.tasks.factories import SubtaskFactory, TaskFactory
-from apps.tasks.models import MyTasksFilter
+from apps.tasks.models import MyTasksFilter, Task
 
 
 @pytest.mark.django_db
@@ -694,3 +694,64 @@ class TestTaskChangedTrigger:
         response = client.post(reverse('task_toggle_label', args=[task.pk, label.pk]))
         assert response.status_code == 200
         assert 'taskChanged' in response['HX-Trigger']
+
+
+@pytest.mark.django_db
+class TestTaskMoveAfterId:
+    def _setup(self, client):
+        from apps.accounts.factories import AdminUserFactory
+
+        project = ProjectFactory()
+        status = project.statuses.get(name='Backlog')
+        tasks = {
+            title: TaskFactory(project=project, status=status, title=title, order=index)
+            for index, title in enumerate(['A', 'B', 'C'])
+        }
+        client.force_login(AdminUserFactory())
+        return project, status, tasks
+
+    @staticmethod
+    def _column(status):
+        return list(
+            Task.objects.filter(status=status).order_by('order').values_list('title', flat=True)
+        )
+
+    def test_after_id_drops_below_the_anchor_card(self, client):
+        project, status, tasks = self._setup(client)
+        response = client.post(reverse('task_move'), {
+            'task_id': tasks['A'].pk, 'status_id': status.pk, 'after_id': tasks['B'].pk,
+        })
+        assert response.status_code == 204
+        assert self._column(status) == ['B', 'A', 'C']
+
+    def test_empty_after_id_means_first(self, client):
+        project, status, tasks = self._setup(client)
+        client.post(reverse('task_move'), {
+            'task_id': tasks['C'].pk, 'status_id': status.pk, 'after_id': '',
+        })
+        assert self._column(status) == ['C', 'A', 'B']
+
+    def test_missing_after_id_keeps_the_old_behaviour(self, client):
+        project, status, tasks = self._setup(client)
+        client.post(reverse('task_move'), {'task_id': tasks['A'].pk, 'status_id': status.pk})
+        assert self._column(status) == ['B', 'C', 'A']
+        client.post(reverse('task_move'), {
+            'task_id': tasks['A'].pk, 'status_id': status.pk, 'position': 0,
+        })
+        assert self._column(status) == ['A', 'B', 'C']
+
+    def test_invalid_after_id_is_a_400(self, client):
+        project, status, tasks = self._setup(client)
+        response = client.post(reverse('task_move'), {
+            'task_id': tasks['A'].pk, 'status_id': status.pk, 'after_id': 'abc',
+        })
+        assert response.status_code == 400
+        assert self._column(status) == ['A', 'B', 'C']
+
+    def test_unknown_after_id_appends(self, client):
+        project, status, tasks = self._setup(client)
+        response = client.post(reverse('task_move'), {
+            'task_id': tasks['A'].pk, 'status_id': status.pk, 'after_id': 424242,
+        })
+        assert response.status_code == 204
+        assert self._column(status) == ['B', 'C', 'A']

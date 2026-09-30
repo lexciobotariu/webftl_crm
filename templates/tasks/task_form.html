@@ -15,7 +15,7 @@
             <button type="submit" class="bg-accent text-on-accent px-4 py-2 rounded-control hover:bg-accent-hover transition-colors">
                 {% if task %}Save{% else %}Create{% endif %}
             </button>
-            <a href="{% url 'project_board' project.pk %}" class="px-4 py-2 text-zinc-400 hover:text-zinc-300 transition-colors">Cancel</a>
+            <a href="{% url 'project_tasks' project.pk %}" class="px-4 py-2 text-zinc-400 hover:text-zinc-300 transition-colors">Cancel</a>
         </div>
     </form>
 </div>

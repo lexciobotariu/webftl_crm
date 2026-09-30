@@ -209,6 +209,70 @@ class TestMoveTaskOrdering:
 
         assert self._column(board['backlog']) == ['A', 'B', 'C']
 
+    def test_after_id_none_puts_the_task_first(self, board):
+        services.move_task(board['tasks']['C'], board['backlog'], board['user'], after_id=None)
+
+        assert self._column(board['backlog']) == ['C', 'A', 'B']
+        assert self._orders(board['backlog']) == [0, 1, 2]
+
+    def test_after_id_places_the_task_after_the_anchor(self, board):
+        tasks = board['tasks']
+        services.move_task(tasks['A'], board['backlog'], board['user'], after_id=tasks['B'].pk)
+
+        assert self._column(board['backlog']) == ['B', 'A', 'C']
+
+    def test_after_id_of_the_last_card_appends(self, board):
+        tasks = board['tasks']
+        services.move_task(tasks['A'], board['backlog'], board['user'], after_id=tasks['C'].pk)
+
+        assert self._column(board['backlog']) == ['B', 'C', 'A']
+
+    def test_after_id_across_columns(self, board):
+        done = board['done']
+        x = TaskFactory(project=board['project'], status=done, title='X', order=0)
+        TaskFactory(project=board['project'], status=done, title='Y', order=1)
+
+        services.move_task(board['tasks']['B'], done, board['user'], after_id=x.pk)
+
+        assert self._column(done) == ['X', 'B', 'Y']
+        assert self._column(board['backlog']) == ['A', 'C']
+        assert self._orders(board['backlog']) == [0, 1]
+
+    def test_after_id_wins_over_position(self, board):
+        tasks = board['tasks']
+        services.move_task(
+            tasks['A'], board['backlog'], board['user'], position=0, after_id=tasks['C'].pk
+        )
+
+        assert self._column(board['backlog']) == ['B', 'C', 'A']
+
+    def test_anchor_missing_from_the_column_appends(self, board):
+        """A deleted card, or one that already left the column, is not an error."""
+        done = board['done']
+        TaskFactory(project=board['project'], status=done, title='X', order=0)
+        elsewhere = board['tasks']['C']  # still in Backlog, not in Done
+
+        services.move_task(board['tasks']['A'], done, board['user'], after_id=elsewhere.pk)
+        assert self._column(done) == ['X', 'A']
+
+        services.move_task(board['tasks']['B'], done, board['user'], after_id=999999)
+        assert self._column(done) == ['X', 'A', 'B']
+
+    def test_anchor_from_another_project_is_ignored(self, board):
+        foreign = TaskFactory(title='Foreign')
+
+        services.move_task(
+            board['tasks']['A'], board['backlog'], board['user'], after_id=foreign.pk
+        )
+
+        assert self._column(board['backlog']) == ['B', 'C', 'A']
+
+    def test_anchor_equal_to_the_moved_task_is_not_an_error(self, board):
+        tasks = board['tasks']
+        services.move_task(tasks['A'], board['backlog'], board['user'], after_id=tasks['A'].pk)
+
+        assert sorted(self._column(board['backlog'])) == ['A', 'B', 'C']
+
     def test_order_survives_a_reload(self, board):
         """Re-reading the column the way the board view does yields the drop order."""
         services.move_task(board['tasks']['C'], board['backlog'], board['user'], position=0)

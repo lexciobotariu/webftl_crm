@@ -233,10 +233,15 @@ class Task(models.Model):
 
     @property
     def subtask_progress(self):
-        total = self.subtasks.count()
+        # The board annotates both counts so a column of cards costs no extra queries.
+        total = getattr(self, 'subtask_total', None)
+        if total is None:
+            total = self.subtasks.count()
+            completed = self.subtasks.filter(completed=True).count() if total else 0
+        else:
+            completed = self.subtask_done
         if total == 0:
             return None
-        completed = self.subtasks.filter(completed=True).count()
         return f"{completed}/{total}"
 
 

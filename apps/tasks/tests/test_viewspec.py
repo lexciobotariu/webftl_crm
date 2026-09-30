@@ -158,3 +158,19 @@ class TestRoundTrip:
         assert parse('hide_status=1&q=abc&limit=400').to_saved_params() == {
             'layout': 'list', 'hide_status': ['1'],
         }
+
+
+class TestBoardLayout:
+    def test_board_layout_is_accepted_and_serialised(self):
+        spec = parse('layout=board')
+        assert spec.layout == 'board'
+        assert spec.to_params() == {'layout': 'board'}
+        assert parse(spec.to_query_string()) == spec
+
+    def test_board_is_not_the_default_view(self):
+        assert not parse('layout=board').is_default
+
+    def test_filters_are_kept_when_the_layout_changes(self):
+        spec = parse('layout=board&hide_status=2&priority=high')
+        assert spec.hidden_statuses == frozenset({2})
+        assert spec.priorities == ('high',)

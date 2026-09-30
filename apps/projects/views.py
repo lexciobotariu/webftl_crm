@@ -7,6 +7,7 @@ from django.db.models import Count, Max, Prefetch, Q
 from django.db.models.deletion import RestrictedError
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 from django_htmx.http import push_url, replace_url
 
@@ -98,7 +99,7 @@ def project_create(request):
         if form.is_valid():
             project = form.save()
             ProjectAccess.objects.create(project=project, user=request.user)
-            return redirect('project_board', pk=project.pk)
+            return redirect('project_tasks', pk=project.pk)
     else:
         form = ProjectForm(initial=initial)
     return render(request, 'projects/project_form.html', {'form': form})
@@ -207,30 +208,33 @@ def project_tasks(request, pk):
     matching = visible.matching(spec)
     total_matching = matching.count()
     total_visible = visible.count() if (spec.has_filters or spec.q) else total_matching
-    page = (
-        matching.ordered_for(spec)
-        .select_related('status', 'assignee')
-        .prefetch_related('labels')[: spec.limit]
-    )
-    groups = build_groups(page, spec, visible.group_counts(spec))
-
-    more_url = None
-    if total_matching > spec.limit:
-        more_url = f'{page_url}?{spec.replace(limit=spec.limit + LIMIT_STEP).to_query_string()}'
 
     context = {
         'project': project,
         'spec': spec,
-        'groups': groups,
+        'groups': [],
         'total_matching': total_matching,
         'total_visible': total_visible,
         'hidden_count': total_visible - total_matching,
-        'more_url': more_url,
+        'more_url': None,
         'page_url': page_url,
         'can_edit_project': can_edit_project(request.user, project),
         'can_create_task': can_create_task(request.user, project),
         **filter_options(project, spec, assignees, project.labels.all()),
     }
+    if spec.layout == 'board':
+        context.update(_board_context(project, spec, matching))
+    else:
+        page = (
+            matching.ordered_for(spec)
+            .select_related('status', 'assignee')
+            .prefetch_related('labels')[: spec.limit]
+        )
+        context['groups'] = build_groups(page, spec, visible.group_counts(spec))
+        if total_matching > spec.limit:
+            more = spec.replace(limit=spec.limit + LIMIT_STEP).to_query_string()
+            context['more_url'] = f'{page_url}?{more}'
+
     response = render(request, 'tasks/view/project_tasks.html', context)
     if request.htmx:
         canonical = f'{page_url}?{spec.to_query_string()}'
@@ -285,39 +289,40 @@ def project_team_remove(request, pk, user_pk):
     return redirect('project_detail_team', pk=project.pk)
 
 
-@login_required
-@require_permission('access_projects')
-def project_board(request, pk):
-    project = get_object_or_404(Project, pk=pk)
-    if not can_access_project(request.user, project):
-        return HttpResponseForbidden("You don't have access to this project")
+def _board_context(project, spec, matching):
+    """Columns and cards for the board layout.
 
-    shown = visible_tasks(request.user, project)
-    visible_statuses = (
-        project.statuses.filter(visible_on_board=True)
-        .annotate(board_task_count=Count('tasks', filter=Q(tasks__in=shown)))
-        .prefetch_related(
-            Prefetch(
-                'tasks',
-                queryset=shown.select_related('assignee').prefetch_related('labels').order_by(
-                    'order', '-created_at'
-                ),
-            )
+    Columns are the statuses shown on the board, minus any the filter hides.
+    Cards are the tasks that pass the filters, always in their manual order: grouping
+    and sorting belong to the list. Every card is loaded; there is no paging here.
+    """
+    cards = (
+        matching.select_related('assignee')
+        .prefetch_related('labels')
+        .annotate(
+            subtask_total=Count('subtasks', distinct=True),
+            subtask_done=Count('subtasks', filter=Q(subtasks__completed=True), distinct=True),
         )
+        .order_by('order', '-created_at')
     )
-    hidden_task_count = shown.filter(status__visible_on_board=False).count()
-
-    context = {
-        'project': project,
-        'visible_statuses': visible_statuses,
-        'hidden_task_count': hidden_task_count,
-        'can_edit_project': can_edit_project(request.user, project),
-        'can_create_task': can_create_task(request.user, project),
+    columns = (
+        project.statuses.filter(visible_on_board=True)
+        .exclude(pk__in=spec.hidden_statuses)
+        .annotate(board_task_count=Count('tasks', filter=Q(tasks__in=matching)))
+        # Meta.ordering is ignored once a query aggregates, so say it.
+        .order_by('order', 'pk')
+        .prefetch_related(Prefetch('tasks', queryset=cards))
+    )
+    return {
+        'visible_statuses': columns,
+        'hidden_task_count': matching.filter(status__visible_on_board=False).count(),
     }
 
-    if request.htmx:
-        return render(request, 'projects/partials/kanban_board.html', context)
-    return render(request, 'projects/project_board.html', context)
+
+@login_required
+def project_board(request, pk):
+    """The board used to be its own page; it is a layout of the Tasks page now."""
+    return redirect(f"{reverse('project_tasks', args=[pk])}?layout=board")
 
 
 @login_required
@@ -374,13 +379,8 @@ def project_settings(request, pk):
         return HttpResponseForbidden("You can't edit this project")
 
     # Determine back URL based on 'next' parameter
-    next_page = request.GET.get('next', 'board')
-    if next_page == 'detail':
-        back_url = 'project_detail'
-    elif next_page == 'tasks':
-        back_url = 'project_tasks'
-    else:
-        back_url = 'project_board'
+    next_page = request.GET.get('next')
+    back_url = 'project_detail' if next_page == 'detail' else 'project_tasks'
 
     status_form = StatusForm()
     label_form = LabelForm()
