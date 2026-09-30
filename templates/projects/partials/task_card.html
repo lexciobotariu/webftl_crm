@@ -6,7 +6,7 @@
      hx-target="this"
      hx-swap="outerHTML"
      hx-on::after-swap="lucide.createIcons()">
-    <div class="flex items-start gap-2">
+    <div class="flex items-stretch gap-2">
         <div class="flex-1 min-w-0 cursor-pointer"
              onclick="htmx.ajax('GET', '{% url 'task_detail' task.pk %}', {target: '#slide-over', swap: 'innerHTML'})">
             <div class="flex items-center gap-2 mb-1.5" title="{{ task.get_priority_display|default:'No priority' }}">
@@ -44,8 +44,8 @@
             </div>
             {% endif %}
         </div>
-        {# A task has at most one assignee, so the avatar sits under the drag handle, in the card's side column. #}
-        <div class="flex flex-col items-center gap-4 shrink-0">
+        {# A task has at most one assignee, so the avatar lives in the card's side column: handle on top, avatar at the bottom, level with the due date. #}
+        <div class="flex flex-col items-center justify-between gap-2 shrink-0">
             <div x-sort:handle class="cursor-grab text-zinc-600 hover:text-zinc-400 pt-0.5"
                  title="Drag to move">
                 <i data-lucide="grip-vertical" class="w-3.5 h-3.5"></i>
