@@ -15,7 +15,14 @@ from .models import priorities_to_store
 
 LAYOUTS = ('list', 'board')
 GROUPS = ('status', 'assignee', 'priority', 'none')
-SORTS = ('priority', 'due', 'created', 'updated', 'title')
+SORT_CHOICES = (
+    ('priority', 'Priority'),
+    ('due', 'Due date'),
+    ('created', 'Created'),
+    ('updated', 'Updated'),
+    ('title', 'Title'),
+)
+SORTS = tuple(value for value, _label in SORT_CHOICES)
 DIRECTIONS = ('asc', 'desc')
 # "asc" means the natural order of the key: most urgent first, earliest due
 # date first, oldest first, A to Z. Dates of activity read better newest first.
@@ -32,6 +39,15 @@ DEFAULT_LIMIT = 200
 LIMIT_STEP = 200
 MAX_LIMIT = 5000
 MAX_QUERY_LENGTH = 100
+
+
+def sort_choices():
+    """``(value, label, default direction)`` for the Display menu.
+
+    The template reads the default direction from here, so the menu and the
+    server can never disagree about what "no ``dir``" means for a sort.
+    """
+    return [(value, label, DEFAULT_DIR[value]) for value, label in SORT_CHOICES]
 
 
 @dataclass(frozen=True)

@@ -43,7 +43,7 @@ class TestAccess:
         user = _member(project)
         TaskFactory(project=project, title='Write the spec')
         client.force_login(user)
-        response = client.get(_url(project))
+        response = client.get(_url(project, 'layout=list'))
         assert response.status_code == 200
         assert 'Write the spec' in response.content.decode()
         assert 'id="task-view"' in response.content.decode()
@@ -58,7 +58,7 @@ class TestAccess:
         ProjectAccessFactory(project=project, user=user)
         TaskFactory(project=project, title='Hidden from them')
         client.force_login(user)
-        response = client.get(_url(project))
+        response = client.get(_url(project, 'layout=list'))
         assert response.status_code == 200
         assert 'Hidden from them' not in response.content.decode()
 
@@ -145,7 +145,7 @@ class TestFiltering:
         gone = UserFactory(name='Left Company', is_active=False)
         TaskFactory(project=project, assignee=gone)
         client.force_login(user)
-        options = client.get(_url(project)).context['assignee_options']
+        options = client.get(_url(project, 'layout=list')).context['assignee_options']
         assert 'Left Company' in [option['label'] for option in options]
         assert 'none' in [option['value'] for option in options]
 
@@ -159,7 +159,7 @@ class TestGroupingAndSorting:
         TaskFactory.create_batch(3, project=project, status=backlog)
         TaskFactory(project=project, status=project.statuses.get(name='Done'))
         client.force_login(user)
-        groups = client.get(_url(project)).context['groups']
+        groups = client.get(_url(project, 'layout=list')).context['groups']
         assert [(g['label'], g['count']) for g in groups] == [('Backlog', 3), ('Done', 1)]
 
     def test_group_by_priority_and_no_grouping(self, client):
@@ -203,7 +203,7 @@ class TestShowMore:
         user = _member(project)
         TaskFactory.create_batch(3, project=project)
         client.force_login(user)
-        assert client.get(_url(project)).context['more_url'] is None
+        assert client.get(_url(project, 'layout=list')).context['more_url'] is None
 
 
 @pytest.mark.django_db
@@ -211,7 +211,7 @@ class TestEmptyStates:
     def test_no_tasks_yet_offers_to_create_one(self, client):
         project = ProjectFactory()
         client.force_login(AdminUserFactory())
-        html = client.get(_url(project)).content.decode()
+        html = client.get(_url(project, 'layout=list')).content.decode()
         assert 'No tasks yet' in html
         assert 'Create the first task' in html
         assert 'Nothing matches this filter' not in html
@@ -276,10 +276,15 @@ class TestSavedView:
         assert response.status_code == 302
         assert response['Location'] == _url(project, 'layout=list&group=assignee')
 
-    def test_bare_get_without_a_saved_view_renders_the_default(self, client):
+    def test_bare_get_without_a_saved_view_redirects_to_the_default(self, client):
+        # The bare URL never renders, so browser history only ever holds URLs that
+        # say what they showed; Back cannot land on "whatever is saved by now".
         project = ProjectFactory()
         client.force_login(_member(project))
-        assert client.get(_url(project)).status_code == 200
+        response = client.get(_url(project))
+        assert response.status_code == 302
+        assert response['Location'] == _url(project, 'layout=list')
+        assert not ProjectTaskView.objects.filter(project=project).exists()
 
     def test_saved_view_is_revalidated_when_a_status_was_deleted(self, client):
         project = ProjectFactory()
@@ -308,7 +313,8 @@ class TestSavedView:
         review.delete()
         client.force_login(user)
         response = client.get(_url(project))
-        assert response.status_code == 200
+        assert response.status_code == 302
+        assert response['Location'] == _url(project, 'layout=list')
         assert not ProjectTaskView.objects.filter(user=user, project=project).exists()
 
     def test_clearing_from_the_toolbar_removes_the_saved_view(self, client):
@@ -343,7 +349,7 @@ class TestSavedView:
             user=owner, project=project, params={'layout': 'list', 'group': 'assignee'}
         )
         client.force_login(other)
-        assert client.get(_url(project)).status_code == 200
+        assert client.get(_url(project, 'layout=list')).status_code == 200
 
     def test_one_row_per_person_and_project(self):
         project = ProjectFactory()
@@ -414,14 +420,14 @@ class TestQueryCount:
         user = _member(project)
         label = LabelFactory(project=project)
         client.force_login(user)
-        client.get(_url(project))  # the first request creates one-off rows (company settings)
+        client.get(_url(project, 'layout=list'))  # the first request creates one-off rows (company settings)
 
         def queries_for(n):
             for _ in range(n):
                 task = TaskFactory(project=project, assignee=UserFactory())
                 task.labels.add(label)
             with CaptureQueriesContext(connection) as captured:
-                assert client.get(_url(project)).status_code == 200
+                assert client.get(_url(project, 'layout=list')).status_code == 200
             return len(captured)
 
         few = queries_for(3)

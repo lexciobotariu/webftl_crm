@@ -5,7 +5,6 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Count, Q
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -653,24 +652,6 @@ def task_edit_title(request, pk):
         return response
     template = 'tasks/partials/title_edit_full.html' if is_full else 'tasks/partials/title_edit.html'
     return render(request, template, {'task': task})
-
-
-@login_required
-@require_permission('access_tasks')
-def task_card(request, pk):
-    """Return just the task card HTML for out-of-band swaps."""
-    task = get_object_or_404(
-        Task.objects.select_related('project', 'status', 'assignee')
-        .prefetch_related('labels')
-        .annotate(
-            subtask_total=Count('subtasks', distinct=True),
-            subtask_done=Count('subtasks', filter=Q(subtasks__completed=True), distinct=True),
-        ),
-        pk=pk
-    )
-    if not can_view_task(request.user, task):
-        return HttpResponseForbidden("You don't have access to this task")
-    return render(request, 'projects/partials/task_card.html', {'task': task, 'project': task.project})
 
 
 def _timer_changed(response):

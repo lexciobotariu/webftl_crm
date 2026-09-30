@@ -6,6 +6,7 @@ Kept apart from the spec (which only knows about URLs) and from the queryset
 from itertools import groupby
 
 from django.db.models import Q
+from django.db.models.functions import Lower
 
 from apps.accounts.models import User
 from apps.projects.models import get_assignable_users
@@ -51,18 +52,21 @@ def build_groups(tasks, spec, counts):
         if spec.group == 'status':
             group['label'] = first.status.name
         elif spec.group == 'assignee':
-            group['label'] = first.assignee.name if first.assignee else 'Unassigned'
+            group['label'] = (
+                (first.assignee.name or first.assignee.email) if first.assignee else 'Unassigned'
+            )
         else:
             group['label'] = PRIORITY_LABELS[first.priority]
         groups.append(group)
     return groups
 
 
-def filter_options(project, spec, assignable_users, labels):
+def filter_options(statuses, spec, assignable_users, labels):
     """Checkbox options for the Filter popover, reflecting ``spec``.
 
     Statuses read "checked means shown". Assignees and labels read "checked means
-    only these"; none checked is no filter.
+    only these"; none checked is no filter. ``statuses`` and ``labels`` are the
+    project's rows, already loaded by the view.
     """
     wanted_assignees = set(spec.assignees)
     assignees = [{
@@ -81,7 +85,7 @@ def filter_options(project, spec, assignable_users, labels):
                 'label': status.name,
                 'checked': status.pk not in spec.hidden_statuses,
             }
-            for status in project.statuses.all()
+            for status in statuses
         ],
         'priority_options': priority_filter_options(spec.priorities),
         'assignee_options': assignees,
@@ -100,4 +104,7 @@ def project_assignees(project):
     """
     assignable = get_assignable_users(project).values('pk')
     holders = Task.objects.filter(project=project, assignee__isnull=False).values('assignee_id')
-    return User.objects.filter(Q(pk__in=assignable) | Q(pk__in=holders)).order_by('name', 'email')
+    # Same order as the assignee groups in the list (``TaskQuerySet.ordered_for``).
+    return User.objects.filter(Q(pk__in=assignable) | Q(pk__in=holders)).order_by(
+        Lower('name'), 'email'
+    )

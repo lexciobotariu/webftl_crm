@@ -139,7 +139,6 @@ class TestViewOwn:
         assert client.get(
             reverse('task_full_page', args=[other.pk, foreign.pk])
         ).status_code == 403
-        assert client.get(reverse('task_card', args=[foreign.pk])).status_code == 403
 
         mine_page = client.get(reverse('my_tasks')).content.decode()
         assert 'On My Project' in mine_page

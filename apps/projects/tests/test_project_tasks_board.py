@@ -172,7 +172,7 @@ class TestBoardShell:
     def test_drag_and_drop_store_lives_outside_the_swapped_fragment(self, client):
         project = ProjectFactory()
         client.force_login(_member(project))
-        html = client.get(reverse('project_tasks', args=[project.pk])).content.decode()
+        html = client.get(_board(project)).content.decode()
         store = html.index("Alpine.store('kanban'")
         assert store < html.index('id="task-view"')
         assert html.count("Alpine.store('kanban'") == 1

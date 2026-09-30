@@ -21,7 +21,7 @@ from apps.tasks.models import (
     can_create_task,
     visible_tasks,
 )
-from apps.tasks.viewspec import LIMIT_STEP, TaskViewOptions, TaskViewSpec
+from apps.tasks.viewspec import LIMIT_STEP, TaskViewOptions, TaskViewSpec, sort_choices
 
 from .forms import LabelForm, ProjectForm, StatusForm
 from .models import (
@@ -164,34 +164,33 @@ def project_detail(request, pk):
 TOOLBAR_TRIGGER = 'task-toolbar'
 
 
-def _task_view_options(project, assignees):
-    return TaskViewOptions(
-        status_ids=frozenset(project.statuses.values_list('pk', flat=True)),
-        assignee_ids=frozenset(user.pk for user in assignees),
-        label_ids=frozenset(project.labels.values_list('pk', flat=True)),
-    )
-
-
 @login_required
 @require_permission('access_projects')
 def project_tasks(request, pk):
-    """The project's Tasks page: one URL-driven view of its tasks (list layout)."""
+    """The project's Tasks page: one URL-driven view of its tasks."""
     project = get_object_or_404(Project, pk=pk)
     if not can_access_project(request.user, project):
         return HttpResponseForbidden("You don't have access to this project")
 
+    statuses = list(project.statuses.all())
+    labels = list(project.labels.all())
     assignees = list(project_assignees(project))
-    options = _task_view_options(project, assignees)
+    options = TaskViewOptions(
+        status_ids=frozenset(status.pk for status in statuses),
+        assignee_ids=frozenset(user.pk for user in assignees),
+        label_ids=frozenset(label.pk for label in labels),
+    )
     page_url = request.path
 
+    # A bare URL never renders. It resolves to the view this person last used, or
+    # to the default, so every entry in browser history says in full what it
+    # showed; Back can then never land on "whatever is saved now".
     if not request.GET:
         saved = ProjectTaskView.objects.filter(user=request.user, project=project).first()
-        if saved is not None:
-            restored = TaskViewSpec.from_params(saved.params, options)
-            if restored.is_default:
-                saved.delete()
-            else:
-                return redirect(f'{page_url}?{restored.to_query_string()}')
+        restored = TaskViewSpec.from_params(saved.params if saved else {}, options)
+        if saved is not None and restored.is_default:
+            saved.delete()
+        return redirect(f'{page_url}?{restored.to_query_string()}')
 
     spec = TaskViewSpec.from_params(request.GET, options)
     from_toolbar = bool(request.htmx) and request.htmx.trigger == TOOLBAR_TRIGGER
@@ -220,7 +219,8 @@ def project_tasks(request, pk):
         'page_url': page_url,
         'can_edit_project': can_edit_project(request.user, project),
         'can_create_task': can_create_task(request.user, project),
-        **filter_options(project, spec, assignees, project.labels.all()),
+        'sort_choices': sort_choices(),
+        **filter_options(statuses, spec, assignees, labels),
     }
     if spec.layout == 'board':
         context.update(_board_context(project, spec, matching))

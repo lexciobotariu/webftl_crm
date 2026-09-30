@@ -224,7 +224,7 @@ class TestProjectDetailTabs:
         project = ProjectFactory()
         client.force_login(user)
 
-        response = client.get(reverse('project_tasks', args=[project.pk]))
+        response = client.get(reverse('project_tasks', args=[project.pk]) + '?layout=list')
         assert response.status_code == 200
         assert 'tasks/view/project_tasks.html' in [t.name for t in response.templates]
 

@@ -54,8 +54,7 @@
             </div>
         </div>
 
-        <div class="relative" x-show="layout === 'list'"
-             x-data="{ open: false, sort: '{{ spec.sort }}', defaults: { priority: 'asc', due: 'asc', created: 'desc', updated: 'desc', title: 'asc' } }">
+        <div class="relative" x-show="layout === 'list'" x-data="{ open: false }">
             <button type="button" @click="open = !open"
                     class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
                 <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>
@@ -75,14 +74,13 @@
                 </label>
                 <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-medium">
                     Order by
-                    <select name="sort" x-model="sort"
-                            @change="$refs.dir.value = defaults[sort]; $el.form.requestSubmit()"
+                    {# Each sort carries its own default direction (viewspec.DEFAULT_DIR), so changing the sort resets the direction the way the server would. #}
+                    <select name="sort"
+                            @change="$refs.dir.value = $el.selectedOptions[0].dataset.dir; $el.form.requestSubmit()"
                             class="mt-1 w-full bg-panel border border-border-subtle rounded-control px-2 py-1.5 text-sm text-zinc-200 normal-case tracking-normal focus:border-border-strong focus:outline-none">
-                        <option value="priority">Priority</option>
-                        <option value="due">Due date</option>
-                        <option value="created">Created</option>
-                        <option value="updated">Updated</option>
-                        <option value="title">Title</option>
+                        {% for value, label, default_dir in sort_choices %}
+                        <option value="{{ value }}" data-dir="{{ default_dir }}" {% if spec.sort == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
                     </select>
                 </label>
                 <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-medium">
