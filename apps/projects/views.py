@@ -5,7 +5,7 @@ from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Max, Prefetch, Q
 from django.db.models.deletion import RestrictedError
-from django.http import HttpResponse, HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -34,6 +34,10 @@ from .models import (
 )
 
 PROJECTS_PER_PAGE = 20
+
+
+def _status_item_context(project, status):
+    return {'status': status, 'project': project, 'category_choices': Status.CATEGORY_CHOICES}
 
 
 def _can_join_project(user):
@@ -108,7 +112,7 @@ def project_detail(request, pk):
     if not can_access_project(request.user, project):
         return HttpResponseForbidden("You don't have access to this project")
 
-    # Calculate stats. "Done" is whatever the project marks with Status.is_done,
+    # Calculate stats. "Done" is whatever the project files under the completed status type,
     # so renaming a column cannot break these numbers. These counts stay on every
     # visible task; the personal list filter below applies only on the Tasks tab.
     tasks = visible_tasks(request.user, project).select_related('status', 'assignee')
@@ -376,6 +380,7 @@ def project_settings(request, pk):
     return render(request, 'projects/project_settings.html', {
         'project': project,
         'status_form': status_form,
+        'category_choices': Status.CATEGORY_CHOICES,
         'label_form': label_form,
         'back_url': back_url,
         'can_edit_project': can_edit_project(request.user, project),
@@ -471,7 +476,7 @@ def status_create(request, pk):
             response = render(
                 request,
                 'projects/partials/status_create_success.html',
-                {'status': status, 'project': project},
+                _status_item_context(project, status),
             )
             response['HX-Trigger'] = 'statusCreated'
             return response
@@ -519,21 +524,25 @@ def status_toggle_visibility(request, pk, status_pk):
         )
         status.visible_on_board = not status.visible_on_board
         status.save(update_fields=['visible_on_board'])
-    return render(request, 'projects/partials/status_item.html', {'status': status, 'project': project})
+    return render(request, 'projects/partials/status_item.html', _status_item_context(project, status))
 
 
 @login_required
 @require_permission('access_projects')
 @require_POST
-def status_toggle_done(request, pk, status_pk):
+def status_set_category(request, pk, status_pk):
     project = get_object_or_404(Project, pk=pk)
     if not can_edit_project(request.user, project):
         return HttpResponseForbidden("You can't edit this project")
+
+    category = request.POST.get('category')
+    if category not in dict(Status.CATEGORY_CHOICES):
+        return HttpResponseBadRequest('Unknown status type')
 
     with transaction.atomic():
         status = get_object_or_404(
             Status.objects.select_for_update(), pk=status_pk, project=project
         )
-        status.is_done = not status.is_done
-        status.save(update_fields=['is_done'])
-    return render(request, 'projects/partials/status_item.html', {'status': status, 'project': project})
+        status.category = category
+        status.save(update_fields=['category'])
+    return render(request, 'projects/partials/status_item.html', _status_item_context(project, status))

@@ -59,3 +59,35 @@ class TestStatusModel:
         status.save()
         status.refresh_from_db()
         assert status.visible_on_board is False
+
+
+@pytest.mark.django_db
+class TestStatusCategory:
+    def test_default_statuses_get_a_category_each(self):
+        project = ProjectFactory()
+        categories = dict(project.statuses.values_list('name', 'category'))
+        assert categories == {
+            'Backlog': 'backlog',
+            'To Do': 'unstarted',
+            'In Progress': 'started',
+            'Review': 'started',
+            'Done': 'completed',
+        }
+
+    def test_new_status_defaults_to_unstarted(self):
+        assert StatusFactory().category == 'unstarted'
+
+    @pytest.mark.parametrize('category,completed,closed', [
+        ('backlog', False, False),
+        ('unstarted', False, False),
+        ('started', False, False),
+        ('completed', True, True),
+        ('canceled', False, True),
+    ])
+    def test_completed_and_closed_flags(self, category, completed, closed):
+        status = StatusFactory(category=category)
+        assert status.is_completed is completed
+        assert status.is_closed is closed
+
+    def test_is_done_is_gone(self):
+        assert not hasattr(StatusFactory(), 'is_done')

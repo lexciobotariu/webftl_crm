@@ -1,12 +1,8 @@
 <div class="relative" x-data="dropdown">
     <button @click="toggle()"
-            class="flex items-center gap-2 px-2 py-1 rounded-control text-sm hover:bg-elevated transition-colors
-                   {% if task.priority == 'urgent' %}text-error
-                   {% elif task.priority == 'high' %}text-error
-                   {% elif task.priority == 'medium' %}text-zinc-400
-                   {% else %}text-zinc-400{% endif %}">
+            class="flex items-center gap-2 px-2 py-1 rounded-control text-sm text-zinc-300 hover:bg-elevated transition-colors">
+        {% include "components/priority_icon.html" with priority=task.priority %}
         {% if task.priority %}
-        <i data-lucide="signal" class="w-3.5 h-3.5"></i>
         {{ task.get_priority_display }}
         {% else %}
         <span class="text-zinc-500">None</span>
@@ -20,7 +16,8 @@
                 hx-target="#priority-value-{{ task.pk }}"
                 hx-swap="innerHTML"
                 @click="close()"
-                class="w-full text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors text-zinc-400">
+                class="w-full flex items-center gap-2 text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors text-zinc-400">
+            {% include "components/priority_icon.html" with priority="" %}
             None
         </button>
         {% for value, label in priority_choices %}
@@ -29,8 +26,9 @@
                 hx-target="#priority-value-{{ task.pk }}"
                 hx-swap="innerHTML"
                 @click="close()"
-                class="w-full text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors
-                       {% if value == task.priority %}text-zinc-200{% elif value == 'urgent' %}text-error{% elif value == 'high' %}text-error{% elif value == 'medium' %}text-zinc-400{% else %}text-zinc-300{% endif %}">
+                class="w-full flex items-center gap-2 text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors
+                       {% if value == task.priority %}text-zinc-100{% else %}text-zinc-300{% endif %}">
+            {% include "components/priority_icon.html" with priority=value %}
             {{ label }}
         </button>
         {% endfor %}

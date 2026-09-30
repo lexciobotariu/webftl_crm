@@ -1,0 +1,20 @@
+{# Status type icon. Pass category=<status.category>; optional size (px, default 14). #}
+{% with px=size|default:14 %}
+<svg width="{{ px }}" height="{{ px }}" viewBox="0 0 14 14" fill="none" aria-hidden="true" class="shrink-0
+    {% if category == 'started' %}text-amber-500{% elif category == 'completed' %}text-accent{% elif category == 'canceled' %}text-zinc-500{% else %}text-zinc-400{% endif %}">
+    {% if category == 'backlog' %}
+    <circle cx="7" cy="7" r="5.75" stroke="currentColor" stroke-width="1.5" stroke-dasharray="1.6 1.9"/>
+    {% elif category == 'started' %}
+    <circle cx="7" cy="7" r="5.75" stroke="currentColor" stroke-width="1.5"/>
+    <path d="M7 3.5a3.5 3.5 0 0 1 0 7z" fill="currentColor"/>
+    {% elif category == 'completed' %}
+    <circle cx="7" cy="7" r="6.5" fill="currentColor"/>
+    <path d="M4.3 7.2l1.9 1.9 3.5-3.9" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    {% elif category == 'canceled' %}
+    <circle cx="7" cy="7" r="6.5" fill="currentColor"/>
+    <path d="M4.8 4.8l4.4 4.4M9.2 4.8L4.8 9.2" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+    {% else %}
+    <circle cx="7" cy="7" r="5.75" stroke="currentColor" stroke-width="1.5"/>
+    {% endif %}
+</svg>
+{% endwith %}

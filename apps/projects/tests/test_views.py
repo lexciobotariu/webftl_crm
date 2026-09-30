@@ -504,3 +504,59 @@ class TestProjectDeleteButton:
         content = client.get(reverse('project_settings', args=[project.pk])).content.decode()
         assert 'Delete Project' in content
         assert reverse('project_delete', args=[project.pk]) in content
+
+
+@pytest.mark.django_db
+class TestStatusSetCategory:
+    def _post(self, client, project, status, category):
+        return client.post(
+            reverse('status_set_category', args=[project.pk, status.pk]),
+            {'category': category},
+        )
+
+    def test_requires_manager(self, client):
+        user = UserFactory()
+        project = ProjectFactory()
+        ProjectAccessFactory(project=project, user=user)
+        status = project.statuses.get(name='To Do')
+        client.force_login(user)
+        assert self._post(client, project, status, 'started').status_code == 403
+        status.refresh_from_db()
+        assert status.category == 'unstarted'
+
+    def test_sets_category(self, client):
+        user = _with_edit_own(UserFactory())
+        project = ProjectFactory()
+        ProjectAccessFactory(project=project, user=user)
+        status = project.statuses.get(name='To Do')
+        client.force_login(user)
+        response = self._post(client, project, status, 'canceled')
+        assert response.status_code == 200
+        status.refresh_from_db()
+        assert status.category == 'canceled'
+
+    def test_rejects_unknown_category(self, client):
+        user = _with_edit_own(UserFactory())
+        project = ProjectFactory()
+        ProjectAccessFactory(project=project, user=user)
+        status = project.statuses.get(name='To Do')
+        client.force_login(user)
+        assert self._post(client, project, status, 'bogus').status_code == 400
+        status.refresh_from_db()
+        assert status.category == 'unstarted'
+
+    def test_status_of_another_project_is_404(self, client):
+        user = _with_edit_own(UserFactory())
+        project = ProjectFactory()
+        ProjectAccessFactory(project=project, user=user)
+        other = ProjectFactory().statuses.first()
+        client.force_login(user)
+        assert self._post(client, project, other, 'started').status_code == 404
+
+    def test_settings_page_renders_category_select(self, client):
+        user = _with_edit_own(UserFactory())
+        project = ProjectFactory()
+        ProjectAccessFactory(project=project, user=user)
+        client.force_login(user)
+        html = client.get(reverse('project_settings', args=[project.pk])).content.decode()
+        assert 'name="category"' in html
