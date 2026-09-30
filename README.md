@@ -11,6 +11,8 @@ You're free to use it, modify it, resell it, or do whatever you want with it. Se
 - **Clients** — contact info, notes, linked projects and todos
 - **Projects** — overview with stats, activity log, GitHub repo sync (experimental)
 - **Tasks** — one Tasks page per project with list and kanban board layouts, shared filters, grouping and sorting, drag-and-drop, a personal My Tasks list grouped by project, subtasks, comments, attachments, labels, and activity tracking
+- **Time tracking** — a running timer or manual entries on tasks, with a weekly view of your logged time
+- **Invoices** — per-client invoices with project and free-text lines, payments, and a currency per client
 - **Todos** — personal to-do list with optional client association and due dates
 - **Notes** — quick notes attached to clients
 - **Salaries** — employee salary tracking with monthly breakdowns and payment records
