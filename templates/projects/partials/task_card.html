@@ -25,29 +25,32 @@
             </div>
             {% endif %}
             {% endwith %}
-            <div class="flex items-center justify-between gap-2 text-[11px] text-zinc-500">
-                <div class="flex items-center gap-2">
-                    {% if task.due_date %}
-                    <span class="flex items-center gap-1 {% if task.is_overdue %}text-error{% endif %}">
-                        <i data-lucide="calendar" class="w-3 h-3"></i>
-                        {{ task.due_date|date:"M d" }}
-                    </span>
-                    {% endif %}
-                    {% with progress=task.subtask_progress %}
-                    {% if progress %}
-                    <span class="flex items-center gap-1" data-subtasks="{{ progress }}" title="Subtasks done">
-                        <i data-lucide="list-checks" class="w-3 h-3"></i>
-                        {{ progress }}
-                    </span>
-                    {% endif %}
-                    {% endwith %}
-                </div>
-                {% include "components/avatar.html" with user=task.assignee size=20 %}
+            {% if task.due_date or task.subtask_progress %}
+            <div class="flex items-center gap-2 text-[11px] text-zinc-500">
+                {% if task.due_date %}
+                <span class="flex items-center gap-1 {% if task.is_overdue %}text-error{% endif %}">
+                    <i data-lucide="calendar" class="w-3 h-3"></i>
+                    {{ task.due_date|date:"M d" }}
+                </span>
+                {% endif %}
+                {% with progress=task.subtask_progress %}
+                {% if progress %}
+                <span class="flex items-center gap-1" data-subtasks="{{ progress }}" title="Subtasks done">
+                    <i data-lucide="list-checks" class="w-3 h-3"></i>
+                    {{ progress }}
+                </span>
+                {% endif %}
+                {% endwith %}
             </div>
+            {% endif %}
         </div>
-        <div x-sort:handle class="cursor-grab text-zinc-600 hover:text-zinc-400 pt-0.5"
-             title="Drag to move">
-            <i data-lucide="grip-vertical" class="w-3.5 h-3.5"></i>
+        {# A task has at most one assignee, so the avatar sits under the drag handle, in the card's side column. #}
+        <div class="flex flex-col items-center gap-2 shrink-0">
+            <div x-sort:handle class="cursor-grab text-zinc-600 hover:text-zinc-400 pt-0.5"
+                 title="Drag to move">
+                <i data-lucide="grip-vertical" class="w-3.5 h-3.5"></i>
+            </div>
+            {% include "components/avatar.html" with user=task.assignee size=20 %}
         </div>
     </div>
 </div>
