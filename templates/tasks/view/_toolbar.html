@@ -1,0 +1,102 @@
+{# One form drives the page. Only requests it triggers (HX-Trigger: task-toolbar) are remembered per person. #}
+<form id="task-toolbar" method="get" action="{{ page_url }}"
+      hx-get="{{ page_url }}" hx-trigger="submit"
+      hx-target="#task-view" hx-select="#task-view" hx-swap="outerHTML"
+      hx-select-oob="#task-filter-badge, #task-filter-fields"
+      class="flex-shrink-0 flex items-center justify-between gap-3 px-4 py-2 border-b border-border-subtle">
+    <div class="flex items-center gap-2">
+        <div class="inline-flex items-center bg-elevated border border-border-subtle rounded-control p-0.5 text-xs">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] bg-hover-strong text-zinc-100">
+                <i data-lucide="list" class="w-3.5 h-3.5"></i>
+                List
+            </span>
+            <a href="{% url 'project_board' project.pk %}"
+               class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] text-zinc-400 hover:text-zinc-200 transition-colors">
+                <i data-lucide="kanban" class="w-3.5 h-3.5"></i>
+                Board
+            </a>
+        </div>
+        <input type="hidden" name="layout" value="{{ spec.layout }}">
+
+        <div class="relative" x-data="dropdown">
+            <button type="button" @click="toggle()"
+                    class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
+                <i data-lucide="filter" class="w-3.5 h-3.5"></i>
+                Filter
+                <span id="task-filter-badge">{% if spec.filter_count %}<span class="bg-accent text-on-accent text-[10px] leading-none font-medium px-1.5 py-0.5 rounded-full">{{ spec.filter_count }}</span>{% endif %}</span>
+            </button>
+            <div x-show="open" x-cloak @click.away="close()" x-transition
+                 class="absolute left-0 top-full mt-1 w-64 max-h-[70vh] overflow-y-auto bg-elevated border border-border-subtle rounded-card shadow-lg z-20 p-3">
+                {# Plain HTML on purpose: it is re-rendered out of band after every request, so it must not carry Alpine state. #}
+                <div id="task-filter-fields" class="space-y-3">
+                    <input type="hidden" name="filter" value="1">
+                    {% include "components/checkbox_filter_group.html" with title="Status" name="shown_status" options=status_options %}
+                    {% include "components/checkbox_filter_group.html" with title="Priority" name="priority" options=priority_options %}
+                    {% include "components/checkbox_filter_group.html" with title="Assignee" name="assignee" options=assignee_options %}
+                    {% if label_options %}
+                    {% include "components/checkbox_filter_group.html" with title="Labels" name="label" options=label_options %}
+                    {% endif %}
+                </div>
+                <div class="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-border-subtle">
+                    <button type="submit" id="task-toolbar-clear" name="clear" value="1" @click="close()"
+                            class="inline-flex items-center bg-panel border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
+                        Clear
+                    </button>
+                    <button type="submit" @click="close()"
+                            class="inline-flex items-center bg-accent text-on-accent px-3 py-1.5 rounded-control text-xs font-medium hover:bg-accent-hover transition-colors">
+                        Apply
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="relative"
+             x-data="{ open: false, sort: '{{ spec.sort }}', defaults: { priority: 'asc', due: 'asc', created: 'desc', updated: 'desc', title: 'asc' } }">
+            <button type="button" @click="open = !open"
+                    class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
+                <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>
+                Display
+            </button>
+            <div x-show="open" x-cloak @click.away="open = false" x-transition
+                 class="absolute left-0 top-full mt-1 w-60 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 p-3 space-y-3">
+                <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-medium">
+                    Group by
+                    <select name="group" @change="$el.form.requestSubmit()"
+                            class="mt-1 w-full bg-panel border border-border-subtle rounded-control px-2 py-1.5 text-sm text-zinc-200 normal-case tracking-normal focus:border-border-strong focus:outline-none">
+                        <option value="status" {% if spec.group == 'status' %}selected{% endif %}>Status</option>
+                        <option value="assignee" {% if spec.group == 'assignee' %}selected{% endif %}>Assignee</option>
+                        <option value="priority" {% if spec.group == 'priority' %}selected{% endif %}>Priority</option>
+                        <option value="none" {% if spec.group == 'none' %}selected{% endif %}>No grouping</option>
+                    </select>
+                </label>
+                <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-medium">
+                    Order by
+                    <select name="sort" x-model="sort"
+                            @change="$refs.dir.value = defaults[sort]; $el.form.requestSubmit()"
+                            class="mt-1 w-full bg-panel border border-border-subtle rounded-control px-2 py-1.5 text-sm text-zinc-200 normal-case tracking-normal focus:border-border-strong focus:outline-none">
+                        <option value="priority">Priority</option>
+                        <option value="due">Due date</option>
+                        <option value="created">Created</option>
+                        <option value="updated">Updated</option>
+                        <option value="title">Title</option>
+                    </select>
+                </label>
+                <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-medium">
+                    Direction
+                    <select name="dir" x-ref="dir" @change="$el.form.requestSubmit()"
+                            class="mt-1 w-full bg-panel border border-border-subtle rounded-control px-2 py-1.5 text-sm text-zinc-200 normal-case tracking-normal focus:border-border-strong focus:outline-none">
+                        <option value="asc" {% if spec.dir == 'asc' %}selected{% endif %}>Ascending</option>
+                        <option value="desc" {% if spec.dir == 'desc' %}selected{% endif %}>Descending</option>
+                    </select>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <input type="search" id="task-search" name="q" value="{{ spec.q }}" placeholder="Search tasks"
+           autocomplete="off"
+           hx-get="{{ page_url }}" hx-trigger="input changed delay:300ms, search"
+           hx-include="#task-toolbar"
+           hx-target="#task-view" hx-select="#task-view" hx-swap="outerHTML"
+           class="w-56 bg-elevated border border-border-subtle rounded-control px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-500 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
+</form>

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} - Tasks - WebFTL CRM{% endblock %}
+
+{% block full_content %}
+{# `collapsed` lives outside #task-view so a refresh keeps collapsed groups collapsed. #}
+<div class="flex flex-col h-full overflow-hidden" x-data="{ collapsed: {} }">
+    <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="{% url 'project_detail' project.pk %}" class="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors" title="Back to Project">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                </a>
+                <div class="flex items-center gap-2 text-sm">
+                    {% if perms_map.access_clients %}
+                    <a href="{% url 'client_detail' project.client.pk %}" class="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 transition-colors">
+                        <i data-lucide="building-2" class="w-3.5 h-3.5"></i>
+                        <span>{{ project.client.name }}</span>
+                    </a>
+                    {% else %}
+                    <span class="flex items-center gap-1.5 text-zinc-500">
+                        <i data-lucide="building-2" class="w-3.5 h-3.5"></i>
+                        <span>{{ project.client.name }}</span>
+                    </span>
+                    {% endif %}
+                    <span class="text-zinc-600">/</span>
+                    <a href="{% url 'project_detail' project.pk %}" class="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 transition-colors">
+                        <i data-lucide="folder" class="w-3.5 h-3.5"></i>
+                        <span>{{ project.name }}</span>
+                    </a>
+                    <span class="text-zinc-600">/</span>
+                    <span class="flex items-center gap-1.5 text-zinc-100 font-medium">
+                        <i data-lucide="check-square" class="w-3.5 h-3.5"></i>
+                        <span>Tasks</span>
+                    </span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                {% if can_create_task %}
+                <button hx-get="{% url 'task_create' project.pk %}"
+                        hx-target="#slide-over"
+                        hx-swap="innerHTML"
+                        hx-on::after-request="openSlideOver(event)"
+                        class="inline-flex items-center gap-1.5 bg-accent text-on-accent px-3 py-1.5 rounded-control text-xs font-medium hover:bg-accent-hover transition-colors">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                    New Task
+                </button>
+                {% endif %}
+                {% if can_edit_project %}
+                <a href="{% url 'project_settings' project.pk %}?next=tasks" class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
+                    <i data-lucide="settings" class="w-3.5 h-3.5"></i>
+                    Settings
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% include "tasks/view/_toolbar.html" %}
+
+    <div class="flex-1 overflow-y-auto">
+        <div id="task-view">
+            {% include "tasks/view/_list.html" %}
+        </div>
+    </div>
+</div>
+<script>
+    // Back must show the URL's state, not a cached copy of an earlier list.
+    htmx.config.historyCacheSize = 0;
+    // Edits made in the drawer (and task create/delete/move) change what the list
+    // shows; re-fetch it through the current URL so filters and "Show more" survive.
+    ['taskChanged', 'taskStatusChanged'].forEach((name) => {
+        document.body.addEventListener(name, () => refreshFragment('#task-view'));
+    });
+</script>
+{% endblock %}

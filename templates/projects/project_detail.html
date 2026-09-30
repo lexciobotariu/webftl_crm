@@ -60,8 +60,8 @@
                         <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
                         Overview
                     </a>
-                    <a href="{% url 'project_detail_tasks' project.pk %}"
-                       class="w-full flex items-center justify-between px-3 py-2 rounded-control text-sm transition-colors text-left {% if active_tab == 'tasks' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
+                    <a href="{% url 'project_tasks' project.pk %}"
+                       class="w-full flex items-center justify-between px-3 py-2 rounded-control text-sm transition-colors text-left text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50">
                         <span class="flex items-center gap-3">
                             <i data-lucide="check-square" class="w-4 h-4"></i>
                             Tasks
@@ -103,11 +103,6 @@
             <div class="space-y-6 pb-6" id="overview-content">
                 {% include "projects/partials/overview_content.html" %}
             </div>
-            {% elif active_tab == 'tasks' %}
-            <!-- Tasks Section -->
-            <div class="pb-6" id="tasks-content">
-                {% include "projects/partials/tasks_content.html" %}
-            </div>
             {% elif active_tab == 'notes' %}
             <div hx-get="{% url 'project_notes_list' project.pk %}"
                  hx-trigger="load, notesChanged from:body"
@@ -129,7 +124,6 @@
     // Task creation and status changes happen in drawers that target #slide-over;
     // pull the affected panels back from the server so they don't go stale.
     document.body.addEventListener('taskStatusChanged', () => {
-        refreshFragment('#tasks-content');
         refreshFragment('#overview-content');
     });
 </script>

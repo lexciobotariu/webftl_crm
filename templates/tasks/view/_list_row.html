@@ -1,0 +1,25 @@
+<div id="task-{{ task.pk }}"
+     class="flex items-center gap-3 h-9 px-4 border-b border-border-subtle text-sm hover:bg-elevated/50 transition-colors cursor-pointer"
+     hx-get="{% url 'task_detail' task.pk %}"
+     hx-target="#slide-over"
+     hx-swap="innerHTML"
+     hx-on::after-request="openSlideOver(event)">
+    {% include "components/priority_icon.html" with priority=task.priority %}
+    <span class="w-16 shrink-0 font-mono text-xs text-zinc-500">{{ project.name|slice:":4"|upper }}-{{ task.pk }}</span>
+    {% include "components/status_icon.html" with category=task.status.category %}
+    <span class="flex-1 min-w-0 truncate text-zinc-100">{{ task.title }}</span>
+    {% with labels=task.labels.all %}
+    {% if labels %}
+    <span class="hidden md:flex items-center gap-1 shrink-0">
+        {% for label in labels|slice:":3" %}
+        <span class="px-2 py-0.5 text-[10px] rounded-full border" style="background: {{ label.color }}20; color: {{ label.color }}; border-color: {{ label.color }}40;">{{ label.name }}</span>
+        {% endfor %}
+        {% if labels|length > 3 %}
+        <span class="text-[10px] text-zinc-500">+{{ labels|length|add:"-3" }}</span>
+        {% endif %}
+    </span>
+    {% endif %}
+    {% endwith %}
+    <span class="w-14 shrink-0 text-right text-xs {% if task.is_overdue %}text-error{% else %}text-zinc-500{% endif %}">{% if task.due_date %}{{ task.due_date|date:"M d" }}{% endif %}</span>
+    {% include "components/avatar.html" with user=task.assignee %}
+</div>

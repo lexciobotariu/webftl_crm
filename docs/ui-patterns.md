@@ -359,10 +359,32 @@ filters or pagination, so nothing is lost there.
 
 ---
 
+## Project Tasks page
+
+`/projects/<pk>/tasks/` (`project_tasks`, `templates/tasks/view/`) is one full-width
+page whose state lives in the URL. `apps/tasks/viewspec.py` (`TaskViewSpec`) is the only
+code that reads and validates the query parameters; unknown values are ignored, never a 400.
+`layout` is always in the canonical URL, so only a bare query string means "restore the view
+this person last used" (`ProjectTaskView`, unique per user and project; search text and
+paging are never saved).
+
+- **Always a full page.** The toolbar and "Show more" request the page and the client keeps
+  `#task-view` (`hx-select`, `outerHTML`); the filter badge and checkboxes are refreshed out
+  of band (`hx-select-oob`). The OOB elements carry no Alpine state. The server sets the
+  URL with `push_url` (toolbar) or `replace_url` (search, "Show more", refreshes).
+- **Only the toolbar form saves the view.** It is `<form id="task-toolbar">`, so its
+  requests arrive with `HX-Trigger: task-toolbar`. A shared link, a refresh after a drawer
+  edit, search-as-you-type and "Show more" never overwrite what someone chose.
+- **Statuses are stored as the ones hidden** (`hide_status=<id>`), so a status added later
+  shows up by itself. The filter form posts the checked ones (`shown_status` + `filter=1`)
+  and the spec translates them.
+- **Rows go stale otherwise.** The drawer's property views emit `taskChanged` (plus
+  `taskUpdated-<pk>`); the page answers with `refreshFragment('#task-view')`.
+
 ## Kanban Board
 
 **Top-nav actions** (`project_board.html`): Add Task (accent) then Task List and
-Settings (secondary). "Task List" is the way back to `project_detail_tasks` — the
+Settings (secondary). "Task List" is the way back to `project_tasks` — the
 board is a peer view of the task list, not a dead end.
 
 **Card drag handle** (`partials/task_card.html`): the `x-sort:handle` grip is
