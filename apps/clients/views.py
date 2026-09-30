@@ -208,7 +208,7 @@ def client_create_project(request, pk):
 
         from django.urls import reverse
         response = HttpResponse('')
-        response['HX-Redirect'] = reverse('project_board', args=[project.pk])
+        response['HX-Redirect'] = reverse('project_tasks', args=[project.pk])
         return response
 
     return render(request, 'clients/partials/project_create_drawer.html', {'client': client})

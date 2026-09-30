@@ -3,8 +3,8 @@
 {% block title %}{{ project.name }} - Tasks - WebFTL CRM{% endblock %}
 
 {% block full_content %}
-{# `collapsed` lives outside #task-view so a refresh keeps collapsed groups collapsed. #}
-<div class="flex flex-col h-full overflow-hidden" x-data="{ collapsed: {} }">
+{# `collapsed` and `layout` live outside #task-view so a refresh keeps collapsed groups collapsed and the toolbar in step. #}
+<div class="flex flex-col h-full overflow-hidden" x-data="{ collapsed: {}, layout: '{{ spec.layout }}' }">
     <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80">
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
@@ -58,9 +58,49 @@
 
     {% include "tasks/view/_toolbar.html" %}
 
-    <div class="flex-1 overflow-y-auto">
-        <div id="task-view">
+    <script>
+        // Drag and drop is wired here, outside #task-view, so it survives every swap of the board.
+        // A drop sends the card it landed under (after_id), because with filters on the
+        // visible index is not the index in the column.
+        document.addEventListener('alpine:init', () => {
+            Alpine.store('kanban', {
+                moveTask(taskId, statusId, position) {
+                    const card = document.getElementById('task-' + taskId);
+                    const previous = card ? card.previousElementSibling : null;
+                    const afterId = previous && previous.id.startsWith('task-') ? previous.id.slice(5) : '';
+                    fetch('{% url "task_move" %}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        body: new URLSearchParams({
+                            task_id: taskId,
+                            status_id: statusId,
+                            position: position,
+                            after_id: afterId
+                        })
+                    }).then(response => {
+                        if (!response.ok) throw new Error('move failed: ' + response.status);
+                        // Re-render so the persisted order is what is shown.
+                        refreshFragment('#task-view');
+                    }).catch(() => {
+                        // Snap the card back by re-rendering from server state.
+                        refreshFragment('#task-view');
+                        window.showErrorToast('Could not move that task. The view has been refreshed.');
+                    });
+                }
+            });
+        });
+    </script>
+
+    <div class="flex-1 min-h-0">
+        <div id="task-view" class="h-full {% if spec.layout == 'board' %}overflow-hidden{% else %}overflow-y-auto{% endif %}">
+            {% if spec.layout == 'board' %}
+            {% include "tasks/view/_board.html" %}
+            {% else %}
             {% include "tasks/view/_list.html" %}
+            {% endif %}
         </div>
     </div>
 </div>

@@ -111,7 +111,7 @@ class TestCreateFlag:
             'description': '',
             'github_repo_url': '',
         }).status_code == 403
-        board = client.get(reverse('project_board', args=[listed.pk])).content.decode()
+        board = client.get(reverse('project_tasks', args=[listed.pk]) + '?layout=board').content.decode()
         detail = client.get(reverse('project_detail', args=[listed.pk])).content.decode()
         settings_url = reverse('project_settings', args=[listed.pk])
         assert settings_url not in board
@@ -151,7 +151,7 @@ class TestEditFlags:
         assert mine.labels.filter(name='Bug').exists()
 
         settings_url = reverse('project_settings', args=[mine.pk])
-        assert settings_url in client.get(reverse('project_board', args=[mine.pk])).content.decode()
+        assert settings_url in client.get(reverse('project_tasks', args=[mine.pk]) + '?layout=board').content.decode()
         assert settings_url in client.get(reverse('project_detail', args=[mine.pk])).content.decode()
         form = client.get(reverse('project_settings', args=[mine.pk])).content.decode()
         assert 'name="name"' in form
@@ -177,7 +177,7 @@ class TestEditFlags:
         assert not ProjectAccess.objects.filter(project=project, user=user).exists()
         client.force_login(user)
 
-        assert client.get(reverse('project_board', args=[project.pk])).status_code == 200
+        assert client.get(reverse('project_tasks', args=[project.pk]) + '?layout=board').status_code == 200
         assert client.get(reverse('project_detail', args=[project.pk])).status_code == 200
         assert client.get(reverse('project_settings', args=[project.pk])).status_code == 200
         updated = client.post(reverse('project_settings_update', args=[project.pk]), {
@@ -195,7 +195,7 @@ class TestEditFlags:
         project = ProjectFactory(name='Read Only')
         client.force_login(user)
 
-        assert client.get(reverse('project_board', args=[project.pk])).status_code == 200
+        assert client.get(reverse('project_tasks', args=[project.pk]) + '?layout=board').status_code == 200
         assert client.get(reverse('project_detail', args=[project.pk])).status_code == 200
         assert client.get(reverse('project_settings', args=[project.pk])).status_code == 403
         assert client.post(reverse('project_settings_update', args=[project.pk]), {
@@ -259,7 +259,7 @@ class TestProjectWorkStaysWithTheRow:
         assert denied_comment.status_code == 403
         assert not project.tasks.filter(title='Watcher Task').exists()
         assert not TaskActivity.objects.filter(content='Should not land').exists()
-        assert client.get(reverse('project_board', args=[project.pk])).status_code == 200
+        assert client.get(reverse('project_tasks', args=[project.pk]) + '?layout=board').status_code == 200
 
 
 @pytest.mark.django_db

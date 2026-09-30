@@ -77,7 +77,7 @@ class TestMemberRemoval:
 
         client.force_login(user)
         assert client.get(reverse('task_full_page', args=[project.pk, task.pk])).status_code == 403
-        assert client.get(reverse('project_board', args=[project.pk])).status_code == 403
+        assert client.get(reverse('project_tasks', args=[project.pk]) + '?layout=board').status_code == 403
         assert client.post(
             reverse('comment_create', args=[task.pk]),
             {'content': 'still here'},

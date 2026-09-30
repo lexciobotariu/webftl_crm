@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction
+from django.db.models import Count, Q
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -196,7 +197,7 @@ def task_create(request, project_pk):
                     'taskStatusChanged': True,
                 })
                 return response
-            return redirect('project_board', pk=project.pk)
+            return redirect('project_tasks', pk=project.pk)
         if request.htmx:
             team_members = get_assignable_users(project)
             project_labels = project.labels.all()
@@ -277,7 +278,7 @@ def task_edit(request, pk):
                     'subtask_form': SubtaskForm(),
                     **_time_context(request.user, task),
                 })
-            return redirect('project_board', pk=task.project.pk)
+            return redirect('project_tasks', pk=task.project.pk)
     else:
         form = TaskForm(task.project, instance=task)
 
@@ -313,9 +314,9 @@ def task_delete(request, pk):
         })
         current_url = request.headers.get('HX-Current-URL', '')
         if f'/project/{project_pk}/{pk}/' in current_url:
-            response['HX-Redirect'] = reverse('project_board', args=[project_pk])
+            response['HX-Redirect'] = reverse('project_tasks', args=[project_pk])
         return response
-    return redirect('project_board', pk=project_pk)
+    return redirect('project_tasks', pk=project_pk)
 
 
 @login_required
@@ -323,6 +324,8 @@ def task_delete(request, pk):
 @require_POST
 @transaction.atomic
 def task_move(request):
+    from apps.tasks import services
+
     try:
         task_id = int(request.POST.get('task_id', ''))
         status_id = int(request.POST.get('status_id', ''))
@@ -337,12 +340,24 @@ def task_move(request):
         except (TypeError, ValueError):
             return HttpResponse('Invalid position', status=400)
 
+    # "after_id" is the card dropped under: empty for the top of the column, absent
+    # for the old append/position behaviour.
+    after_id = services.AFTER_UNSET
+    if 'after_id' in request.POST:
+        raw_after = request.POST['after_id']
+        if raw_after == '':
+            after_id = None
+        else:
+            try:
+                after_id = int(raw_after)
+            except (TypeError, ValueError):
+                return HttpResponse('Invalid anchor', status=400)
+
     # move_task takes the row locks itself, in a deadlock-safe order.
     task = get_object_or_404(Task, pk=task_id)
     status = get_object_or_404(Status, pk=status_id, project=task.project)
     try:
-        from apps.tasks import services
-        services.move_task(task, status, request.user, position=position)
+        services.move_task(task, status, request.user, position=position, after_id=after_id)
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
     except Task.DoesNotExist:
@@ -645,12 +660,17 @@ def task_edit_title(request, pk):
 def task_card(request, pk):
     """Return just the task card HTML for out-of-band swaps."""
     task = get_object_or_404(
-        Task.objects.select_related('project', 'status', 'assignee').prefetch_related('labels'),
+        Task.objects.select_related('project', 'status', 'assignee')
+        .prefetch_related('labels')
+        .annotate(
+            subtask_total=Count('subtasks', distinct=True),
+            subtask_done=Count('subtasks', filter=Q(subtasks__completed=True), distinct=True),
+        ),
         pk=pk
     )
     if not can_view_task(request.user, task):
         return HttpResponseForbidden("You don't have access to this task")
-    return render(request, 'projects/partials/task_card.html', {'task': task})
+    return render(request, 'projects/partials/task_card.html', {'task': task, 'project': task.project})
 
 
 def _timer_changed(response):

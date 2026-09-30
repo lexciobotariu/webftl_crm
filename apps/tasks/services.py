@@ -91,8 +91,12 @@ def update_task_field(task, field, value, user):
     return task
 
 
+# Default for move_task's ``after_id``: no anchor given, so ``position`` decides.
+AFTER_UNSET = object()
+
+
 @transaction.atomic
-def move_task(task, new_status, user, position=None):
+def move_task(task, new_status, user, position=None, after_id=AFTER_UNSET):
     """
     Move a task to a new status column, optionally at a specific index.
 
@@ -105,6 +109,11 @@ def move_task(task, new_status, user, position=None):
         new_status: Status instance to move to
         user: User performing the move (for permissions and activity log)
         position: Zero-based index within the destination column. None appends.
+        after_id: The card the task was dropped under. Use it when the client only
+            shows some of the column (filters), where a visible index is not the
+            column index. ``None`` drops at the top, a pk drops right after that
+            card, and a card that is not in the column (deleted, moved, another
+            project) appends. Wins over ``position``; left out, ``position`` decides.
 
     Raises:
         TaskPermissionError: If user lacks editor access
@@ -144,7 +153,13 @@ def move_task(task, new_status, user, position=None):
         .exclude(pk=locked_task.pk)
         .order_by('order', '-created_at')
     )
-    if position is None:
+    if after_id is not AFTER_UNSET:
+        if after_id is None:
+            index = 0
+        else:
+            anchor = next((i for i, t in enumerate(destination) if t.pk == after_id), None)
+            index = len(destination) if anchor is None else anchor + 1
+    elif position is None:
         index = len(destination)
     else:
         index = max(0, min(int(position), len(destination)))

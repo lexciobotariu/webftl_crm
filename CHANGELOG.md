@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Features
+- Statuses have a type (backlog, unstarted, started, completed, canceled) instead of a "counts as done" flag; canceled work no longer counts as active or overdue, and the settings page has a type select per status
+- Status, priority and unassigned icons follow Linear's design (Tabler and Material Design Icons SVGs, inlined)
+- Each project has one full-width Tasks page at `/projects/<pk>/tasks/` with a List/Board toggle, shared filters (status, priority, assignee, labels), search, and — in the list — grouping, sorting and "Show more"
+- The Tasks page state lives in the URL, so views can be shared and Back works; the last view you used on a project is remembered per person
+- On the board, dropping a card under active filters places it under the card it landed on instead of at a position counted only among visible cards
+
+### Changes
+- `/projects/<pk>/kanban/` now redirects to the Tasks page in board layout
+- The project Tasks tab and its saved status/priority filter are replaced by the Tasks page; filters saved on the old tab reset once
+- Editing a task's assignee, priority, due date, estimate, labels or title in the drawer refreshes the list behind it
+
+### Fixes
+- Board columns are ordered by the status order even when the database returns them differently
+
 ## [0.7.0] - 2026-08-31
 
 ### Features

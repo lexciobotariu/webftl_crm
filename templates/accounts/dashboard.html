@@ -83,7 +83,7 @@
                             <span class="font-medium text-sm text-zinc-100">{{ task.title }}</span>
                         </td>
                         <td class="px-4 py-3">
-                            <a href="{% url 'project_board' task.project.pk %}"
+                            <a href="{% url 'project_tasks' task.project.pk %}"
                                class="text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
                                onclick="event.stopPropagation()">
                                 {{ task.project.name }}

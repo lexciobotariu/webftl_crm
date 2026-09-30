@@ -68,16 +68,16 @@ class TestProjectBoard:
         project = ProjectFactory()
         ProjectAccessFactory(project=project, user=user)
         client.force_login(user)
-        response = client.get(reverse('project_board', args=[project.pk]))
+        response = client.get(reverse('project_tasks', args=[project.pk]) + '?layout=board')
         assert response.status_code == 200
 
-    def test_project_board_htmx_returns_partial(self, client):
+    def test_project_board_htmx_request_gets_the_full_page(self, client):
         user = UserFactory()
         project = ProjectFactory()
         ProjectAccessFactory(project=project, user=user)
         client.force_login(user)
         response = client.get(
-            reverse('project_board', args=[project.pk]),
+            reverse('project_tasks', args=[project.pk]) + '?layout=board',
             HTTP_HX_REQUEST='true'
         )
         assert response.status_code == 200
@@ -88,7 +88,7 @@ class TestProjectBoard:
         project = ProjectFactory()
         # No membership created
         client.force_login(user)
-        response = client.get(reverse('project_board', args=[project.pk]))
+        response = client.get(reverse('project_tasks', args=[project.pk]) + '?layout=board')
         assert response.status_code == 403
 
 
@@ -288,12 +288,12 @@ class TestBoardVisibility:
         hidden_status.visible_on_board = False
         hidden_status.save()
         client.force_login(user)
-        response = client.get(reverse('project_board', args=[project.pk]))
-        content = response.content.decode()
-        assert 'Done' not in content
-        # Other statuses still visible
-        assert 'Backlog' in content
-        assert 'In Progress' in content
+        response = client.get(reverse('project_tasks', args=[project.pk]) + '?layout=board')
+        # The filter menu still lists every status; the board columns do not.
+        columns = [status.name for status in response.context['visible_statuses']]
+        assert 'Done' not in columns
+        assert 'Backlog' in columns
+        assert 'In Progress' in columns
 
     def test_board_shows_hidden_task_count(self, client):
         """Board should show count of tasks in hidden statuses."""
@@ -306,7 +306,7 @@ class TestBoardVisibility:
         TaskFactory(project=project, status=hidden_status)
         TaskFactory(project=project, status=hidden_status)
         client.force_login(user)
-        response = client.get(reverse('project_board', args=[project.pk]))
+        response = client.get(reverse('project_tasks', args=[project.pk]) + '?layout=board')
         assert response.context['hidden_task_count'] == 2
 
     def test_board_no_hidden_badge_when_zero(self, client):
@@ -314,7 +314,7 @@ class TestBoardVisibility:
         user = AdminUserFactory()
         project = ProjectFactory()
         client.force_login(user)
-        response = client.get(reverse('project_board', args=[project.pk]))
+        response = client.get(reverse('project_tasks', args=[project.pk]) + '?layout=board')
         assert response.context['hidden_task_count'] == 0
 
     def test_toggle_visibility_requires_manager(self, client):
@@ -480,7 +480,7 @@ class TestClientNameVisibility:
         project = ProjectFactory()
         ProjectAccessFactory(project=project, user=user)
         client.force_login(user)
-        response = client.get(reverse('project_board', args=[project.pk]))
+        response = client.get(reverse('project_tasks', args=[project.pk]) + '?layout=board')
         content = response.content.decode()
         assert project.client.name in content
         assert f'/clients/{project.client.pk}/' not in content

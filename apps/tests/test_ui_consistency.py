@@ -81,19 +81,19 @@ class TestPagination:
 class TestHTMXSupport:
     """Views with HTMX support should respond correctly."""
 
-    def test_project_board_htmx(self, client):
+    def test_project_tasks_board_htmx(self, client):
         user = UserFactory()
         project = ProjectFactory()
         ProjectAccessFactory(project=project, user=user)
         client.force_login(user)
         response = client.get(
-            reverse('project_board', args=[project.pk]),
+            reverse('project_tasks', args=[project.pk]) + '?layout=board',
             HTTP_HX_REQUEST='true'
         )
         assert response.status_code == 200
-        # Should return partial, not full page
+        # The Tasks page always renders in full; the client keeps #task-view.
         content = response.content.decode()
-        assert '<!DOCTYPE' not in content
+        assert 'id="task-view"' in content
 
     def test_task_create_htmx(self, client):
         user = UserFactory()
