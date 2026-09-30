@@ -8,25 +8,25 @@ from django.db.models.deletion import RestrictedError
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
+from django_htmx.http import push_url, replace_url
 
 from apps.accounts.decorators import require_permission
 from apps.accounts.models import User
 from apps.clients.models import Client, visible_clients
+from apps.tasks.listview import build_groups, filter_options, project_assignees
 from apps.tasks.models import (
     Label,
     TaskActivity,
     can_create_task,
-    clean_priorities,
-    priorities_to_store,
-    priority_filter_options,
     visible_tasks,
 )
+from apps.tasks.viewspec import LIMIT_STEP, TaskViewOptions, TaskViewSpec
 
 from .forms import LabelForm, ProjectForm, StatusForm
 from .models import (
     Project,
     ProjectAccess,
-    ProjectTaskListFilter,
+    ProjectTaskView,
     Status,
     can_access_project,
     can_edit_project,
@@ -114,7 +114,7 @@ def project_detail(request, pk):
 
     # Calculate stats. "Done" is whatever the project files under the completed status type,
     # so renaming a column cannot break these numbers. These counts stay on every
-    # visible task; the personal list filter below applies only on the Tasks tab.
+    # visible task; the Tasks page has its own filters and never changes them.
     tasks = visible_tasks(request.user, project).select_related('status', 'assignee')
     total_tasks = tasks.count()
     completed_tasks = tasks.done().count()
@@ -129,7 +129,6 @@ def project_detail(request, pk):
     # Determine active tab based on URL
     url_name = request.resolver_match.url_name
     tab_mapping = {
-        'project_detail_tasks': 'tasks',
         'project_detail_notes': 'notes',
         'project_detail_team': 'team',
     }
@@ -143,45 +142,9 @@ def project_detail(request, pk):
         if editable:
             addable_users = _addable_users(project)
 
-    list_tasks = tasks
-    list_task_count = total_tasks
-    hidden_by_filter_count = 0
-    status_options = []
-    priority_options = []
-    active_filter_count = 0
-    if active_tab == 'tasks':
-        saved_filter = ProjectTaskListFilter.objects.filter(
-            user=request.user, project=project
-        ).first()
-        hidden_status_ids = []
-        shown_priorities = []
-        if saved_filter is not None:
-            hidden_status_ids = list(saved_filter.hidden_statuses.values_list('pk', flat=True))
-            shown_priorities = clean_priorities(saved_filter.shown_priorities)
-        if hidden_status_ids:
-            list_tasks = list_tasks.exclude(status_id__in=hidden_status_ids)
-        list_tasks = list_tasks.with_priorities(shown_priorities)
-        if hidden_status_ids or shown_priorities:
-            list_task_count = list_tasks.count()
-            hidden_by_filter_count = total_tasks - list_task_count
-        # Checked means shown; a status added after the filter was saved is not
-        # in the hidden set, so it comes up checked.
-        status_options = [
-            {'value': status.pk, 'label': status.name, 'checked': status.pk not in hidden_status_ids}
-            for status in project.statuses.all()
-        ]
-        priority_options = priority_filter_options(shown_priorities)
-        active_filter_count = bool(hidden_status_ids) + bool(shown_priorities)
-
     return render(request, 'projects/project_detail.html', {
         'project': project,
-        'tasks': list_tasks,
         'total_tasks': total_tasks,
-        'list_task_count': list_task_count,
-        'hidden_by_filter_count': hidden_by_filter_count,
-        'status_options': status_options,
-        'priority_options': priority_options,
-        'active_filter_count': active_filter_count,
         'completed_tasks': completed_tasks,
         'active_tasks': active_tasks,
         'overdue_tasks': overdue_tasks,
@@ -194,43 +157,85 @@ def project_detail(request, pk):
     })
 
 
-def _project_for_task_list(request, pk):
-    """The project, when this person may open it and keep their own list filter."""
+# Only requests sent by the toolbar form (its element id) remember the view. A link
+# from a colleague, a refresh after an edit, search-as-you-type and "Show more" all
+# render what the URL says without changing what this person last chose.
+TOOLBAR_TRIGGER = 'task-toolbar'
+
+
+def _task_view_options(project, assignees):
+    return TaskViewOptions(
+        status_ids=frozenset(project.statuses.values_list('pk', flat=True)),
+        assignee_ids=frozenset(user.pk for user in assignees),
+        label_ids=frozenset(project.labels.values_list('pk', flat=True)),
+    )
+
+
+@login_required
+@require_permission('access_projects')
+def project_tasks(request, pk):
+    """The project's Tasks page: one URL-driven view of its tasks (list layout)."""
     project = get_object_or_404(Project, pk=pk)
     if not can_access_project(request.user, project):
-        return None
-    return project
-
-
-@login_required
-@require_permission('access_projects')
-@require_POST
-def project_task_list_filter_apply(request, pk):
-    """Save this person's checked statuses and priorities. No project-edit permission."""
-    project = _project_for_task_list(request, pk)
-    if project is None:
         return HttpResponseForbidden("You don't have access to this project")
 
-    task_filter, _created = ProjectTaskListFilter.objects.get_or_create(
-        user=request.user, project=project
+    assignees = list(project_assignees(project))
+    options = _task_view_options(project, assignees)
+    page_url = request.path
+
+    if not request.GET:
+        saved = ProjectTaskView.objects.filter(user=request.user, project=project).first()
+        if saved is not None:
+            restored = TaskViewSpec.from_params(saved.params, options)
+            if restored.is_default:
+                saved.delete()
+            else:
+                return redirect(f'{page_url}?{restored.to_query_string()}')
+
+    spec = TaskViewSpec.from_params(request.GET, options)
+    from_toolbar = bool(request.htmx) and request.htmx.trigger == TOOLBAR_TRIGGER
+    if from_toolbar:
+        if spec.is_default:
+            ProjectTaskView.objects.filter(user=request.user, project=project).delete()
+        else:
+            ProjectTaskView.objects.update_or_create(
+                user=request.user, project=project,
+                defaults={'params': spec.to_saved_params()},
+            )
+
+    visible = visible_tasks(request.user, project)
+    matching = visible.matching(spec)
+    total_matching = matching.count()
+    total_visible = visible.count() if (spec.has_filters or spec.q) else total_matching
+    page = (
+        matching.ordered_for(spec)
+        .select_related('status', 'assignee')
+        .prefetch_related('labels')[: spec.limit]
     )
-    task_filter.replace_shown_statuses(request.POST.getlist('shown_statuses'))
-    task_filter.shown_priorities = priorities_to_store(request.POST.getlist('shown_priorities'))
-    task_filter.save(update_fields=['shown_priorities'])
-    return redirect('project_detail_tasks', pk=project.pk)
+    groups = build_groups(page, spec, visible.group_counts(spec))
 
+    more_url = None
+    if total_matching > spec.limit:
+        more_url = f'{page_url}?{spec.replace(limit=spec.limit + LIMIT_STEP).to_query_string()}'
 
-@login_required
-@require_permission('access_projects')
-@require_POST
-def project_task_list_filter_clear(request, pk):
-    """Delete this person's filter row so the task list shows every visible task."""
-    project = _project_for_task_list(request, pk)
-    if project is None:
-        return HttpResponseForbidden("You don't have access to this project")
-
-    ProjectTaskListFilter.objects.filter(user=request.user, project=project).delete()
-    return redirect('project_detail_tasks', pk=project.pk)
+    context = {
+        'project': project,
+        'spec': spec,
+        'groups': groups,
+        'total_matching': total_matching,
+        'total_visible': total_visible,
+        'hidden_count': total_visible - total_matching,
+        'more_url': more_url,
+        'page_url': page_url,
+        'can_edit_project': can_edit_project(request.user, project),
+        'can_create_task': can_create_task(request.user, project),
+        **filter_options(project, spec, assignees, project.labels.all()),
+    }
+    response = render(request, 'tasks/view/project_tasks.html', context)
+    if request.htmx:
+        canonical = f'{page_url}?{spec.to_query_string()}'
+        (push_url if from_toolbar else replace_url)(response, canonical)
+    return response
 
 
 @login_required
@@ -372,6 +377,8 @@ def project_settings(request, pk):
     next_page = request.GET.get('next', 'board')
     if next_page == 'detail':
         back_url = 'project_detail'
+    elif next_page == 'tasks':
+        back_url = 'project_tasks'
     else:
         back_url = 'project_board'
 

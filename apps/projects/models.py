@@ -113,74 +113,36 @@ class ProjectAccess(models.Model):
         return f"{self.user.name} - {self.project.name}"
 
 
-class ProjectTaskListFilter(models.Model):
-    """Statuses one person hides, and priorities they show, on one project's task list.
+class ProjectTaskView(models.Model):
+    """The Tasks page setup one person last used on one project.
 
-    Unique per person and project. The board still uses
-    ``Status.visible_on_board``; this row does not change it, and it does not
-    change what anyone else sees. Deleting a status drops it from the set.
+    ``params`` is the canonical query string of a
+    :class:`~apps.tasks.viewspec.TaskViewSpec` as a dict, without search text or
+    paging. It is revalidated every time it is restored, so deleting a status or
+    a label cannot leave a view pointing at something that is gone. Unique per
+    person and project; it changes nothing for anyone else.
     """
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='task_list_filters',
+        related_name='project_task_views',
     )
     project = models.ForeignKey(
-        Project, on_delete=models.CASCADE, related_name='task_list_filters'
+        Project, on_delete=models.CASCADE, related_name='task_views'
     )
-    # Stored as the statuses left unchecked, so a status added later shows up
-    # checked and visible instead of vanishing from the list.
-    hidden_statuses = models.ManyToManyField(
-        Status, blank=True, related_name='hidden_on_task_lists'
-    )
-    # Checked priorities (including 'none'); empty means every priority.
-    shown_priorities = models.JSONField(default=list, blank=True)
+    params = models.JSONField(default=dict, blank=True)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'project'],
-                name='unique_task_list_filter_per_user_project',
+                name='unique_task_view_per_user_project',
             ),
         ]
 
     def __str__(self):
         return f"{self.user} - {self.project.name}"
-
-    def replace_shown_statuses(self, checked_ids):
-        """Hide every status of this project that is not among ``checked_ids``.
-
-        Nothing checked means no filter, the same as Clear, so Apply on an empty
-        form cannot leave a blank list.
-        """
-        checked = set()
-        for raw in checked_ids:
-            try:
-                checked.add(int(raw))
-            except (TypeError, ValueError):
-                continue
-        project_ids = set(
-            Status.objects.filter(project_id=self.project_id).values_list('pk', flat=True)
-        )
-        checked &= project_ids
-        hidden = project_ids - checked if checked else set()
-        self.replace_hidden_statuses(hidden)
-
-    def replace_hidden_statuses(self, status_ids):
-        """Replace the hidden set with statuses that belong to this project.
-
-        An id from another project, or a value that is not an id, is ignored.
-        """
-        ids = []
-        for raw in status_ids:
-            try:
-                ids.append(int(raw))
-            except (TypeError, ValueError):
-                continue
-        self.hidden_statuses.set(
-            Status.objects.filter(project_id=self.project_id, pk__in=ids)
-        )
 
 
 def _has_access_row(user, project):

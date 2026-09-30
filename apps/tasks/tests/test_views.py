@@ -661,3 +661,36 @@ class TestMyTasksTabs:
         response = client.get(reverse('my_tasks_todos'))
         assert response.status_code == 200
         assert response.context['active_tab'] == 'todos'
+
+
+@pytest.mark.django_db
+class TestTaskChangedTrigger:
+    """Every property edit tells the Tasks page to re-fetch its rows."""
+
+    @pytest.mark.parametrize('route,payload', [
+        ('task_update_assignee', {'assignee_id': ''}),
+        ('task_update_priority', {'priority': 'high'}),
+        ('task_update_due_date', {'due_date': '2030-01-02'}),
+        ('task_update_estimate', {'time_estimate': '3'}),
+        ('task_edit_title', {'title': 'A new title'}),
+    ])
+    def test_property_updates_emit_task_changed(self, client, route, payload):
+        from apps.accounts.factories import AdminUserFactory
+
+        task = TaskFactory()
+        client.force_login(AdminUserFactory())
+        response = client.post(reverse(route, args=[task.pk]), payload)
+        assert response.status_code == 200
+        assert 'taskChanged' in response['HX-Trigger']
+        assert f'taskUpdated-{task.pk}' in response['HX-Trigger']
+
+    def test_label_toggle_emits_task_changed(self, client):
+        from apps.accounts.factories import AdminUserFactory
+        from apps.tasks.factories import LabelFactory
+
+        task = TaskFactory()
+        label = LabelFactory(project=task.project)
+        client.force_login(AdminUserFactory())
+        response = client.post(reverse('task_toggle_label', args=[task.pk, label.pk]))
+        assert response.status_code == 200
+        assert 'taskChanged' in response['HX-Trigger']

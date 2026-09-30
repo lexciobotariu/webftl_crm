@@ -510,7 +510,7 @@ def task_update_assignee(request, pk):
     response = render(request, 'tasks/partials/assignee_dropdown.html', {
         'task': task, 'team_members': team_members
     })
-    response['HX-Trigger'] = f'activityUpdated, taskUpdated-{pk}'
+    response['HX-Trigger'] = f'activityUpdated, taskUpdated-{pk}, taskChanged'
     return response
 
 
@@ -531,7 +531,7 @@ def task_update_priority(request, pk):
     response = render(request, 'tasks/partials/priority_dropdown.html', {
         'task': task, 'priority_choices': Task.PRIORITY_CHOICES
     })
-    response['HX-Trigger'] = f'activityUpdated, taskUpdated-{pk}'
+    response['HX-Trigger'] = f'activityUpdated, taskUpdated-{pk}, taskChanged'
     return response
 
 
@@ -555,7 +555,7 @@ def task_update_due_date(request, pk):
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
     response = render(request, 'tasks/partials/due_date_picker.html', {'task': task})
-    response['HX-Trigger'] = f'activityUpdated, taskUpdated-{pk}'
+    response['HX-Trigger'] = f'activityUpdated, taskUpdated-{pk}, taskChanged'
     return response
 
 
@@ -575,7 +575,7 @@ def task_update_estimate(request, pk):
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
     response = render(request, 'tasks/partials/estimate_input.html', {'task': task})
-    response['HX-Trigger'] = f'taskUpdated-{pk}'
+    response['HX-Trigger'] = f'taskUpdated-{pk}, taskChanged'
     return response
 
 
@@ -594,7 +594,7 @@ def task_toggle_label(request, pk, label_pk):
     response = render(request, 'tasks/partials/labels_selector.html', {
         'task': task, 'project_labels': project_labels
     })
-    response['HX-Trigger'] = f'taskUpdated-{pk}'
+    response['HX-Trigger'] = f'taskUpdated-{pk}, taskChanged'
     return response
 
 
@@ -634,7 +634,7 @@ def task_edit_title(request, pk):
             task.save()
         template = 'tasks/partials/title_display_full.html' if is_full else 'tasks/partials/title_display.html'
         response = render(request, template, {'task': task})
-        response['HX-Trigger'] = f'taskUpdated-{pk}'
+        response['HX-Trigger'] = f'taskUpdated-{pk}, taskChanged'
         return response
     template = 'tasks/partials/title_edit_full.html' if is_full else 'tasks/partials/title_edit.html'
     return render(request, template, {'task': task})

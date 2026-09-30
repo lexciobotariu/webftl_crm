@@ -1,0 +1,70 @@
+<div class="flex items-center gap-3 px-4 py-2 text-xs text-zinc-500">
+    <span class="bg-elevated px-1.5 py-0.5 rounded tabular-nums">{{ total_matching }}</span>
+    <span>task{{ total_matching|pluralize }}</span>
+    {% if hidden_count %}
+    <span>{{ hidden_count }} hidden by filters</span>
+    {% endif %}
+</div>
+{% if total_matching %}
+<div class="border-t border-border-subtle">
+    {% for group in groups %}
+    {% if group.kind %}
+    <button type="button"
+            @click="collapsed['{{ group.key }}'] = !collapsed['{{ group.key }}']"
+            class="w-full flex items-center gap-2 px-4 py-1.5 bg-panel/80 border-b border-border-subtle text-left hover:bg-elevated/60 transition-colors">
+        <span class="inline-flex transition-transform text-zinc-500" :class="collapsed['{{ group.key }}'] ? '-rotate-90' : ''">
+            <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+        </span>
+        {% if group.kind == 'status' %}
+        {% include "components/status_icon.html" with category=group.status.category %}
+        {% elif group.kind == 'priority' %}
+        {% include "components/priority_icon.html" with priority=group.priority %}
+        {% else %}
+        {% include "components/avatar.html" with user=group.user size=18 %}
+        {% endif %}
+        <span class="text-sm font-medium text-zinc-200">{{ group.label }}</span>
+        <span class="text-xs text-zinc-500 tabular-nums">{{ group.count }}</span>
+    </button>
+    {% endif %}
+    <div x-show="!collapsed['{{ group.key }}']">
+        {% for task in group.rows %}
+        {% include "tasks/view/_list_row.html" %}
+        {% endfor %}
+    </div>
+    {% endfor %}
+</div>
+{% if more_url %}
+<div class="flex items-center justify-center py-4">
+    <button type="button" id="task-more"
+            hx-get="{{ more_url }}" hx-target="#task-view" hx-select="#task-view" hx-swap="outerHTML"
+            class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
+        Show more
+        <span class="text-zinc-500 tabular-nums">{{ total_matching }} in total</span>
+    </button>
+</div>
+{% endif %}
+{% elif total_visible %}
+<div class="flex flex-col items-center justify-center py-16 text-zinc-500">
+    <i data-lucide="filter" class="w-10 h-10 mb-3 opacity-30"></i>
+    <p class="text-sm mb-2">Nothing matches this filter</p>
+    <button type="button"
+            onclick="document.getElementById('task-search').value = ''; document.getElementById('task-toolbar-clear').click()"
+            class="text-zinc-200 hover:text-zinc-50 text-sm">
+        Clear filters
+    </button>
+</div>
+{% else %}
+<div class="flex flex-col items-center justify-center py-16 text-zinc-500">
+    <i data-lucide="check-square" class="w-10 h-10 mb-3 opacity-30"></i>
+    <p class="text-sm mb-2">No tasks yet</p>
+    {% if can_create_task %}
+    <button hx-get="{% url 'task_create' project.pk %}"
+            hx-target="#slide-over"
+            hx-swap="innerHTML"
+            hx-on::after-request="openSlideOver(event)"
+            class="text-zinc-200 hover:text-zinc-50 text-sm">
+        Create the first task
+    </button>
+    {% endif %}
+</div>
+{% endif %}

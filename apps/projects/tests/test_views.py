@@ -218,15 +218,15 @@ class TestProjectDetailTabs:
         assert response.status_code == 200
         assert response.context['active_tab'] == 'overview'
 
-    def test_project_detail_tasks_tab(self, client):
-        """GET /projects/<pk>/tasks/ should set active_tab to 'tasks'"""
+    def test_tasks_url_is_the_full_width_tasks_page(self, client):
+        """GET /projects/<pk>/tasks/ is the Tasks page, not a project detail tab."""
         user = AdminUserFactory()
         project = ProjectFactory()
         client.force_login(user)
 
-        response = client.get(reverse('project_detail_tasks', args=[project.pk]))
+        response = client.get(reverse('project_tasks', args=[project.pk]))
         assert response.status_code == 200
-        assert response.context['active_tab'] == 'tasks'
+        assert 'tasks/view/project_tasks.html' in [t.name for t in response.templates]
 
     def test_bare_project_url_redirects_to_overview(self, client):
         """GET /projects/<pk>/ should redirect to the overview tab"""

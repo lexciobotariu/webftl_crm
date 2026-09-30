@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
-from django.db.models import Q
+from django.db.models import Case, Count, Exists, F, OuterRef, Q, Value, When
+from django.db.models.functions import Lower
 from django.utils import timezone
 
 from apps.projects.models import Project, ProjectAccess, Status
@@ -50,6 +51,17 @@ def priority_filter_options(selected):
     ]
 
 
+def _priority_rank():
+    """0 for urgent down to 4 for no priority, so "most urgent first" is ascending."""
+    return Case(
+        When(priority='urgent', then=Value(0)),
+        When(priority='high', then=Value(1)),
+        When(priority='medium', then=Value(2)),
+        When(priority='low', then=Value(3)),
+        default=Value(4),
+    )
+
+
 class TaskQuerySet(models.QuerySet):
     """Keeps the definitions of "done", "active" and "overdue" in one place.
 
@@ -83,6 +95,76 @@ class TaskQuerySet(models.QuerySet):
         if PRIORITY_NONE in values:
             query |= Q(priority='')
         return self.filter(query)
+
+    def matching(self, spec):
+        """Tasks that pass every filter of a :class:`~apps.tasks.viewspec.TaskViewSpec`.
+
+        Labels use ``Exists`` rather than ``labels__in`` plus ``distinct()``, so a
+        task with two matching labels is still one row and the query stays cheap.
+        """
+        qs = self
+        if spec.hidden_statuses:
+            qs = qs.exclude(status_id__in=spec.hidden_statuses)
+        qs = qs.with_priorities(spec.priorities)
+        if spec.assignees:
+            query = Q(assignee_id__in=[int(v) for v in spec.assignees if v != 'none'])
+            if 'none' in spec.assignees:
+                query |= Q(assignee__isnull=True)
+            qs = qs.filter(query)
+        if spec.labels:
+            qs = qs.filter(
+                Exists(
+                    Task.labels.through.objects.filter(
+                        task_id=OuterRef('pk'), label_id__in=spec.labels
+                    )
+                )
+            )
+        if spec.q:
+            qs = qs.filter(title__icontains=spec.q)
+        return qs
+
+    def ordered_for(self, spec):
+        """Group key first, then the sort key, then ``pk`` so ties never reshuffle."""
+        ordering = []
+        if spec.group == 'status':
+            ordering.append('status__order')
+            ordering.append('status_id')
+        elif spec.group == 'assignee':
+            ordering.append(Lower('assignee__name').asc(nulls_last=True))
+            ordering.append(F('assignee_id').asc(nulls_last=True))
+        elif spec.group == 'priority':
+            ordering.append(_priority_rank().asc())
+
+        descending = spec.dir == 'desc'
+        if spec.sort == 'priority':
+            key = _priority_rank()
+            ordering.append(key.desc() if descending else key.asc())
+        elif spec.sort == 'due':
+            key = F('due_date')
+            ordering.append(key.desc(nulls_last=True) if descending else key.asc(nulls_last=True))
+        elif spec.sort == 'title':
+            key = Lower('title')
+            ordering.append(key.desc() if descending else key.asc())
+        else:
+            field = 'created_at' if spec.sort == 'created' else 'updated_at'
+            ordering.append(f'-{field}' if descending else field)
+        ordering.append('pk')
+        return self.order_by(*ordering)
+
+    def group_counts(self, spec):
+        """``{group key: matching tasks}`` for every group, in one query.
+
+        The list only loads the first page of rows, so headers take their counts
+        from here. The keys are ``status_id``, ``assignee_id`` (``None`` for
+        unassigned) or the priority string; ``group=none`` has no groups.
+        """
+        field = {'status': 'status_id', 'assignee': 'assignee_id', 'priority': 'priority'}.get(
+            spec.group
+        )
+        if field is None:
+            return {}
+        rows = self.matching(spec).order_by().values(field).annotate(total=Count('pk'))
+        return {row[field]: row['total'] for row in rows}
 
     def open_for(self, user):
         """Tasks assigned to ``user`` that they can still view.
