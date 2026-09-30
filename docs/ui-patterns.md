@@ -59,7 +59,7 @@ Used for list pages and detail pages. Provides a consistent header with icon, ti
 **Usage examples:**
 - `templates/clients/client_list.html` - Clients list with "Add Client" button
 - `templates/projects/project_list.html` - Projects list with filter and "Add Project" button
-- `templates/tasks/my_tasks.html` - My tasks with priority filter
+- `templates/tasks/my_tasks.html` - My tasks: toolbar plus grouped list (`tasks/view/`), driven by the URL
 
 ### 2. Full-Height Layout (`{% block full_content %}`)
 
@@ -236,6 +236,9 @@ into the drawer. Omit both for a message-only state.
 ## Pagination Component
 
 Reusable pagination component at `templates/components/pagination.html`.
+
+Task lists (the project Tasks page and My Tasks) do not page: they load the first
+`limit` rows and offer "Show more" (`?limit=`), see `apps/tasks/viewspec.py`.
 
 **Include in templates:**
 ```html

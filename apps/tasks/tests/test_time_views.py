@@ -172,7 +172,7 @@ class TestWeekAndProjectViews:
     def test_week_page_is_linked_under_my_tasks(self, client):
         user, _task = _member()
         client.force_login(user)
-        content = client.get(reverse('my_tasks')).content.decode()
+        content = client.get(reverse('my_tasks'), {'layout': 'list'}).content.decode()
         assert reverse('time_week') in content
         assert 'My Week' in content
 

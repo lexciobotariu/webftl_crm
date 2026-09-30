@@ -64,12 +64,6 @@ class TestPagination:
         response = client.get(reverse('project_list'))
         assert 'page_obj' in response.context
 
-    def test_my_tasks_pagination_context(self, client):
-        user = UserFactory()
-        client.force_login(user)
-        response = client.get(reverse('my_tasks'))
-        assert 'page_obj' in response.context
-
     def test_team_list_pagination_context(self, client):
         admin = AdminUserFactory()
         client.force_login(admin)

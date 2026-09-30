@@ -8,13 +8,17 @@ view instead of erroring.
 Options come in as an argument rather than from a project, so the same spec can
 drive a view that is not scoped to one project (My Tasks).
 """
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from urllib.parse import urlencode
+
+from apps.projects.models import Status
 
 from .models import priorities_to_store
 
 LAYOUTS = ('list', 'board')
-GROUPS = ('status', 'assignee', 'priority', 'none')
+# Status types in their natural order; the position in this tuple is the order
+# they are listed in the URL and in the filter.
+CATEGORIES = tuple(value for value, _label in Status.CATEGORY_CHOICES)
 SORT_CHOICES = (
     ('priority', 'Priority'),
     ('due', 'Due date'),
@@ -52,11 +56,24 @@ def sort_choices():
 
 @dataclass(frozen=True)
 class TaskViewOptions:
-    """The ids a view may refer to; anything else in the URL is dropped."""
+    """What a page lets its URL say; anything else in the URL is dropped.
+
+    The ids are the rows the view may refer to. The rest is the shape of the page
+    itself: which layouts and groupings it offers, whether it filters by status
+    type (``categories`` is the allowed set, empty for a page without that filter)
+    or by assignee, and what it shows when the URL says nothing. The defaults are
+    the project Tasks page.
+    """
 
     status_ids: frozenset = frozenset()
     assignee_ids: frozenset = frozenset()
     label_ids: frozenset = frozenset()
+    layouts: tuple = LAYOUTS
+    groups: tuple = ('status', 'assignee', 'priority', 'none')
+    categories: frozenset = frozenset()
+    has_assignee_filter: bool = True
+    default_group: str = 'status'
+    default_categories: frozenset = frozenset()
 
 
 def _getlist(params, key):
@@ -113,6 +130,10 @@ class TaskViewSpec:
     sort: str = 'priority'
     dir: str = 'asc'
     limit: int = DEFAULT_LIMIT
+    categories: frozenset = frozenset()
+    # Carried so ``to_params`` and ``is_default`` can tell what the page's defaults
+    # are. Not part of the state itself, so it stays out of equality and repr.
+    options: TaskViewOptions = field(default_factory=TaskViewOptions, compare=False, repr=False)
 
     @classmethod
     def from_params(cls, params, options):
@@ -122,7 +143,11 @@ class TaskViewSpec:
         canonical one: statuses are stored as the ones left out, so a status
         added later shows up by itself. The filter form posts the checked ones
         as ``shown_status`` together with ``filter=1``, and is translated here.
-        ``clear=1`` drops every filter and keeps the display choices.
+        The type filter is positive: ``category`` (or ``shown_category`` with
+        ``filter=1``) lists exactly the status types to show, and leaving it out
+        means the page's default. All of them checked is kept as it is, not folded
+        into "no filter". ``clear=1`` drops every filter, back to the page's
+        default, and keeps the display choices.
         """
         clearing = _getone(params, 'clear') == '1'
 
@@ -132,7 +157,17 @@ class TaskViewSpec:
         else:
             hidden = _ids(_getlist(params, 'hide_status'), options.status_ids)
 
+        if not options.categories:
+            categories = frozenset()
+        else:
+            key = 'shown_category' if _getone(params, 'filter') == '1' else 'category'
+            categories = frozenset(_getlist(params, key)) & options.categories
+            categories = categories or options.default_categories
+
         raw_assignees = _getlist(params, 'assignee')
+        raw_assignees = [
+            raw for raw in raw_assignees if options.has_assignee_filter or raw != ASSIGNEE_NONE
+        ]
         assignee_ids = _ids(
             [raw for raw in raw_assignees if raw != ASSIGNEE_NONE], options.assignee_ids
         )
@@ -143,20 +178,27 @@ class TaskViewSpec:
 
         sort = _choice(_getone(params, 'sort'), SORTS, 'priority')
         spec = cls(
-            layout=_choice(_getone(params, 'layout'), LAYOUTS, LAYOUTS[0]),
+            layout=_choice(_getone(params, 'layout'), options.layouts, options.layouts[0]),
             hidden_statuses=frozenset(hidden),
             priorities=tuple(priorities_to_store(_getlist(params, 'priority'))),
             assignees=assignee_tokens,
             labels=tuple(sorted(_ids(_getlist(params, 'label'), options.label_ids))),
             q=(_getone(params, 'q') or '').strip()[:MAX_QUERY_LENGTH],
-            group=_choice(_getone(params, 'group'), GROUPS, 'status'),
+            group=_choice(_getone(params, 'group'), options.groups, options.default_group),
             sort=sort,
             dir=_choice(_getone(params, 'dir'), DIRECTIONS, DEFAULT_DIR[sort]),
             limit=_limit(_getone(params, 'limit')),
+            categories=categories,
+            options=options,
         )
         if clearing:
             spec = replace(
-                spec, hidden_statuses=frozenset(), priorities=(), assignees=(), labels=()
+                spec,
+                hidden_statuses=frozenset(),
+                priorities=(),
+                assignees=(),
+                labels=(),
+                categories=frozenset(options.default_categories),
             )
         return spec
 
@@ -165,20 +207,20 @@ class TaskViewSpec:
 
     @property
     def has_filters(self):
-        return bool(self.hidden_statuses or self.priorities or self.assignees or self.labels)
+        return self.filter_count > 0
 
     @property
     def filter_count(self):
-        """How many filter groups are narrowing the list (for the toolbar badge)."""
+        """How many filter groups differ from the page's default (for the toolbar badge)."""
         return sum(
             bool(group)
             for group in (self.hidden_statuses, self.priorities, self.assignees, self.labels)
-        )
+        ) + (self.categories != self.options.default_categories)
 
     @property
     def is_default(self):
         """True when nothing but search text or paging differs from a fresh view."""
-        return self.to_saved_params() == {'layout': LAYOUTS[0]}
+        return self.to_saved_params() == {'layout': self.options.layouts[0]}
 
     def to_params(self):
         """The canonical query parameters: defaults left out, ``layout`` always in.
@@ -187,6 +229,8 @@ class TaskViewSpec:
         "restore the view this person last used".
         """
         params = {'layout': self.layout}
+        if self.categories != self.options.default_categories:
+            params['category'] = [value for value in CATEGORIES if value in self.categories]
         if self.hidden_statuses:
             params['hide_status'] = [str(pk) for pk in sorted(self.hidden_statuses)]
         if self.priorities:
@@ -197,7 +241,7 @@ class TaskViewSpec:
             params['label'] = [str(pk) for pk in self.labels]
         if self.q:
             params['q'] = self.q
-        if self.group != 'status':
+        if self.group != self.options.default_group:
             params['group'] = self.group
         if self.sort != 'priority':
             params['sort'] = self.sort

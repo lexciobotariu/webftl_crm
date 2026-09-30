@@ -5,22 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.8.0] - 2026-10-01
 
 ### Features
 - Statuses have a type (backlog, unstarted, started, completed, canceled) instead of a "counts as done" flag; canceled work no longer counts as active or overdue, and the settings page has a type select per status
 - Status, priority and unassigned icons follow Linear's design (Tabler and Material Design Icons SVGs, inlined)
 - Each project has one full-width Tasks page at `/projects/<pk>/tasks/` with a List/Board toggle, shared filters (status, priority, assignee, labels), search, and — in the list — grouping, sorting and "Show more"
 - The Tasks page state lives in the URL, so views can be shared and Back works; the last view you used on a project is remembered per person
+- My Tasks uses the same URL-driven list as the Tasks page: grouped by project (or status type, or priority), filtered by status type and priority, searchable, with "Show more"; it shows only open tasks until you ask for finished ones, and remembers your last view
 - On the board, dropping a card under active filters places it under the card it landed on instead of at a position counted only among visible cards
+- Time tracking on tasks: one running timer per person with a 12-hour automatic stop, manual start and end entries, the logged total shown under Estimate, and a My Week page
+- Invoices: an invoice belongs to one client, mixes that client's projects with free-text lines, keeps a bill-to snapshot, and derives its status from send state, payments and the due date; clients carry a billing name, email and tax id
+- Company settings, a fixed currency per client, and a choice of where the currency symbol sits (snapshotted on invoices)
+- Permission presets are grouped into module cards, with view-all, create and edit flags for clients, projects, tasks, notes, salaries and team
+- Each project has a Team screen that lists and edits who has access to it
+- Perfex SQL import; task titles can be up to 1000 characters
+- A light theme, chosen globally in Settings; the dark theme is retinted to the Linear palette
 
 ### Changes
 - `/projects/<pk>/kanban/` now redirects to the Tasks page in board layout
 - The project Tasks tab and its saved status/priority filter are replaced by the Tasks page; filters saved on the old tab reset once
-- Editing a task's assignee, priority, due date, estimate, labels or title in the drawer refreshes the list behind it
+- My Tasks no longer pages its list or filters statuses by name; its saved status/priority filter resets once and `/tasks/my/filter/` is gone
+- Editing a task's assignee, priority, due date, estimate, labels or title in the drawer refreshes the list behind it, and on My Tasks the Assigned Tasks count with it
+- Client and project section menus sit on the left, and list tables sit in cards
 
 ### Fixes
 - Board columns are ordered by the status order even when the database returns them differently
+- Permission checks that leaked data or disagreed between a list and its detail page now apply the same rule
+
+### Infrastructure
+- A Dokploy compose file for deployment; database migrations run when the container starts
 
 ## [0.7.0] - 2026-08-31
 
