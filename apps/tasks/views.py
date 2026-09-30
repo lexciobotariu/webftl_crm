@@ -3,9 +3,8 @@ from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.core.paginator import Paginator
 from django.db import transaction
-from django.http import HttpResponse, HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -22,18 +21,9 @@ from apps.projects.models import (
 from apps.tasks.models import Label, can_create_task, can_edit_task, can_view_task
 
 from .forms import SubtaskForm, TaskForm, TimeEntryForm
-from .models import (
-    MyTasksFilter,
-    Subtask,
-    Task,
-    TimeEntry,
-    clean_priorities,
-    my_tasks_status_names,
-    priorities_to_store,
-    priority_filter_options,
-)
-
-TASKS_PER_PAGE = 20
+from .listview import apply_url_headers, build_groups, filter_options, group_choices, resolve_view
+from .models import MyTasksView, Subtask, Task, TimeEntry
+from .viewspec import LIMIT_STEP, TaskViewOptions, sort_choices
 
 
 def _time_context(user, task):
@@ -73,97 +63,91 @@ def _format_total(entries):
     return _format_duration(total_seconds)
 
 
-@login_required
-@require_permission('access_tasks')
-@require_POST
-def my_tasks_filter_apply(request):
-    """Save the statuses and priorities this person shows on My Tasks.
-
-    Statuses are stored as the names left unchecked. Nothing checked, or only
-    names that are not on offer, means no status filter, the same as Clear.
-    """
-    names = my_tasks_status_names(request.user)
-    checked = {name for name in request.POST.getlist('shown_statuses') if name in names}
-    hidden = [name for name in names if name not in checked] if checked else []
-    MyTasksFilter.objects.update_or_create(
-        user=request.user,
-        defaults={
-            'shown_priorities': priorities_to_store(request.POST.getlist('shown_priorities')),
-            'hidden_statuses': hidden,
-        },
-    )
-    return redirect('my_tasks')
-
-
-@login_required
-@require_permission('access_tasks')
-@require_POST
-def my_tasks_filter_clear(request):
-    """Show every status and priority on My Tasks again."""
-    MyTasksFilter.objects.filter(user=request.user).delete()
-    return redirect('my_tasks')
+# The project Tasks page offers a board too; My Tasks cannot, because a column would be a
+# status type and a drop would have to pick one concrete column in every project.
+MY_TASKS_OPTIONS = TaskViewOptions(
+    layouts=('list',),
+    groups=('project', 'category', 'priority', 'none'),
+    categories=frozenset(value for value, _label in Status.CATEGORY_CHOICES),
+    has_assignee_filter=False,
+    default_group='project',
+    default_categories=frozenset({Status.BACKLOG, Status.UNSTARTED, Status.STARTED}),
+)
 
 
 @login_required
 @require_permission('access_tasks')
 def my_tasks(request):
-    # Determine active tab from URL
-    active_tab = 'todos' if request.resolver_match.url_name == 'my_tasks_todos' else 'tasks'
+    """My Tasks: the tasks assigned to this person, in the URL-driven list view."""
+    tasks_tab = request.resolver_match.url_name == 'my_tasks'
+    assigned = Task.objects.open_for(request.user)
+    # Needed on both tabs: the Assigned Tasks count in the top bar must not change
+    # with the tab or the filters. It is the dashboard's "My Active Tasks" number.
+    context = {
+        'active_tab': 'tasks' if tasks_tab else 'todos',
+        'total_count': assigned.active().count(),
+    }
 
-    tasks_qs = (
-        Task.objects.open_for(request.user)
-        .select_related('project', 'status')
-        .order_by('-created_at')
-    )
-    saved_filter = MyTasksFilter.objects.filter(user=request.user).first()
-    shown_priorities = clean_priorities(saved_filter.shown_priorities) if saved_filter else []
-    # Needed on both tabs: the Assigned Tasks count in the top bar must not
-    # change when the To-Dos tab is open.
-    status_names = my_tasks_status_names(request.user)
-    # A stored name that no longer exists (renamed status) must not hide anything.
-    hidden_statuses = (
-        [name for name in saved_filter.hidden_statuses if name in status_names]
-        if saved_filter
-        else []
-    )
-    unfiltered_count = None
-    if shown_priorities or hidden_statuses:
-        unfiltered_count = tasks_qs.count()
-        if hidden_statuses:
-            tasks_qs = tasks_qs.exclude(status__name__in=hidden_statuses)
-        tasks_qs = tasks_qs.with_priorities(shown_priorities)
+    # The To-Dos tab renders without a query string; only the Tasks tab restores a view.
+    if tasks_tab:
+        page_url = request.path
+        resolved = resolve_view(
+            request,
+            options=MY_TASKS_OPTIONS,
+            model=MyTasksView,
+            lookup={'user': request.user},
+            page_url=page_url,
+        )
+        if isinstance(resolved, HttpResponseRedirect):
+            return resolved
+        spec, from_toolbar = resolved
 
-    paginator = Paginator(tasks_qs, TASKS_PER_PAGE)
-    page_number = request.GET.get('page', 1)
-    page_obj = paginator.get_page(page_number)
+        matching = assigned.matching(spec)
+        total_matching = matching.count()
+        # What the default view leaves out is hidden too, so every page of this
+        # view measures "hidden" against all of the person's tasks.
+        total_visible = assigned.count()
+        page = (
+            matching.ordered_for(spec)
+            .select_related('project', 'status', 'assignee')
+            .prefetch_related('labels')[: spec.limit]
+        )
+        context.update({
+            'spec': spec,
+            'groups': build_groups(page, spec, assigned.group_counts(spec)),
+            'total_matching': total_matching,
+            'total_visible': total_visible,
+            'hidden_count': total_visible - total_matching,
+            'more_url': None,
+            'show_all_url': None,
+            'page_url': page_url,
+            'show_project': True,
+            'empty_message': 'No open tasks assigned to you',
+            'sort_choices': sort_choices(),
+            'group_choices': group_choices(MY_TASKS_OPTIONS),
+            **filter_options(
+                [], spec, [], [], categories=MY_TASKS_OPTIONS.categories
+            ),
+        })
+        if total_matching > spec.limit:
+            more = spec.replace(limit=spec.limit + LIMIT_STEP).to_query_string()
+            context['more_url'] = f'{page_url}?{more}'
+        everything = spec.replace(categories=MY_TASKS_OPTIONS.categories)
+        context['show_all_url'] = f'{page_url}?{everything.to_query_string()}'
 
-    # Get user's todos
     from apps.todos.models import Todo
-    show_completed_todos = request.GET.get('show_completed_todos', '').lower() == 'true'
-    todos_qs = Todo.objects.filter(owner=request.user).select_related('client')
-    todo_count = todos_qs.filter(is_completed=False).count()
-    if not show_completed_todos:
-        todos_qs = todos_qs.filter(is_completed=False)
-
-    return render(request, 'tasks/my_tasks.html', {
-        'tasks': page_obj,
-        'page_obj': page_obj,
-        'total_count': paginator.count,
-        'priority_options': priority_filter_options(shown_priorities),
-        'status_options': [
-            {'value': name, 'label': name, 'checked': name not in hidden_statuses}
-            for name in status_names
-        ],
-        'active_filter_count': bool(shown_priorities) + bool(hidden_statuses),
-        'hidden_by_filter_count': (
-            unfiltered_count - paginator.count if unfiltered_count is not None else 0
-        ),
+    todos_qs = Todo.objects.filter(owner=request.user, is_completed=False).select_related('client')
+    context.update({
         'todos': todos_qs,
-        'show_completed': show_completed_todos,
-        'todo_count': todo_count,
+        'todo_count': todos_qs.count(),
+        'show_completed': False,
         'today': timezone.now().date(),
-        'active_tab': active_tab,
     })
+
+    response = render(request, 'tasks/my_tasks.html', context)
+    if tasks_tab:
+        apply_url_headers(response, request, spec, from_toolbar, page_url)
+    return response
 
 
 @login_required

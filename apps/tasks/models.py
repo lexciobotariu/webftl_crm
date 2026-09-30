@@ -451,37 +451,21 @@ class Attachment(models.Model):
         super().save(*args, **kwargs)
 
 
-def my_tasks_status_names(user):
-    """Distinct status names in the projects where ``user`` has assigned tasks.
+class MyTasksView(models.Model):
+    """The My Tasks setup one person last used.
 
-    My Tasks mixes projects, and every project has its own statuses, so the
-    filter works on names: one "Done" covers the "Done" of every project.
-    Ordered by the column position, then by name.
-    """
-    rows = (
-        Status.objects.filter(project__in=Task.objects.open_for(user).values('project'))
-        .values('name')
-        .annotate(first_order=models.Min('order'))
-        .order_by('first_order', 'name')
-    )
-    return [row['name'] for row in rows]
-
-
-class MyTasksFilter(models.Model):
-    """What one person shows on My Tasks.
-
-    ``shown_priorities``: checked priorities, empty meaning every priority.
-    ``hidden_statuses``: status names left unchecked, so a status that appears
-    later shows up checked and visible.
+    ``params`` is the canonical query string of a
+    :class:`~apps.tasks.viewspec.TaskViewSpec` as a dict, without search text or
+    paging, and is revalidated every time it is restored. It lives apart from
+    ``ProjectTaskView`` because it belongs to no project.
     """
 
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='my_tasks_filter',
+        related_name='my_tasks_view',
     )
-    shown_priorities = models.JSONField(default=list, blank=True)
-    hidden_statuses = models.JSONField(default=list, blank=True)
+    params = models.JSONField(default=dict, blank=True)
 
     def __str__(self):
-        return f"My Tasks filter - {self.user}"
+        return f"My Tasks view - {self.user}"

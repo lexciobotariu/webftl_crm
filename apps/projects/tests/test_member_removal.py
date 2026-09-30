@@ -88,7 +88,7 @@ class TestMemberRemoval:
             {'title': 'Hacked', 'description': ''},
         ).status_code == 403
 
-        my_tasks = client.get(reverse('my_tasks')).content.decode()
+        my_tasks = client.get(reverse('my_tasks'), {'layout': 'list'}).content.decode()
         assert 'Design the logo' not in my_tasks
         assert 'Still mine' in my_tasks
 

@@ -140,7 +140,7 @@ class TestViewOwn:
             reverse('task_full_page', args=[other.pk, foreign.pk])
         ).status_code == 403
 
-        mine_page = client.get(reverse('my_tasks')).content.decode()
+        mine_page = client.get(reverse('my_tasks'), {'layout': 'list'}).content.decode()
         assert 'On My Project' in mine_page
         assert 'On Their Project' not in mine_page
         assert 'Also On Mine' not in mine_page
@@ -353,7 +353,7 @@ class TestMyTasksFollowsView:
         TaskFactory(project=project, title='Not Mine')
         client.force_login(user)
 
-        page = client.get(reverse('my_tasks')).content.decode()
+        page = client.get(reverse('my_tasks'), {'layout': 'list'}).content.decode()
         assert 'Assigned Far' in page
         assert 'Not Mine' not in page
         dashboard = client.get(reverse('dashboard'))

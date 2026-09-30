@@ -12,11 +12,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Status, priority and unassigned icons follow Linear's design (Tabler and Material Design Icons SVGs, inlined)
 - Each project has one full-width Tasks page at `/projects/<pk>/tasks/` with a List/Board toggle, shared filters (status, priority, assignee, labels), search, and — in the list — grouping, sorting and "Show more"
 - The Tasks page state lives in the URL, so views can be shared and Back works; the last view you used on a project is remembered per person
+- My Tasks uses the same URL-driven list as the Tasks page: grouped by project (or status type, or priority), filtered by status type and priority, searchable, with "Show more"; it shows only open tasks until you ask for finished ones, and remembers your last view
 - On the board, dropping a card under active filters places it under the card it landed on instead of at a position counted only among visible cards
 
 ### Changes
 - `/projects/<pk>/kanban/` now redirects to the Tasks page in board layout
 - The project Tasks tab and its saved status/priority filter are replaced by the Tasks page; filters saved on the old tab reset once
+- My Tasks no longer pages its list or filters statuses by name; its saved status/priority filter resets once and `/tasks/my/filter/` is gone
 - Editing a task's assignee, priority, due date, estimate, labels or title in the drawer refreshes the list behind it
 
 ### Fixes
