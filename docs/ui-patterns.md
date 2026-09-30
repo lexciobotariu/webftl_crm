@@ -479,6 +479,22 @@ document.body.addEventListener('htmx:afterSwap', () => {
 - `arrow-left` - Back navigation
 - `chevron-left/right` - Pagination
 
+### Inline SVG icons (status, priority, unassigned)
+
+Status types, priorities and the unassigned avatar use SVGs downloaded from
+[Iconify](https://icon-sets.iconify.design/) and stored in `templates/components/icons/`,
+named `<set>-<icon>.svg`. They are inlined by `components/status_icon.html`,
+`priority_icon.html` and `avatar.html` (no CDN request, no `lucide.createIcons()` rescan
+on every htmx swap). They use `currentColor` and size with `1em`, so colour and size
+come from the wrapper.
+
+To add or change one: `curl https://api.iconify.design/<set>/<icon>.svg -o templates/components/icons/<set>-<icon>.svg`.
+
+| Icon set | Used for | License |
+| --- | --- | --- |
+| Tabler Icons (`tabler`) | backlog, unstarted, completed, canceled, urgent, no priority, unassigned | MIT |
+| Material Design Icons (`mdi`) | started (half circle), low / medium / high signal bars | Apache-2.0 |
+
 ---
 
 ## JavaScript Libraries
