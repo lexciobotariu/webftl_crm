@@ -1,8 +1,11 @@
 <div class="flex items-center gap-3 px-4 py-2 text-xs text-zinc-500">
     <span class="bg-elevated px-1.5 py-0.5 rounded tabular-nums">{{ total_matching }}</span>
     <span>task{{ total_matching|pluralize }}</span>
-    {% if hidden_count %}
+    {% if hidden_count and spec.has_filters or hidden_count and spec.q %}
     <span>{{ hidden_count }} hidden by filters</span>
+    {% elif hidden_count and show_all_url %}
+    <span>{{ hidden_count }} done or canceled hidden</span>
+    <a href="{{ show_all_url }}" class="text-zinc-400 hover:text-zinc-200 transition-colors">Show all</a>
     {% endif %}
 </div>
 {% if total_matching %}

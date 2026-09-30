@@ -123,7 +123,7 @@ def build_groups(tasks, spec, counts):
         elif spec.group == 'project':
             group['label'] = first.project.name
         elif spec.group == 'category':
-            group['label'] = CATEGORY_LABELS[first.status.category]
+            group['label'] = CATEGORY_LABELS.get(first.status.category, first.status.category)
         else:
             group['label'] = PRIORITY_LABELS[first.priority]
         groups.append(group)

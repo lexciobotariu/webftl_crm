@@ -23,7 +23,7 @@ from apps.tasks.models import Label, can_create_task, can_edit_task, can_view_ta
 from .forms import SubtaskForm, TaskForm, TimeEntryForm
 from .listview import apply_url_headers, build_groups, filter_options, group_choices, resolve_view
 from .models import MyTasksView, Subtask, Task, TimeEntry
-from .viewspec import LIMIT_STEP, TaskViewOptions, sort_choices
+from .viewspec import CATEGORIES, LIMIT_STEP, TaskViewOptions, sort_choices
 
 
 def _time_context(user, task):
@@ -68,7 +68,7 @@ def _format_total(entries):
 MY_TASKS_OPTIONS = TaskViewOptions(
     layouts=('list',),
     groups=('project', 'category', 'priority', 'none'),
-    categories=frozenset(value for value, _label in Status.CATEGORY_CHOICES),
+    categories=frozenset(CATEGORIES),
     has_assignee_filter=False,
     default_group='project',
     default_categories=frozenset({Status.BACKLOG, Status.UNSTARTED, Status.STARTED}),

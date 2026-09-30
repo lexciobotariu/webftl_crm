@@ -101,6 +101,15 @@ class TestDefaultView:
         assert client.get(reverse('my_tasks_todos')).context['total_count'] == 2
         assert client.get(reverse('dashboard')).context['my_task_count'] == 2
 
+    def test_a_refresh_after_an_edit_updates_the_badge_too(self, client, person):
+        # The refresher swaps #task-view; the badge rides along out of band, so
+        # finishing a task in the drawer cannot leave the old number in the header.
+        html = client.get(_url('layout=list')).content.decode()
+        assert 'id="assigned-count"' in html
+        assert 'id="task-view-refresh"' in html
+        assert 'hx-select-oob="#assigned-count"' in html
+        assert "source: '#task-view-refresh'" in html
+
 
 @pytest.mark.django_db
 class TestFilters:

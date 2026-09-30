@@ -16,7 +16,6 @@ from apps.projects.models import Status
 from .models import priorities_to_store
 
 LAYOUTS = ('list', 'board')
-GROUPS = ('status', 'assignee', 'priority', 'project', 'category', 'none')
 # Status types in their natural order; the position in this tuple is the order
 # they are listed in the URL and in the filter.
 CATEGORIES = tuple(value for value, _label in Status.CATEGORY_CHOICES)

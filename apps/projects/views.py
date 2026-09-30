@@ -127,7 +127,7 @@ def project_detail(request, pk):
     # Calculate stats. "Done" is whatever the project files under the completed status type,
     # so renaming a column cannot break these numbers. These counts stay on every
     # visible task; the Tasks page has its own filters and never changes them.
-    tasks = visible_tasks(request.user, project).select_related('project', 'status', 'assignee')
+    tasks = visible_tasks(request.user, project).select_related('status', 'assignee')
     total_tasks = tasks.count()
     completed_tasks = tasks.done().count()
     active_tasks = tasks.active().count()
