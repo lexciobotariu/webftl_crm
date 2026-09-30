@@ -174,3 +174,127 @@ class TestBoardLayout:
         spec = parse('layout=board&hide_status=2&priority=high')
         assert spec.hidden_statuses == frozenset({2})
         assert spec.priorities == ('high',)
+
+
+ALL_CATEGORIES = frozenset({'backlog', 'unstarted', 'started', 'completed', 'canceled'})
+OPEN_CATEGORIES = frozenset({'backlog', 'unstarted', 'started'})
+# The shape My Tasks gives the spec: list only, grouped by project, open tasks first.
+MY_OPTIONS = TaskViewOptions(
+    layouts=('list',),
+    groups=('project', 'category', 'priority', 'none'),
+    categories=ALL_CATEGORIES,
+    has_assignee_filter=False,
+    default_group='project',
+    default_categories=OPEN_CATEGORIES,
+)
+
+
+def parse_my(query=''):
+    return parse(query, MY_OPTIONS)
+
+
+class TestPageOptions:
+    def test_project_page_options_are_the_defaults(self):
+        options = TaskViewOptions()
+        assert options.layouts == ('list', 'board')
+        assert options.groups == ('status', 'assignee', 'priority', 'none')
+        assert options.categories == frozenset()
+        assert options.has_assignee_filter
+        assert options.default_group == 'status'
+        assert options.default_categories == frozenset()
+
+    def test_layouts_limit_what_the_url_may_ask_for(self):
+        assert parse_my('layout=board').layout == 'list'
+        assert parse_my('layout=board').to_params()['layout'] == 'list'
+
+    def test_groups_limit_what_the_url_may_ask_for(self):
+        assert parse('group=project').group == 'status'
+        assert parse('group=category').group == 'status'
+        assert parse_my('group=status').group == 'project'
+        assert parse_my('group=assignee').group == 'project'
+        assert parse_my('group=category').group == 'category'
+
+    def test_assignee_none_needs_the_assignee_filter(self):
+        assert parse_my('assignee=none').assignees == ()
+        assert parse('assignee=none').assignees == ('none',)
+
+    def test_options_do_not_take_part_in_equality(self):
+        other = TaskViewOptions(status_ids=frozenset({9}))
+        assert parse('group=none') == parse('group=none', other)
+        assert 'options' not in repr(parse())
+
+
+class TestCategories:
+    def test_page_without_category_filter_ignores_the_parameter(self):
+        spec = parse('category=completed&filter=1&shown_category=completed')
+        assert spec.categories == frozenset()
+        assert 'category' not in spec.to_params()
+
+    def test_absent_means_the_pages_default(self):
+        assert parse_my().categories == OPEN_CATEGORIES
+
+    def test_explicit_categories_mean_exactly_those(self):
+        spec = parse_my('category=completed&category=canceled')
+        assert spec.categories == {'completed', 'canceled'}
+
+    def test_all_five_mean_everything_and_are_not_collapsed(self):
+        query = '&'.join(f'category={c}' for c in ALL_CATEGORIES)
+        spec = parse_my(query)
+        assert spec.categories == ALL_CATEGORIES
+        assert sorted(spec.to_params()['category']) == sorted(ALL_CATEGORIES)
+        assert parse_my(spec.to_query_string()) == spec
+
+    def test_unknown_categories_are_dropped(self):
+        assert parse_my('category=done&category=started').categories == {'started'}
+        assert parse_my('category=done').categories == OPEN_CATEGORIES
+
+    def test_serialised_in_the_order_of_the_status_types(self):
+        spec = parse_my('category=canceled&category=backlog&category=completed')
+        assert spec.to_params()['category'] == ['backlog', 'completed', 'canceled']
+
+    def test_default_categories_are_left_out_of_the_url(self):
+        spec = parse_my('category=started&category=backlog&category=unstarted')
+        assert 'category' not in spec.to_params()
+        assert spec.to_params() == {'layout': 'list'}
+
+    def test_default_group_is_left_out_of_the_url(self):
+        assert parse_my('group=project').to_params() == {'layout': 'list'}
+        assert parse_my('group=category').to_params()['group'] == 'category'
+        # The project page's own default is an explicit choice here.
+        assert parse_my('group=priority').to_params()['group'] == 'priority'
+
+    def test_filter_form_checked_types_become_the_selection(self):
+        spec = parse_my('filter=1&shown_category=completed&shown_category=started')
+        assert spec.categories == {'completed', 'started'}
+
+    def test_filter_form_with_nothing_checked_is_the_default(self):
+        assert parse_my('filter=1').categories == OPEN_CATEGORIES
+
+    def test_clear_goes_back_to_the_default_not_to_everything(self):
+        spec = parse_my('clear=1&category=completed&group=category&priority=high')
+        assert spec.categories == OPEN_CATEGORIES
+        assert spec.priorities == ()
+        assert spec.group == 'category'
+
+    def test_is_default_is_measured_against_the_page(self):
+        assert parse_my().is_default
+        assert parse_my('q=abc&limit=400').is_default
+        assert not parse_my('category=completed').is_default
+        assert not parse_my('group=none').is_default
+        assert not parse_my('priority=high').is_default
+
+    def test_filter_count_counts_differences_from_the_default(self):
+        assert parse_my().filter_count == 0
+        assert not parse_my().has_filters
+        assert parse_my('category=completed').filter_count == 1
+        assert parse_my('category=completed').has_filters
+        assert parse_my('category=completed&priority=high').filter_count == 2
+        # Display choices are not filters.
+        assert parse_my('group=none').filter_count == 0
+
+    def test_round_trip(self):
+        spec = parse_my('category=completed&category=started&group=category&priority=high&q=x')
+        assert parse_my(spec.to_query_string()) == spec
+
+    def test_replace_keeps_the_page_options(self):
+        assert parse_my().replace(limit=400).to_params() == {'layout': 'list', 'limit': '400'}

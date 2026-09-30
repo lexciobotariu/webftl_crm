@@ -62,6 +62,17 @@ def _priority_rank():
     )
 
 
+def _category_rank():
+    """Position of the status type in ``Status.CATEGORY_CHOICES``: backlog first."""
+    return Case(
+        *[
+            When(status__category=value, then=Value(rank))
+            for rank, (value, _label) in enumerate(Status.CATEGORY_CHOICES)
+        ],
+        default=Value(len(Status.CATEGORY_CHOICES)),
+    )
+
+
 class TaskQuerySet(models.QuerySet):
     """Keeps the definitions of "done", "active" and "overdue" in one place.
 
@@ -103,6 +114,8 @@ class TaskQuerySet(models.QuerySet):
         task with two matching labels is still one row and the query stays cheap.
         """
         qs = self
+        if spec.categories:
+            qs = qs.filter(status__category__in=spec.categories)
         if spec.hidden_statuses:
             qs = qs.exclude(status_id__in=spec.hidden_statuses)
         qs = qs.with_priorities(spec.priorities)
@@ -134,6 +147,11 @@ class TaskQuerySet(models.QuerySet):
             ordering.append(F('assignee_id').asc(nulls_last=True))
         elif spec.group == 'priority':
             ordering.append(_priority_rank().asc())
+        elif spec.group == 'project':
+            ordering.append(Lower('project__name').asc())
+            ordering.append('project_id')
+        elif spec.group == 'category':
+            ordering.append(_category_rank().asc())
 
         descending = spec.dir == 'desc'
         if spec.sort == 'priority':
@@ -156,11 +174,16 @@ class TaskQuerySet(models.QuerySet):
 
         The list only loads the first page of rows, so headers take their counts
         from here. The keys are ``status_id``, ``assignee_id`` (``None`` for
-        unassigned) or the priority string; ``group=none`` has no groups.
+        unassigned), the priority string, ``project_id`` or the status type;
+        ``group=none`` has no groups.
         """
-        field = {'status': 'status_id', 'assignee': 'assignee_id', 'priority': 'priority'}.get(
-            spec.group
-        )
+        field = {
+            'status': 'status_id',
+            'assignee': 'assignee_id',
+            'priority': 'priority',
+            'project': 'project_id',
+            'category': 'status__category',
+        }.get(spec.group)
         if field is None:
             return {}
         rows = self.matching(spec).order_by().values(field).annotate(total=Count('pk'))

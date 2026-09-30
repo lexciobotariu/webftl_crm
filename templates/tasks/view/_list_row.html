@@ -5,9 +5,12 @@
      hx-swap="innerHTML"
      hx-on::after-request="openSlideOver(event)">
     {% include "components/priority_icon.html" with priority=task.priority %}
-    <span class="w-16 shrink-0 font-mono text-xs text-zinc-500">{{ project.name|slice:":4"|upper }}-{{ task.pk }}</span>
+    <span class="w-16 shrink-0 font-mono text-xs text-zinc-500">{{ task.project.name|slice:":4"|upper }}-{{ task.pk }}</span>
     {% include "components/status_icon.html" with category=task.status.category %}
     <span class="flex-1 min-w-0 truncate text-zinc-100">{{ task.title }}</span>
+    {% if show_project and spec.group != 'project' %}
+    <span class="hidden md:inline max-w-[10rem] shrink-0 truncate text-xs text-zinc-500">{{ task.project.name }}</span>
+    {% endif %}
     {% with labels=task.labels.all %}
     {% if labels %}
     <span class="hidden md:flex items-center gap-1 shrink-0">

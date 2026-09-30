@@ -5,23 +5,34 @@ from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Max, Prefetch, Q
 from django.db.models.deletion import RestrictedError
-from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
+from django.http import (
+    HttpResponse,
+    HttpResponseBadRequest,
+    HttpResponseForbidden,
+    HttpResponseRedirect,
+)
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
-from django_htmx.http import push_url, replace_url
 
 from apps.accounts.decorators import require_permission
 from apps.accounts.models import User
 from apps.clients.models import Client, visible_clients
-from apps.tasks.listview import build_groups, filter_options, project_assignees
+from apps.tasks.listview import (
+    apply_url_headers,
+    build_groups,
+    filter_options,
+    group_choices,
+    project_assignees,
+    resolve_view,
+)
 from apps.tasks.models import (
     Label,
     TaskActivity,
     can_create_task,
     visible_tasks,
 )
-from apps.tasks.viewspec import LIMIT_STEP, TaskViewOptions, TaskViewSpec, sort_choices
+from apps.tasks.viewspec import LIMIT_STEP, TaskViewOptions, sort_choices
 
 from .forms import LabelForm, ProjectForm, StatusForm
 from .models import (
@@ -116,7 +127,7 @@ def project_detail(request, pk):
     # Calculate stats. "Done" is whatever the project files under the completed status type,
     # so renaming a column cannot break these numbers. These counts stay on every
     # visible task; the Tasks page has its own filters and never changes them.
-    tasks = visible_tasks(request.user, project).select_related('status', 'assignee')
+    tasks = visible_tasks(request.user, project).select_related('project', 'status', 'assignee')
     total_tasks = tasks.count()
     completed_tasks = tasks.done().count()
     active_tasks = tasks.active().count()
@@ -158,12 +169,6 @@ def project_detail(request, pk):
     })
 
 
-# Only requests sent by the toolbar form (its element id) remember the view. A link
-# from a colleague, a refresh after an edit, search-as-you-type and "Show more" all
-# render what the URL says without changing what this person last chose.
-TOOLBAR_TRIGGER = 'task-toolbar'
-
-
 @login_required
 @require_permission('access_projects')
 def project_tasks(request, pk):
@@ -182,26 +187,16 @@ def project_tasks(request, pk):
     )
     page_url = request.path
 
-    # A bare URL never renders. It resolves to the view this person last used, or
-    # to the default, so every entry in browser history says in full what it
-    # showed; Back can then never land on "whatever is saved now".
-    if not request.GET:
-        saved = ProjectTaskView.objects.filter(user=request.user, project=project).first()
-        restored = TaskViewSpec.from_params(saved.params if saved else {}, options)
-        if saved is not None and restored.is_default:
-            saved.delete()
-        return redirect(f'{page_url}?{restored.to_query_string()}')
-
-    spec = TaskViewSpec.from_params(request.GET, options)
-    from_toolbar = bool(request.htmx) and request.htmx.trigger == TOOLBAR_TRIGGER
-    if from_toolbar:
-        if spec.is_default:
-            ProjectTaskView.objects.filter(user=request.user, project=project).delete()
-        else:
-            ProjectTaskView.objects.update_or_create(
-                user=request.user, project=project,
-                defaults={'params': spec.to_saved_params()},
-            )
+    resolved = resolve_view(
+        request,
+        options=options,
+        model=ProjectTaskView,
+        lookup={'user': request.user, 'project': project},
+        page_url=page_url,
+    )
+    if isinstance(resolved, HttpResponseRedirect):
+        return resolved
+    spec, from_toolbar = resolved
 
     visible = visible_tasks(request.user, project)
     matching = visible.matching(spec)
@@ -220,6 +215,7 @@ def project_tasks(request, pk):
         'can_edit_project': can_edit_project(request.user, project),
         'can_create_task': can_create_task(request.user, project),
         'sort_choices': sort_choices(),
+        'group_choices': group_choices(options),
         **filter_options(statuses, spec, assignees, labels),
     }
     if spec.layout == 'board':
@@ -227,7 +223,7 @@ def project_tasks(request, pk):
     else:
         page = (
             matching.ordered_for(spec)
-            .select_related('status', 'assignee')
+            .select_related('project', 'status', 'assignee')
             .prefetch_related('labels')[: spec.limit]
         )
         context['groups'] = build_groups(page, spec, visible.group_counts(spec))
@@ -236,10 +232,7 @@ def project_tasks(request, pk):
             context['more_url'] = f'{page_url}?{more}'
 
     response = render(request, 'tasks/view/project_tasks.html', context)
-    if request.htmx:
-        canonical = f'{page_url}?{spec.to_query_string()}'
-        (push_url if from_toolbar else replace_url)(response, canonical)
-    return response
+    return apply_url_headers(response, request, spec, from_toolbar, page_url)
 
 
 @login_required

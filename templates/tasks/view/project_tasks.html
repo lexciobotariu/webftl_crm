@@ -104,17 +104,5 @@
         </div>
     </div>
 </div>
-<script>
-    // Back must show the URL's state, not a cached copy of an earlier list. With no
-    // cache every restore is a miss, and a miss is a real page load rather than an
-    // AJAX swap of <body>: that keeps these page scripts from running a second time
-    // (and registering the listeners below twice) on every Back.
-    htmx.config.historyCacheSize = 0;
-    htmx.config.refreshOnHistoryMiss = true;
-    // Edits made in the drawer (and task create/delete/move) change what the list
-    // shows; re-fetch it through the current URL so filters and "Show more" survive.
-    ['taskChanged', 'taskStatusChanged'].forEach((name) => {
-        document.body.addEventListener(name, () => refreshFragment('#task-view'));
-    });
-</script>
+{% include "tasks/view/_view_scripts.html" %}
 {% endblock %}

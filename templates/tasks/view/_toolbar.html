@@ -7,6 +7,7 @@
     <div class="flex items-center gap-2">
         {# Bound to the page's Alpine state so the toggle, the hidden field and the Display menu agree before the response arrives. #}
         <input type="hidden" name="layout" :value="layout">
+        {% if spec.options.layouts|length > 1 %}
         <div class="inline-flex items-center bg-elevated border border-border-subtle rounded-control p-0.5 text-xs">
             <button type="submit" name="layout" value="list" @click="layout = 'list'"
                     :class="layout === 'list' ? 'bg-hover-strong text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'"
@@ -21,6 +22,7 @@
                 Board
             </button>
         </div>
+        {% endif %}
 
         <div class="relative" x-data="dropdown">
             <button type="button" @click="toggle()"
@@ -34,9 +36,16 @@
                 {# Plain HTML on purpose: it is re-rendered out of band after every request, so it must not carry Alpine state. #}
                 <div id="task-filter-fields" class="space-y-3">
                     <input type="hidden" name="filter" value="1">
+                    {% if status_options %}
                     {% include "components/checkbox_filter_group.html" with title="Status" name="shown_status" options=status_options %}
+                    {% endif %}
+                    {% if category_options %}
+                    {% include "components/checkbox_filter_group.html" with title="Status type" name="shown_category" options=category_options %}
+                    {% endif %}
                     {% include "components/checkbox_filter_group.html" with title="Priority" name="priority" options=priority_options %}
+                    {% if assignee_options %}
                     {% include "components/checkbox_filter_group.html" with title="Assignee" name="assignee" options=assignee_options %}
+                    {% endif %}
                     {% if label_options %}
                     {% include "components/checkbox_filter_group.html" with title="Labels" name="label" options=label_options %}
                     {% endif %}
@@ -66,10 +75,9 @@
                     Group by
                     <select name="group" @change="$el.form.requestSubmit()"
                             class="mt-1 w-full bg-panel border border-border-subtle rounded-control px-2 py-1.5 text-sm text-zinc-200 normal-case tracking-normal focus:border-border-strong focus:outline-none">
-                        <option value="status" {% if spec.group == 'status' %}selected{% endif %}>Status</option>
-                        <option value="assignee" {% if spec.group == 'assignee' %}selected{% endif %}>Assignee</option>
-                        <option value="priority" {% if spec.group == 'priority' %}selected{% endif %}>Priority</option>
-                        <option value="none" {% if spec.group == 'none' %}selected{% endif %}>No grouping</option>
+                        {% for value, label in group_choices %}
+                        <option value="{{ value }}" {% if spec.group == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
                     </select>
                 </label>
                 <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-medium">

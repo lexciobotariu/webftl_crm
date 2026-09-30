@@ -6,7 +6,8 @@ from django.http import QueryDict
 from django.test.utils import CaptureQueriesContext
 
 from apps.accounts.factories import UserFactory
-from apps.projects.factories import ProjectFactory
+from apps.projects.factories import ProjectFactory, StatusFactory
+from apps.projects.models import Status
 from apps.tasks.factories import LabelFactory, TaskFactory
 from apps.tasks.models import Task
 from apps.tasks.viewspec import TaskViewOptions, TaskViewSpec
@@ -209,3 +210,75 @@ class TestGroupCounts:
             Task.objects.group_counts(spec)
         assert len(queries) == 1
 
+
+
+MY_OPTIONS = TaskViewOptions(
+    layouts=('list',),
+    groups=('project', 'category', 'priority', 'none'),
+    categories=frozenset(value for value, _label in Status.CATEGORY_CHOICES),
+    has_assignee_filter=False,
+    default_group='project',
+    default_categories=frozenset({'backlog', 'unstarted', 'started'}),
+)
+
+
+def my_spec(query=''):
+    return TaskViewSpec.from_params(QueryDict(query), MY_OPTIONS)
+
+
+@pytest.mark.django_db
+class TestAcrossProjects:
+    def test_category_filter_keeps_only_those_status_types(self):
+        project = ProjectFactory()
+        TaskFactory(project=project, status=project.statuses.get(name='Backlog'), title='backlog')
+        TaskFactory(project=project, status=project.statuses.get(name='Review'), title='review')
+        TaskFactory(project=project, status=project.statuses.get(name='Done'), title='done')
+        assert sorted(titles(Task.objects.matching(my_spec()))) == ['backlog', 'review']
+        done = my_spec('category=completed')
+        assert titles(Task.objects.matching(done)) == ['done']
+
+    def test_category_filter_spans_projects_with_different_column_names(self):
+        one, two = ProjectFactory(), ProjectFactory()
+        StatusFactory(project=two, name='Doing', category=Status.STARTED)
+        TaskFactory(project=one, status=one.statuses.get(name='In Progress'), title='one')
+        TaskFactory(project=two, status=two.statuses.get(name='Doing'), title='two')
+        assert sorted(titles(Task.objects.matching(my_spec('category=started')))) == ['one', 'two']
+
+    def test_a_page_without_the_type_filter_is_not_narrowed(self):
+        project = ProjectFactory()
+        TaskFactory(project=project, status=project.statuses.get(name='Done'))
+        assert Task.objects.matching(spec_for(project)).count() == 1
+
+    def test_project_groups_are_alphabetical_then_split_by_id(self):
+        zulu = ProjectFactory(name='Zulu')
+        alpha = ProjectFactory(name='alpha')
+        twin = ProjectFactory(name='alpha')
+        TaskFactory(project=zulu, title='a in zulu')
+        TaskFactory(project=twin, title='b in twin')
+        TaskFactory(project=alpha, title='c in alpha')
+        result = titles(Task.objects.ordered_for(my_spec('sort=title')))
+        assert result == ['c in alpha', 'b in twin', 'a in zulu']
+        assert alpha.pk < twin.pk
+
+    def test_category_groups_follow_the_order_of_the_status_types(self):
+        project = ProjectFactory()
+        for name in ('Done', 'Review', 'Backlog', 'To Do'):
+            TaskFactory(project=project, status=project.statuses.get(name=name), title=name)
+        spec = my_spec('group=category&category=backlog&category=unstarted'
+                       '&category=started&category=completed&sort=title')
+        assert titles(Task.objects.ordered_for(spec)) == ['Backlog', 'To Do', 'Review', 'Done']
+
+    def test_counts_by_project(self):
+        one, two = ProjectFactory(), ProjectFactory()
+        TaskFactory.create_batch(2, project=one)
+        TaskFactory(project=two)
+        assert Task.objects.group_counts(my_spec()) == {one.pk: 2, two.pk: 1}
+
+    def test_counts_by_status_type_respect_the_filters(self):
+        project = ProjectFactory()
+        TaskFactory(project=project, status=project.statuses.get(name='In Progress'))
+        TaskFactory(project=project, status=project.statuses.get(name='Review'))
+        TaskFactory(project=project, status=project.statuses.get(name='Done'))
+        assert Task.objects.group_counts(my_spec('group=category')) == {'started': 2}
+        everything = my_spec('group=category&category=started&category=completed')
+        assert Task.objects.group_counts(everything) == {'started': 2, 'completed': 1}
