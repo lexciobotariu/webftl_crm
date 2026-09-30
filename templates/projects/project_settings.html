@@ -90,9 +90,14 @@
                                     Add Status
                                 </button>
                             </div>
-                            <label class="flex items-center gap-2 mt-2 text-xs text-zinc-500 cursor-pointer">
-                                <input type="checkbox" name="is_done" value="true" class="accent-accent w-3.5 h-3.5">
-                                Tasks in this status count as done
+                            <label class="flex items-center gap-2 mt-2 text-xs text-zinc-500">
+                                Type
+                                <select name="category" class="bg-elevated border border-border-subtle rounded-control px-2 py-1 text-xs text-zinc-300 focus:border-border-strong focus:outline-none">
+                                    {% for value, label in category_choices %}
+                                    <option value="{{ value }}" {% if value == 'unstarted' %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                                <span class="text-zinc-600">Completed and Canceled tasks stop counting as active.</span>
                             </label>
                             <div id="status-form-error" class="text-xs text-error mt-2"></div>
                         </form>

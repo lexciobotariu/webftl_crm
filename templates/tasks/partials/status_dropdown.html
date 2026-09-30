@@ -1,7 +1,7 @@
 <div class="relative" id="status-dropdown-{{ task.pk }}" x-data="dropdown">
     <button @click="toggle()"
             class="flex items-center gap-2 px-2 py-1 rounded-control text-sm text-zinc-300 hover:bg-elevated transition-colors">
-        <i data-lucide="circle" class="w-3.5 h-3.5 text-zinc-500"></i>
+        {% include "components/status_icon.html" with category=task.status.category %}
         <span>{{ task.status.name }}</span>
     </button>
     <div x-show="open" x-cloak @click.away="close()"
@@ -13,7 +13,8 @@
                 hx-target="#status-dropdown-{{ task.pk }}"
                 hx-swap="outerHTML"
                 @click="close()"
-                class="w-full text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors {% if status.pk == task.status.pk %}text-zinc-200{% else %}text-zinc-300{% endif %}">
+                class="w-full flex items-center gap-2 text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors {% if status.pk == task.status.pk %}text-zinc-200{% else %}text-zinc-300{% endif %}">
+            {% include "components/status_icon.html" with category=status.category %}
             {{ status.name }}
         </button>
         {% endfor %}

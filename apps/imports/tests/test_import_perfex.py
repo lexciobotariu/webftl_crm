@@ -226,7 +226,7 @@ def test_commit_maps_the_fabricated_dump(tmp_path):
 
     ship = Task.objects.get(title='Ship homepage')
     assert ship.status.name == 'Done'
-    assert ship.status.is_done is True
+    assert ship.status.is_completed is True
     assert ship.priority == 'medium'
     assert ship.description == 'Line one\nLine two'
     assert ship.assignee == admin

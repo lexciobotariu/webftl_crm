@@ -1,0 +1,10 @@
+{# Status type icon. Pass category=<status.category>; optional size (px, default 14). Icons: Tabler (MIT) and Material Design Icons (Apache-2.0), see docs/ui-patterns.md. #}
+<span class="inline-flex shrink-0 {% if category == 'started' %}text-amber-500{% elif category == 'completed' %}text-accent{% elif category == 'canceled' %}text-zinc-500{% else %}text-zinc-400{% endif %}"
+      style="font-size:{{ size|default:14 }}px" aria-hidden="true">
+    {% if category == 'backlog' %}{% include "components/icons/tabler-circle-dashed.svg" %}
+    {% elif category == 'started' %}{% include "components/icons/mdi-circle-half-full.svg" %}
+    {% elif category == 'completed' %}{% include "components/icons/tabler-circle-check-filled.svg" %}
+    {% elif category == 'canceled' %}{% include "components/icons/tabler-circle-x-filled.svg" %}
+    {% else %}{% include "components/icons/tabler-circle.svg" %}
+    {% endif %}
+</span>

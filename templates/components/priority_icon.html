@@ -1,0 +1,10 @@
+{# Priority icon. Pass priority=<task.priority> ('' = none); optional size (px, default 14). Icons: Tabler (MIT) and Material Design Icons (Apache-2.0), see docs/ui-patterns.md. #}
+<span class="inline-flex shrink-0 {% if priority == 'urgent' %}text-error{% elif priority %}text-zinc-300{% else %}text-zinc-600{% endif %}"
+      style="font-size:{{ size|default:14 }}px" aria-hidden="true">
+    {% if priority == 'urgent' %}{% include "components/icons/tabler-alert-square-filled.svg" %}
+    {% elif priority == 'high' %}{% include "components/icons/mdi-signal-cellular-3.svg" %}
+    {% elif priority == 'medium' %}{% include "components/icons/mdi-signal-cellular-2.svg" %}
+    {% elif priority == 'low' %}{% include "components/icons/mdi-signal-cellular-1.svg" %}
+    {% else %}{% include "components/icons/tabler-minus.svg" %}
+    {% endif %}
+</span>

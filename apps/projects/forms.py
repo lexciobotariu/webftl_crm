@@ -22,12 +22,19 @@ class ProjectForm(forms.ModelForm):
 class StatusForm(forms.ModelForm):
     class Meta:
         model = Status
-        fields = ['name', 'is_done']
-        labels = {'is_done': 'Counts as done'}
+        fields = ['name', 'category']
         widgets = {
             'name': forms.TextInput(attrs={'class': INPUT_CLASSES}),
-            'is_done': forms.CheckboxInput(attrs={'class': 'accent-accent w-4 h-4'}),
+            'category': forms.Select(attrs={'class': INPUT_CLASSES}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # A status created with just a name is a plain "unstarted" column.
+        self.fields['category'].required = False
+
+    def clean_category(self):
+        return self.cleaned_data.get('category') or Status.UNSTARTED
 
 
 class LabelForm(forms.ModelForm):

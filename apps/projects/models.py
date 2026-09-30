@@ -26,11 +26,15 @@ class Project(models.Model):
             self._create_default_statuses()
 
     def _create_default_statuses(self):
-        defaults = ['Backlog', 'To Do', 'In Progress', 'Review', 'Done']
-        for i, name in enumerate(defaults):
-            Status.objects.create(
-                project=self, name=name, order=i, is_done=(name == 'Done')
-            )
+        defaults = [
+            ('Backlog', Status.BACKLOG),
+            ('To Do', Status.UNSTARTED),
+            ('In Progress', Status.STARTED),
+            ('Review', Status.STARTED),
+            ('Done', Status.COMPLETED),
+        ]
+        for i, (name, category) in enumerate(defaults):
+            Status.objects.create(project=self, name=name, order=i, category=category)
 
     @property
     def task_count(self):
@@ -40,11 +44,27 @@ class Project(models.Model):
 
 
 class Status(models.Model):
+    BACKLOG = 'backlog'
+    UNSTARTED = 'unstarted'
+    STARTED = 'started'
+    COMPLETED = 'completed'
+    CANCELED = 'canceled'
+    CATEGORY_CHOICES = [
+        (BACKLOG, 'Backlog'),
+        (UNSTARTED, 'Unstarted'),
+        (STARTED, 'Started'),
+        (COMPLETED, 'Completed'),
+        (CANCELED, 'Canceled'),
+    ]
+    CLOSED_CATEGORIES = (COMPLETED, CANCELED)
+
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='statuses')
     name = models.CharField(max_length=100)
     order = models.PositiveIntegerField(default=0)
     visible_on_board = models.BooleanField(default=True)
-    is_done = models.BooleanField(default=False)
+    # What a column means, whatever it is called: renaming "Done" cannot break
+    # the done/active/overdue counts, and the icon follows the category.
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default=UNSTARTED)
 
     class Meta:
         ordering = ['order']
@@ -55,6 +75,15 @@ class Status(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def is_completed(self):
+        return self.category == self.COMPLETED
+
+    @property
+    def is_closed(self):
+        """Completed or canceled: work here needs no more attention."""
+        return self.category in self.CLOSED_CATEGORIES
 
     @property
     def task_count(self):

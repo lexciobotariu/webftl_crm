@@ -175,3 +175,34 @@ class TestGitHubSync:
         response = client.post(reverse('github_sync', args=[project.pk]))
         assert response.status_code == 400
         assert 'token' in response.json()['error'].lower()
+
+
+@pytest.mark.django_db
+class TestIssueClosedWebhook:
+    def _payload(self, task):
+        return {'action': 'closed', 'issue': {'id': task.github_issue_id}}
+
+    def test_closed_issue_moves_task_to_completed_status(self):
+        from apps.integrations.github import process_webhook_issue
+        from apps.tasks.factories import TaskFactory
+
+        project = ProjectFactory()
+        task = TaskFactory(project=project, github_issue_id=42)
+        assert task.status.category == 'backlog'
+        process_webhook_issue(self._payload(task), project)
+        task.refresh_from_db()
+        assert task.status.category == 'completed'
+
+    def test_closed_issue_ignores_canceled_statuses(self):
+        from apps.integrations.github import process_webhook_issue
+        from apps.projects.factories import StatusFactory
+        from apps.tasks.factories import TaskFactory
+
+        project = ProjectFactory()
+        project.statuses.filter(category='completed').delete()
+        StatusFactory(project=project, name='Wontfix', category='canceled')
+        task = TaskFactory(project=project, github_issue_id=43)
+        original = task.status
+        process_webhook_issue(self._payload(task), project)
+        task.refresh_from_db()
+        assert task.status == original

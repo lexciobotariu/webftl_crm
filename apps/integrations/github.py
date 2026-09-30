@@ -3,7 +3,7 @@ from datetime import datetime
 
 import httpx
 
-from apps.projects.models import Project
+from apps.projects.models import Project, Status
 from apps.tasks.models import Task
 
 from .models import GitHubCommit, GitHubPullRequest
@@ -141,7 +141,7 @@ def process_webhook_issue(payload: dict, project: Project):
     elif action == 'closed':
         try:
             task = Task.objects.get(project=project, github_issue_id=issue['id'])
-            done_status = project.statuses.filter(is_done=True).first()
+            done_status = project.statuses.filter(category=Status.COMPLETED).first()
             if done_status:
                 task.status = done_status
                 task.save()

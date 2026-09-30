@@ -1,0 +1,13 @@
+{# Round initial avatar. Pass user=<user or None>; optional size (px, default 20). Unassigned shows a dashed user icon (Tabler, MIT). #}
+{% with px=size|default:20 %}
+{% if user %}
+<span class="shrink-0 inline-flex items-center justify-center rounded-full bg-elevated border border-border-subtle text-zinc-200 font-semibold"
+      style="width:{{ px }}px;height:{{ px }}px;font-size:{% widthratio px 20 10 %}px"
+      title="{{ user.name }}">{{ user.name|slice:":1"|upper }}</span>
+{% else %}
+<span class="shrink-0 inline-flex items-center justify-center rounded-full border border-dashed border-zinc-600 text-zinc-600"
+      style="width:{{ px }}px;height:{{ px }}px;font-size:{% widthratio px 20 12 %}px" title="Unassigned">
+    {% include "components/icons/tabler-user.svg" %}
+</span>
+{% endif %}
+{% endwith %}

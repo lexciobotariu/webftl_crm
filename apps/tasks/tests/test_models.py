@@ -54,3 +54,49 @@ class TestSubtaskModel:
         SubtaskFactory(task=task, order=1, title='Second')
         subtasks = list(task.subtasks.all())
         assert subtasks[0].title == 'First'
+
+
+@pytest.mark.django_db
+class TestTaskQuerySetStatusCategories:
+    def _task(self, category, **kwargs):
+        from apps.projects.factories import StatusFactory
+        project = ProjectFactory()
+        return TaskFactory(
+            project=project, status=StatusFactory(project=project, category=category), **kwargs
+        )
+
+    def test_done_is_completed_only(self):
+        from apps.tasks.models import Task
+        completed = self._task('completed')
+        self._task('canceled')
+        self._task('started')
+        assert list(Task.objects.done()) == [completed]
+
+    def test_active_excludes_completed_and_canceled(self):
+        from apps.tasks.models import Task
+        self._task('completed')
+        self._task('canceled')
+        started = self._task('started')
+        backlog = self._task('backlog')
+        assert set(Task.objects.active()) == {started, backlog}
+
+    def test_overdue_ignores_canceled_and_completed(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from apps.tasks.models import Task
+        yesterday = timezone.now().date() - timedelta(days=1)
+        late = self._task('started', due_date=yesterday)
+        self._task('canceled', due_date=yesterday)
+        self._task('completed', due_date=yesterday)
+        assert list(Task.objects.overdue()) == [late]
+
+    def test_is_overdue_false_for_canceled(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+        yesterday = timezone.now().date() - timedelta(days=1)
+        assert self._task('started', due_date=yesterday).is_overdue is True
+        assert self._task('canceled', due_date=yesterday).is_overdue is False
+        assert self._task('completed', due_date=yesterday).is_overdue is False

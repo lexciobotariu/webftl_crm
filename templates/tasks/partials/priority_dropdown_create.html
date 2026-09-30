@@ -1,18 +1,14 @@
 <div class="relative" x-data="{ open: false, selected: '{{ form.priority.value|default:'' }}' }">
     <input type="hidden" name="priority" :value="selected">
     <button type="button" @click="open = !open"
-            class="flex items-center gap-2 px-2 py-1.5 rounded-control text-sm hover:bg-elevated transition-colors w-full"
-            :class="{
-                'text-error': selected === 'urgent',
-                'text-error': selected === 'high',
-                'text-zinc-400': selected === 'medium',
-                'text-zinc-400': selected === 'low' || selected === ''
-            }">
+            class="flex items-center gap-2 px-2 py-1.5 rounded-control text-sm text-zinc-300 hover:bg-elevated transition-colors w-full">
+        <span x-show="selected === 'urgent'">{% include "components/priority_icon.html" with priority="urgent" %}</span>
+        <span x-show="selected === 'high'">{% include "components/priority_icon.html" with priority="high" %}</span>
+        <span x-show="selected === 'medium'">{% include "components/priority_icon.html" with priority="medium" %}</span>
+        <span x-show="selected === 'low'">{% include "components/priority_icon.html" with priority="low" %}</span>
+        <span x-show="!selected">{% include "components/priority_icon.html" with priority="" %}</span>
         <template x-if="selected">
-            <span class="flex items-center gap-2">
-                <i data-lucide="signal" class="w-3.5 h-3.5"></i>
-                <span x-text="selected === 'urgent' ? 'Urgent' : selected === 'high' ? 'High' : selected === 'medium' ? 'Medium' : selected === 'low' ? 'Low' : 'None'"></span>
-            </span>
+            <span x-text="selected === 'urgent' ? 'Urgent' : selected === 'high' ? 'High' : selected === 'medium' ? 'Medium' : selected === 'low' ? 'Low' : 'None'"></span>
         </template>
         <template x-if="!selected">
             <span class="text-zinc-500">None</span>
@@ -22,13 +18,14 @@
          x-transition
          class="absolute left-0 top-full mt-1 w-40 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 py-1">
         <button type="button" @click="selected = ''; open = false"
-                class="w-full text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors text-zinc-400">
+                class="w-full flex items-center gap-2 text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors text-zinc-400">
+            {% include "components/priority_icon.html" with priority="" %}
             None
         </button>
         {% for value, label in priority_choices %}
         <button type="button" @click="selected = '{{ value }}'; open = false"
-                class="w-full text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors
-                       {% if value == 'urgent' %}text-error{% elif value == 'high' %}text-error{% elif value == 'medium' %}text-zinc-400{% else %}text-zinc-300{% endif %}">
+                class="w-full flex items-center gap-2 text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors text-zinc-300">
+            {% include "components/priority_icon.html" with priority=value %}
             {{ label }}
         </button>
         {% endfor %}

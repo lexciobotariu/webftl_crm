@@ -59,11 +59,11 @@ class TaskQuerySet(models.QuerySet):
     """
 
     def done(self):
-        return self.filter(status__is_done=True)
+        return self.filter(status__category=Status.COMPLETED)
 
     def active(self):
-        """Tasks in a status that does not count as done."""
-        return self.exclude(status__is_done=True)
+        """Tasks in a status that is not completed or canceled."""
+        return self.exclude(status__category__in=Status.CLOSED_CATEGORIES)
 
     def overdue(self, today=None):
         if today is None:
@@ -145,7 +145,7 @@ class Task(models.Model):
     def is_overdue(self):
         if not self.due_date:
             return False
-        if self.status.is_done:
+        if self.status.is_closed:
             return False
         return self.due_date < timezone.now().date()
 

@@ -90,7 +90,8 @@
                             </a>
                         </td>
                         <td class="px-4 py-3">
-                            <span class="px-2 py-0.5 text-xs rounded-full border border-border-subtle bg-elevated text-zinc-300">
+                            <span class="inline-flex items-center gap-1.5 text-sm text-zinc-300 whitespace-nowrap">
+                                {% include "components/status_icon.html" with category=task.status.category %}
                                 {{ task.status.name }}
                             </span>
                         </td>
