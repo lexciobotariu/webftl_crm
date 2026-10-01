@@ -5,10 +5,9 @@
           @htmx:before-request="saving = true"
           class="space-y-2">
         {% csrf_token %}
-        <textarea name="description" rows="4"
-                  class="w-full bg-panel border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-border-strong focus:outline-none resize-none"
-                  placeholder="Add a description..."
-                  autofocus>{{ task.description|default:"" }}</textarea>
+        {% with pk_str=task.pk|stringformat:"s" %}
+        {% include "tasks/partials/markdown_editor.html" with uid="description-"|add:pk_str name="description" value=task.description rows=6 placeholder="Add a description..." autofocus=True %}
+        {% endwith %}
         <div class="flex items-center gap-2">
             <button type="submit"
                     :disabled="saving"
@@ -27,7 +26,7 @@
     </form>
 </div>
 <script>
-// Cancel on Escape
+// Escape in Write cancels the edit; in Preview the editor takes it first.
 document.querySelector('#task-description-{{ task.pk }} textarea').addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         htmx.ajax('GET', '{% url 'task_edit_description' task.pk %}?cancel=1', {target: '#task-description-{{ task.pk }}', swap: 'innerHTML'});

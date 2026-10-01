@@ -1,3 +1,4 @@
+{% load task_markdown %}
 <div class="relative flex gap-3 py-2">
     <!-- Timeline icon -->
     <div class="relative z-10 flex-shrink-0 w-6 h-6 rounded-full bg-panel border border-border-subtle flex items-center justify-center">
@@ -32,7 +33,7 @@
                 <span class="text-sm font-medium text-zinc-200">{{ activity.user.name|default:"Unknown" }}</span>
                 <span class="text-xs text-zinc-500">commented {{ activity.created_at|timesince }} ago</span>
             </div>
-            <div class="text-sm text-zinc-300">{{ activity.content|linebreaks }}</div>
+            <div class="markdown text-sm text-zinc-300">{{ activity.content|render_markdown }}</div>
         </div>
         {% else %}
         <!-- Activity text -->

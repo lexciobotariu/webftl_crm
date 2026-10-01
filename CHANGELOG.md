@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2026-10-01
+
+### Features
+- Task descriptions and comments are written in Markdown: bold, italics, lists, code, quotes, headings, tables and links; bare URLs become links, and a single line break is kept, so existing text reads the same
+- The description editor and the comment box have Write and Preview tabs; Escape in Preview goes back to Write instead of closing the drawer, and Ctrl/Cmd+Enter saves or posts
+- The description has an explicit edit button (also reachable with the keyboard)
+
+### Changes
+- Clicking a link in a description opens the link instead of starting an edit
+- Raw HTML typed into a description or comment is shown as text, images are not embedded, and links open in a new tab without access to the opener; only `http`, `https` and `mailto` links are kept
+- Descriptions imported from Perfex that contain HTML will show their tags as text
+
 ## [0.11.0] - 2026-10-01
 
 ### Features

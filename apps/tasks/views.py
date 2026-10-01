@@ -494,6 +494,21 @@ def comment_create(request, pk):
     return render(request, 'tasks/partials/activity_item.html', {'activity': activity})
 
 
+# Generous for a description, small enough that a preview cannot tie up a worker.
+MARKDOWN_PREVIEW_MAX = 100_000
+
+
+@login_required
+@require_permission('access_tasks')
+@require_POST
+def markdown_preview(request):
+    """The Preview tab: the text rendered with the same filter as saved text."""
+    text = request.POST.get('text', '')
+    if len(text) > MARKDOWN_PREVIEW_MAX:
+        return HttpResponse('Too long to preview.', status=400)
+    return render(request, 'tasks/partials/markdown_preview.html', {'text': text})
+
+
 @login_required
 @require_permission('access_tasks')
 def task_activity_list(request, pk):
