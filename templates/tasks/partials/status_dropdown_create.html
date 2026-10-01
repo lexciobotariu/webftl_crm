@@ -1,0 +1,24 @@
+{% comment %}Status picker for the create drawer, after priority_dropdown_create.html. It posts status_id, so the drawer can change the status it was opened with. It stays out of task_form_fields.html, which the full-page form shares and which has no status of its own.{% endcomment %}
+<div class="relative" x-data="{ open: false, selected: '{{ selected_status.pk }}' }">
+    <input type="hidden" name="status_id" :value="selected">
+    <button type="button" @click="open = !open" aria-haspopup="menu" :aria-expanded="open"
+            class="inline-flex items-center gap-1.5 px-2 py-1 rounded-control text-xs text-zinc-300 bg-elevated border border-border-subtle hover:bg-hover-strong transition-colors">
+        {% for status in statuses %}
+        <span x-show="selected === '{{ status.pk }}'" class="inline-flex items-center gap-1.5"{% if status.pk != selected_status.pk %} x-cloak{% endif %}>
+            {% include "components/status_icon.html" with category=status.category %}
+            {{ status.name }}
+        </span>
+        {% endfor %}
+    </button>
+    <div x-show="open" x-cloak @click.away="open = false"
+         x-transition
+         class="absolute left-0 top-full mt-1 w-48 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 py-1 max-h-64 overflow-y-auto">
+        {% for status in statuses %}
+        <button type="button" @click="selected = '{{ status.pk }}'; open = false"
+                class="w-full flex items-center gap-2 text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors text-zinc-300">
+            {% include "components/status_icon.html" with category=status.category %}
+            {{ status.name }}
+        </button>
+        {% endfor %}
+    </div>
+</div>

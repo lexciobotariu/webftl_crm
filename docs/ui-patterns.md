@@ -435,6 +435,29 @@ selected (`.task-selected`, defined in `custom.css` from the theme tokens, plus 
   else has it, so a refresh never pulls it out of the search box or the drawer. Closing the
   drawer returns focus to the selected row (`slideover:closed`).
 
+### Creating a task
+
+The create drawer (`task_create_slideover.html`) is one form that is the whole panel: a
+compact header (project, "New task", the **status picker**), a scrolling body, and a footer
+with "Create more", Cancel and Create.
+
+- **Fast entry.** The title takes focus when the drawer opens (and again after "Create more");
+  `Enter` in the title submits natively and `Ctrl` / `Cmd` + `Enter` submits from any field;
+  `hx-sync="this:drop"` ignores a second submit while one is in flight.
+- **Status picker.** `partials/status_dropdown_create.html`, after `priority_dropdown_create.html`,
+  posts `status_id`. It lives in the slide-over template, not in `task_form_fields.html`, which
+  the full-page form shares and which has no status.
+- **Create more.** The checkbox is remembered in `localStorage` (`taskCreateMore`). On success the
+  view returns a fresh form in the same status with a "Created <title>" line and fires only
+  `taskStatusChanged`, so the drawer stays open while the list behind it refreshes.
+- **Prefill.** `?status=`, `?assignee=` and `?priority=` open the drawer with that value. A status
+  or assignee that is not a number, or a priority that is not a choice, is ignored; a status from
+  another project is a 404; a non-numeric `status_id` on submit is a 400. The prefilled assignee's
+  name is resolved from the team list (`selected_assignee`).
+- **Where "+" is.** Board column headers (status), and list group headers when grouped by status,
+  priority or assignee. The group buttons show only with `can_create_task and project`, so not
+  on My Tasks.
+
 ## Kanban Board
 
 The board is the `board` layout of the Tasks page above (`tasks/view/_board.html`), not a

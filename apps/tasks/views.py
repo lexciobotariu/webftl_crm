@@ -155,6 +155,32 @@ def my_tasks(request):
     return response
 
 
+def _int_or_none(raw):
+    """``raw`` as an int, or None when it is missing or not a number."""
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def _create_context(project, form, status, **extra):
+    """What the create drawer and the full-page form need to render."""
+    team_members = list(get_assignable_users(project).order_by('name', 'email'))
+    chosen = str(form['assignee'].value() or '')
+    return {
+        'form': form,
+        'project': project,
+        'selected_status': status,
+        'statuses': project.statuses.all(),
+        'team_members': team_members,
+        # Resolved from the team so a prefilled or re-posted id shows its name.
+        'selected_assignee': next((u for u in team_members if str(u.pk) == chosen), None),
+        'project_labels': project.labels.all(),
+        'priority_choices': Task.PRIORITY_CHOICES,
+        **extra,
+    }
+
+
 @login_required
 @require_permission('access_tasks')
 def task_create(request, project_pk):
@@ -162,9 +188,14 @@ def task_create(request, project_pk):
     if not can_create_task(request.user, project):
         return HttpResponseForbidden("You can't create tasks on this project")
 
-    # Get status from query param or default to first status
-    status_pk = request.GET.get('status') or request.POST.get('status_id')
-    if status_pk:
+    # The status comes from ?status= when the drawer is opened (a column or group "+")
+    # and from the form's status_id when it is submitted. A value that is not a number
+    # is ignored on open and refused on submit; one from another project is a 404.
+    raw_status = request.GET.get('status') or request.POST.get('status_id')
+    status_pk = _int_or_none(raw_status)
+    if raw_status and status_pk is None and request.method == 'POST':
+        return HttpResponse('Invalid status', status=400)
+    if status_pk is not None:
         status = get_object_or_404(Status, pk=status_pk, project=project)
     else:
         status = project.statuses.filter(visible_on_board=True).first() or project.statuses.first()
@@ -179,6 +210,13 @@ def task_create(request, project_pk):
             task.save()
             form.save_m2m()
             if request.htmx:
+                if request.POST.get('create_more'):
+                    # Keep the drawer open on a fresh form in the same status.
+                    response = render(request, 'tasks/task_create_slideover.html', _create_context(
+                        project, TaskForm(project), status, created_title=task.title,
+                    ))
+                    response['HX-Trigger'] = 'taskStatusChanged'
+                    return response
                 response = HttpResponse('')
                 response['HX-Trigger'] = json.dumps({
                     'closeSlideOver': True,
@@ -186,43 +224,23 @@ def task_create(request, project_pk):
                 })
                 return response
             return redirect('project_tasks', pk=project.pk)
-        if request.htmx:
-            team_members = get_assignable_users(project)
-            project_labels = project.labels.all()
-            priority_choices = Task.PRIORITY_CHOICES
-            return render(request, 'tasks/task_create_slideover.html', {
-                'form': form,
-                'project': project,
-                'selected_status': status,
-                'team_members': team_members,
-                'project_labels': project_labels,
-                'priority_choices': priority_choices,
-            })
     else:
-        form = TaskForm(project)
+        # ?assignee= and ?priority= prefill the drawer from a group "+"; anything that
+        # is not a team member or one of the priorities is ignored.
+        initial = {}
+        assignee_pk = _int_or_none(request.GET.get('assignee'))
+        if assignee_pk is not None and get_assignable_users(project).filter(pk=assignee_pk).exists():
+            initial['assignee'] = assignee_pk
+        priority = request.GET.get('priority')
+        if priority in dict(Task.PRIORITY_CHOICES):
+            initial['priority'] = priority
+        form = TaskForm(project, initial=initial)
 
-    # Context for custom dropdown components
-    team_members = get_assignable_users(project)
-    project_labels = project.labels.all()
-    priority_choices = Task.PRIORITY_CHOICES
-
-    # Return slide-over for HTMX, full page otherwise
+    context = _create_context(project, form, status)
+    # Slide-over for HTMX, full page otherwise
     if request.htmx:
-        return render(request, 'tasks/task_create_slideover.html', {
-            'form': form,
-            'project': project,
-            'selected_status': status,
-            'team_members': team_members,
-            'project_labels': project_labels,
-            'priority_choices': priority_choices,
-        })
-    return render(request, 'tasks/task_form.html', {
-        'form': form,
-        'project': project,
-        'team_members': team_members,
-        'project_labels': project_labels,
-        'priority_choices': priority_choices,
-    })
+        return render(request, 'tasks/task_create_slideover.html', context)
+    return render(request, 'tasks/task_form.html', context)
 
 
 @login_required
