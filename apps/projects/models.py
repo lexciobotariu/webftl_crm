@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.validators import RegexValidator
 from django.db import IntegrityError, models, transaction
+from django.utils import timezone
 
 from apps.clients.models import Client
 
@@ -62,17 +63,19 @@ class Project(models.Model):
         same snapshot of taken keys; the one that loses the unique constraint
         derives again from what is taken now.
         """
+        def taken_keys():
+            return set(Project.objects.exclude(pk=self.pk).values_list('key', flat=True))
+
+        taken = taken_keys()
         for attempt in range(KEY_DERIVE_ATTEMPTS):
-            taken = set(Project.objects.exclude(pk=self.pk).values_list('key', flat=True))
             self.key = derive_key(self.name, taken, pk=self.pk)
             try:
                 with transaction.atomic():
                     super().save(*args, **kwargs)
                 return
             except IntegrityError:
-                if attempt == KEY_DERIVE_ATTEMPTS - 1 or self.key not in set(
-                    Project.objects.exclude(pk=self.pk).values_list('key', flat=True)
-                ):
+                taken = taken_keys()
+                if attempt == KEY_DERIVE_ATTEMPTS - 1 or self.key not in taken:
                     # Out of tries, or the failure was about something other than the key.
                     raise
 
@@ -126,6 +129,25 @@ class Status(models.Model):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        update_fields = kwargs.get('update_fields')
+        adding = self._state.adding
+        super().save(*args, **kwargs)
+        if not adding and (update_fields is None or 'category' in update_fields):
+            self._sync_tasks_closed_at()
+
+    def _sync_tasks_closed_at(self):
+        """The rule Task.save applies to one task, for every task in this status.
+
+        Changing a status's type closes or reopens the work in it. ``update()``
+        leaves ``updated_at`` alone. Here, not in the settings view, so the admin
+        (and anything else that saves a Status) keeps ``closed_at`` right too.
+        """
+        if self.is_closed:
+            self.tasks.filter(closed_at__isnull=True).update(closed_at=timezone.now())
+        else:
+            self.tasks.filter(closed_at__isnull=False).update(closed_at=None)
 
     @property
     def is_completed(self):

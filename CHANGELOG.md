@@ -15,11 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changes
 - **On deploy, tasks closed more than 14 days ago disappear from boards and default lists.** Existing closed tasks are dated by their last status change, or their last update when there is none
-- Changing a status's type to completed or canceled (or back) closes or reopens the tasks in it
+- Changing a status's type to completed or canceled (or back) closes or reopens the tasks in it, from the project settings and from the admin alike
 - Tasks imported from Perfex are dated by their finish date, so old finished work archives at once
 
 ### Fixes
-- A GitHub issue sync no longer moves every synced task back to the first status; the first status only applies to a new issue
+- A GitHub issue sync no longer moves every synced task back to the first status; the first status only applies to a new issue, and reopening an issue on GitHub reopens its task
+- A list whose tasks are all archived says so and offers to show them, instead of "No tasks yet"
 
 ## [0.14.1] - 2026-10-01
 

@@ -78,6 +78,17 @@
         Clear filters
     </button>
 </div>
+{% elif archived_count and not total_visible %}
+{# Everything that would be listed is archived: say that, not "No tasks yet". #}
+<div class="flex flex-col items-center justify-center py-16 text-zinc-500">
+    <i data-lucide="archive" class="w-10 h-10 mb-3 opacity-30"></i>
+    <p class="text-sm mb-2">Everything here is archived</p>
+    <button type="button"
+            onclick="const box = document.querySelector('#task-toolbar input[name=archived]'); if (box) { box.checked = true; box.form.requestSubmit(); }"
+            class="text-zinc-200 hover:text-zinc-50 text-sm">
+        Show {{ archived_count }} archived
+    </button>
+</div>
 {% else %}
 <div class="flex flex-col items-center justify-center py-16 text-zinc-500">
     <i data-lucide="check-square" class="w-10 h-10 mb-3 opacity-30"></i>

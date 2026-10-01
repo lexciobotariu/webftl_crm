@@ -482,3 +482,30 @@ class TestMentionNamesAndAccess:
         task.refresh_from_db()
         assert task.assignee is None
         assert _kinds(worker) == []
+
+
+@pytest.mark.django_db
+class TestMentionRuleOnDelete:
+    def test_names_mentioned_takes_the_longest_name(self):
+        from apps.notifications.services import names_mentioned
+
+        names = {'Alex', 'Alex Pop', 'Bo'}
+
+        assert names_mentioned('over to @Alex Pop', names) == {'Alex Pop'}
+        assert names_mentioned('@Alex and @Alex Pop, cc @Bo', names) == {'Alex', 'Alex Pop', 'Bo'}
+        assert names_mentioned('mail alex@example.com', names) == set()
+
+    def test_a_deleted_mention_does_not_fall_back_to_a_comment_naming_someone_else(self):
+        # Comment A names Alex Pop, comment B names Alex. Deleting B must not leave
+        # Alex with a "mentioned you" pointing at A.
+        project = ProjectFactory()
+        author = _member(project)
+        alex, alex_pop = _member(project, name='Alex'), _member(project, name='Alex Pop')
+        task = TaskFactory(project=project)
+        task_services.add_comment(task, 'over to @Alex Pop', author, mentions=[alex_pop.pk])
+        second = task_services.add_comment(task, 'and @Alex too', author, mentions=[alex.pk])
+        assert Notification.objects.filter(recipient=alex, kind='mentioned', read_at__isnull=True).exists()
+
+        task_services.delete_comment(second, author)
+
+        assert not Notification.objects.filter(recipient=alex, kind='mentioned').exists()

@@ -1,0 +1,7 @@
+{% comment %}Shown next to the id of an archived task, in the drawer and on the full page.{% endcomment %}
+{% if task.is_archived %}
+<span class="inline-flex items-center gap-1 text-[11px] text-zinc-400 bg-elevated px-2 py-0.5 rounded border border-border-subtle"
+      title="Closed long enough ago to leave the boards and lists. Reopen it to bring it back.">
+    <i data-lucide="archive" class="w-3 h-3"></i>Archived
+</span>
+{% endif %}

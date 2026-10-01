@@ -334,3 +334,77 @@ def test_the_migration_fills_closed_at_and_goes_back():
     finally:
         executor = MigrationExecutor(connection)
         executor.migrate(executor.loader.graph.leaf_nodes())
+
+
+@pytest.mark.django_db
+class TestArchiveReviewFixes:
+    def test_a_reopened_issue_brings_its_task_back(self):
+        # A sync no longer resets the status, so "reopened" has to move the task itself.
+        from apps.integrations.github import process_webhook_issue
+
+        project = ProjectFactory()
+        task = _age(TaskFactory(project=project, status=_done(project), github_issue_id=7), 30)
+
+        process_webhook_issue({'action': 'reopened', 'issue': {
+            'id': 7, 'number': 3, 'title': 'Back', 'body': '',
+        }}, project)
+        task.refresh_from_db()
+
+        assert not task.status.is_closed
+        assert task.closed_at is None
+        assert not task.is_archived
+
+    def test_reopening_an_issue_whose_task_is_open_leaves_it_where_it_is(self):
+        from apps.integrations.github import process_webhook_issue
+
+        project = ProjectFactory()
+        review = project.statuses.get(name='Review')
+        task = TaskFactory(project=project, status=review, github_issue_id=8)
+
+        process_webhook_issue({'action': 'reopened', 'issue': {
+            'id': 8, 'number': 4, 'title': 'Open', 'body': '',
+        }}, project)
+        task.refresh_from_db()
+
+        assert task.status == review
+
+    def test_saving_a_status_with_a_new_type_closes_or_reopens_its_tasks(self):
+        # The rule is on the model, so the admin follows it, not only the settings page.
+        project = ProjectFactory()
+        review = project.statuses.get(name='Review')
+        task = TaskFactory(project=project, status=review)
+        assert task.closed_at is None
+
+        review.category = Status.COMPLETED
+        review.save()
+        task.refresh_from_db()
+        assert task.closed_at is not None
+
+        review.category = Status.STARTED
+        review.save()
+        task.refresh_from_db()
+        assert task.closed_at is None
+
+    def test_saving_other_status_fields_leaves_closed_at_alone(self):
+        project = ProjectFactory()
+        done = _done(project)
+        task = _age(TaskFactory(project=project, status=done), 30)
+        closed_at = task.closed_at
+
+        done.visible_on_board = False
+        done.save(update_fields=['visible_on_board'])
+        task.refresh_from_db()
+
+        assert task.closed_at == closed_at
+
+    def test_a_list_whose_tasks_are_all_archived_says_so(self, client):
+        project = ProjectFactory()
+        _age(TaskFactory(project=project, status=_done(project), title='Ancient done'), 30)
+        client.force_login(AdminUserFactory())
+
+        html = client.get(reverse('project_tasks', args=[project.pk]), {'layout': 'list'}).content.decode()
+
+        assert 'Everything here is archived' in html
+        assert 'Show 1 archived' in html
+        assert 'No tasks yet' not in html
+        assert 'Create the first task' not in html

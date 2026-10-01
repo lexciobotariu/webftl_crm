@@ -14,7 +14,6 @@ from django.http import (
 )
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.accounts.decorators import require_permission
@@ -577,11 +576,6 @@ def status_set_category(request, pk, status_pk):
             Status.objects.select_for_update(), pk=status_pk, project=project
         )
         status.category = category
+        # Status.save closes or reopens the tasks in the column.
         status.save(update_fields=['category'])
-        # The same rule Task.save applies, for every task in the column at once;
-        # update() leaves updated_at alone.
-        if status.is_closed:
-            status.tasks.filter(closed_at__isnull=True).update(closed_at=timezone.now())
-        else:
-            status.tasks.update(closed_at=None)
     return render(request, 'projects/partials/status_item.html', _status_item_context(project, status))
