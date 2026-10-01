@@ -1,13 +1,14 @@
-// The Tasks page and My Tasks: the quick-edit menu on rows and cards, and scroll
-// that survives a refresh of #task-view. One menu element (#task-quick-menu) serves
-// every row; a delegated listener opens it from any [data-quick] button.
+// The Tasks page and My Tasks: the quick-edit menu on rows and cards, the keyboard
+// selection and shortcuts, and scroll that survives a refresh of #task-view. One menu
+// element (#task-quick-menu) serves every row; a delegated listener opens it from any
+// [data-quick] button. People who cannot edit get no menu, only the selection.
 (function () {
     if (window.__taskViewLoaded) return;
     window.__taskViewLoaded = true;
 
     const menu = () => document.getElementById('task-quick-menu');
     const LABELS = { priority: 'Set priority', status: 'Set status', assignee: 'Set assignee' };
-    let state = null; // the open menu: { trigger, kind, pk, rowId, token, top, left }
+    let state = null; // the open menu: { trigger, kind, pk, rowId, token, top, left, viaKey }
     let token = 0;
     let refocus = null; // after a refresh replaces the trigger, put focus back on its twin
 
@@ -58,7 +59,7 @@
 
     function closeMenu(returnFocus) {
         if (!state) return;
-        const { trigger, kind, rowId } = state;
+        const { trigger, kind, rowId, viaKey } = state;
         const m = menu();
         state = null;
         token += 1;
@@ -66,14 +67,20 @@
         m.replaceChildren();
         trigger.setAttribute('aria-expanded', 'false');
         if (!returnFocus) return;
-        if (trigger.isConnected) trigger.focus({ preventScroll: true });
+        if (viaKey) {
+            // Opened with S / P / A: the row is where the person was.
+            const row = document.getElementById(rowId);
+            if (row) row.focus({ preventScroll: true });
+        } else if (trigger.isConnected) {
+            trigger.focus({ preventScroll: true });
+        }
         // A refresh replaces the trigger; its twin in the new list takes the focus.
-        refocus = { trigger, rowId, kind };
+        refocus = { trigger, rowId, kind, viaKey };
         // If no refresh follows, don't let a much later swap pull focus back.
         setTimeout(() => { if (refocus && refocus.rowId === rowId) refocus = null; }, 4000);
     }
 
-    function openMenu(trigger) {
+    function openMenu(trigger, viaKey) {
         if (state && state.trigger === trigger) {
             closeMenu(true);
             return;
@@ -86,7 +93,7 @@
         const kind = trigger.dataset.quick;
         const mine = ++token;
         const at = trigger.getBoundingClientRect();
-        state = { trigger, kind, pk: row.id.replace('task-', ''), rowId: row.id, token: mine, top: at.top, left: at.left };
+        state = { trigger, kind, pk: row.id.replace('task-', ''), rowId: row.id, token: mine, top: at.top, left: at.left, viaKey: !!viaKey };
         trigger.setAttribute('aria-expanded', 'true');
         const m = menu();
         m.setAttribute('aria-label', LABELS[kind]);
@@ -133,6 +140,9 @@
     }
 
     document.addEventListener('click', (event) => {
+        // Clicking a row or card makes it the selection, so the keys carry on from there.
+        const clicked = event.target.closest('[data-task-row]');
+        if (clicked && !event.target.closest('a')) select(clicked, { focus: false });
         const trigger = event.target.closest('[data-quick]');
         if (trigger) {
             event.preventDefault();
@@ -143,6 +153,7 @@
     });
 
     document.addEventListener('DOMContentLoaded', () => {
+        if (!menu()) return;
         menu().addEventListener('click', (event) => {
             const item = event.target.closest('[role="menuitemradio"]');
             if (item && state) choose(item);
@@ -178,6 +189,205 @@
         if (!state) return false;
         closeMenu(true);
         return true;
+    });
+
+    // --- Selection and shortcuts ----------------------------------------------
+    // The selected row or card is the one keys act on. It carries .task-selected,
+    // tabindex, aria-current and real focus; the id is remembered so a refresh can
+    // put the selection back on the new copy of the same row.
+    const view = () => document.getElementById('task-view');
+    let selectedId = null;
+    let selectedPos = { col: null, idx: 0 };
+
+    const isShown = (el) => el.getClientRects().length > 0;
+    const board = () => document.getElementById('kanban-board-content');
+    const allRows = () => (view() ? Array.from(view().querySelectorAll('[data-task-row]')).filter(isShown) : []);
+    const columnOf = (row) => row.closest('#kanban-board-content > [id^="column-"]');
+    const columnRows = (col) => allRows().filter((row) => columnOf(row) === col);
+    const selectedRow = () => (selectedId ? document.getElementById(selectedId) : null);
+    const isIdle = () => !document.activeElement || document.activeElement === document.body;
+
+    function clearSelection() {
+        document.querySelectorAll('.task-selected').forEach((el) => {
+            el.classList.remove('task-selected');
+            el.removeAttribute('aria-current');
+            el.removeAttribute('tabindex');
+        });
+    }
+
+    function select(row, options) {
+        const { focus = true, preventScroll = false } = options || {};
+        clearSelection();
+        row.classList.add('task-selected');
+        row.setAttribute('aria-current', 'true');
+        row.tabIndex = 0;
+        selectedId = row.id;
+        const col = board() ? columnOf(row) : null;
+        const peers = col ? columnRows(col) : allRows();
+        selectedPos = { col: col ? col.id : null, idx: Math.max(0, peers.indexOf(row)) };
+        if (focus) row.focus({ preventScroll });
+    }
+
+    function deselect() {
+        clearSelection();
+        selectedId = null;
+    }
+
+    // Where the selection goes when its row is gone: same place in the list or column.
+    function fallbackRow() {
+        const rows = allRows();
+        const col = selectedPos.col && document.getElementById(selectedPos.col);
+        const peers = col ? columnRows(col) : rows;
+        const pool = peers.length ? peers : rows;
+        return pool[Math.min(selectedPos.idx, pool.length - 1)] || null;
+    }
+
+    function reselect() {
+        if (!selectedId) return;
+        let row = selectedRow();
+        if (!row || !isShown(row)) row = fallbackRow();
+        if (!row) {
+            selectedId = null;
+            return;
+        }
+        // Only take focus back when nothing else has it: a refresh replaces the row
+        // the person was on, but never pulls focus out of the search box or the drawer.
+        select(row, { focus: isIdle(), preventScroll: true });
+    }
+
+    function step(direction) {
+        const rows = allRows();
+        if (!rows.length) return;
+        const current = selectedRow();
+        if (!current || !isShown(current)) {
+            select(rows[0]);
+            return;
+        }
+        let target = null;
+        if (!board()) {
+            const at = rows.indexOf(current);
+            if (direction === 'next') target = rows[at + 1];
+            else if (direction === 'prev') target = rows[at - 1];
+        } else if (direction === 'next' || direction === 'prev') {
+            const peers = columnRows(columnOf(current));
+            target = peers[peers.indexOf(current) + (direction === 'next' ? 1 : -1)];
+        } else {
+            const columns = Array.from(board().children).filter((el) => el.id.startsWith('column-'));
+            const here = columnOf(current);
+            const index = columnRows(here).indexOf(current);
+            const stride = direction === 'right' ? 1 : -1;
+            for (let at = columns.indexOf(here) + stride; at >= 0 && at < columns.length; at += stride) {
+                const peers = columnRows(columns[at]);
+                if (peers.length) {
+                    target = peers[Math.min(index, peers.length - 1)];
+                    break;
+                }
+            }
+        }
+        if (target) select(target);
+    }
+
+    const isField = (el) => !!el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
+    const drawerOpen = () => !document.getElementById('slide-over').classList.contains('hidden');
+    const help = () => document.getElementById('task-shortcuts');
+    const helpOpen = () => !!help() && !help().hidden;
+
+    function openSelected() {
+        const row = selectedRow();
+        if (!row) return;
+        const url = row.dataset.detailUrl || row.getAttribute('hx-get');
+        if (url) htmx.ajax('GET', url, { target: '#slide-over', swap: 'innerHTML' });
+    }
+
+    let helpReturn = null;
+    function showHelp() {
+        helpReturn = document.activeElement;
+        help().hidden = false;
+        help().querySelector('[role="dialog"]').focus();
+    }
+    function hideHelp() {
+        help().hidden = true;
+        const back = helpReturn && helpReturn.isConnected ? helpReturn : selectedRow();
+        helpReturn = null;
+        if (back) back.focus({ preventScroll: true });
+    }
+
+    document.addEventListener('keydown', (event) => {
+        if (event.defaultPrevented || event.isComposing || event.keyCode === 229) return;
+        if (event.ctrlKey || event.metaKey || event.altKey) return;
+        // The menu and the drawer own the keyboard while they are open.
+        if (state || drawerOpen() || helpOpen()) return;
+        const target = event.target;
+        if (isField(target)) return;
+        const inView = target === document.body || target === document.documentElement
+            || (view() && view().contains(target));
+        if (!inView) return;
+
+        const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+        const handled = () => event.preventDefault();
+        if (key === 'j' || key === 'ArrowDown') { handled(); step('next'); }
+        else if (key === 'k' || key === 'ArrowUp') { handled(); step('prev'); }
+        else if (board() && (key === 'h' || key === 'ArrowLeft')) { handled(); step('left'); }
+        else if (board() && (key === 'l' || key === 'ArrowRight')) { handled(); step('right'); }
+        else if (key === 'Enter') {
+            // On a focused button Enter is that button's click, not "open the task".
+            if (selectedRow() && (target === document.body || target.hasAttribute('data-task-row'))) {
+                handled();
+                openSelected();
+            }
+        } else if (key === '/') {
+            const search = document.getElementById('task-search');
+            if (search) { handled(); search.focus(); search.select(); }
+        } else if (key === 'c') {
+            const create = document.getElementById('task-new');
+            if (create) { handled(); create.click(); }
+        } else if (key === '?') {
+            if (help()) { handled(); showHelp(); }
+        } else if (key === 's' || key === 'p' || key === 'a') {
+            const row = selectedRow();
+            const kind = { s: 'status', p: 'priority', a: 'assignee' }[key];
+            const trigger = row && row.querySelector('[data-quick="' + kind + '"]');
+            if (trigger) { handled(); openMenu(trigger, true); }
+        }
+    });
+
+    // Escape in the search box leaves it. Capture phase, so it runs before the app-wide
+    // Escape handler and that one sees the key as already dealt with.
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape' || event.target.id !== 'task-search') return;
+        event.preventDefault();
+        event.target.blur();
+        const row = selectedRow();
+        if (row) row.focus({ preventScroll: true });
+    }, true);
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!help()) return;
+        help().addEventListener('click', (event) => {
+            if (event.target === help() || event.target.closest('[data-shortcuts-close]')) hideHelp();
+        });
+        // Nothing else in the dialog is focusable, so Tab stays where it is.
+        help().addEventListener('keydown', (event) => {
+            if (event.key === 'Tab') event.preventDefault();
+        });
+    });
+
+    window.registerEscLayer('help', () => {
+        if (!helpOpen()) return false;
+        hideHelp();
+        return true;
+    });
+    window.registerEscLayer('selection', () => {
+        if (!selectedId) return false;
+        const row = selectedRow();
+        deselect();
+        if (row && row === document.activeElement) row.blur();
+        return true;
+    });
+    // Back from the drawer lands on the row it was opened from.
+    document.addEventListener('slideover:closed', () => {
+        const row = selectedRow();
+        if (row && isIdle()) row.focus({ preventScroll: true });
     });
 
     // --- Scroll that survives a refresh -------------------------------------
@@ -219,7 +429,8 @@
         if (!refocus || refocus.trigger.isConnected) return;
         const row = document.getElementById(refocus.rowId);
         const twin = row && row.querySelector('[data-quick="' + refocus.kind + '"]');
-        if (twin && (!document.activeElement || document.activeElement === document.body)) {
+        // A keyboard-opened menu returns to the row, which the selection takes back below.
+        if (twin && !refocus.viaKey && (!document.activeElement || document.activeElement === document.body)) {
             twin.focus({ preventScroll: true });
         }
         refocus = null;
@@ -231,5 +442,6 @@
         restoreScroll();
         scrolls = null;
         restoreFocus();
+        reselect();
     });
 })();

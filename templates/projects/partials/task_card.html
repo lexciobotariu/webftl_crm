@@ -1,6 +1,6 @@
 {# The card does not refresh itself: the Tasks page re-fetches the whole view on taskChanged, which also lets a card leave when an edit takes it out of the current filter. #}
 <div class="group bg-card/90 rounded-card border border-border-subtle p-3 transition-all duration-150 hover:bg-elevated/90 hover:border-border-strong"
-     id="task-{{ task.pk }}" data-task-row
+     id="task-{{ task.pk }}" data-task-row data-detail-url="{% url 'task_detail' task.pk %}"
      x-sort:item="{{ task.pk }}">
     <div class="flex items-stretch gap-2">
         <div class="flex-1 min-w-0 cursor-pointer"

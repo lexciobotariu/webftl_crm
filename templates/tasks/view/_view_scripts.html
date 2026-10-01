@@ -47,5 +47,32 @@
     </button>
     {% endfor %}
 </template>
-<script src="{% static 'js/task-view.js' %}"></script>
 {% endif %}
+{% comment %}The shortcut list that "?" opens. Static/js/task-view.js shows and hides it and keeps focus inside it.{% endcomment %}
+<div id="task-shortcuts" hidden class="fixed inset-0 z-[70] bg-black/50">
+    <div role="dialog" aria-modal="true" aria-labelledby="task-shortcuts-title" tabindex="-1"
+         class="mx-auto mt-24 w-[calc(100%-2rem)] max-w-sm focus:outline-none bg-panel border border-border-subtle rounded-card shadow-lg p-4">
+        <div class="flex items-center justify-between mb-3">
+            <h2 id="task-shortcuts-title" class="text-sm font-medium text-zinc-100">Keyboard shortcuts</h2>
+            <button type="button" data-shortcuts-close aria-label="Close"
+                    class="p-1 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded transition-colors">
+                {% include "components/icons/tabler-x.svg" %}
+            </button>
+        </div>
+        <dl class="space-y-1.5 text-sm">
+            {% include "tasks/view/_shortcut_row.html" with keys="J / K, ↓ / ↑" what="Move the selection" %}
+            {% include "tasks/view/_shortcut_row.html" with keys="H / L, ← / →" what="Between board columns" %}
+            {% include "tasks/view/_shortcut_row.html" with keys="Enter" what="Open the task" %}
+            {% include "tasks/view/_shortcut_row.html" with keys="Esc" what="Close, then clear the selection" %}
+            {% include "tasks/view/_shortcut_row.html" with keys="/" what="Search" %}
+            {% if can_create_task and project %}{% include "tasks/view/_shortcut_row.html" with keys="C" what="New task" %}{% endif %}
+            {% if quick_edit or quick_edit_projects %}
+            {% include "tasks/view/_shortcut_row.html" with keys="S" what="Change status" %}
+            {% include "tasks/view/_shortcut_row.html" with keys="P" what="Change priority" %}
+            {% include "tasks/view/_shortcut_row.html" with keys="A" what="Change assignee" %}
+            {% endif %}
+            {% include "tasks/view/_shortcut_row.html" with keys="?" what="This list" %}
+        </dl>
+    </div>
+</div>
+<script src="{% static 'js/task-view.js' %}"></script>
