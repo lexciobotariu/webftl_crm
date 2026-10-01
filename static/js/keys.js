@@ -48,6 +48,11 @@
     const paletteOptions = () => Array.from(palette().querySelectorAll('[role="option"]'));
     let paletteReturn = null;
     let paletteHint = null;
+    // The query the listed results answer, and an Enter pressed before they arrived.
+    let shownQuery = '';
+    let enterPending = false;
+    const typedQuery = () => field().value.trim();
+    const queryOf = (path) => (new URL(path, window.location.origin).searchParams.get('q') || '').trim();
 
     function setActive(option) {
         paletteOptions().forEach((el) => el.setAttribute('aria-selected', el === option ? 'true' : 'false'));
@@ -60,6 +65,8 @@
         paletteReturn = document.activeElement;
         field().value = '';
         document.getElementById('palette-results').innerHTML = paletteHint;
+        shownQuery = '';
+        enterPending = false;
         setActive(null);
         palette().hidden = false;
         field().focus();
@@ -67,19 +74,30 @@
 
     function closePalette() {
         palette().hidden = true;
+        enterPending = false;
+        // A search still on its way must not fill a palette that is closed (or reopened).
+        htmx.trigger(field(), 'htmx:abort');
         const back = paletteReturn && paletteReturn.isConnected ? paletteReturn : null;
         paletteReturn = null;
         if (back) back.focus({ preventScroll: true });
     }
 
+    // The task's full page is already showing: the drawer would repeat its element ids
+    // (#task-title-<pk> and friends), and an edit in the drawer would land on the page.
+    function onItsOwnPage(option) {
+        const title = document.getElementById('task-title-' + option.id.replace('palette-task-', ''));
+        return !!title && !document.getElementById('slide-over').contains(title);
+    }
+
     function choose(option, newTab) {
         if (!option) return;
-        if (option.dataset.detailUrl && !newTab) {
+        if (newTab) {
+            window.open(option.href, '_blank');
+        } else if (option.dataset.detailUrl && !onItsOwnPage(option)) {
             closePalette();
             htmx.ajax('GET', option.dataset.detailUrl, { target: '#slide-over', swap: 'innerHTML' });
-        } else if (newTab) {
-            window.open(option.href, '_blank');
         } else {
+            closePalette();
             window.location.assign(option.href);
         }
     }
@@ -96,9 +114,35 @@
         });
         if (!palette()) return;
         paletteHint = document.getElementById('palette-results').innerHTML;
-        // Each answer starts on its first result.
+        // Only the answer to what is typed now may be shown. An answer to an earlier
+        // query (slow network, palette closed and reopened) is dropped, and a redirect
+        // means the session ended: go and log in rather than list the login page here.
+        document.addEventListener('htmx:beforeSwap', (event) => {
+            if (!event.detail.target || event.detail.target.id !== 'palette-results') return;
+            const asked = event.detail.pathInfo.finalRequestPath;
+            const answered = new URL(event.detail.xhr.responseURL || asked, window.location.origin);
+            if (answered.pathname !== new URL(asked, window.location.origin).pathname) {
+                event.detail.shouldSwap = false;
+                window.location.reload();
+            } else if (!isPaletteOpen() || queryOf(asked) !== typedQuery()) {
+                event.detail.shouldSwap = false;
+            }
+        });
+        // Each answer starts on its first result; an Enter that was waiting for it goes there.
         document.addEventListener('htmx:afterSwap', (event) => {
-            if (event.detail.target && event.detail.target.id === 'palette-results') setActive(paletteOptions()[0] || null);
+            if (!event.detail.target || event.detail.target.id !== 'palette-results') return;
+            shownQuery = queryOf(event.detail.pathInfo.finalRequestPath);
+            const first = paletteOptions()[0] || null;
+            setActive(first);
+            if (enterPending) {
+                enterPending = false;
+                choose(first, false);
+            }
+        });
+        // What is listed no longer answers what is typed, so nothing is selected until it does.
+        field().addEventListener('input', () => {
+            enterPending = false;
+            if (shownQuery !== typedQuery()) setActive(null);
         });
         field().addEventListener('keydown', (event) => {
             const options = paletteOptions();
@@ -110,7 +154,10 @@
                 setActive(options[(at + step + options.length) % options.length]);
             } else if (event.key === 'Enter' && !event.isComposing) {
                 event.preventDefault();
-                choose(options[at], event.ctrlKey || event.metaKey);
+                // Enter typed ahead of the results waits for them instead of opening
+                // whatever the previous query had listed.
+                if (shownQuery === typedQuery()) choose(options[at], event.ctrlKey || event.metaKey);
+                else enterPending = true;
             } else if (event.key === 'Tab') {
                 // The input is the only control, so focus stays in the dialog.
                 event.preventDefault();
@@ -139,13 +186,20 @@
         });
     });
 
+    // Cmd+K on a Mac, Ctrl+K elsewhere. On a Mac Ctrl+K is "delete to the end of the
+    // line" in a text field and stays that. Autofill sends key events without a key, and
+    // pages without a palette (login) leave the shortcut to the browser.
+    const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
     document.addEventListener('keydown', function (event) {
-        if (event.key.toLowerCase() === 'k' && (event.metaKey || event.ctrlKey) && !event.altKey
-            && !event.shiftKey && !event.isComposing) {
-            event.preventDefault();
-            if (isPaletteOpen()) closePalette();
-            else window.openPalette();
-        }
+        if (!event.key || !palette() || event.key.toLowerCase() !== 'k') return;
+        if (!(isMac ? event.metaKey : event.ctrlKey) || event.altKey || event.shiftKey || event.isComposing) return;
+        event.preventDefault();
+        if (isPaletteOpen()) closePalette();
+        else window.openPalette();
+    });
+    // Back to a page kept whole by the browser: it should not come back with the palette open.
+    window.addEventListener('pageshow', function (event) {
+        if (event.persisted && isPaletteOpen()) closePalette();
     });
 
     document.addEventListener('keydown', function (event) {

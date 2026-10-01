@@ -82,6 +82,32 @@ class TestTasks:
             tasks = services.search(user, query).tasks
             assert tasks[0] == target, query
 
+    def test_the_prefix_may_hold_spaces_and_any_letters(self):
+        # The prefix is the first four characters of the project name, whatever they are.
+        user = _member()
+        project = ProjectFactory(name='My Website')
+        ProjectAccessFactory(project=project, user=user)
+        TaskFactory.create_batch(10, project=project)
+        target = TaskFactory(project=project, title='Unrelated title')
+
+        for query in (f'MY W-{target.pk}', f'R&D -{target.pk}', f'ÉLAN-{target.pk}'):
+            assert services.search(user, query).tasks[0] == target, query
+
+    def test_a_single_digit_is_a_task_id_and_nothing_else(self):
+        user = _member()
+        project = ProjectFactory(name='Project 7')
+        ProjectAccessFactory(project=project, user=user)
+        target = TaskFactory(project=project, id=7, title='Seventh')
+        TaskFactory(project=project, title='Has a 7 in the title')
+
+        results = services.search(user, '7')
+
+        assert not results.too_short
+        assert results.tasks == [target]
+        # One character is still too little to match names by.
+        assert results.projects == [] and results.clients == [] and results.pages == []
+        assert services.search(user, 'a').too_short
+
     def test_an_id_does_not_match_a_task_you_cannot_see(self):
         user = _member()
         hidden = TaskFactory()

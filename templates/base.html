@@ -150,7 +150,7 @@
                        placeholder="Search tasks, projects, clients, pages…" aria-label="Search"
                        role="combobox" aria-expanded="true" aria-controls="palette-list"
                        aria-autocomplete="list" aria-activedescendant=""
-                       hx-get="{% url 'search' %}" hx-trigger="input changed delay:200ms"
+                       hx-get="{% url 'search' %}" hx-trigger="input delay:200ms"
                        hx-target="#palette-results" hx-swap="innerHTML" hx-sync="this:replace"
                        hx-indicator="#palette-spinner"
                        class="flex-1 min-w-0 bg-transparent py-3 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none">
@@ -259,8 +259,12 @@
 
         // Click anywhere outside the open panel closes it. The click that opens a
         // drawer bubbles here while the panel is still hidden, so it can't self-close.
+        // A dialog opened over the drawer (the command palette, the shortcut list) is not
+        // "outside" in that sense: clicking in it must not close the drawer under it and
+        // throw away what was being typed there.
         document.addEventListener('click', (event) => {
             const panel = document.getElementById('slide-over');
+            if (event.target.closest('#palette, #task-shortcuts')) return;
             if (!panel.classList.contains('hidden') && !panel.contains(event.target)) {
                 window.closeSlideOver();
             }

@@ -18,8 +18,10 @@ from .pages import pages_for
 
 MIN_QUERY_LENGTH = 2
 PER_SECTION = 5
-# "19" or "CUST-19": the prefix is only how a task id is shown, so it is ignored.
-TASK_ID = re.compile(r'^(?:[A-Za-z0-9]+-)?(\d{1,9})$')
+# "19" or "CUST-19": the prefix is only how a task id is shown, so it is ignored. It is
+# the first four characters of the project name, which can be anything ("MY W-19",
+# "R&D -19", "ÉLAN-19").
+TASK_ID = re.compile(r'^(?:.*-)?(\d{1,9})$')
 
 
 @dataclass
@@ -43,14 +45,16 @@ def clean_query(raw):
 def search(user, raw_query):
     query = clean_query(raw_query)
     results = SearchResults(query=query)
-    if len(query) < MIN_QUERY_LENGTH:
+    match = TASK_ID.match(query)
+    number = int(match.group(1)) if match else None
+    # One character is too little to search names by, but "7" is a whole task id.
+    id_only = len(query) < MIN_QUERY_LENGTH
+    if id_only and number is None:
         results.too_short = True
         return results
 
     if user.has_app_permission('access_tasks'):
-        condition = Q(title__icontains=query)
-        match = TASK_ID.match(query)
-        number = int(match.group(1)) if match else None
+        condition = Q(pk=number) if id_only else Q(title__icontains=query)
         if number is not None:
             condition |= Q(pk=number)
         tasks = visible_tasks(user).filter(condition).select_related('project', 'status')
@@ -62,6 +66,8 @@ def search(user, raw_query):
         else:
             tasks = tasks.order_by('-updated_at')
         results.tasks = list(tasks[:PER_SECTION])
+    if id_only:
+        return results
 
     if user.has_app_permission('access_projects'):
         results.projects = list(

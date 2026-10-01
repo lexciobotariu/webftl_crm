@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.10.0] - 2026-10-01
 
 ### Features
-- A command palette: Ctrl/Cmd+K (or the Search button in the sidebar) searches tasks, projects, clients and pages, shows only what the person may open, and opens a task in the drawer on the page they are on
+- A command palette: Ctrl/Cmd+K (or the Search button in the sidebar) searches tasks by title or id, projects, clients and pages, shows only what the person may open, and opens a task in the drawer on the page they are on
 
 ## [0.9.0] - 2026-10-01
 
