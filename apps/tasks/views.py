@@ -211,9 +211,14 @@ def task_create(request, project_pk):
             form.save_m2m()
             if request.htmx:
                 if request.POST.get('create_more'):
-                    # Keep the drawer open on a fresh form in the same status.
+                    # Keep the drawer open on a fresh form in the same place: same status,
+                    # assignee and priority, so a run of tasks started from a group "+"
+                    # all land in that group.
+                    fresh = TaskForm(project, initial={
+                        'assignee': task.assignee_id, 'priority': task.priority,
+                    })
                     response = render(request, 'tasks/task_create_slideover.html', _create_context(
-                        project, TaskForm(project), status, created_title=task.title,
+                        project, fresh, status, created_title=task.title,
                     ))
                     response['HX-Trigger'] = 'taskStatusChanged'
                     return response
@@ -402,7 +407,9 @@ def task_quick_menu(request, pk, field):
 @require_POST
 def task_update_status(request, pk):
     task = get_object_or_404(Task, pk=pk)
-    status_id = request.POST.get('status_id')
+    status_id = _int_or_none(request.POST.get('status_id'))
+    if status_id is None:
+        return HttpResponse('Invalid status', status=400)
     status = get_object_or_404(Status, pk=status_id, project=task.project)
     try:
         from apps.tasks import services

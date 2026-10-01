@@ -12,12 +12,17 @@
         layers[name] = handler;
     };
 
+    // A dropdown is an Alpine component with `open` and a panel that closes on a click
+    // outside it. Collapsible sections also use `open` (the permission preset drawer);
+    // they are not something Escape closes.
+    const POPOVER = '[\\@click\\.away], [x-on\\:click\\.away], [\\@click\\.outside], [x-on\\:click\\.outside]';
+
     layers.dropdown = function () {
         if (!window.Alpine) return false;
         for (const el of document.querySelectorAll('[x-data]')) {
             let data;
             try { data = Alpine.$data(el); } catch (error) { continue; }
-            if (data && data.open === true) {
+            if (data && data.open === true && el.querySelector(POPOVER)) {
                 data.open = false;
                 return true;
             }

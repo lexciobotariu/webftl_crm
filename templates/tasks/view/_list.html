@@ -34,29 +34,13 @@
             <span class="text-xs text-zinc-500 tabular-nums">{{ group.count }}</span>
         </button>
         {# Siblings of the button, not inside it: a link or button in a button is not valid HTML. #}
-        {% if can_create_task and project %}
-        {% if group.kind == 'status' %}
-        <button type="button" hx-get="{% url 'task_create' project.pk %}?status={{ group.status.pk }}"
+        {% if can_create_task and project and group.create_query is not None %}
+        <button type="button" hx-get="{% url 'task_create' project.pk %}{% if group.create_query %}?{{ group.create_query }}{% endif %}"
                 hx-target="#slide-over" hx-swap="innerHTML" hx-on::after-request="openSlideOver(event)"
                 title="Add task to {{ group.label }}" aria-label="Add task to {{ group.label }}"
                 class="px-3 py-1.5 text-zinc-500 hover:text-zinc-200 transition-colors">
             <i data-lucide="plus" class="w-3.5 h-3.5"></i>
         </button>
-        {% elif group.kind == 'priority' %}
-        <button type="button" hx-get="{% url 'task_create' project.pk %}{% if group.priority %}?priority={{ group.priority }}{% endif %}"
-                hx-target="#slide-over" hx-swap="innerHTML" hx-on::after-request="openSlideOver(event)"
-                title="Add task to {{ group.label }}" aria-label="Add task to {{ group.label }}"
-                class="px-3 py-1.5 text-zinc-500 hover:text-zinc-200 transition-colors">
-            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-        </button>
-        {% elif group.kind == 'assignee' %}
-        <button type="button" hx-get="{% url 'task_create' project.pk %}{% if group.user %}?assignee={{ group.user.pk }}{% endif %}"
-                hx-target="#slide-over" hx-swap="innerHTML" hx-on::after-request="openSlideOver(event)"
-                title="Add task for {{ group.label }}" aria-label="Add task for {{ group.label }}"
-                class="px-3 py-1.5 text-zinc-500 hover:text-zinc-200 transition-colors">
-            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-        </button>
-        {% endif %}
         {% endif %}
         {% if group.kind == 'project' and perms_map.access_projects %}
         <a href="{% url 'project_tasks' group.project.pk %}" title="Open {{ group.project.name }}"

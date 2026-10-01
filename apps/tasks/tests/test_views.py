@@ -84,6 +84,26 @@ class TestTaskCreate:
 
 @pytest.mark.django_db
 class TestTaskEdit:
+    def test_edit_form_shows_who_the_task_is_assigned_to(self, client):
+        # The assignee control reads the name from the instance when the view passes
+        # no selected_assignee, and falls back to the email for someone without a name.
+        user = UserFactory()
+        project = ProjectFactory()
+        ProjectAccessFactory(project=project, user=user)
+        named = UserFactory(name='Grace Hopper')
+        nameless = UserFactory(name='', email='nameless@example.com')
+        ProjectAccessFactory(project=project, user=named)
+        ProjectAccessFactory(project=project, user=nameless)
+        client.force_login(user)
+
+        task = TaskFactory(project=project, assignee=named)
+        html = client.get(reverse('task_edit', args=[task.pk])).content.decode()
+        assert "selectedName: 'Grace Hopper'" in html
+
+        task = TaskFactory(project=project, assignee=nameless)
+        html = client.get(reverse('task_edit', args=[task.pk])).content.decode()
+        assert "selectedName: 'nameless@example.com'" in html
+
     def test_task_edit_records_activity_with_user(self, client):
         """Editing a task via form records activity with the editing user."""
         from apps.tasks.models import TaskActivity
@@ -207,6 +227,21 @@ class TestTaskUpdateStatus:
         activity = TaskActivity.objects.filter(task=task, activity_type='status_change').first()
         assert activity is not None
         assert activity.user == user
+
+    @pytest.mark.django_db
+    def test_task_update_status_refuses_a_status_that_is_not_a_number(self, client):
+        user = UserFactory()
+        project = ProjectFactory()
+        ProjectAccessFactory(project=project, user=user)
+        task = TaskFactory(project=project)
+        client.force_login(user)
+
+        response = client.post(
+            reverse('task_update_status', args=[task.pk]), {'status_id': 'abc'},
+            HTTP_HX_REQUEST='true',
+        )
+
+        assert response.status_code == 400
 
     @pytest.mark.django_db
     def test_task_update_status_renders_new_status_in_dropdown(self, client):

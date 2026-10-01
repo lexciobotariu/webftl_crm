@@ -197,11 +197,33 @@
             document.getElementById('slide-over').classList.remove('hidden');
             lucide.createIcons();
         };
+        // The drawer is emptied once closed, so what was open stops fetching for a task
+        // nobody sees. Not straight away, though: emptying detaches the element that sent a
+        // request, and an HX-Trigger event dispatched on a detached element never reaches
+        // <body>. A response that closes the drawer and refreshes a list ("closeSlideOver"
+        // then "taskStatusChanged") would lose the refresh, and so would an edit whose
+        // answer is still on its way when Escape is pressed. So wait until the events of
+        // this response are out and nothing in the drawer is in flight.
+        const slideOver = document.getElementById('slide-over');
+        let slideOverRequests = 0;
+        function emptySlideOverIfClosed() {
+            if (slideOver.classList.contains('hidden') && slideOverRequests === 0) {
+                slideOver.replaceChildren();
+            }
+        }
+        slideOver.addEventListener('htmx:beforeSend', () => { slideOverRequests += 1; });
+        slideOver.addEventListener('htmx:afterRequest', () => {
+            slideOverRequests = Math.max(0, slideOverRequests - 1);
+            setTimeout(emptySlideOverIfClosed, 0);
+        });
+        // New content in the drawer: whatever the old content was waiting for can no
+        // longer report back here, so stop counting it.
+        slideOver.addEventListener('htmx:afterSwap', (event) => {
+            if (event.detail.target === slideOver) slideOverRequests = 0;
+        });
         window.closeSlideOver = function () {
-            const panel = document.getElementById('slide-over');
-            panel.classList.add('hidden');
-            // Empty it, so what was open stops polling and fetching for a task nobody sees.
-            panel.replaceChildren();
+            slideOver.classList.add('hidden');
+            setTimeout(emptySlideOverIfClosed, 0);
             document.dispatchEvent(new Event('slideover:closed'));
         };
         document.body.addEventListener('closeSlideOver', window.closeSlideOver);
