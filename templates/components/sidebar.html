@@ -12,6 +12,16 @@
         </div>
     </div>
 
+    <!-- Search: opens the command palette, so it works without the keyboard shortcut -->
+    <div class="px-2 pt-3">
+        <button type="button" onclick="window.openPalette && window.openPalette()"
+                class="w-full flex items-center gap-2.5 px-3 py-2 rounded-control text-[13px] text-zinc-500 bg-panel/60 border border-border-subtle hover:text-zinc-200 hover:bg-hover transition-colors duration-150">
+            <i data-lucide="search" class="w-4 h-4"></i>
+            Search
+            <kbd data-palette-hint class="ml-auto text-[10px] font-mono text-zinc-500">Ctrl K</kbd>
+        </button>
+    </div>
+
     <!-- Navigation -->
     <nav class="flex-1 px-2 py-3 space-y-1">
         {% if perms_map.access_dashboard %}
