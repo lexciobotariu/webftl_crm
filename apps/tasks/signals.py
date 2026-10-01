@@ -1,7 +1,7 @@
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
-from apps.notifications.services import notify_assigned
+from apps.notifications.services import notify_assigned, withdraw_assigned
 
 from .models import Task, TaskActivity
 
@@ -70,6 +70,7 @@ def log_task_changes(sender, instance, created, **kwargs):
             new_value=new_name,
             content=f'changed assignee from {old_name} to {new_name}'
         )
+        withdraw_assigned(instance, instance._old_assignee)
         if user is not None:
             notify_assigned(instance, user)
 

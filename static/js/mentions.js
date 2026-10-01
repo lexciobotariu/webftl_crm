@@ -7,6 +7,7 @@
 (function () {
     const LIMIT = 6;
     let open = null; // { textarea, menu, start, matches, active }
+    let renders = 0;
 
     function peopleFor(textarea) {
         const source = document.getElementById(textarea.dataset.mentions);
@@ -52,13 +53,16 @@
     }
 
     function render(textarea, start, matches) {
-        const menu = document.getElementById(textarea.getAttribute('aria-controls'));
+        // Next to the textarea, not by id: a task open on its full page and in the
+        // drawer has two comment boxes with the same ids.
+        const menu = textarea.parentElement.querySelector('[role="listbox"]');
         if (!menu) return;
         if (!matches.length) { close(); return; }
         open = { textarea, menu, start, matches, active: 0 };
+        const round = ++renders;
         menu.replaceChildren(...matches.map((person) => {
             const option = document.createElement('li');
-            option.id = `${menu.id}-${person.id}`;
+            option.id = `${menu.id}-${round}-${person.id}`;
             option.setAttribute('role', 'option');
             option.dataset.index = String(matches.indexOf(person));
             option.className = 'px-3 py-1.5 text-sm text-zinc-300 cursor-pointer aria-selected:bg-hover-strong aria-selected:text-zinc-100';

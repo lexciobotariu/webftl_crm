@@ -29,7 +29,8 @@ def _member(project=None, name=None, **flags):
 
 
 def _kinds(user):
-    return sorted(Notification.objects.filter(recipient=user).values_list('kind', flat=True))
+    """Unread notifications of ``user``, by kind."""
+    return sorted(Notification.objects.filter(recipient=user, read_at__isnull=True).values_list('kind', flat=True))
 
 
 def _assign(task, assignee, by):
@@ -102,7 +103,8 @@ class TestCommented:
         task.assignee = assignee
         task.save()
         task_services.add_comment(task, 'first', earlier)
-        Notification.objects.all().delete()
+        # Everyone has seen what happened so far.
+        Notification.objects.update(read_at='2026-01-01T00:00:00Z')
         return task, creator, assignee, earlier, outsider, author
 
     def test_followers_hear_about_a_comment_and_the_author_does_not(self):
@@ -114,7 +116,7 @@ class TestCommented:
             assert _kinds(follower) == ['commented']
         assert _kinds(outsider) == []
         assert _kinds(author) == []
-        note = Notification.objects.get(recipient=creator)
+        note = Notification.objects.get(recipient=creator, read_at__isnull=True)
         assert note.activity.content == 'hello' and note.actor == author
 
     def test_your_own_comment_on_your_task_notifies_the_others_only(self):
@@ -158,6 +160,8 @@ class TestCommented:
 
         task_services.add_comment(task, 'x', author, mentions=['abc', None, 999999])
 
+        assert not Notification.objects.filter(kind='mentioned').exists()
+
     def test_comments_while_unread_keep_one_row_with_the_latest(self):
         task, creator, *_rest, author = self._setup()
         other = _member(task.project)
@@ -165,18 +169,19 @@ class TestCommented:
         task_services.add_comment(task, 'one', author)
         task_services.add_comment(task, 'two', other)
 
-        notes = Notification.objects.filter(recipient=creator, kind='commented')
+        notes = Notification.objects.filter(recipient=creator, kind='commented', read_at__isnull=True)
         assert notes.count() == 1
         assert notes.get().actor == other and notes.get().activity.content == 'two'
 
     def test_a_read_notification_gets_a_new_row_next_time(self):
         task, creator, *_rest, author = self._setup()
 
+        before = Notification.objects.filter(recipient=creator).count()
         task_services.add_comment(task, 'one', author)
         Notification.objects.filter(recipient=creator).update(read_at='2026-01-01T00:00:00Z')
         task_services.add_comment(task, 'two', author)
 
-        assert Notification.objects.filter(recipient=creator).count() == 2
+        assert Notification.objects.filter(recipient=creator).count() == before + 2
 
     def test_deleting_the_comment_removes_its_notification(self):
         task, creator, *_rest, author = self._setup()
@@ -184,7 +189,7 @@ class TestCommented:
         comment = task_services.add_comment(task, 'oops', author)
         task_services.delete_comment(comment, author)
 
-        assert not Notification.objects.filter(recipient=creator).exists()
+        assert _kinds(creator) == []
 
     def test_the_comment_view_passes_the_chosen_mentions(self, client):
         task, *_rest, outsider, author = self._setup()
@@ -361,3 +366,76 @@ class TestMentionMenu:
         assert 'Ana Team' in names and 'Me Myself' not in names
         assert 'Zed Elsewhere' not in names and 'Nora NoTasks' not in names
         assert 'role="listbox"' in html
+
+
+@pytest.mark.django_db
+class TestReviewFixes:
+    def test_deleting_the_latest_comment_keeps_the_notice_for_an_earlier_one(self):
+        project = ProjectFactory()
+        follower, alice, carol = _member(project), _member(project), _member(project)
+        task = TaskFactory(project=project)
+        task.activities.filter(activity_type='created').update(user=follower)
+
+        first = task_services.add_comment(task, 'A', alice)
+        latest = task_services.add_comment(task, 'C', carol)
+        task_services.delete_comment(latest, carol)
+
+        note = Notification.objects.get(recipient=follower, kind='commented')
+        assert note.activity == first and note.actor == alice
+
+    def test_deleting_the_only_unread_comment_removes_the_notice(self):
+        project = ProjectFactory()
+        follower, alice = _member(project), _member(project)
+        task = TaskFactory(project=project)
+        task.activities.filter(activity_type='created').update(user=follower)
+        old = task_services.add_comment(task, 'seen already', alice)
+        Notification.objects.update(read_at='2026-01-01T00:00:00Z')
+
+        latest = task_services.add_comment(task, 'new', alice)
+        task_services.delete_comment(latest, alice)
+
+        assert not Notification.objects.filter(recipient=follower, read_at__isnull=True).exists()
+        assert old.pk
+
+    def test_deleting_a_later_mention_keeps_an_earlier_mention(self):
+        project = ProjectFactory()
+        target = _member(project, name='Tia Target')
+        alice, carol = _member(project), _member(project)
+        task = TaskFactory(project=project)
+
+        first = task_services.add_comment(task, 'hi @Tia Target', alice, mentions=[target.pk])
+        latest = task_services.add_comment(task, 'again @Tia Target', carol, mentions=[target.pk])
+        task_services.delete_comment(latest, carol)
+
+        note = Notification.objects.get(recipient=target, kind='mentioned')
+        assert note.activity == first
+
+    def test_reassigning_withdraws_the_unread_assigned_notice(self):
+        project = ProjectFactory()
+        boss, first, second = _member(project), _member(project), _member(project)
+        task = TaskFactory(project=project)
+
+        _assign(task, first, boss)
+        _assign(task, second, boss)
+
+        assert _kinds(first) == []
+        assert _kinds(second) == ['assigned']
+
+    def test_reassigning_keeps_a_read_assigned_notice(self):
+        project = ProjectFactory()
+        boss, first, second = _member(project), _member(project), _member(project)
+        task = TaskFactory(project=project)
+        _assign(task, first, boss)
+        Notification.objects.update(read_at='2026-01-01T00:00:00Z')
+
+        _assign(task, second, boss)
+
+        assert Notification.objects.filter(recipient=first, kind='assigned', read_at__isnull=False).exists()
+
+    def test_the_mention_menu_is_found_next_to_its_textarea(self):
+        from pathlib import Path
+
+        script = Path('static/js/mentions.js').read_text()
+
+        # A task open on its full page and in the drawer repeats the menu id.
+        assert "getElementById(textarea.getAttribute('aria-controls'))" not in script

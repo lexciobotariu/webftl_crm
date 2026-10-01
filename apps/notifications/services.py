@@ -47,6 +47,51 @@ def notify_assigned(task, actor):
     notify(task.assignee, actor, task, Notification.ASSIGNED)
 
 
+def withdraw_assigned(task, previous_assignee):
+    """The task moved on to someone else: an unread "assigned you" is no longer true."""
+    if previous_assignee is not None:
+        Notification.objects.filter(
+            recipient=previous_assignee, task=task, kind=Notification.ASSIGNED, read_at__isnull=True
+        ).delete()
+
+
+def comment_deleted(comment):
+    """Before ``comment`` is deleted: keep unread notices that earlier comments still justify.
+
+    An unread row moves to the latest comment, so deleting that comment would
+    take the notice for the earlier ones with it. Each row pointing here moves
+    back to the newest remaining comment that would have raised it (not by the
+    recipient, newer than the recipient's last read notice of that kind, and
+    for a mention still naming them). A row with nothing left goes with the
+    comment.
+    """
+    notes = Notification.objects.filter(activity=comment, read_at__isnull=True).select_related('recipient')
+    for note in notes:
+        candidates = (
+            TaskActivity.objects.filter(task_id=comment.task_id, activity_type='comment')
+            .exclude(pk=comment.pk)
+            .exclude(user_id=note.recipient_id)
+            .order_by('-created_at', '-pk')
+        )
+        last_read = (
+            Notification.objects.filter(
+                recipient_id=note.recipient_id, task_id=comment.task_id, kind=note.kind, read_at__isnull=False
+            )
+            .order_by('-created_at')
+            .values_list('created_at', flat=True)
+            .first()
+        )
+        if last_read is not None:
+            candidates = candidates.filter(created_at__gt=last_read)
+        if note.kind == Notification.MENTIONED:
+            candidates = candidates.filter(content__contains=f'@{note.recipient.name}')
+        previous = candidates.first()
+        if previous is not None:
+            Notification.objects.filter(pk=note.pk).update(
+                activity=previous, actor_id=previous.user_id, created_at=previous.created_at
+            )
+
+
 def _mentioned(task, content, mention_ids):
     """The people picked in the @ menu who can see the task and are still named in the text."""
     ids = set()

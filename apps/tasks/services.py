@@ -323,8 +323,12 @@ def edit_comment(comment, content, user):
 
 
 def delete_comment(comment, user):
+    from apps.notifications.services import comment_deleted
+
     require_comment_change(user, comment)
-    comment.delete()
+    with transaction.atomic():
+        comment_deleted(comment)
+        comment.delete()
 
 
 def validate_upload(file):
