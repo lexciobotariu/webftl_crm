@@ -1,5 +1,5 @@
 {% load task_markdown %}
-<div id="activity-{{ activity.pk }}" class="relative flex gap-3 py-2">
+<div id="activity-{{ activity.pk }}" class="relative flex gap-3 py-2" data-kind="{% if activity.activity_type == 'comment' %}comment{% else %}event{% endif %}">
     <!-- Timeline icon -->
     <div class="relative z-10 flex-shrink-0 w-6 h-6 rounded-full bg-panel border border-border-subtle flex items-center justify-center">
         {% if activity.activity_type == 'comment' %}

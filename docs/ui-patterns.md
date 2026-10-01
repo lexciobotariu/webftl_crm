@@ -373,7 +373,7 @@ filters or pagination, so nothing is lost there.
   (`apps/tasks/durations.py`); a bare number is hours in the estimate and refused when logging. Time is
   logged as **duration + date**, never start and end, and shown as date + duration.
 - **`timerChanged`** (an `HX-Trigger`, sent by start, stop, log, edit and delete) is the one event for
-  time. Listeners: the running-timer bar, the entry list, and `#time-logged-<pk>` — the single listener
+  time. Listeners: the running-timer bar, the activity list (see below), and `#time-logged-<pk>` — the single listener
   of the Time property. Its answer (`task_time_property`) replaces itself and brings the bar, the
   Start/Stop button and the task header's Start/Stop button along with `hx-swap-oob`, so nothing
   listens twice. Changing the estimate sends `taskUpdated-<pk>`, which the same element hears.
@@ -383,6 +383,26 @@ filters or pagination, so nothing is lost there.
   on a `relative` parent), not to its button: the sidebar is `overflow-hidden` and clips anything wider.
 - **Logging answers with an empty body**; anything else is the reason, swapped into the popover's
   error line. The popover does not close the drawer.
+
+### Activity: comments, events and the Work log
+
+- **One list, three tabs** (All / Comments / Work log, `static/js/activity-filter.js`). The list is
+  always rendered whole; every row carries `data-kind` (`comment`, `event`, `work`, plus the Work
+  log's `summary`) and `custom.css` hides what the open tab does not match, so a refresh or a new
+  comment never needs to know the tab. Empty states are `data-empty` lines the CSS shows when a tab
+  has nothing. The tabs copy the Write/Preview tablist (roving `tabindex`, arrow keys, wrapping).
+  Each opening starts on **All**, so a notification that leads to a comment is not behind a tab that
+  hides it, and a comment written from Work log sends the tab back to All.
+- **`task_activities` merges at read time.** It returns activities plus the time entries the viewer
+  may see (`entries_on_task`), ordered by `created_at` (for time that is when it was logged, not the
+  day it is for), each marked `item_type` and `can_change`. Nothing is written to the activity
+  table for time, so editing or deleting an entry has nothing to sync and time stays out of the
+  project's activity. The query count does not grow with the rows (tested).
+- **A time row has its own ids** (`time-entry-<pk>`), reads "Lex logged 1h 30m — note", and edits in
+  place like a comment (the refresh guard `#activity-items-<pk> form` covers it). Delete answers an
+  empty 200 so the row goes. A running timer reads "timer running" and can only be deleted.
+- **Work log totals** per person come from the rows already read. What the viewer cannot see is one
+  "Others" line, taken from the task's full total, so the sum matches the Time property.
 
 **Deprecated:** POSTing into list containers (`#client-list`, `#notes-list`, `#preset-list`) — causes broken empty states and nested IDs.
 
