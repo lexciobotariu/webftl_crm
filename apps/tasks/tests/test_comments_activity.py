@@ -394,3 +394,24 @@ class TestReviewFixes:
 
         activity_reads = [q['sql'] for q in queries if 'FROM "tasks_taskactivity"' in q['sql']]
         assert len(activity_reads) == 1, activity_reads
+
+
+@pytest.mark.django_db
+class TestDescriptionWhitespace:
+    def test_whitespace_at_the_ends_is_not_an_edit(self):
+        # The inline editor keeps a trailing newline, the full form strips it; saving
+        # the form for another reason must not log "updated the description".
+        project = ProjectFactory()
+        user = _editor(project)
+        task = TaskFactory(project=project, description='Line one\n')
+
+        task.description = 'Line one'
+        task._changed_by = user
+        task.save()
+
+        assert not TaskActivity.objects.filter(task=task, activity_type='description_change').exists()
+
+        task.description = 'Line two'
+        task.save()
+
+        assert TaskActivity.objects.filter(task=task, activity_type='description_change').count() == 1

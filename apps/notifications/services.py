@@ -102,7 +102,17 @@ def _mentioned(task, content, mention_ids):
             continue
     if not ids:
         return []
-    return [person for person in people_who_can_see(task).filter(pk__in=ids) if f'@{person.name}' in content]
+    viewers = [person for person in people_who_can_see(task) if person.name]
+    # Longest first: at each "@" the text names whoever's full name follows it, so
+    # "@Alex Pop" is Alex Pop and never also Alex.
+    names = sorted({person.name for person in viewers}, key=len, reverse=True)
+    named = set()
+    start = content.find('@')
+    while start != -1:
+        rest = content[start + 1:]
+        named.add(next((name for name in names if rest.startswith(name)), None))
+        start = content.find('@', start + 1)
+    return [person for person in viewers if person.pk in ids and person.name in named]
 
 
 def notify_comment(comment, mention_ids=()):

@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.1] - 2026-10-01
+
+### Fixes
+- A commit or pull request that writes a task as `#CUST-12` is linked like one that writes `CUST-12`, and a message naming several tasks links to the first one that exists
+- File names such as `manage.py`, `README.md` or `deploy.sh` in a description or comment are no longer turned into links; a link needs `http://`, `https://` or an email address
+- Mentioning `@Alex Pop` no longer also notifies Alex when he had been picked in the same comment earlier
+- Losing access to a project withdraws an unread "assigned you" notice along with the assignment, so it does not come back if the person is added again
+- Saving the full task form no longer logs "updated the description" when only the whitespace at its ends differed
+- The description editor's Save button works again after a save was refused for being too long
+- Two projects created at the same moment with the same name prefix no longer fail on the derived key
+
 ## [0.14.0] - 2026-10-01
 
 ### Features

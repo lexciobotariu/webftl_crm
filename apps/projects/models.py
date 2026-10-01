@@ -1,10 +1,12 @@
 from django.conf import settings
 from django.core.validators import RegexValidator
-from django.db import models
+from django.db import IntegrityError, models, transaction
 
 from apps.clients.models import Client
 
 from .keys import KEY_MAX_LENGTH, KEY_REGEX, derive_key
+
+KEY_DERIVE_ATTEMPTS = 3
 
 
 class Project(models.Model):
@@ -38,9 +40,7 @@ class Project(models.Model):
 
     def save(self, *args, **kwargs):
         is_new = self.pk is None
-        if not self.key:
-            taken = set(Project.objects.exclude(pk=self.pk).values_list('key', flat=True))
-            self.key = derive_key(self.name, taken, pk=self.pk)
+        derived = not self.key
         if not self._state.adding and kwargs.get('update_fields') is None:
             # A project loaded before a task was created holds a stale counter;
             # writing it back would hand out the same task numbers again.
@@ -48,9 +48,33 @@ class Project(models.Model):
                 field.name for field in self._meta.concrete_fields
                 if not field.primary_key and field.name != 'task_counter'
             ]
-        super().save(*args, **kwargs)
+        if not derived:
+            super().save(*args, **kwargs)
+        else:
+            self._save_with_derived_key(*args, **kwargs)
         if is_new:
             self._create_default_statuses()
+
+    def _save_with_derived_key(self, *args, **kwargs):
+        """Save under a key derived from the name.
+
+        Two projects created at the same moment can derive the same key from the
+        same snapshot of taken keys; the one that loses the unique constraint
+        derives again from what is taken now.
+        """
+        for attempt in range(KEY_DERIVE_ATTEMPTS):
+            taken = set(Project.objects.exclude(pk=self.pk).values_list('key', flat=True))
+            self.key = derive_key(self.name, taken, pk=self.pk)
+            try:
+                with transaction.atomic():
+                    super().save(*args, **kwargs)
+                return
+            except IntegrityError:
+                if attempt == KEY_DERIVE_ATTEMPTS - 1 or self.key not in set(
+                    Project.objects.exclude(pk=self.pk).values_list('key', flat=True)
+                ):
+                    # Out of tries, or the failure was about something other than the key.
+                    raise
 
     def _create_default_statuses(self):
         defaults = [

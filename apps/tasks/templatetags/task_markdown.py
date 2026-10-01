@@ -17,6 +17,10 @@ register = template.Library()
 # keeps a single newline as a line break, so text written before markdown
 # reads the same.
 _markdown = MarkdownIt('gfm-like', options_update={'html': False, 'breaks': True}).disable('image')
+# Only text that says it is a link becomes one (http://, https://, mailto:, an email
+# address). Without this "manage.py", "README.md" and "deploy.sh" would turn into
+# links to whoever owns those domains.
+_markdown.linkify.set({'fuzzy_link': False})
 
 ALLOWED_TAGS = {
     'p', 'br', 'hr', 'strong', 'em', 's', 'del', 'code', 'pre', 'blockquote',

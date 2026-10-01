@@ -439,3 +439,46 @@ class TestReviewFixes:
 
         # A task open on its full page and in the drawer repeats the menu id.
         assert "getElementById(textarea.getAttribute('aria-controls'))" not in script
+
+
+@pytest.mark.django_db
+class TestMentionNamesAndAccess:
+    def test_a_mention_is_the_longest_name_after_the_at(self):
+        # "@Alex Pop" names Alex Pop. Alex was picked earlier and his hidden id is
+        # still posted, but nothing in the text names him.
+        project = ProjectFactory()
+        author = _member(project)
+        alex, alex_pop = _member(project, name='Alex'), _member(project, name='Alex Pop')
+        task = TaskFactory(project=project)
+
+        task_services.add_comment(task, 'over to @Alex Pop', author, mentions=[alex.pk, alex_pop.pk])
+
+        assert _kinds(alex_pop) == ['mentioned']
+        assert _kinds(alex) == []
+
+    def test_both_are_mentioned_when_both_are_named(self):
+        project = ProjectFactory()
+        author = _member(project)
+        alex, alex_pop = _member(project, name='Alex'), _member(project, name='Alex Pop')
+        task = TaskFactory(project=project)
+
+        task_services.add_comment(task, '@Alex and @Alex Pop', author, mentions=[alex.pk, alex_pop.pk])
+
+        assert _kinds(alex) == ['mentioned']
+        assert _kinds(alex_pop) == ['mentioned']
+
+    def test_losing_access_withdraws_an_unread_assignment(self):
+        from apps.projects.models import ProjectAccess
+
+        project = ProjectFactory()
+        boss, worker = _member(project), _member(project)
+        task = TaskFactory(project=project)
+        _assign(task, worker, boss)
+        assert _kinds(worker) == ['assigned']
+
+        ProjectAccess.objects.get(project=project, user=worker).delete()
+        ProjectAccessFactory(project=project, user=worker)
+
+        task.refresh_from_db()
+        assert task.assignee is None
+        assert _kinds(worker) == []

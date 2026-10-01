@@ -280,3 +280,34 @@ class TestTaskReferences:
         }}, project)
 
         assert GitHubPullRequest.objects.get().task == tasks[2]
+
+
+@pytest.mark.django_db
+class TestTaskReferenceSpellings:
+    def _project(self, key='CUST'):
+        from apps.tasks.factories import TaskFactory
+
+        project = ProjectFactory(name='Custom CRM', key=key)
+        return project, TaskFactory.create_batch(3, project=project)
+
+    def test_a_hash_before_the_key_reads_the_same(self):
+        from apps.integrations.github import find_referenced_task
+
+        project, tasks = self._project()
+
+        assert find_referenced_task('fix: login, closes #CUST-2', project) == tasks[1]
+
+    def test_the_first_reference_to_a_real_task_wins(self):
+        from apps.integrations.github import find_referenced_task
+
+        project, tasks = self._project()
+
+        assert find_referenced_task('refs CUST-99, fixes CUST-2 and CUST-3', project) == tasks[1]
+
+    def test_a_project_keyed_task_leaves_the_hash_form_to_the_old_rule(self):
+        from apps.integrations.github import find_referenced_task
+
+        project, tasks = self._project(key='TASK')
+        # "#TASK-<n>" is the old spelling and means the global id, not the number.
+        assert find_referenced_task(f'#TASK-{tasks[2].pk}', project) == tasks[2]
+        assert find_referenced_task('TASK-1', project) == tasks[0]

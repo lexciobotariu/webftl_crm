@@ -11,6 +11,7 @@
           hx-target="#task-description-{{ task.pk }}"
           hx-swap="innerHTML"
           @htmx:before-request="saving = true"
+          @htmx:after-request="saving = false"
           @keydown.escape="cancel($event)"
           class="space-y-2">
         {% csrf_token %}
