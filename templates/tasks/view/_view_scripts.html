@@ -1,5 +1,5 @@
-{# Re-fetches the view through the current URL after an edit. It sits outside #task-view so it survives every swap.
-   Optional refresh_oob: a selector list for anything else the same response should update (My Tasks passes its count badge). #}
+{% comment %}Re-fetches the view through the current URL after an edit. It sits outside #task-view so it survives every swap.
+   Optional refresh_oob: a selector list for anything else the same response should update (My Tasks passes its count badge).{% endcomment %}
 <div id="task-view-refresh" hidden
      hx-target="#task-view" hx-select="#task-view" hx-swap="outerHTML"{% if refresh_oob %}
      hx-select-oob="{{ refresh_oob }}"{% endif %}></div>

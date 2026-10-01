@@ -2,7 +2,10 @@
 Tests to verify UI/UX consistency across the application.
 These tests check templates and responses for consistent patterns.
 """
+from pathlib import Path
+
 import pytest
+from django.conf import settings
 from django.urls import reverse
 
 from apps.accounts.factories import AdminUserFactory, UserFactory
@@ -102,3 +105,18 @@ class TestHTMXSupport:
         # Should return slide-over content
         content = response.content.decode()
         assert 'slide-over' in content.lower() or 'New Task' in content
+
+
+class TestTemplateComments:
+    def test_no_single_line_comment_spans_lines(self):
+        """``{# ... #}`` only works on one line; a longer one is printed on the page.
+
+        Comments that need more room use ``{% comment %}``.
+        """
+        offenders = []
+        for template_dir in settings.TEMPLATES[0]['DIRS']:
+            for path in Path(template_dir).rglob('*.html'):
+                for number, line in enumerate(path.read_text().splitlines(), start=1):
+                    if line.count('{#') > line.count('#}'):
+                        offenders.append(f'{path.relative_to(template_dir)}:{number}')
+        assert offenders == []
