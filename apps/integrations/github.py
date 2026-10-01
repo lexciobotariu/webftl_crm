@@ -96,17 +96,21 @@ LEGACY_TASK_REF = re.compile(r'#TASK-(\d+)')
 def find_referenced_task(message: str, project: Project) -> Task | None:
     """The task on ``project`` that a commit or PR text points at.
 
-    ``CUST-12`` with this project's exact key, as a whole word, or the older
-    ``#TASK-<pk>`` form, which links written before task numbers still use.
+    ``CUST-12`` with this project's exact key, as a whole word (``#CUST-12``
+    reads the same), or the older ``#TASK-<pk>`` form, which links written before
+    task numbers still use. The first reference that names a real task wins, so
+    "refs CUST-99, fixes CUST-2" links to CUST-2 when there is no CUST-99.
     """
     message = message or ''
-    # Not after "#": a project keyed TASK must leave #TASK-<pk> to the legacy rule.
-    pattern = rf'(?<!#)\b{re.escape(project.key)}-(\d{{1,9}})\b'
-    match = re.search(pattern, message) if project.key else None
-    if match:
-        task = Task.objects.filter(project=project, number=int(match.group(1))).first()
-        if task:
-            return task
+    # Only a project keyed TASK has to leave "#TASK-<n>" to the legacy rule.
+    guard = '(?<!#)' if project.key == 'TASK' else ''
+    pattern = rf'{guard}\b{re.escape(project.key)}-(\d{{1,9}})\b'
+    numbers = [int(number) for number in re.findall(pattern, message)] if project.key else []
+    if numbers:
+        found = {task.number: task for task in Task.objects.filter(project=project, number__in=numbers)}
+        for number in numbers:
+            if number in found:
+                return found[number]
     match = LEGACY_TASK_REF.search(message)
     if match:
         return Task.objects.filter(project=project, pk=int(match.group(1))).first()

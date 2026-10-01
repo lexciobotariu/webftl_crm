@@ -294,3 +294,19 @@ class TestReviewFixes:
         content = client.get(reverse('project_settings', args=[project.pk])).content.decode()
 
         assert 'name="key"' in content and 'value="CUST"' in content
+
+
+@pytest.mark.django_db
+class TestKeyRace:
+    def test_a_key_taken_between_deriving_and_saving_is_derived_again(self, monkeypatch):
+        # Two projects created at once derive the same key from the same snapshot.
+        from apps.projects import models as project_models
+
+        ProjectFactory(name='Customer Portal', key='CUST')
+        answers = iter(['CUST', 'CUST2'])
+        monkeypatch.setattr(project_models, 'derive_key', lambda name, taken, pk=None: next(answers))
+
+        project = ProjectFactory(name='Custom CRM', key='')
+
+        assert project.key == 'CUST2'
+        assert project.statuses.count() == 5

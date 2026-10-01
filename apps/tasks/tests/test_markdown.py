@@ -251,3 +251,17 @@ class TestLengthLimitsOnSave:
         # leaves an Escape the Preview tab already handled alone.
         assert '@keydown.escape="cancel($event)"' in html
         assert "addEventListener('keydown'" not in html
+
+
+class TestLinks:
+    def test_a_file_name_is_not_a_link(self):
+        html = render_markdown('edit manage.py and README.md then run deploy.sh')
+
+        assert '<a ' not in html
+        assert 'manage.py' in html and 'README.md' in html
+
+    def test_a_url_and_an_email_address_still_are(self):
+        html = render_markdown('see https://example.com/a or write to a@b.co')
+
+        assert 'href="https://example.com/a"' in html
+        assert 'href="mailto:a@b.co"' in html

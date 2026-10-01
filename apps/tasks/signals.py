@@ -109,7 +109,9 @@ def log_task_changes(sender, instance, created, **kwargs):
             content=f'changed the title to {new_title}'
         )
 
-    if hasattr(instance, '_old_description') and instance._old_description != instance.description:
+    if hasattr(instance, '_old_description') and (
+        (instance._old_description or '').strip() != (instance.description or '').strip()
+    ):
         # No diff: descriptions are long, and the row only says that it changed.
         TaskActivity.objects.create(
             task=instance,
