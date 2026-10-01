@@ -409,6 +409,12 @@ def project_settings_update(request, pk):
     # A form without the field keeps the key; an empty field is an error.
     key = request.POST.get('key', project.key).strip().upper()
 
+    # The form re-renders from ``project``, so an error keeps what was typed.
+    project.name = name
+    project.description = description
+    project.github_repo_url = github_repo_url
+    project.key = key
+
     errors = {}
     if not name:
         errors['name'] = 'Name is required.'
@@ -417,27 +423,18 @@ def project_settings_update(request, pk):
     elif Project.objects.filter(key=key).exclude(pk=project.pk).exists():
         errors['key'] = 'This key is already used by another project.'
 
+    if not errors:
+        try:
+            with transaction.atomic():
+                project.save(update_fields=['name', 'description', 'github_repo_url', 'key', 'updated_at'])
+        except IntegrityError:
+            # Another project took the key between the check and the save.
+            errors['key'] = 'This key is already used by another project.'
+
     if errors:
         return render(request, 'projects/partials/settings_general_form.html', {
             'project': project,
             'errors': errors,
-            'key': key,
-        })
-
-    project.name = name
-    project.description = description
-    project.github_repo_url = github_repo_url
-    project.key = key
-    try:
-        with transaction.atomic():
-            project.save(update_fields=['name', 'description', 'github_repo_url', 'key', 'updated_at'])
-    except IntegrityError:
-        # Another project took the key between the check and the save.
-        project.refresh_from_db()
-        return render(request, 'projects/partials/settings_general_form.html', {
-            'project': project,
-            'errors': {'key': 'This key is already used by another project.'},
-            'key': key,
         })
 
     return render(request, 'projects/partials/settings_general_form.html', {

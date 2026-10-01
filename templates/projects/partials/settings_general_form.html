@@ -35,7 +35,7 @@
 
     <div>
         <label for="project-key" class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Task ID prefix</label>
-        <input type="text" id="project-key" name="key" value="{{ key|default:project.key }}" required
+        <input type="text" id="project-key" name="key" value="{{ project.key }}" required
                maxlength="6" autocomplete="off" spellcheck="false"
                aria-describedby="project-key-help"
                class="w-full max-w-[10rem] bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm font-mono uppercase text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none {% if errors.key %}border-error{% endif %}">

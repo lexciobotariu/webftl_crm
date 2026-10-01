@@ -245,3 +245,52 @@ class TestIdsOnPages:
 
         create = client.get(reverse('task_create', args=[project.pk]), HTTP_HX_REQUEST='true').content.decode()
         assert '>CUST</span>' in create
+
+
+@pytest.mark.django_db
+class TestReviewFixes:
+    def test_a_project_keyed_task_keeps_old_hash_task_references_on_the_pk(self):
+        from apps.integrations.github import find_referenced_task
+
+        project = ProjectFactory(name='Tasks', key='TASK')
+        by_pk = TaskFactory(project=project, id=10**6)
+        # Another task on the project whose number is that pk.
+        Project.objects.filter(pk=project.pk).update(task_counter=10**6 - 1)
+        by_number = TaskFactory(project=project)
+        assert by_number.number == by_pk.pk
+
+        assert find_referenced_task(f'#TASK-{by_pk.pk}', project) == by_pk
+        assert find_referenced_task(f'fixes TASK-{by_number.number}', project) == by_number
+
+    def test_the_admin_cannot_move_a_task_to_another_project(self, client):
+        admin_user = AdminUserFactory(is_staff=True, is_superuser=True)
+        task = TaskFactory()
+        client.force_login(admin_user)
+
+        page = client.get(reverse('admin:tasks_task_change', args=[task.pk])).content.decode()
+        add_page = client.get(reverse('admin:tasks_task_add')).content.decode()
+
+        assert 'name="project"' not in page
+        assert 'name="project"' in add_page
+
+    def test_a_key_error_keeps_the_other_edits(self, client):
+        ProjectFactory(key='TAKEN')
+        project = ProjectFactory(key='CUST', name='Mine')
+        client.force_login(AdminUserFactory())
+
+        content = client.post(reverse('project_settings_update', args=[project.pk]), {
+            'name': 'New name', 'description': 'New description',
+            'github_repo_url': 'https://github.com/o/r', 'key': 'taken',
+        }).content.decode()
+
+        assert 'value="New name"' in content
+        assert 'New description</textarea>' in content
+        assert 'value="https://github.com/o/r"' in content
+
+    def test_the_settings_page_shows_the_key_field(self, client):
+        project = ProjectFactory(key='CUST')
+        client.force_login(AdminUserFactory())
+
+        content = client.get(reverse('project_settings', args=[project.pk])).content.decode()
+
+        assert 'name="key"' in content and 'value="CUST"' in content

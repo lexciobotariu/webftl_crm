@@ -100,7 +100,9 @@ def find_referenced_task(message: str, project: Project) -> Task | None:
     ``#TASK-<pk>`` form, which links written before task numbers still use.
     """
     message = message or ''
-    match = re.search(rf'\b{re.escape(project.key)}-(\d{{1,9}})\b', message) if project.key else None
+    # Not after "#": a project keyed TASK must leave #TASK-<pk> to the legacy rule.
+    pattern = rf'(?<!#)\b{re.escape(project.key)}-(\d{{1,9}})\b'
+    match = re.search(pattern, message) if project.key else None
     if match:
         task = Task.objects.filter(project=project, number=int(match.group(1))).first()
         if task:
