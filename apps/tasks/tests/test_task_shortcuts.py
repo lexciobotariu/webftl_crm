@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from django.urls import reverse
 
@@ -18,6 +20,10 @@ def _viewer():
     return UserFactory(permission_preset=preset)
 
 
+# With DEBUG off the static file gets a content hash in its name.
+TASK_VIEW_SCRIPT = re.compile(r'js/task-view(\.[0-9a-f]+)?\.js')
+
+
 def _page(client, user, project, layout='list'):
     client.force_login(user)
     return client.get(reverse('project_tasks', args=[project.pk]) + f'?layout={layout}').content.decode()
@@ -33,7 +39,7 @@ class TestShortcutsMarkup:
 
         content = _page(client, user, project)
 
-        assert 'js/task-view.js' in content
+        assert TASK_VIEW_SCRIPT.search(content)
         assert content.count('id="task-shortcuts"') == 1
         for what in ('Change status', 'Change priority', 'Change assignee', 'New task', 'Search'):
             assert what in content
@@ -47,7 +53,7 @@ class TestShortcutsMarkup:
 
         content = _page(client, viewer, project)
 
-        assert 'js/task-view.js' in content
+        assert TASK_VIEW_SCRIPT.search(content)
         assert 'id="task-shortcuts"' in content
         assert 'Move the selection' in content
         for what in ('Change status', 'Change priority', 'Change assignee', 'New task'):
