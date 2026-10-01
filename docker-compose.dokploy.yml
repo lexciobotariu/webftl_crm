@@ -23,6 +23,7 @@ services:
       SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
       FERNET_KEY: ${FERNET_KEY:?FERNET_KEY is required}
       DEBUG: ${DEBUG:-False}
+      TIME_ZONE: ${TIME_ZONE:-Europe/Bucharest}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:?ALLOWED_HOSTS is required}
       CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-}
       SECURE_SSL_REDIRECT: ${SECURE_SSL_REDIRECT:-True}

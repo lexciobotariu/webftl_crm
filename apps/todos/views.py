@@ -41,7 +41,7 @@ def todo_list(request):
     return render(request, 'todos/partials/todo_list.html', {
         'todos': todos_qs,
         'show_completed': show_completed,
-        'today': timezone.now().date(),
+        'today': timezone.localdate(),
     })
 
 
@@ -115,7 +115,7 @@ def todo_toggle(request, pk):
         todo.save(update_fields=['is_completed', 'completed_at'])
     response = render(request, 'todos/partials/todo_item.html', {
         'todo': todo,
-        'today': timezone.now().date(),
+        'today': timezone.localdate(),
     })
     return _set_todo_triggers(response, has_client=bool(todo.client_id))
 
@@ -149,7 +149,7 @@ def client_todo_list(request, pk):
         'todos': todos_qs,
         'client': client,
         'show_completed': show_completed,
-        'today': timezone.now().date(),
+        'today': timezone.localdate(),
     })
 
 

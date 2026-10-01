@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] - 2026-10-01
+
+### Features
+- Estimates and durations are written as text with hours and minutes: `1h 30m`, `1h30`, `90m`, `1.5h` or `1:30`. A bare number is hours in the estimate field; logging time asks for a unit so `15` can't log 15 hours
+- Estimates can be set in minutes. Until now the field said "Hours" and accepted halves, but the server refused them
+- A wrong estimate gets a message in the popover and in the create drawer, instead of closing silently
+- One time zone for the whole app, `TIME_ZONE` (default `Europe/Bucharest`), set in `.env`
+
+### Changes
+- **Times on screen move from UTC to Bucharest time** (activity, comments, invoices, My Week). Stored dates and times do not change
+- "Today" follows that time zone: a task due today is no longer overdue from 02:00 or 03:00 at night, and the day lists and week no longer flip at that hour
+- Durations read the same everywhere: `1h 30m`, `45m`, `2h`, and `<1m` under a minute. Totals that read `3h 05m` now read `3h 5m`
+- The estimate is stored in minutes (`Task.estimate_minutes`); existing estimates keep their value, so 4h stays 4h. An estimate of 0 hours becomes "no estimate"
+
+### Fixes
+- Saving the full task form no longer reads the estimate back as a different number
+
 ## [0.15.0] - 2026-10-01
 
 ### Features

@@ -3,14 +3,11 @@ from django.dispatch import receiver
 
 from apps.notifications.services import notify_assigned, withdraw_assigned
 
+from .durations import format_minutes
 from .models import Task, TaskActivity
 
 # TaskActivity.old_value and new_value are 255 characters; titles go up to 1000.
 VALUE_LENGTH = 255
-
-
-def _estimate_label(hours):
-    return f'{hours}h' if hours is not None else ''
 
 
 @receiver(pre_save, sender=Task)
@@ -25,7 +22,7 @@ def track_task_changes(sender, instance, **kwargs):
             instance._old_due_date = old_task.due_date
             instance._old_title = old_task.title
             instance._old_description = old_task.description
-            instance._old_time_estimate = old_task.time_estimate
+            instance._old_estimate_minutes = old_task.estimate_minutes
         except Task.DoesNotExist:
             pass
 
@@ -120,9 +117,9 @@ def log_task_changes(sender, instance, created, **kwargs):
             content='updated the description'
         )
 
-    if hasattr(instance, '_old_time_estimate') and instance._old_time_estimate != instance.time_estimate:
-        old_label = _estimate_label(instance._old_time_estimate)
-        new_label = _estimate_label(instance.time_estimate)
+    if hasattr(instance, '_old_estimate_minutes') and instance._old_estimate_minutes != instance.estimate_minutes:
+        old_label = format_minutes(instance._old_estimate_minutes)
+        new_label = format_minutes(instance.estimate_minutes)
         TaskActivity.objects.create(
             task=instance,
             user=user,

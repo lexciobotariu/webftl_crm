@@ -5,6 +5,7 @@ from django.utils import timezone
 from apps.accounts.models import User
 from apps.projects.models import get_assignable_users
 
+from .durations import format_minutes, parse_duration
 from .models import Label, Subtask, Task
 from .templatetags.task_markdown import MAX_LENGTH as MARKDOWN_MAX_LENGTH
 
@@ -12,16 +13,21 @@ INPUT_CLASSES = 'w-full bg-panel border border-border-subtle rounded-control px-
 
 
 class TaskForm(forms.ModelForm):
+    # Typed as text ("1h 30m") and stored as minutes on ``estimate_minutes``.
+    estimate = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'e.g. 1h 30m'}),
+    )
+
     class Meta:
         model = Task
-        fields = ['title', 'description', 'assignee', 'priority', 'due_date', 'time_estimate', 'labels']
+        fields = ['title', 'description', 'assignee', 'priority', 'due_date', 'labels']
         widgets = {
             'title': forms.TextInput(attrs={'class': INPUT_CLASSES}),
             'description': forms.Textarea(attrs={'class': INPUT_CLASSES, 'rows': 4}),
             'assignee': forms.Select(attrs={'class': INPUT_CLASSES}),
             'priority': forms.Select(attrs={'class': INPUT_CLASSES}),
             'due_date': forms.DateInput(attrs={'class': INPUT_CLASSES, 'type': 'date'}),
-            'time_estimate': forms.NumberInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'Hours'}),
             'labels': forms.CheckboxSelectMultiple(),
         }
 
@@ -35,6 +41,23 @@ class TaskForm(forms.ModelForm):
             self.fields['assignee'].queryset = User.objects.none()
         self.fields['description'].max_length = MARKDOWN_MAX_LENGTH
         self.fields['description'].validators.append(MaxLengthValidator(MARKDOWN_MAX_LENGTH))
+        if self.instance.pk and 'estimate' not in self.initial:
+            self.initial['estimate'] = format_minutes(self.instance.estimate_minutes)
+
+    def clean_estimate(self):
+        text = self.cleaned_data['estimate'].strip()
+        if not text:
+            return None
+        try:
+            # A bare number keeps meaning hours, as the old field did.
+            return parse_duration(text, bare_unit='hours')
+        except ValueError as error:
+            raise forms.ValidationError(str(error)) from error
+
+    def _post_clean(self):
+        super()._post_clean()
+        if 'estimate' in self.cleaned_data:
+            self.instance.estimate_minutes = self.cleaned_data['estimate']
 
 
 DATETIME_INPUT_FORMATS = [

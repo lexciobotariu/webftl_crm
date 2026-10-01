@@ -95,7 +95,7 @@ class TestMemberRemoval:
         week = client.get(reverse('time_week')).content.decode()
         assert 'Design the logo' in week
         assert 'Acme Build' in week
-        assert '2h 00m' in week
+        assert '2h' in week
         assert 'Secret brief' not in week
         assert 'Ship It' not in week
         assert 'Other Logger' not in week

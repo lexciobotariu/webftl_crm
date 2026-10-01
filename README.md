@@ -11,7 +11,7 @@ You're free to use it, modify it, resell it, or do whatever you want with it. Se
 - **Clients** — contact info, notes, linked projects and todos
 - **Projects** — overview with stats, activity log, GitHub repo sync (experimental)
 - **Tasks** — one Tasks page per project with list and kanban board layouts, shared filters, grouping and sorting, drag-and-drop, a personal My Tasks list grouped by project, status, priority and assignee changed straight from a row or card, keyboard shortcuts, a Ctrl/Cmd+K search palette, a fast new-task drawer, subtasks, comments, attachments, labels, and activity tracking
-- **Time tracking** — a running timer or manual entries on tasks, with a weekly view of your logged time
+- **Time tracking** — a running timer or manual entries on tasks, and estimates and durations written as `1h 30m`, with a weekly view of your logged time
 - **Invoices** — per-client invoices with project and free-text lines, payments, and a currency per client
 - **Todos** — personal to-do list with optional client association and due dates
 - **Notes** — quick notes attached to clients
@@ -94,6 +94,11 @@ cp .env.example .env
 ```
 
 Edit `.env` if needed. The defaults work out of the box for local development.
+
+Set `TIME_ZONE` (an IANA name such as `Europe/Bucharest`, the default) to the zone
+your team works in. It is the one time zone for the whole app: it decides what
+"today" is, which day a logged time falls on, and the hours shown everywhere.
+Stored dates and times are UTC, so changing it later moves nothing in the database.
 
 ### 4. Create a virtual environment and install dependencies
 

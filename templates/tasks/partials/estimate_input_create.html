@@ -1,26 +1,18 @@
-<div class="relative" x-data="{ open: false, estimate: '{{ form.time_estimate.value|default:'' }}' }">
-    <input type="hidden" name="time_estimate" :value="estimate">
-    <button type="button" @click="open = !open"
+<div class="relative" x-data="dropdown">
+    <button type="button" @click="toggle()"
             class="flex items-center gap-2 px-2 py-1.5 rounded-control text-sm text-zinc-300 hover:bg-elevated transition-colors w-full">
-        <template x-if="estimate">
-            <span x-text="estimate + 'h'"></span>
-        </template>
-        <template x-if="!estimate">
-            <span class="text-zinc-500">Add estimate</span>
-        </template>
+        {% if form.estimate.value %}
+        {{ form.estimate.value }}
+        {% else %}
+        <span class="text-zinc-500">Add estimate</span>
+        {% endif %}
     </button>
-    <div x-show="open" x-cloak @click.away="open = false"
+    <div x-show="open" x-cloak @click.away="close()"
          x-transition
          class="absolute left-0 top-full mt-1 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 p-3">
-        <div class="flex items-center gap-2">
-            <input type="number" x-model="estimate" step="0.5" min="0"
-                   placeholder="Hours"
-                   class="w-24 bg-panel border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:outline-none">
-            <span class="text-zinc-500 text-sm">hours</span>
-        </div>
-        <div class="flex gap-2 mt-2">
-            <button type="button" @click="open = false" class="bg-accent text-on-accent px-3 py-1 rounded-control text-xs">Done</button>
-            <button type="button" @click="estimate = ''; open = false" class="text-zinc-400 hover:text-error px-3 py-1 text-xs">Clear</button>
-        </div>
+        <input type="text" name="estimate" value="{{ form.estimate.value|default:'' }}"
+               placeholder="e.g. 1h 30m" autocomplete="off" aria-label="Estimate" @keydown.enter.prevent="close()"
+               class="w-28 bg-panel border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:outline-none">
+        <button type="button" @click="close()" class="bg-accent text-on-accent px-3 py-1 rounded-control text-xs ml-2">Done</button>
     </div>
 </div>

@@ -330,8 +330,7 @@ class TestLoggedHoursRow:
         for page in (detail, full, row.content.decode()):
             assert f'id="prop-logged-{task.pk}"' in page
             assert 'Logged' in page
-            assert '0h' in page
-            assert '0h 00m' not in page
+            assert '0m' in page
 
     def test_drawer_and_full_page_render_the_logged_row_for_a_viewer(self, client):
         viewer, task = _member('viewer')
@@ -358,7 +357,7 @@ class TestLoggedHoursRow:
         for page in (detail, full):
             assert f'id="prop-logged-{task.pk}"' in page
             assert 'Logged' in page
-            assert '3h 05m' in page
+            assert '3h 5m' in page
             assert 'timerChanged from:body' in page
             assert 'owner-private-note' not in page
             assert 'other-private-note' not in page
