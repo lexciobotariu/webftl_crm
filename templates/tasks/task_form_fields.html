@@ -62,6 +62,9 @@
             </div>
             <div class="flex-1">
                 {% include "tasks/partials/estimate_input_create.html" %}
+                {% if form.estimate.errors %}
+                <p class="text-error text-xs mt-1 px-2">{{ form.estimate.errors.0 }}</p>
+                {% endif %}
             </div>
         </div>
 

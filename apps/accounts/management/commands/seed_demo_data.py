@@ -167,7 +167,7 @@ class Command(BaseCommand):
             )
 
         rng = random.Random(options['seed'])
-        today = timezone.now().date()
+        today = timezone.localdate()
 
         users = {}
         for name, email, role in TEAM:
@@ -228,7 +228,7 @@ class Command(BaseCommand):
                             assignee=rng.choice([admin, *members, None]),
                             priority=rng.choice(['low', 'medium', 'high', 'urgent', '']),
                             due_date=today + timedelta(days=rng.randint(-4, 21)),
-                            time_estimate=rng.choice([None, 2, 4, 8, 16]),
+                            estimate_minutes=rng.choice([None, 120, 240, 480, 960]),
                             order=order,
                         )
                         task.labels.set(rng.sample(labels, k=rng.randint(0, 2)))

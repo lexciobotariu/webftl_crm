@@ -152,7 +152,7 @@ class PaymentForm(forms.ModelForm):
         # Default payment_date to today for new records only
         is_new = not self.instance.pk
         if is_new and not self.data:
-            self.initial['payment_date'] = timezone.now().date()
+            self.initial['payment_date'] = timezone.localdate()
 
         # Filter salary_month queryset to only show months for this employee
         if employee_salary:

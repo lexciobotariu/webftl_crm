@@ -125,7 +125,7 @@ def client_detail(request, pk):
         'client_invoices': client_invoices,
         'invoice_count': invoice_count,
         'show_completed': False,
-        'today': timezone.now().date(),
+        'today': timezone.localdate(),
         'active_tab': active_tab,
     })
 

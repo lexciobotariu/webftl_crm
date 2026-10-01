@@ -14,7 +14,7 @@ from apps.tasks.models import TimeEntry
 
 def _member(role='editor'):
     user = UserFactory()
-    task = TaskFactory(time_estimate=5)
+    task = TaskFactory(estimate_minutes=300)
     ProjectAccessFactory(project=task.project, user=user)
     return user, task
 
@@ -101,7 +101,7 @@ class TestTimerRules:
         user, task = _member()
         services.log_manual(task, user, _at(2), _at(1), '')
         task.refresh_from_db()
-        assert task.time_estimate == 5
+        assert task.estimate_minutes == 300
 
 
 @pytest.mark.django_db
@@ -253,7 +253,7 @@ class TestManualValidation:
 class TestTimePermissions:
     def test_viewer_cannot_log_time(self):
         user = UserFactory()
-        task = TaskFactory(time_estimate=5)
+        task = TaskFactory(estimate_minutes=300)
         with pytest.raises(PermissionDenied):
             services.start_timer(task, user)
         with pytest.raises(PermissionDenied):
@@ -326,7 +326,7 @@ class TestTimePermissions:
             projects_view_all=True,
         )
         user = UserFactory(permission_preset=preset)
-        task = TaskFactory(time_estimate=5)
+        task = TaskFactory(estimate_minutes=300)
         entry = TimeEntryFactory(user=user, task=task, started_at=_at(2), ended_at=_at(1))
 
         with pytest.raises(PermissionDenied):

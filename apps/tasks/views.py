@@ -21,6 +21,7 @@ from apps.projects.models import (
 )
 from apps.tasks.models import Label, can_create_task, can_edit_task, can_view_task, editable_scope
 
+from .durations import format_seconds, parse_duration
 from .forms import SubtaskForm, TaskForm, TimeEntryForm
 from .listview import (
     apply_url_headers,
@@ -43,10 +44,7 @@ def _time_context(user, task):
     return {
         'time_entries': services.entries_on_task(user, task),
         'can_log_time': can_edit_task(user, task),
-        'logged_label': _format_duration(
-            services.logged_seconds_on_task(task),
-            empty='0h',
-        ),
+        'logged_label': format_seconds(services.logged_seconds_on_task(task), zero='0m'),
     }
 
 
@@ -54,22 +52,12 @@ def _monday(day):
     return day - timedelta(days=day.weekday())
 
 
-def _format_duration(total_seconds, *, empty=None):
-    """Week-total shape (``3h 05m``). ``empty`` replaces a zero total."""
-    total_seconds = max(int(total_seconds), 0)
-    if total_seconds == 0 and empty is not None:
-        return empty
-    hours, remainder = divmod(total_seconds, 3600)
-    minutes = remainder // 60
-    return f'{hours}h {minutes:02d}m'
-
-
 def _format_total(entries):
     total_seconds = 0
     for entry in entries:
         if entry.duration is not None:
             total_seconds += max(int(entry.duration.total_seconds()), 0)
-    return _format_duration(total_seconds)
+    return format_seconds(total_seconds, zero='0m')
 
 
 # The project Tasks page offers a board too; My Tasks cannot, because a column would be a
@@ -157,7 +145,7 @@ def my_tasks(request):
         'todos': todos_qs,
         'todo_count': todos_qs.count(),
         'show_completed': False,
-        'today': timezone.now().date(),
+        'today': timezone.localdate(),
     })
 
     response = render(request, 'tasks/my_tasks.html', context)
@@ -706,12 +694,17 @@ def task_update_estimate(request, pk):
     task = get_object_or_404(Task, pk=pk)
     try:
         from apps.tasks import services
-        estimate = request.POST.get('time_estimate')
+        text = request.POST.get('estimate', '').strip()
         try:
-            value = int(estimate) if estimate else None
-        except (ValueError, TypeError):
-            return HttpResponse('Invalid time estimate', status=400)
-        services.update_task_field(task, 'time_estimate', value, request.user)
+            # A bare number keeps meaning hours, as the old field did.
+            value = parse_duration(text, bare_unit='hours') if text else None
+        except ValueError as error:
+            # The popover stays open on what was typed, with the reason.
+            services.require_access(request.user, task.project)
+            return render(request, 'tasks/partials/estimate_input.html', {
+                'task': task, 'estimate_error': str(error), 'estimate_text': text,
+            })
+        services.update_task_field(task, 'estimate_minutes', value, request.user)
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
     response = render(request, 'tasks/partials/estimate_input.html', {'task': task})

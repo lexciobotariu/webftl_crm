@@ -424,7 +424,7 @@ class TestTaskChangedTrigger:
         ('task_update_assignee', {'assignee_id': ''}),
         ('task_update_priority', {'priority': 'high'}),
         ('task_update_due_date', {'due_date': '2030-01-02'}),
-        ('task_update_estimate', {'time_estimate': '3'}),
+        ('task_update_estimate', {'estimate': '3'}),
         ('task_edit_title', {'title': 'A new title'}),
     ])
     def test_property_updates_emit_task_changed(self, client, route, payload):

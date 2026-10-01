@@ -8,6 +8,8 @@ from django.utils import timezone
 
 from apps.projects.models import Project, ProjectAccess, Status
 
+from .durations import format_minutes, format_seconds
+
 
 class Label(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='labels')
@@ -111,7 +113,7 @@ class TaskQuerySet(models.QuerySet):
 
     def overdue(self, today=None):
         if today is None:
-            today = timezone.now().date()
+            today = timezone.localdate()
         return self.active().filter(due_date__lt=today)
 
     def with_priorities(self, values):
@@ -245,7 +247,7 @@ class Task(models.Model):
     )
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, blank=True)
     due_date = models.DateField(null=True, blank=True)
-    time_estimate = models.PositiveIntegerField(null=True, blank=True, help_text='Estimated hours')
+    estimate_minutes = models.PositiveIntegerField(null=True, blank=True, help_text='Estimated time, in minutes')
     labels = models.ManyToManyField(Label, blank=True, related_name='tasks')
     order = models.PositiveIntegerField(default=0)
 
@@ -319,12 +321,16 @@ class Task(models.Model):
         return f'{self.project.key}-{self.number}'
 
     @property
+    def estimate_label(self):
+        return format_minutes(self.estimate_minutes)
+
+    @property
     def is_overdue(self):
         if not self.due_date:
             return False
         if self.status.is_closed:
             return False
-        return self.due_date < timezone.now().date()
+        return self.due_date < timezone.localdate()
 
     @property
     def subtask_progress(self):
@@ -521,14 +527,7 @@ class TimeEntry(models.Model):
     def duration_label(self):
         if self.duration is None:
             return 'Running'
-        total_seconds = max(int(self.duration.total_seconds()), 0)
-        hours, remainder = divmod(total_seconds, 3600)
-        minutes, seconds = divmod(remainder, 60)
-        if hours:
-            return f'{hours}h {minutes:02d}m'
-        if minutes:
-            return f'{minutes}m {seconds:02d}s'
-        return f'{seconds}s'
+        return format_seconds(self.duration.total_seconds())
 
 
 class Attachment(models.Model):

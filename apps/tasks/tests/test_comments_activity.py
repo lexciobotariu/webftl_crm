@@ -280,11 +280,11 @@ class TestMoreActivity:
         assert not task.activities.filter(activity_type='description_change').exists()
 
     def test_an_estimate_change_is_logged(self, client):
-        task = TaskFactory(time_estimate=None)
+        task = TaskFactory(estimate_minutes=None)
         self._admin_client(client)
 
-        response = client.post(reverse('task_update_estimate', args=[task.pk]), {'time_estimate': '4'})
-        client.post(reverse('task_update_estimate', args=[task.pk]), {'time_estimate': ''})
+        response = client.post(reverse('task_update_estimate', args=[task.pk]), {'estimate': '4'})
+        client.post(reverse('task_update_estimate', args=[task.pk]), {'estimate': ''})
 
         rows = list(task.activities.filter(activity_type='estimate_change').order_by('pk'))
         assert [(r.old_value, r.new_value) for r in rows] == [('', '4h'), ('4h', '')]
@@ -324,11 +324,11 @@ class TestMoreActivity:
         assert added == ['add'] and removed == ['drop']
 
     def test_the_new_rows_render_in_the_drawer(self, client):
-        task = TaskFactory(title='Old', description='a', time_estimate=None)
+        task = TaskFactory(title='Old', description='a', estimate_minutes=None)
         self._admin_client(client)
         client.post(reverse('task_edit_title', args=[task.pk]), {'title': 'New'})
         client.post(reverse('task_edit_description', args=[task.pk]), {'description': 'b'})
-        client.post(reverse('task_update_estimate', args=[task.pk]), {'time_estimate': '3'})
+        client.post(reverse('task_update_estimate', args=[task.pk]), {'estimate': '3'})
 
         html = client.get(reverse('task_activity_list', args=[task.pk])).content.decode()
 
