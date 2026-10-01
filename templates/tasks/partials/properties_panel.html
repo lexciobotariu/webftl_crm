@@ -45,19 +45,8 @@
         </div>
     </div>
 
-    <!-- Time Estimate -->
-    <div class="flex items-center py-2 px-2 hover:bg-hover rounded-card" id="prop-estimate-{{ task.pk }}">
-        <div class="flex items-center gap-2 w-28 text-zinc-500 text-sm">
-            <i data-lucide="clock" class="w-4 h-4"></i>
-            <span>Estimate</span>
-        </div>
-        <div class="flex-1" id="estimate-value-{{ task.pk }}">
-            {% include "tasks/partials/estimate_input.html" %}
-        </div>
-    </div>
-
-    <!-- Logged -->
-    {% include "tasks/partials/logged_total.html" %}
+    <!-- Time -->
+    {% include "tasks/partials/time_property.html" %}
 
     <!-- Labels -->
     <div class="flex items-center py-2 px-2 hover:bg-hover rounded-card" id="prop-labels-{{ task.pk }}">

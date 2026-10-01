@@ -47,8 +47,7 @@
                             <th class="px-4 py-2 font-medium">Task</th>
                             {% if not project %}<th class="px-4 py-2 font-medium">Project</th>{% endif %}
                             {% if sees_everyone %}<th class="px-4 py-2 font-medium">Person</th>{% endif %}
-                            <th class="px-4 py-2 font-medium">Start</th>
-                            <th class="px-4 py-2 font-medium">End</th>
+                            <th class="px-4 py-2 font-medium">Date</th>
                             <th class="px-4 py-2 font-medium">Duration</th>
                             <th class="px-4 py-2 font-medium">Note</th>
                         </tr>
@@ -75,10 +74,7 @@
                             {% if sees_everyone %}
                             <td class="px-4 py-3 text-zinc-400 truncate">{{ entry.user.name }}</td>
                             {% endif %}
-                            <td class="px-4 py-3 whitespace-nowrap">{{ entry.started_at|date:"D, M j, H:i" }}</td>
-                            <td class="px-4 py-3 whitespace-nowrap">
-                                {% if entry.ended_at %}{{ entry.ended_at|date:"H:i" }}{% else %}Running{% endif %}
-                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap">{{ entry.started_at|date:"D, M j" }}</td>
                             <td class="px-4 py-3 whitespace-nowrap text-zinc-400">{{ entry.duration_label }}</td>
                             <td class="px-4 py-3 text-zinc-500 break-words">{{ entry.note }}</td>
                         </tr>

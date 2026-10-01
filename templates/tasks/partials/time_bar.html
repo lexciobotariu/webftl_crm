@@ -1,0 +1,14 @@
+<div id="time-bar-{{ task.pk }}"{% if oob %} hx-swap-oob="true"{% endif %} class="px-2">
+    {% if task.estimate_minutes %}
+    <div role="progressbar" aria-label="Logged time against the estimate"
+         aria-valuemin="0" aria-valuemax="{{ task.estimate_minutes }}" aria-valuenow="{{ time_bar_now }}"
+         {% if time_over_label %}aria-valuetext="Over by {{ time_over_label }}"{% endif %}
+         class="mt-1 h-1 w-full rounded-full bg-elevated overflow-hidden">
+        <div class="h-full rounded-full {% if time_over_label %}bg-error{% else %}bg-accent{% endif %}"
+             style="width: {{ time_percent }}%"></div>
+    </div>
+    {% if time_over_label %}
+    <p class="mt-1 text-xs text-error">Over by {{ time_over_label }}</p>
+    {% endif %}
+    {% endif %}
+</div>

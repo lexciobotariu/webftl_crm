@@ -1,4 +1,4 @@
-<div class="relative" x-data="dropdown"{% if estimate_error %} x-init="open = true"{% endif %}>
+<div x-data="dropdown"{% if estimate_error %} x-init="open = true"{% endif %}>
     <button @click="toggle()"
             class="flex items-center gap-2 px-2 py-1 rounded-control text-sm text-zinc-300 hover:bg-elevated transition-colors">
         {% if task.estimate_minutes %}
@@ -9,7 +9,7 @@
     </button>
     <div x-show="open" x-cloak @click.away="close()"
          x-transition
-         class="absolute left-0 top-full mt-1 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 p-3">
+         class="absolute left-0 right-0 top-full mt-1 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 p-3">
         <form hx-post="{% url 'task_update_estimate' task.pk %}"
               hx-target="#estimate-value-{{ task.pk }}"
               hx-swap="innerHTML">
@@ -17,10 +17,10 @@
             <input type="text" name="estimate" value="{% if estimate_error %}{{ estimate_text }}{% else %}{{ task.estimate_label }}{% endif %}"
                    placeholder="e.g. 1h 30m" autocomplete="off" aria-label="Estimate"
                    {% if estimate_error %}aria-invalid="true" aria-describedby="estimate-error-{{ task.pk }}"{% endif %}
-                   class="w-28 bg-panel border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:outline-none">
-            <button type="submit" class="bg-accent text-on-accent px-3 py-1 rounded-control text-xs ml-2">Save</button>
+                   class="w-full bg-panel border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:outline-none">
+            <button type="submit" class="bg-accent text-on-accent px-3 py-1 rounded-control text-xs mt-2">Save</button>
             {% if estimate_error %}
-            <p id="estimate-error-{{ task.pk }}" class="text-error text-xs mt-2 max-w-56">{{ estimate_error }}</p>
+            <p id="estimate-error-{{ task.pk }}" class="text-error text-xs mt-2">{{ estimate_error }}</p>
             {% endif %}
         </form>
     </div>

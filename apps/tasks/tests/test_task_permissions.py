@@ -34,10 +34,6 @@ def _user(name, **overrides):
     return UserFactory(permission_preset=_preset(name, **overrides))
 
 
-def _stamp(dt):
-    return timezone.localtime(dt).strftime('%Y-%m-%dT%H:%M')
-
-
 @pytest.mark.django_db
 class TestProjectFlagsDoNotGrantTasks:
     def test_project_access_view_all_and_edit_do_not_show_or_change_tasks(self, client):
@@ -234,11 +230,10 @@ class TestEditFlags:
         assert comment.status_code == 200
         assert mine_task.activities.filter(activity_type='comment', content='Hello').exists()
 
-        started = timezone.now() - timedelta(hours=3)
-        ended = timezone.now() - timedelta(hours=2)
+        today = timezone.localdate().isoformat()
         logged = client.post(reverse('time_log', args=[mine_task.pk]), {
-            'started_at': _stamp(started),
-            'ended_at': _stamp(ended),
+            'duration': '1h',
+            'day': today,
             'note': 'my-hours',
         })
         assert logged.status_code == 200
@@ -251,8 +246,8 @@ class TestEditFlags:
         )
         assert denied.status_code == 403
         assert client.post(reverse('time_log', args=[other_task.pk]), {
-            'started_at': _stamp(started),
-            'ended_at': _stamp(ended),
+            'duration': '1h',
+            'day': today,
             'note': 'not-mine',
         }).status_code == 403
         assert not other_task.activities.filter(activity_type='comment').exists()
@@ -323,8 +318,8 @@ class TestTimeEntries:
         detail = client.get(reverse('task_detail', args=[task.pk])).content.decode()
         assert 'owner-note' in detail
         denied = client.post(reverse('time_entry_edit', args=[entry.pk]), {
-            'started_at': _stamp(entry.started_at),
-            'ended_at': _stamp(entry.ended_at),
+            'duration': '30m',
+            'day': timezone.localdate(entry.started_at).isoformat(),
             'note': 'changed',
         })
         assert denied.status_code == 403
@@ -335,8 +330,8 @@ class TestTimeEntries:
         admin = AdminUserFactory()
         client.force_login(admin)
         changed = client.post(reverse('time_entry_edit', args=[entry.pk]), {
-            'started_at': _stamp(entry.started_at),
-            'ended_at': _stamp(entry.ended_at),
+            'duration': '30m',
+            'day': timezone.localdate(entry.started_at).isoformat(),
             'note': 'admin-note',
         })
         assert changed.status_code == 200

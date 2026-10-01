@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0] - 2026-10-01
+
+### Features
+- A single **Time** property in a task shows `2h 15m / 4h` with a thin progress bar (going over is written out: "Over by 30m"), and holds Start/Stop, **Log time** and the estimate, which is edited by clicking it
+- A Start/Stop button in the task header (drawer and full page), for people who can log time
+- Time is logged as **a duration and a date** (plus a note): `45m` for yesterday, `1h 30m` for today. A day cannot be in the future; the duration is 1 minute to 24 hours. Logging early in the morning no longer fails because the end would be "in the future"
+- Time lists show a date and a duration, never start and end times
+
+### Changes
+- Editing a logged entry changes its duration, date and note. A timer keeps its real start; the end follows the duration
+- My Week has Date and Duration columns in place of Start and End
+- The Time section in the task body is now just the list of entries; Start/Stop and logging moved into the property
+- Logging from the property does not close the task drawer
+- Entries from the same day keep a steady order
+
 ## [0.16.0] - 2026-10-01
 
 ### Features

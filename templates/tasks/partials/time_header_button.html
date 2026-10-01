@@ -1,0 +1,24 @@
+{# Start/Stop in the task header. Only for people who can log time. #}
+{% if can_log_time %}
+<span id="time-header-{{ task.pk }}"{% if oob %} hx-swap-oob="true"{% endif %} class="contents">
+    {% if running_timer and running_timer.task_id == task.pk %}
+    <button type="button"
+            id="time-header-stop-{{ task.pk }}"
+            hx-post="{% url 'timer_stop' %}"
+            hx-swap="none"
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 mr-1 text-xs text-error bg-elevated border border-border-subtle rounded-full hover:border-zinc-600 transition-colors">
+        <i data-lucide="square" class="w-3 h-3"></i>
+        Stop
+    </button>
+    {% else %}
+    <button type="button"
+            id="time-header-start-{{ task.pk }}"
+            hx-post="{% url 'timer_start' task.pk %}"
+            hx-swap="none"
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 mr-1 text-xs text-zinc-400 bg-elevated border border-border-subtle rounded-full hover:text-zinc-200 hover:border-zinc-600 transition-colors">
+        <i data-lucide="play" class="w-3 h-3"></i>
+        Start
+    </button>
+    {% endif %}
+</span>
+{% endif %}

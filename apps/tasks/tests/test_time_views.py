@@ -25,10 +25,6 @@ def _monday_start():
     return monday, timezone.make_aware(datetime.combine(monday, time.min))
 
 
-def _stamp(dt):
-    return timezone.localtime(dt).strftime('%Y-%m-%dT%H:%M')
-
-
 @pytest.mark.django_db
 class TestTimerViews:
     def test_requires_login(self, client):
@@ -58,7 +54,7 @@ class TestTimerViews:
         client.force_login(user)
 
         assert client.post(reverse('timer_start', args=[task.pk])).status_code == 403
-        assert client.get(reverse('time_log', args=[task.pk])).status_code == 403
+        assert client.post(reverse('time_log', args=[task.pk])).status_code == 403
         assert not TimeEntry.objects.filter(user=user).exists()
 
         detail = client.get(reverse('task_detail', args=[task.pk]))
@@ -96,48 +92,62 @@ class TestTimerViews:
         assert f'id="time-start-{task.pk}"' in detail
         assert f'id="time-start-{task.pk}"' in full
 
-    def test_manual_validation(self, client):
+    def test_logging_by_duration_and_day(self, client):
         user, task = _member()
         client.force_login(user)
-        start = timezone.now() - timedelta(hours=3)
-        end = timezone.now() - timedelta(hours=1)
+        url = reverse('time_log', args=[task.pk])
+        today = timezone.localdate()
 
-        bad_order = client.post(reverse('time_log', args=[task.pk]), {
-            'started_at': _stamp(end),
-            'ended_at': _stamp(start),
-            'note': '',
-        })
-        assert bad_order.status_code == 200
-        assert 'End must be after start.' in bad_order.content.decode()
+        def post(**data):
+            return client.post(url, {'duration': '45m', 'day': today.isoformat(), 'note': '', **data})
+
+        bare = post(duration='15')
+        assert bare.status_code == 200
+        assert '30m or 2h' in bare.content.decode()
+
+        future = post(day=(today + timedelta(days=1)).isoformat())
+        assert future.status_code == 200
+        assert 'future' in future.content.decode()
+
+        no_day = post(day='')
+        assert 'required' in no_day.content.decode().lower()
         assert not TimeEntry.objects.filter(task=task).exists()
 
-        inline = client.post(reverse('time_log', args=[task.pk]), {
-            'started_at': _stamp(end),
-            'ended_at': _stamp(start),
-            'note': '',
-            'inline': '1',
-        })
-        assert inline.status_code == 400
-        assert inline.content.decode() == 'End must be after start.'
-
-        future = client.post(reverse('time_log', args=[task.pk]), {
-            'started_at': _stamp(timezone.now() + timedelta(hours=1)),
-            'ended_at': _stamp(timezone.now() + timedelta(hours=2)),
-            'note': '',
-        })
-        assert future.status_code == 200
-        assert 'End cannot be in the future.' in future.content.decode()
-
-        ok = client.post(reverse('time_log', args=[task.pk]), {
-            'started_at': _stamp(start),
-            'ended_at': _stamp(end),
-            'note': 'shipped it',
-        })
+        ok = post(duration='1h 30m', day=(today - timedelta(days=1)).isoformat(), note='shipped it')
         assert ok.status_code == 200
-        assert ok.headers['HX-Trigger']
+        assert ok.content == b''
+        assert ok.headers['HX-Trigger'] == 'timerChanged'
         entry = TimeEntry.objects.get(task=task, user=user)
         assert entry.note == 'shipped it'
-        assert entry.ended_at > entry.started_at
+        assert entry.ended_at - entry.started_at == timedelta(minutes=90)
+        assert timezone.localdate(entry.started_at) == today - timedelta(days=1)
+
+    def test_logging_from_the_popover_does_not_close_the_drawer(self, client):
+        user, task = _member()
+        client.force_login(user)
+        response = client.post(reverse('time_log', args=[task.pk]), {
+            'duration': '20m', 'day': timezone.localdate().isoformat(), 'note': '',
+        })
+        assert 'closeSlideOver' not in response.headers['HX-Trigger']
+
+    def test_editing_an_entry_closes_its_drawer_and_keeps_the_start(self, client):
+        user, task = _member()
+        started = timezone.now() - timedelta(hours=2)
+        entry = TimeEntryFactory(user=user, task=task, started_at=started, ended_at=started + timedelta(hours=1))
+        client.force_login(user)
+        url = reverse('time_entry_edit', args=[entry.pk])
+
+        form = client.get(url).content.decode()
+        assert 'name="duration"' in form and 'value="1h"' in form
+        assert 'name="started_at"' not in form
+
+        response = client.post(url, {
+            'duration': '2h 15m', 'day': timezone.localdate(started).isoformat(), 'note': 'longer',
+        })
+        assert 'closeSlideOver' in response.headers['HX-Trigger']
+        entry.refresh_from_db()
+        assert entry.started_at == started
+        assert entry.ended_at == started + timedelta(minutes=135)
 
     def test_page_render_closes_at_start_plus_twelve_hours(self, client):
         user, task = _member()
@@ -245,8 +255,8 @@ class TestWeekAndProjectViews:
         assert reverse('time_entry_edit', args=[entry.pk]) not in detail
 
         edit = client.post(reverse('time_entry_edit', args=[entry.pk]), {
-            'started_at': _stamp(entry.started_at),
-            'ended_at': _stamp(entry.ended_at),
+            'duration': '30m',
+            'day': timezone.localdate(entry.started_at).isoformat(),
             'note': 'changed',
         })
         assert edit.status_code == 403
@@ -285,8 +295,8 @@ class TestWeekAndProjectViews:
         client.force_login(admin)
 
         response = client.post(reverse('time_entry_edit', args=[entry.pk]), {
-            'started_at': _stamp(entry.started_at),
-            'ended_at': _stamp(entry.ended_at),
+            'duration': '30m',
+            'day': timezone.localdate(entry.started_at).isoformat(),
             'note': 'after',
         })
         assert response.status_code == 200
@@ -314,66 +324,184 @@ class TestWeekAndProjectViews:
         assert disabled_icons == ['file-text']
 
 
+def _view_only_user(task):
+    from apps.accounts.permissions import PermissionPreset
+
+    preset = PermissionPreset.objects.create(name='TimeViewOnly', access_projects=True, access_tasks=True)
+    user = UserFactory(permission_preset=preset)
+    ProjectAccessFactory(project=task.project, user=user)
+    return user
+
+
+def _pages(client, task):
+    detail = client.get(reverse('task_detail', args=[task.pk])).content.decode()
+    full = client.get(reverse('task_full_page', args=[task.project.pk, task.pk])).content.decode()
+    return detail, full
+
+
 @pytest.mark.django_db
-class TestLoggedHoursRow:
-    def test_no_entries_shows_zero_hours(self, client):
-        user, task = _member('viewer')
+class TestTimeProperty:
+    def test_one_time_property_replaces_the_estimate_and_logged_rows(self, client):
+        user, task = _member()
+        client.force_login(user)
+        for page in _pages(client, task):
+            assert f'id="prop-time-{task.pk}"' in page
+            assert f'id="prop-logged-{task.pk}"' not in page
+            assert f'id="prop-estimate-{task.pk}"' not in page
+
+    def test_it_reads_logged_over_estimate(self, client):
+        user, task = _member(estimate_minutes=240)
+        now = timezone.now()
+        TimeEntryFactory(user=user, task=task, started_at=now - timedelta(hours=3), ended_at=now - timedelta(minutes=45))
         client.force_login(user)
 
-        detail = client.get(reverse('task_detail', args=[task.pk])).content.decode()
-        full = client.get(
-            reverse('task_full_page', args=[task.project.pk, task.pk])
-        ).content.decode()
-        row = client.get(reverse('task_logged_total', args=[task.pk]))
+        response = client.get(reverse('task_time_property', args=[task.pk]))
 
-        assert row.status_code == 200
-        for page in (detail, full, row.content.decode()):
-            assert f'id="prop-logged-{task.pk}"' in page
-            assert 'Logged' in page
-            assert '0m' in page
+        html = response.content.decode()
+        assert response.status_code == 200
+        assert re.search(r'id="time-logged-\d+"[^>]*>\s*2h 15m\s*/', html)
+        assert '4h' in client.get(reverse('task_detail', args=[task.pk])).content.decode()
+        assert 'role="progressbar"' in html
+        assert 'aria-valuenow="135"' in html and 'aria-valuemax="240"' in html
+        assert 'Over by' not in html
 
-    def test_drawer_and_full_page_render_the_logged_row_for_a_viewer(self, client):
-        viewer, task = _member('viewer')
-        owner = UserFactory()
-        other = UserFactory()
+    def test_going_over_is_written_out_and_not_only_coloured(self, client):
+        user, task = _member(estimate_minutes=60)
         now = timezone.now()
-        TimeEntryFactory(
-            user=owner, task=task, note='owner-private-note',
-            started_at=now - timedelta(hours=3),
-            ended_at=now - timedelta(hours=1),
+        TimeEntryFactory(user=user, task=task, started_at=now - timedelta(hours=2), ended_at=now - timedelta(minutes=15))
+        client.force_login(user)
+
+        html = client.get(reverse('task_time_property', args=[task.pk])).content.decode()
+
+        assert 'Over by 45m' in html
+        assert 'width: 100%' in html
+
+    def test_no_estimate_means_no_bar(self, client):
+        user, task = _member()
+        now = timezone.now()
+        TimeEntryFactory(user=user, task=task, started_at=now - timedelta(hours=1), ended_at=now)
+        client.force_login(user)
+
+        html = client.get(reverse('task_time_property', args=[task.pk])).content.decode()
+
+        assert 'progressbar' not in html
+        assert '1h' in html
+
+    def test_nothing_logged_reads_zero(self, client):
+        user, task = _member(estimate_minutes=60)
+        client.force_login(user)
+        html = client.get(reverse('task_time_property', args=[task.pk])).content.decode()
+        assert re.search(r'id="time-logged-\d+"[^>]*>\s*0m\s*/', html)
+        assert 'Over by' not in html
+
+    def test_someone_who_cannot_log_sees_the_total_and_no_controls(self, client):
+        task = TaskFactory(estimate_minutes=120)
+        user = _view_only_user(task)
+        TimeEntryFactory(user=UserFactory(), task=task, started_at=timezone.now() - timedelta(hours=2),
+                         ended_at=timezone.now() - timedelta(hours=1))
+        client.force_login(user)
+
+        detail, full = _pages(client, task)
+        live = client.get(reverse('task_time_property', args=[task.pk])).content.decode()
+
+        for page in (detail, full, live):
+            assert f'id="time-start-{task.pk}"' not in page
+            assert f'id="time-header-{task.pk}"' not in page
+            assert 'Log time' not in page
+            assert '1h' in page
+
+    def test_the_header_button_is_for_people_who_can_log_and_has_its_own_id(self, client):
+        user, task = _member()
+        client.force_login(user)
+        for page in _pages(client, task):
+            assert f'id="time-header-{task.pk}"' in page
+            assert f'id="time-header-start-{task.pk}"' in page
+
+    def test_the_header_button_arrives_out_of_band_from_the_same_endpoint(self, client):
+        user, task = _member()
+        client.force_login(user)
+        html = client.get(reverse('task_time_property', args=[task.pk])).content.decode()
+        assert re.search(rf'id="time-header-{task.pk}"[^>]*hx-swap-oob', html) or re.search(
+            rf'hx-swap-oob="[^"]*"[^>]*id="time-header-{task.pk}"', html
         )
-        TimeEntryFactory(
-            user=other, task=task, note='other-private-note',
-            started_at=now - timedelta(hours=2, minutes=5),
-            ended_at=now - timedelta(hours=1),
-        )
-        client.force_login(viewer)
+        # Only the property listens for the refresh.
+        assert html.count('timerChanged from:body') == 1
 
-        detail = client.get(reverse('task_detail', args=[task.pk])).content.decode()
-        full = client.get(
-            reverse('task_full_page', args=[task.project.pk, task.pk])
-        ).content.decode()
+    def test_start_and_stop_follow_the_running_timer(self, client):
+        user, task = _member()
+        client.force_login(user)
+        idle = client.get(reverse('task_time_property', args=[task.pk])).content.decode()
+        assert f'id="time-start-{task.pk}"' in idle and f'id="time-header-start-{task.pk}"' in idle
 
-        for page in (detail, full):
-            assert f'id="prop-logged-{task.pk}"' in page
-            assert 'Logged' in page
-            assert '3h 5m' in page
-            assert 'timerChanged from:body' in page
-            assert 'owner-private-note' not in page
-            assert 'other-private-note' not in page
+        TimeEntryFactory(user=user, task=task, running=True)
+        running = client.get(reverse('task_time_property', args=[task.pk])).content.decode()
+        assert f'id="time-stop-{task.pk}"' in running and f'id="time-header-stop-{task.pk}"' in running
+        assert f'id="time-start-{task.pk}"' not in running
 
-    def test_logged_total_endpoint_is_viewer_only(self, client):
-        viewer, task = _member('viewer')
-        outsider = UserFactory()
-        client.force_login(viewer)
-        allowed = client.get(reverse('task_logged_total', args=[task.pk]))
-        assert allowed.status_code == 200
-        body = allowed.content.decode()
-        assert 'timerChanged from:body' in body
-        assert reverse('task_logged_total', args=[task.pk]) in body
+    def test_it_says_where_the_running_timer_stops(self, client):
+        user, task = _member()
+        elsewhere = TaskFactory(project=task.project, status=task.status, title='Elsewhere task')
+        TimeEntryFactory(user=user, task=elsewhere, running=True)
+        client.force_login(user)
+        html = client.get(reverse('task_time_property', args=[task.pk])).content.decode()
+        assert 'Starting here stops the timer on Elsewhere task' in html
 
-        client.force_login(outsider)
-        assert client.get(reverse('task_logged_total', args=[task.pk])).status_code == 403
+    def test_the_popovers_are_not_replaced_by_the_refresh(self, client):
+        user, task = _member()
+        client.force_login(user)
+        live = client.get(reverse('task_time_property', args=[task.pk])).content.decode()
+        page, _ = _pages(client, task)
+        # The log form and its dropdown exist on the page, not in what the refresh swaps in.
+        assert 'name="duration"' in page
+        assert 'name="duration"' not in live
+        assert 'name="estimate"' not in live
+
+    def test_the_endpoint_is_for_people_who_can_view_the_task(self, client):
+        task = TaskFactory()
+        client.force_login(UserFactory())
+        assert client.get(reverse('task_time_property', args=[task.pk])).status_code == 403
+
+    def test_the_body_no_longer_has_start_stop_or_the_two_date_form(self, client):
+        user, task = _member()
+        client.force_login(user)
+        section = client.get(reverse('task_time_section', args=[task.pk])).content.decode()
+        assert f'id="time-start-{task.pk}"' not in section
+        assert 'datetime-local' not in section
+        assert 'No time logged yet.' in section
+
+    def test_the_full_page_list_keeps_its_spacing_when_it_refreshes(self, client):
+        user, task = _member()
+        client.force_login(user)
+        page = client.get(reverse('task_full_page', args=[task.project.pk, task.pk])).content.decode()
+        refresh_url = reverse('task_time_section', args=[task.pk]) + '?full_page=1'
+        assert refresh_url in page
+        assert 'mb-5' in client.get(refresh_url).content.decode()
+        assert 'mb-5' not in client.get(reverse('task_time_section', args=[task.pk])).content.decode()
+
+    def test_entries_show_a_date_and_a_duration_and_no_clock_times(self, client):
+        user, task = _member()
+        day = timezone.localdate() - timedelta(days=2)
+        started = timezone.make_aware(datetime.combine(day, time(9, 41)))
+        TimeEntryFactory(user=user, task=task, started_at=started, ended_at=started + timedelta(minutes=90))
+        client.force_login(user)
+
+        section = client.get(reverse('task_time_section', args=[task.pk])).content.decode()
+
+        assert f'{day:%b} {day.day}' in section
+        assert '1h 30m' in section
+        assert '09:41' not in section and '11:11' not in section
+
+    def test_my_week_has_date_and_duration_columns(self, client):
+        user, task = _member()
+        _, week_start = _monday_start()
+        TimeEntryFactory(user=user, task=task, started_at=week_start, ended_at=week_start + timedelta(minutes=45))
+        client.force_login(user)
+
+        html = client.get(reverse('time_week')).content.decode()
+
+        assert '>Date<' in html and '>Duration<' in html
+        assert '>Start<' not in html and '>End<' not in html
+        assert '45m' in html
 
 
 @pytest.mark.django_db

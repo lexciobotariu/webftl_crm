@@ -1,0 +1,35 @@
+<div x-data="dropdown">
+    <button type="button" @click="toggle(); $nextTick(() => $refs.duration && $refs.duration.focus())"
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-zinc-400 bg-elevated border border-border-subtle rounded-full hover:text-zinc-200 hover:border-zinc-600 transition-colors">
+        <i data-lucide="plus" class="w-3 h-3"></i>
+        Log time
+    </button>
+    <div x-show="open" x-cloak @click.away="close()"
+         x-transition
+         class="absolute left-2 right-2 top-full mt-1 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 p-3">
+        <form hx-post="{% url 'time_log' task.pk %}"
+              hx-target="#time-log-error-{{ task.pk }}"
+              hx-swap="innerHTML"
+              @htmx:after-request="if (!$event.detail.xhr.responseText) { $el.reset(); close(); }"
+              class="space-y-2">
+            {% csrf_token %}
+            <label class="block text-xs text-zinc-500">
+                Duration
+                <input type="text" name="duration" x-ref="duration" required autocomplete="off" placeholder="e.g. 45m or 1h 30m"
+                       class="mt-1 w-full bg-panel border border-border-subtle rounded-control px-2 py-1.5 text-sm text-zinc-100 placeholder-zinc-600 focus:border-border-strong focus:outline-none">
+            </label>
+            <label class="block text-xs text-zinc-500">
+                Date
+                <input type="date" name="day" required value="{% now 'Y-m-d' %}" max="{% now 'Y-m-d' %}"
+                       class="mt-1 w-full bg-panel border border-border-subtle rounded-control px-2 py-1.5 text-sm text-zinc-100 focus:border-border-strong focus:outline-none">
+            </label>
+            <input type="text" name="note" placeholder="Note (optional)" aria-label="Note"
+                   class="w-full bg-panel border border-border-subtle rounded-control px-2 py-1.5 text-sm text-zinc-100 placeholder-zinc-600 focus:border-border-strong focus:outline-none">
+            <p id="time-log-error-{{ task.pk }}" class="text-xs text-error empty:hidden" role="alert"></p>
+            <div class="flex items-center gap-3">
+                <button type="submit" class="bg-accent text-on-accent px-3 py-1 rounded-control text-xs">Save</button>
+                <button type="button" @click="close()" class="text-xs text-zinc-500 hover:text-zinc-300">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>

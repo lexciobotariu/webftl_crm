@@ -25,17 +25,17 @@
 
         <div class="space-y-4">
             <div>
-                <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5" for="{{ form.started_at.id_for_label }}">Start</label>
-                {{ form.started_at }}
-                {% if form.started_at.errors %}
-                <p class="mt-1 text-xs text-error">{{ form.started_at.errors.0 }}</p>
+                <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5" for="{{ form.duration.id_for_label }}">Duration</label>
+                {{ form.duration }}
+                {% if form.duration.errors %}
+                <p class="mt-1 text-xs text-error">{{ form.duration.errors.0 }}</p>
                 {% endif %}
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5" for="{{ form.ended_at.id_for_label }}">End</label>
-                {{ form.ended_at }}
-                {% if form.ended_at.errors %}
-                <p class="mt-1 text-xs text-error">{{ form.ended_at.errors.0 }}</p>
+                <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5" for="{{ form.day.id_for_label }}">Date</label>
+                {{ form.day }}
+                {% if form.day.errors %}
+                <p class="mt-1 text-xs text-error">{{ form.day.errors.0 }}</p>
                 {% endif %}
             </div>
             <div>

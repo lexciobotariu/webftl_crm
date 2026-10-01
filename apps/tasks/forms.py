@@ -60,32 +60,24 @@ class TaskForm(forms.ModelForm):
             self.instance.estimate_minutes = self.cleaned_data['estimate']
 
 
-DATETIME_INPUT_FORMATS = [
-    '%Y-%m-%dT%H:%M',
-    '%Y-%m-%dT%H:%M:%S',
-    '%Y-%m-%d %H:%M:%S',
-]
-
 DRAWER_INPUT = (
     'w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm '
     'text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none'
 )
 
 
-class TimeEntryForm(forms.Form):
-    started_at = forms.DateTimeField(
-        input_formats=DATETIME_INPUT_FORMATS,
-        widget=forms.DateTimeInput(format='%Y-%m-%dT%H:%M', attrs={
-            'type': 'datetime-local',
+class DurationEntryForm(forms.Form):
+    """Time as a duration on a day, not a start and an end."""
+
+    duration = forms.CharField(
+        widget=forms.TextInput(attrs={
             'class': DRAWER_INPUT,
+            'placeholder': 'e.g. 1h 30m',
+            'autocomplete': 'off',
         }),
     )
-    ended_at = forms.DateTimeField(
-        input_formats=DATETIME_INPUT_FORMATS,
-        widget=forms.DateTimeInput(format='%Y-%m-%dT%H:%M', attrs={
-            'type': 'datetime-local',
-            'class': DRAWER_INPUT,
-        }),
+    day = forms.DateField(
+        widget=forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': DRAWER_INPUT}),
     )
     note = forms.CharField(
         required=False,
@@ -96,16 +88,16 @@ class TimeEntryForm(forms.Form):
         }),
     )
 
-    def clean(self):
-        cleaned = super().clean()
-        started = cleaned.get('started_at')
-        ended = cleaned.get('ended_at')
-        if started and ended:
-            if ended <= started:
-                self.add_error('ended_at', 'End must be after start.')
-            elif ended > timezone.now():
-                self.add_error('ended_at', 'End cannot be in the future.')
-        return cleaned
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['day'].initial = timezone.localdate
+
+    def clean_duration(self):
+        try:
+            # No bare_unit: "15" must not log 15 hours.
+            return parse_duration(self.cleaned_data['duration'])
+        except ValueError as error:
+            raise forms.ValidationError(str(error)) from error
 
 
 class SubtaskForm(forms.ModelForm):

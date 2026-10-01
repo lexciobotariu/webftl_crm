@@ -1,0 +1,5 @@
+<span id="time-logged-{{ task.pk }}"
+      hx-get="{% url 'task_time_property' task.pk %}"
+      hx-trigger="timerChanged from:body, taskUpdated-{{ task.pk }} from:body"
+      hx-swap="outerHTML"
+      class="pl-2 pr-1 py-1 text-sm text-zinc-300 whitespace-nowrap">{{ logged_label }}{% if task.estimate_minutes %} /{% endif %}</span>

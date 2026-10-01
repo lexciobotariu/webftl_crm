@@ -1,0 +1,5 @@
+{# The answer to task_time_property: the first element replaces the one that asked, the rest are out of band. #}
+{% include "tasks/partials/time_logged.html" %}
+{% include "tasks/partials/time_bar.html" with oob=True %}
+{% include "tasks/partials/time_timer.html" with oob=True %}
+{% include "tasks/partials/time_header_button.html" with oob=True %}

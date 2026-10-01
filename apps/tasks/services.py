@@ -21,6 +21,7 @@ from django.db.models import DateTimeField, ExpressionWrapper, F, Max, Q
 from django.utils import timezone
 from django.utils.text import get_valid_filename
 
+from .durations import MAX_DAY_MINUTES
 from .models import (
     Attachment,
     Subtask,
@@ -596,15 +597,55 @@ def log_manual(task, user, started_at, ended_at, note=''):
     )
 
 
-def update_entry(entry, user, *, started_at, ended_at, note=''):
-    """Change a closed entry. The owner must still be an editor; admins may change any."""
+def _validate_duration_and_day(minutes, day):
+    """The rules for a logged duration: a day that is not ahead, and 1 minute to 24 hours."""
+    if day is None:
+        raise TimeEntryValidationError('Pick the day.')
+    if day > timezone.localdate():
+        raise TimeEntryValidationError('The day cannot be in the future.')
+    if minutes is None or not 1 <= minutes <= MAX_DAY_MINUTES:
+        raise TimeEntryValidationError('The duration must be between 1 minute and 24 hours.')
+
+
+def _start_of_day(day):
+    """Midnight of ``day`` in the app's time zone."""
+    return timezone.make_aware(datetime.combine(day, time.min))
+
+
+def log_duration(task, user, minutes, day, note=''):
+    """Log ``minutes`` of the user's own time on ``day``. Editors only.
+
+    The entry starts at midnight of that day in the app's zone and ends
+    ``minutes`` later, so its day is right wherever the zone sits. The
+    "end cannot be in the future" rule of :func:`log_manual` would refuse an
+    ordinary morning log of a long day, so it does not apply here.
+    """
+    require_access(user, task.project)
+    _validate_duration_and_day(minutes, day)
+    started_at = _start_of_day(day)
+    return TimeEntry.objects.create(
+        task=task,
+        user=user,
+        started_at=started_at,
+        ended_at=started_at + timedelta(minutes=minutes),
+        note=note or '',
+    )
+
+
+def update_entry(entry, user, *, minutes, day, note=''):
+    """Change a closed entry to ``minutes`` on ``day``.
+
+    The owner must still be an editor; admins may change any. A timer keeps
+    its real start when the day stays the same, and the end becomes start
+    plus ``minutes``; a new day moves the start to that day's midnight.
+    """
     require_entry_edit(user, entry)
-    now = timezone.now()
-    if ended_at is None:
-        raise TimeEntryValidationError('A logged entry needs an end time.')
-    _validate_closed_range(started_at, ended_at, now=now)
-    entry.started_at = started_at
-    entry.ended_at = ended_at
+    if entry.ended_at is None:
+        raise TimeEntryValidationError('A running timer cannot be edited. Stop it first.')
+    _validate_duration_and_day(minutes, day)
+    if timezone.localdate(entry.started_at) != day:
+        entry.started_at = _start_of_day(day)
+    entry.ended_at = entry.started_at + timedelta(minutes=minutes)
     entry.note = note or ''
     entry.save(update_fields=['started_at', 'ended_at', 'note'])
     return entry
@@ -627,7 +668,7 @@ def entries_for_week(user, week_start, project=None):
     entries = (
         TimeEntry.objects.filter(started_at__gte=start, started_at__lt=end)
         .select_related('task', 'task__project', 'user')
-        .order_by('started_at')
+        .order_by('started_at', 'pk')
     )
     if project is not None:
         entries = entries.filter(task__project=project)
@@ -644,7 +685,7 @@ def entries_on_task(user, task):
     """
     if not can_view_task(user, task):
         return task.time_entries.none()
-    entries = task.time_entries.select_related('user')
+    entries = task.time_entries.select_related('user').order_by('-started_at', '-pk')
     if user.is_admin or user.has_app_permission('tasks_view_all'):
         return entries
     return entries.filter(user=user)
