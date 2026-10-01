@@ -1,0 +1,59 @@
+{% comment %}The command palette's results. Rendered without a request (see apps/search/views.py), so no csrf_token or request context here. Every result is a real link; static/js/keys.js picks one with the arrow keys and opens a task in the drawer instead of following its link.{% endcomment %}
+{% if results.too_short %}
+<p class="px-4 py-6 text-sm text-zinc-500">Type at least 2 characters to search tasks, projects, clients and pages.</p>
+{% elif results.empty %}
+<p class="px-4 py-6 text-sm text-zinc-500">Nothing found for “{{ results.query }}”.</p>
+{% else %}
+{% if results.tasks %}
+<div role="group" aria-labelledby="palette-h-tasks" class="py-1">
+    <h3 id="palette-h-tasks" class="px-4 pt-2 pb-1 text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Tasks</h3>
+    {% for task in results.tasks %}
+    <a role="option" id="palette-task-{{ task.pk }}" href="{% url 'task_full_page' task.project_id task.pk %}"
+       data-detail-url="{% url 'task_detail' task.pk %}" aria-selected="false"
+       class="palette-option flex items-center gap-3 px-4 py-2 text-sm text-zinc-300 hover:bg-hover-strong aria-selected:bg-hover-strong">
+        {% include "components/status_icon.html" with category=task.status.category %}
+        <span class="shrink-0 font-mono text-xs text-zinc-500">{{ task.project.name|slice:":4"|upper }}-{{ task.pk }}</span>
+        <span class="flex-1 min-w-0 truncate text-zinc-100">{{ task.title }}</span>
+        <span class="hidden sm:inline max-w-[10rem] shrink-0 truncate text-xs text-zinc-500">{{ task.project.name }}</span>
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+{% if results.projects %}
+<div role="group" aria-labelledby="palette-h-projects" class="py-1">
+    <h3 id="palette-h-projects" class="px-4 pt-2 pb-1 text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Projects</h3>
+    {% for project in results.projects %}
+    <a role="option" id="palette-project-{{ project.pk }}" href="{% url 'project_detail' project.pk %}" aria-selected="false"
+       class="palette-option flex items-center gap-3 px-4 py-2 text-sm text-zinc-300 hover:bg-hover-strong aria-selected:bg-hover-strong">
+        <i data-lucide="folder" class="w-3.5 h-3.5 text-zinc-500"></i>
+        <span class="flex-1 min-w-0 truncate text-zinc-100">{{ project.name }}</span>
+        <span class="max-w-[10rem] shrink-0 truncate text-xs text-zinc-500">{{ project.client.name }}</span>
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+{% if results.clients %}
+<div role="group" aria-labelledby="palette-h-clients" class="py-1">
+    <h3 id="palette-h-clients" class="px-4 pt-2 pb-1 text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Clients</h3>
+    {% for client in results.clients %}
+    <a role="option" id="palette-client-{{ client.pk }}" href="{% url 'client_detail' client.pk %}" aria-selected="false"
+       class="palette-option flex items-center gap-3 px-4 py-2 text-sm text-zinc-300 hover:bg-hover-strong aria-selected:bg-hover-strong">
+        <i data-lucide="building-2" class="w-3.5 h-3.5 text-zinc-500"></i>
+        <span class="flex-1 min-w-0 truncate text-zinc-100">{{ client.name }}</span>
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+{% if results.pages %}
+<div role="group" aria-labelledby="palette-h-pages" class="py-1">
+    <h3 id="palette-h-pages" class="px-4 pt-2 pb-1 text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Pages</h3>
+    {% for page in results.pages %}
+    <a role="option" id="palette-page-{{ forloop.counter }}" href="{{ page.url }}" aria-selected="false"
+       class="palette-option flex items-center gap-3 px-4 py-2 text-sm text-zinc-300 hover:bg-hover-strong aria-selected:bg-hover-strong">
+        <i data-lucide="corner-down-right" class="w-3.5 h-3.5 text-zinc-500"></i>
+        <span class="flex-1 min-w-0 truncate text-zinc-100">{{ page.label }}</span>
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+{% endif %}

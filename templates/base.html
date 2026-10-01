@@ -139,6 +139,35 @@
     <!-- Slide-over panel container -->
     <div id="slide-over" class="fixed inset-y-0 right-0 w-full max-w-xl bg-panel border-l border-border-subtle z-50 overflow-y-auto hidden animate-slide-in-right"></div>
 
+    {% if user.is_authenticated %}
+    {% comment %}Command palette: search and jump (tasks, projects, clients, pages), no actions. static/js/keys.js opens it with Ctrl/Cmd+K or the sidebar button. Results are real links rendered by apps/search without the request. The input names its own spinner so the global "Loading…" stays quiet on every keystroke.{% endcomment %}
+    <div id="palette" hidden class="fixed inset-0 z-[80] bg-black/50">
+        <div role="dialog" aria-modal="true" aria-label="Search"
+             class="mx-auto mt-[12vh] w-[calc(100%-2rem)] max-w-xl bg-panel border border-border-subtle rounded-card shadow-lg overflow-hidden">
+            <div class="flex items-center gap-2 px-4 border-b border-border-subtle">
+                <i data-lucide="search" class="w-4 h-4 text-zinc-500 shrink-0"></i>
+                <input id="palette-input" type="text" name="q" maxlength="100" autocomplete="off" spellcheck="false"
+                       placeholder="Search tasks, projects, clients, pages…" aria-label="Search"
+                       role="combobox" aria-expanded="true" aria-controls="palette-list"
+                       aria-autocomplete="list" aria-activedescendant=""
+                       hx-get="{% url 'search' %}" hx-trigger="input delay:200ms"
+                       hx-target="#palette-results" hx-swap="innerHTML" hx-sync="this:replace"
+                       hx-indicator="#palette-spinner"
+                       class="flex-1 min-w-0 bg-transparent py-3 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none">
+                <svg id="palette-spinner" class="htmx-indicator animate-spin h-3.5 w-3.5 text-zinc-500 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+            </div>
+            <div id="palette-list" role="listbox" aria-label="Results" class="max-h-[60vh] overflow-y-auto">
+                <div id="palette-results" aria-live="polite">
+                    <p class="px-4 py-6 text-sm text-zinc-500">Type at least 2 characters to search tasks, projects, clients and pages.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Global HTMX loading indicator -->
     <div id="htmx-indicator" class="htmx-indicator fixed top-3 right-3 z-[60] flex items-center gap-2 px-3 py-1.5 bg-elevated border border-border-subtle rounded-control text-xs text-zinc-400">
         <svg class="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -230,8 +259,12 @@
 
         // Click anywhere outside the open panel closes it. The click that opens a
         // drawer bubbles here while the panel is still hidden, so it can't self-close.
+        // A dialog opened over the drawer (the command palette, the shortcut list) is not
+        // "outside" in that sense: clicking in it must not close the drawer under it and
+        // throw away what was being typed there.
         document.addEventListener('click', (event) => {
             const panel = document.getElementById('slide-over');
+            if (event.target.closest('#palette, #task-shortcuts')) return;
             if (!panel.classList.contains('hidden') && !panel.contains(event.target)) {
                 window.closeSlideOver();
             }

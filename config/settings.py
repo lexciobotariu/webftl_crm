@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     'apps.invoices',
     'apps.integrations',
     'apps.imports',
+    'apps.search',
 ]
 
 MIDDLEWARE = [

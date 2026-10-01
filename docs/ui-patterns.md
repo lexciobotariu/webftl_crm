@@ -416,8 +416,8 @@ column is the status) without opening the drawer.
   board, each column) are saved before `#task-view` is swapped and restored after: the
   refresh after an edit, "Show more", and the board's refresh after a drag. Only a request
   sent from the toolbar (filter, layout, search) is a different view and starts from the top.
-- **Escape.** `static/js/keys.js` is the one Escape handler. It walks shortcut help, palette,
-  quick menu, dropdown, drawer, selection and stops at the first that closes something; new layers
+- **Escape.** `static/js/keys.js` is the one Escape handler. It walks palette, shortcut
+  help, quick menu, dropdown, drawer, selection and stops at the first that closes something; new layers
   register with `registerEscLayer(name, fn)`. A field that handles Escape itself must
   `preventDefault()`. The dropdown layer closes an Alpine component only when it has `open`
   *and* a panel with `@click.away` (or `.outside`); a collapsible section that also uses `open`
@@ -467,6 +467,43 @@ with "Create more", Cancel and Create.
 - **Where "+" is.** Board column headers (status), and list group headers when grouped by status,
   priority or assignee. The group buttons show only with `can_create_task and project`, so not
   on My Tasks.
+
+## Command palette (Ctrl/Cmd+K)
+
+Search and jump, no actions. `Cmd+K` on a Mac, `Ctrl+K` elsewhere (or the Search button at the top
+of the sidebar, which works without a keyboard) opens `#palette` from `base.html`;
+`static/js/keys.js` runs it. On a Mac `Ctrl+K` is left alone: it deletes to the end of the line in
+a text field.
+
+- **What it finds.** `apps/search` (no models): `services.search(user, q)` and `GET /search/?q=`.
+  Tasks match the title or the id (a number, or `CUST-19`, where the prefix is only how an id is
+  shown and is ignored, whatever characters it holds; an exact id comes first). A single digit is
+  searched as a task id only. Projects and clients match the name. Pages match
+  the label. Five results per section, newest tasks first.
+- **Visibility.** Each section uses the helper the list page uses (`visible_tasks`,
+  `visible_projects`, `visible_clients`) **and** only appears if the person has the module
+  (`access_tasks`, `access_projects`, `access_clients`); the helpers do not check the module.
+- **Pages** are `apps/search/pages.py`, the sidebar's list with the sidebar's conditions. Add a
+  sidebar entry there too; `TestPages.test_the_page_list_is_the_sidebars_...` renders the sidebar for
+  several kinds of user and fails when the two drift.
+- **The query** is trimmed and cut to `MAX_QUERY_LENGTH` (`apps/tasks/viewspec.py`); under 2
+  characters it only shows the hint, unless it is a digit. The view renders `search/results.html` without the request, so
+  the context processors (permissions, timers) do not run on every keystroke.
+- **Markup.** A modal `role="dialog"` with a `role="combobox"` input and a `role="listbox"` whose
+  options are real `<a href>` links; focus stays in the input and `aria-activedescendant` follows
+  the arrow keys. `Tab` keeps focus in the dialog. The input has `hx-trigger="input delay:200ms"`,
+  `hx-sync="this:replace"` (a newer keystroke cancels the older request) and its own spinner, so the
+  global "Loading…" stays quiet.
+- **Choosing.** `Enter` or a click on a task loads the drawer into `#slide-over` on the current page
+  (`data-detail-url`); everything else navigates. `Ctrl/Cmd`-click or `Ctrl/Cmd+Enter` opens the link
+  in a new tab. `Esc` closes the palette before anything else. On the task's own full page the
+  link is followed instead: the drawer would repeat that page's element ids.
+- **Only the answer to what is typed is shown.** An answer to an earlier query is dropped, a
+  search still running when the palette closes is aborted, and `Enter` pressed before the results
+  arrive waits for them and opens the first. A redirect instead of results means the session
+  ended, and the page reloads to the login.
+- **Over the drawer.** A click inside the palette (or the shortcut list) does not count as a click
+  outside the drawer, so a half-filled drawer under it stays open.
 
 ## Kanban Board
 
@@ -635,7 +672,7 @@ Integrity. Bumping a version means recomputing its `integrity` hash.
 - **Lucide 1.38.0** — icon library
 - **Iconify 2.3.0** — supplementary icons
 - **Own scripts** (`static/js/`, served from the app, not the CDN): `keys.js` (the Escape
-  dispatcher, loaded by `base.html`) and `task-view.js` (quick-edit menu, loaded by the Tasks
+  dispatcher and the command palette, loaded by `base.html`) and `task-view.js` (quick-edit menu, loaded by the Tasks
   pages). With `DEBUG` off, run `collectstatic` after adding or changing one; CI and Docker do.
 - **Tailwind CSS** (`cdn.tailwindcss.com`) — the one unpinned, unhashed dependency;
   it is a JIT build with no versioned URL. See the README for the tradeoff.

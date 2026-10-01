@@ -314,7 +314,7 @@
     }
 
     document.addEventListener('keydown', (event) => {
-        if (event.defaultPrevented || event.isComposing || event.keyCode === 229) return;
+        if (!event.key || event.defaultPrevented || event.isComposing || event.keyCode === 229) return;
         if (event.ctrlKey || event.metaKey || event.altKey) return;
         // The menu and the drawer own the keyboard while they are open.
         if (state || drawerOpen() || helpOpen()) return;
