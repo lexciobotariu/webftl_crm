@@ -25,3 +25,15 @@ def task_activities(task, user):
                 may_edit = can_edit_task(user, task)
             activity.can_change = may_edit
     return activities
+
+
+@register.simple_tag
+def mention_people(task, user):
+    """Who the @ menu in the comment box offers: people who can see ``task``, minus you."""
+    from apps.notifications.services import people_who_can_see
+
+    return [
+        {'id': person.pk, 'name': person.name}
+        for person in people_who_can_see(task).exclude(pk=user.pk)
+        if person.name
+    ]

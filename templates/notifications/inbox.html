@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Inbox - WebFTL CRM{% endblock %}
+
+{% block full_content %}
+<div class="flex-1 overflow-auto p-4">
+<div class="max-w-3xl mx-auto py-8 px-4">
+    <div class="mb-6 flex items-center justify-between gap-3">
+        <div>
+            <h1 class="text-xl font-semibold text-zinc-100">Inbox</h1>
+            <p class="text-sm text-zinc-500">Assignments, mentions and comments on tasks you follow.</p>
+        </div>
+        <button type="button"
+                hx-post="{% url 'notification_read_all' %}"
+                hx-target="#inbox-list" hx-swap="outerHTML"
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded-control text-xs text-zinc-300 border border-border-subtle hover:bg-hover transition-colors">
+            <i data-lucide="check-check" class="w-3.5 h-3.5"></i>
+            Mark all read
+        </button>
+    </div>
+    {% include "notifications/partials/list.html" %}
+</div>
+</div>
+{% endblock %}

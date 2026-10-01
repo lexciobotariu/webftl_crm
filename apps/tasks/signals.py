@@ -1,6 +1,8 @@
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
+from apps.notifications.services import notify_assigned, withdraw_assigned
+
 from .models import Task, TaskActivity
 
 # TaskActivity.old_value and new_value are 255 characters; titles go up to 1000.
@@ -40,6 +42,8 @@ def log_task_changes(sender, instance, created, **kwargs):
             activity_type='created',
             content='created this task'
         )
+        if user is not None:
+            notify_assigned(instance, user)
         return
 
     # Check what changed
@@ -66,6 +70,9 @@ def log_task_changes(sender, instance, created, **kwargs):
             new_value=new_name,
             content=f'changed assignee from {old_name} to {new_name}'
         )
+        withdraw_assigned(instance, instance._old_assignee)
+        if user is not None:
+            notify_assigned(instance, user)
 
     if hasattr(instance, '_old_priority') and instance._old_priority != instance.priority:
         old_display = dict(Task.PRIORITY_CHOICES).get(instance._old_priority, 'None')

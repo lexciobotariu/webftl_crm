@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0] - 2026-10-01
+
+### Features
+- An Inbox (sidebar and command palette, for people with the Tasks module) lists what happened on your tasks: being assigned, being mentioned, and comments on tasks you follow; unread first, then earlier ones
+- Clicking a notification opens the task in the drawer and marks it read; "Mark all read" clears the list
+- Typing `@` in the comment box lists the people who can see the task; picking one mentions them, and a mention takes the place of the "commented" notification
+- Following a task means being its assignee, its creator, or someone who commented on it; your own changes never notify you
+- The sidebar shows the unread count, refreshed when you come back to the tab
+
+### Changes
+- Notifications are only created by a person's action, so imports and GitHub syncs do not send any; a notification disappears from the Inbox when you lose access to its task or when its comment is deleted
+- Several comments on one task while you have not looked collapse into one notification showing the latest
+
 ## [0.13.0] - 2026-10-01
 
 ### Features

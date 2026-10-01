@@ -1,0 +1,23 @@
+{% comment %}One notification. A click on the link opens the task in the drawer (the full page is the plain link), and the click bubbles to the <li>, which marks it read and swaps in its read version.{% endcomment %}
+<li id="notification-{{ note.pk }}"
+    {% if not note.read_at %}hx-post="{% url 'notification_read' note.pk %}" hx-trigger="click" hx-swap="outerHTML"{% endif %}
+    class="flex items-start gap-3 px-4 py-3 {% if note.read_at %}bg-transparent{% else %}bg-elevated/40{% endif %} hover:bg-hover transition-colors">
+    <span class="mt-1.5 w-2 h-2 shrink-0 rounded-full {% if note.read_at %}bg-transparent{% else %}bg-accent{% endif %}" aria-hidden="true"></span>
+    <span class="mt-0.5 w-6 h-6 shrink-0 rounded-full bg-elevated border border-border-subtle flex items-center justify-center text-[10px] font-medium text-zinc-200" aria-hidden="true">{{ note.actor.name|slice:":1"|upper|default:"?" }}</span>
+    <div class="flex-1 min-w-0">
+        <a href="{% url 'task_full_page' note.task.project_id note.task_id %}"
+           hx-get="{% url 'task_detail' note.task_id %}" hx-target="#slide-over" hx-swap="innerHTML"
+           class="block text-sm text-zinc-300 hover:text-zinc-100">
+            {% if not note.read_at %}<span class="sr-only">Unread: </span>{% endif %}
+            <span class="font-medium text-zinc-100">{{ note.actor.name|default:"Someone" }}</span>
+            {{ note.verb }}
+            {% if note.kind == 'mentioned' %}on{% endif %}
+            <span class="font-mono text-xs text-zinc-500">{{ note.task.identifier }}</span>
+            <span class="text-zinc-100">{{ note.task.title }}</span>
+        </a>
+        {% if note.activity and note.activity.content %}
+        <p class="mt-0.5 text-xs text-zinc-500 truncate">{{ note.activity.content|truncatechars:140 }}</p>
+        {% endif %}
+    </div>
+    <span class="shrink-0 text-xs text-zinc-500" title="{{ note.created_at }}">{{ note.created_at|timesince }} ago</span>
+</li>

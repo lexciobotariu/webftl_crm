@@ -1,0 +1,20 @@
+<div id="inbox-list" class="space-y-6">
+    <section aria-labelledby="inbox-unread">
+        <h2 id="inbox-unread" class="mb-2 text-[11px] uppercase tracking-[0.18em] text-zinc-500">Unread</h2>
+        {% if unread %}
+        <ul class="border border-border-subtle rounded-card overflow-hidden divide-y divide-border-subtle">
+            {% for note in unread %}{% include "notifications/partials/item.html" %}{% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-sm text-zinc-500 py-6 text-center border border-dashed border-border-subtle rounded-card">You are all caught up.</p>
+        {% endif %}
+    </section>
+    {% if earlier %}
+    <section aria-labelledby="inbox-earlier">
+        <h2 id="inbox-earlier" class="mb-2 text-[11px] uppercase tracking-[0.18em] text-zinc-500">Earlier</h2>
+        <ul class="border border-border-subtle rounded-card overflow-hidden divide-y divide-border-subtle">
+            {% for note in earlier %}{% include "notifications/partials/item.html" %}{% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+</div>
