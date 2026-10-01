@@ -48,15 +48,14 @@ def sync_issues_from_github(project: Project, token: str):
             if 'pull_request' in issue:
                 continue
 
+            # The status only applies to a new task: a sync must not move an
+            # existing one back to the first column.
+            fields = _issue_fields(issue)
             Task.objects.update_or_create(
                 project=project,
                 github_issue_id=issue['id'],
-                defaults={
-                    'github_issue_number': issue['number'],
-                    'title': issue['title'],
-                    'description': issue['body'] or '',
-                    'status': backlog,
-                }
+                defaults=fields,
+                create_defaults={**fields, 'status': backlog},
             )
 
 
@@ -135,6 +134,15 @@ def process_webhook_push(payload: dict, project: Project):
         )
 
 
+def _issue_fields(issue: dict) -> dict:
+    """What a GitHub issue sets on its task, on create and on every later sync."""
+    return {
+        'github_issue_number': issue['number'],
+        'title': issue['title'],
+        'description': issue['body'] or '',
+    }
+
+
 def process_webhook_issue(payload: dict, project: Project):
     """Process issue webhook events."""
     action = payload.get('action')
@@ -142,16 +150,21 @@ def process_webhook_issue(payload: dict, project: Project):
 
     if action == 'opened':
         backlog = project.statuses.first()
+        fields = _issue_fields(issue)
         Task.objects.update_or_create(
             project=project,
             github_issue_id=issue['id'],
-            defaults={
-                'github_issue_number': issue['number'],
-                'title': issue['title'],
-                'description': issue['body'] or '',
-                'status': backlog,
-            }
+            defaults=fields,
+            create_defaults={**fields, 'status': backlog},
         )
+    elif action == 'reopened':
+        # A sync no longer resets the status, so reopening has to say it: without
+        # this the task of a reopened issue would stay done and then archive.
+        task = Task.objects.filter(project=project, github_issue_id=issue['id']).select_related('status').first()
+        first_open = project.statuses.exclude(category__in=Status.CLOSED_CATEGORIES).first()
+        if task and first_open and task.status.is_closed:
+            task.status = first_open
+            task.save()
     elif action == 'closed':
         try:
             task = Task.objects.get(project=project, github_issue_id=issue['id'])

@@ -5,6 +5,7 @@
         {% if hidden_count %}
         <span>{{ hidden_count }} hidden by filters</span>
         {% endif %}
+        {% include "tasks/view/_archived_note.html" %}
         {% if hidden_task_count > 0 %}
         <span class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle rounded-card px-2 py-1">
             <i data-lucide="eye-off" class="w-3 h-3"></i>

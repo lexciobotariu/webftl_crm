@@ -66,6 +66,7 @@ def comment_deleted(comment):
     comment.
     """
     notes = Notification.objects.filter(activity=comment, read_at__isnull=True).select_related('recipient')
+    viewer_names = None
     for note in notes:
         candidates = (
             TaskActivity.objects.filter(task_id=comment.task_id, activity_type='comment')
@@ -84,12 +85,38 @@ def comment_deleted(comment):
         if last_read is not None:
             candidates = candidates.filter(created_at__gt=last_read)
         if note.kind == Notification.MENTIONED:
-            candidates = candidates.filter(content__contains=f'@{note.recipient.name}')
-        previous = candidates.first()
+            # The same rule that raised the mention: the text has to name this person,
+            # not someone whose longer name starts the same way.
+            if viewer_names is None:
+                viewer_names = {person.name for person in people_who_can_see(comment.task) if person.name}
+            name = note.recipient.name
+            candidates = [
+                candidate for candidate in candidates.filter(content__contains=f'@{name}')
+                if name in names_mentioned(candidate.content, viewer_names)
+            ]
+            previous = candidates[0] if candidates else None
+        else:
+            previous = candidates.first()
         if previous is not None:
             Notification.objects.filter(pk=note.pk).update(
                 activity=previous, actor_id=previous.user_id, created_at=previous.created_at
             )
+
+
+def names_mentioned(content, names):
+    """Which of ``names`` the text names with an "@".
+
+    Longest first: at each "@" the text names whoever's full name follows it, so
+    "@Alex Pop" is Alex Pop and never also Alex.
+    """
+    by_length = sorted(names, key=len, reverse=True)
+    named = set()
+    start = content.find('@')
+    while start != -1:
+        named.add(next((name for name in by_length if content.startswith(name, start + 1)), None))
+        start = content.find('@', start + 1)
+    named.discard(None)
+    return named
 
 
 def _mentioned(task, content, mention_ids):
@@ -103,15 +130,7 @@ def _mentioned(task, content, mention_ids):
     if not ids:
         return []
     viewers = [person for person in people_who_can_see(task) if person.name]
-    # Longest first: at each "@" the text names whoever's full name follows it, so
-    # "@Alex Pop" is Alex Pop and never also Alex.
-    names = sorted({person.name for person in viewers}, key=len, reverse=True)
-    named = set()
-    start = content.find('@')
-    while start != -1:
-        rest = content[start + 1:]
-        named.add(next((name for name in names if rest.startswith(name)), None))
-        start = content.find('@', start + 1)
+    named = names_mentioned(content, {person.name for person in viewers})
     return [person for person in viewers if person.pk in ids and person.name in named]
 
 

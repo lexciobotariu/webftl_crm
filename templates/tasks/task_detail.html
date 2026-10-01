@@ -9,6 +9,7 @@
             <span class="text-xs text-zinc-500 bg-elevated px-2 py-0.5 rounded border border-border-subtle font-mono">
                 {{ task.identifier }}
             </span>
+            {% include "tasks/partials/archived_badge.html" %}
         </div>
         <div class="flex items-center gap-1">
             <button x-data="{ copied: false }"

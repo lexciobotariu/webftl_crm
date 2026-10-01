@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.conf import settings
 from django.db import models, transaction
 from django.db.models import Case, Count, Exists, F, OuterRef, Q, Value, When
@@ -73,6 +75,10 @@ def _category_rank():
     )
 
 
+def archive_cutoff(now=None):
+    return (now or timezone.now()) - timedelta(days=settings.TASK_ARCHIVE_AFTER_DAYS)
+
+
 class TaskQuerySet(models.QuerySet):
     """Keeps the definitions of "done", "active" and "overdue" in one place.
 
@@ -87,6 +93,21 @@ class TaskQuerySet(models.QuerySet):
     def active(self):
         """Tasks in a status that is not completed or canceled."""
         return self.exclude(status__category__in=Status.CLOSED_CATEGORIES)
+
+    def archived(self, now=None):
+        """Closed, and closed longer ago than ``TASK_ARCHIVE_AFTER_DAYS``."""
+        return self.filter(
+            status__category__in=Status.CLOSED_CATEGORIES, closed_at__lt=archive_cutoff(now)
+        )
+
+    def not_archived(self, now=None):
+        # Spelled out rather than ``exclude(...)`` so a closed task with no
+        # ``closed_at`` (nothing to measure from) is plainly kept.
+        return self.filter(
+            ~Q(status__category__in=Status.CLOSED_CATEGORIES)
+            | Q(closed_at__isnull=True)
+            | Q(closed_at__gte=archive_cutoff(now))
+        )
 
     def overdue(self, today=None):
         if today is None:
@@ -114,6 +135,8 @@ class TaskQuerySet(models.QuerySet):
         task with two matching labels is still one row and the query stays cheap.
         """
         qs = self
+        if not spec.archived:
+            qs = qs.not_archived()
         if spec.categories:
             qs = qs.filter(status__category__in=spec.categories)
         if spec.hidden_statuses:
@@ -232,6 +255,9 @@ class Task(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    # When the task entered a completed or canceled status; cleared when it is
+    # reopened. Set by ``save``, so every path that changes the status keeps it.
+    closed_at = models.DateTimeField(null=True, blank=True, db_index=True)
 
     objects = TaskQuerySet.as_manager()
 
@@ -253,6 +279,12 @@ class Task(models.Model):
         return self.title
 
     def save(self, *args, **kwargs):
+        update_fields = kwargs.get('update_fields')
+        if update_fields is None or 'status' in update_fields:
+            self._sync_closed_at()
+            if update_fields is not None:
+                # Otherwise a save(update_fields=['status']) would drop it.
+                kwargs['update_fields'] = {*update_fields, 'closed_at'}
         if self.number is not None:
             return super().save(*args, **kwargs)
         with transaction.atomic():
@@ -262,6 +294,24 @@ class Task(models.Model):
             projects.update(task_counter=F('task_counter') + 1)
             self.number = projects.values_list('task_counter', flat=True).get()
             super().save(*args, **kwargs)
+
+    def _sync_closed_at(self):
+        """A stateless rule: closed with no date gets now, open gets none."""
+        if self.status_id is None:
+            return
+        if self.status.is_closed:
+            if self.closed_at is None:
+                self.closed_at = timezone.now()
+        else:
+            self.closed_at = None
+
+    @property
+    def is_archived(self):
+        return (
+            self.closed_at is not None
+            and self.status.is_closed
+            and self.closed_at < archive_cutoff()
+        )
 
     @property
     def identifier(self):

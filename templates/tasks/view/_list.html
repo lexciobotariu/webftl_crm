@@ -7,6 +7,7 @@
     <span>{{ hidden_count }} done or canceled hidden</span>
     <a href="{{ show_all_url }}" class="text-zinc-400 hover:text-zinc-200 transition-colors">Show all</a>
     {% endif %}
+    {% include "tasks/view/_archived_note.html" %}
 </div>
 {% if total_matching %}
 <div class="border-t border-border-subtle">
@@ -75,6 +76,17 @@
             onclick="document.getElementById('task-search').value = ''; document.getElementById('task-toolbar-clear').click()"
             class="text-zinc-200 hover:text-zinc-50 text-sm">
         Clear filters
+    </button>
+</div>
+{% elif archived_count and not total_visible %}
+{# Everything that would be listed is archived: say that, not "No tasks yet". #}
+<div class="flex flex-col items-center justify-center py-16 text-zinc-500">
+    <i data-lucide="archive" class="w-10 h-10 mb-3 opacity-30"></i>
+    <p class="text-sm mb-2">Everything here is archived</p>
+    <button type="button"
+            onclick="const box = document.querySelector('#task-toolbar input[name=archived]'); if (box) { box.checked = true; box.form.requestSubmit(); }"
+            class="text-zinc-200 hover:text-zinc-50 text-sm">
+        Show {{ archived_count }} archived
     </button>
 </div>
 {% else %}

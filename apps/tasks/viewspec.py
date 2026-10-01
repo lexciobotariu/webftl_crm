@@ -131,6 +131,8 @@ class TaskViewSpec:
     dir: str = 'asc'
     limit: int = DEFAULT_LIMIT
     categories: frozenset = frozenset()
+    # Closed tasks past TASK_ARCHIVE_AFTER_DAYS are left out unless this is on.
+    archived: bool = False
     # Carried so ``to_params`` and ``is_default`` can tell what the page's defaults
     # are. Not part of the state itself, so it stays out of equality and repr.
     options: TaskViewOptions = field(default_factory=TaskViewOptions, compare=False, repr=False)
@@ -189,6 +191,7 @@ class TaskViewSpec:
             dir=_choice(_getone(params, 'dir'), DIRECTIONS, DEFAULT_DIR[sort]),
             limit=_limit(_getone(params, 'limit')),
             categories=categories,
+            archived=_getone(params, 'archived') == '1',
             options=options,
         )
         if clearing:
@@ -199,6 +202,7 @@ class TaskViewSpec:
                 assignees=(),
                 labels=(),
                 categories=frozenset(options.default_categories),
+                archived=False,
             )
         return spec
 
@@ -215,7 +219,7 @@ class TaskViewSpec:
         return sum(
             bool(group)
             for group in (self.hidden_statuses, self.priorities, self.assignees, self.labels)
-        ) + (self.categories != self.options.default_categories)
+        ) + (self.categories != self.options.default_categories) + self.archived
 
     @property
     def is_default(self):
@@ -239,6 +243,8 @@ class TaskViewSpec:
             params['assignee'] = list(self.assignees)
         if self.labels:
             params['label'] = [str(pk) for pk in self.labels]
+        if self.archived:
+            params['archived'] = '1'
         if self.q:
             params['q'] = self.q
         if self.group != self.options.default_group:

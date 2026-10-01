@@ -49,6 +49,15 @@
                     {% if label_options %}
                     {% include "components/checkbox_filter_group.html" with title="Labels" name="label" options=label_options %}
                     {% endif %}
+                    <fieldset class="space-y-1">
+                        <legend class="text-[10px] uppercase tracking-wider text-zinc-500 font-medium mb-1">Archive</legend>
+                        <label class="flex items-center gap-2 py-1 text-sm text-zinc-300 cursor-pointer">
+                            <input type="checkbox" name="archived" value="1" {% if spec.archived %}checked{% endif %}
+                                   aria-describedby="task-archive-help" class="accent-accent w-4 h-4">
+                            <span>Show archived</span>
+                        </label>
+                        <p id="task-archive-help" class="text-[11px] text-zinc-500">Done or canceled more than {{ archive_after_days }} days ago.</p>
+                    </fieldset>
                 </div>
                 <div class="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-border-subtle">
                     <button type="submit" id="task-toolbar-clear" name="clear" value="1" @click="close()"
