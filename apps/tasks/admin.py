@@ -10,9 +10,16 @@ class SubtaskInline(admin.TabularInline):
 
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
-    list_display = ('title', 'project', 'status', 'assignee', 'priority', 'due_date')
+    list_display = ('title', 'number', 'project', 'status', 'assignee', 'priority', 'due_date')
     list_filter = ('project', 'status', 'priority', 'assignee')
     search_fields = ('title', 'description')
+    readonly_fields = ('number',)
+
+    def get_readonly_fields(self, request, obj=None):
+        # The number belongs to the project's sequence, so a task cannot move.
+        if obj is not None:
+            return ('number', 'project')
+        return self.readonly_fields
     inlines = [SubtaskInline]
 
 

@@ -12,7 +12,7 @@
        data-detail-url="{% url 'task_detail' task.pk %}" aria-selected="false"
        class="palette-option flex items-center gap-3 px-4 py-2 text-sm text-zinc-300 hover:bg-hover-strong aria-selected:bg-hover-strong">
         {% include "components/status_icon.html" with category=task.status.category %}
-        <span class="shrink-0 font-mono text-xs text-zinc-500">{{ task.project.name|slice:":4"|upper }}-{{ task.pk }}</span>
+        <span class="shrink-0 font-mono text-xs text-zinc-500">{{ task.identifier }}</span>
         <span class="flex-1 min-w-0 truncate text-zinc-100">{{ task.title }}</span>
         <span class="hidden sm:inline max-w-[10rem] shrink-0 truncate text-xs text-zinc-500">{{ task.project.name }}</span>
     </a>

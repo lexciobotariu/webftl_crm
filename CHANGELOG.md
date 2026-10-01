@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2026-10-01
+
+### Features
+- Task ids count per project: each project has a key (derived from its name, for example `CUST`) and its tasks are numbered `CUST-1`, `CUST-2`, ... in the list, on board cards, in the drawer, on the full page and in the command palette
+- The key can be changed under project Settings (2 to 6 capital letters or digits, starting with a letter, unique across projects); renaming the project no longer changes its task ids
+- Search finds `CUST-12` as task 12 of the project with that key, and a plain `12` as task 12 of any project you can see
+- GitHub commits and pull requests that mention `CUST-12` (the exact key, as a whole word) link to that task; the older `#TASK-<id>` form still works
+
+### Changes
+- **Every task gets a new id.** Existing tasks are numbered per project in the order they were created, so `ERP-285` may become `ERP-12`. Task links and URLs are unchanged
+- Search no longer ignores the prefix of a task id: an unknown key finds nothing
+- In the admin, a task's number and a project's task counter are read-only
+
+### Upgrade notes
+- The migration runs when the new container starts; stop the old instance from creating tasks while it runs
+
 ## [0.10.0] - 2026-10-01
 
 ### Features

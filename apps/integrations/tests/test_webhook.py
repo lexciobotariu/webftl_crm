@@ -206,3 +206,77 @@ class TestIssueClosedWebhook:
         process_webhook_issue(self._payload(task), project)
         task.refresh_from_db()
         assert task.status == original
+
+
+def _push(*messages):
+    return {'commits': [
+        {
+            'id': f'sha{i}', 'message': message, 'author': {'name': 'Dev'},
+            'url': f'https://github.com/o/r/commit/{i}', 'timestamp': '2026-10-01T10:00:00Z',
+        }
+        for i, message in enumerate(messages)
+    ]}
+
+
+@pytest.mark.django_db
+class TestTaskReferences:
+    def _project(self):
+        from apps.tasks.factories import TaskFactory
+
+        project = ProjectFactory(name='Custom CRM', key='CUST')
+        tasks = TaskFactory.create_batch(3, project=project)
+        return project, tasks
+
+    def test_a_commit_naming_the_key_links_to_that_task(self):
+        from apps.integrations.github import process_webhook_push
+        from apps.integrations.models import GitHubCommit
+
+        project, tasks = self._project()
+        process_webhook_push(_push('fix: login, closes CUST-2'), project)
+
+        assert GitHubCommit.objects.get().task == tasks[1]
+
+    def test_the_key_must_be_exact_and_a_whole_word(self):
+        from apps.integrations.github import process_webhook_push
+        from apps.integrations.models import GitHubCommit
+        from apps.tasks.factories import TaskFactory
+
+        project, _tasks = self._project()
+        # A real OTHR-1 on another project is still not this project's task.
+        TaskFactory(project=ProjectFactory(name='Other', key='OTHR'))
+        process_webhook_push(_push('XCUST-2', 'cust-2', 'CUST-22', 'CUST-2x', 'OTHR-1', 'CUST-9'), project)
+
+        assert not GitHubCommit.objects.exists()
+
+    def test_the_old_task_pk_reference_still_links(self):
+        from apps.integrations.github import process_webhook_push
+        from apps.integrations.models import GitHubCommit
+
+        project, tasks = self._project()
+        process_webhook_push(_push(f'fix: update #TASK-{tasks[2].pk}'), project)
+
+        assert GitHubCommit.objects.get().task == tasks[2]
+
+    def test_an_old_reference_to_another_projects_task_is_ignored(self):
+        from apps.integrations.github import process_webhook_push
+        from apps.integrations.models import GitHubCommit
+        from apps.tasks.factories import TaskFactory
+
+        project, _tasks = self._project()
+        elsewhere = TaskFactory()
+        process_webhook_push(_push(f'#TASK-{elsewhere.pk}'), project)
+
+        assert not GitHubCommit.objects.exists()
+
+    def test_a_pull_request_title_links_by_key(self):
+        from apps.integrations.github import process_webhook_pull_request
+        from apps.integrations.models import GitHubPullRequest
+
+        project, tasks = self._project()
+        process_webhook_pull_request({'pull_request': {
+            'number': 5, 'title': 'CUST-3: speed up', 'body': None, 'state': 'open', 'merged': False,
+            'html_url': 'https://github.com/o/r/pull/5',
+            'created_at': '2026-10-01T10:00:00Z', 'updated_at': '2026-10-01T10:00:00Z',
+        }}, project)
+
+        assert GitHubPullRequest.objects.get().task == tasks[2]

@@ -134,7 +134,7 @@ class TestBoardCards:
         SubtaskFactory(task=task, completed=False)
         client.force_login(_member(project))
         html = client.get(_board(project)).content.decode()
-        assert f'WEBS-{task.pk}' in html
+        assert '>WEBS-1<' in html
         assert 'title="Zoe"' in html
         assert '1/2' in html
         assert 'text-error' in html

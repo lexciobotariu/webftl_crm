@@ -15,7 +15,7 @@
                 {% else %}
                 {% include "components/priority_icon.html" with priority=task.priority %}
                 {% endif %}
-                <span class="font-mono text-[11px] text-zinc-500">{{ project.name|slice:":4"|upper }}-{{ task.pk }}</span>
+                <span class="font-mono text-[11px] text-zinc-500">{{ project.key }}-{{ task.number }}</span>
             </div>
             <div class="text-sm font-medium text-zinc-100 mb-1.5">{{ task.title }}</div>
             {% with labels=task.labels.all %}

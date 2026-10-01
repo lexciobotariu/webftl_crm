@@ -18,10 +18,9 @@ from .pages import pages_for
 
 MIN_QUERY_LENGTH = 2
 PER_SECTION = 5
-# "19" or "CUST-19": the prefix is only how a task id is shown, so it is ignored. It is
-# the first four characters of the project name, which can be anything ("MY W-19",
-# "R&D -19", "ÉLAN-19").
-TASK_ID = re.compile(r'^(?:.*-)?(\d{1,9})$')
+# "CUST-19" is task 19 of the project whose key is CUST; "19" is task 19 of any
+# project. Keys are stored in capitals, so "cust-19" works too.
+TASK_ID = re.compile(r'^(?:([A-Za-z][A-Za-z0-9]{1,5})-)?(\d{1,9})$')
 
 
 @dataclass
@@ -46,22 +45,29 @@ def search(user, raw_query):
     query = clean_query(raw_query)
     results = SearchResults(query=query)
     match = TASK_ID.match(query)
-    number = int(match.group(1)) if match else None
+    id_query = None
+    if match:
+        id_query = Q(number=int(match.group(2)))
+        if match.group(1):
+            id_query &= Q(project__key=match.group(1).upper())
     # One character is too little to search names by, but "7" is a whole task id.
     id_only = len(query) < MIN_QUERY_LENGTH
-    if id_only and number is None:
+    if id_only and id_query is None:
         results.too_short = True
         return results
 
     if user.has_app_permission('access_tasks'):
-        condition = Q(pk=number) if id_only else Q(title__icontains=query)
-        if number is not None:
-            condition |= Q(pk=number)
+        if id_only:
+            condition = id_query
+        else:
+            condition = Q(title__icontains=query)
+            if id_query is not None:
+                condition |= id_query
         tasks = visible_tasks(user).filter(condition).select_related('project', 'status')
-        if number is not None:
+        if id_query is not None:
             # An id typed in full comes first.
             tasks = tasks.annotate(
-                exact=Case(When(pk=number, then=Value(0)), default=Value(1), output_field=IntegerField())
+                exact=Case(When(id_query, then=Value(0)), default=Value(1), output_field=IntegerField())
             ).order_by('exact', '-updated_at')
         else:
             tasks = tasks.order_by('-updated_at')
