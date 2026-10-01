@@ -34,6 +34,19 @@
     </div>
 
     <div>
+        <label for="project-key" class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Task ID prefix</label>
+        <input type="text" id="project-key" name="key" value="{{ key|default:project.key }}" required
+               maxlength="6" autocomplete="off" spellcheck="false"
+               aria-describedby="project-key-help"
+               class="w-full max-w-[10rem] bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm font-mono uppercase text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none {% if errors.key %}border-error{% endif %}">
+        {% if errors.key %}
+        <p id="project-key-help" class="text-error text-xs mt-1">{{ errors.key }}</p>
+        {% else %}
+        <p id="project-key-help" class="text-zinc-500 text-xs mt-1">Tasks show as {{ project.key }}-1, {{ project.key }}-2. Changing it renames every id.</p>
+        {% endif %}
+    </div>
+
+    <div>
         <label class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Description</label>
         <textarea name="description" rows="3" placeholder="Project description..."
                   class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none resize-none">{{ project.description }}</textarea>

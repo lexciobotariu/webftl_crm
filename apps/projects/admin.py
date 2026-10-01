@@ -10,9 +10,10 @@ class StatusInline(admin.TabularInline):
 
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
-    list_display = ('name', 'client', 'github_sync_enabled', 'created_at')
+    list_display = ('name', 'key', 'client', 'github_sync_enabled', 'created_at')
     list_filter = ('client', 'github_sync_enabled')
-    search_fields = ('name', 'client__name')
+    search_fields = ('name', 'key', 'client__name')
+    readonly_fields = ('task_counter',)
     inlines = [StatusInline]
 
 

@@ -1,4 +1,5 @@
 import json
+import re
 
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
@@ -37,6 +38,7 @@ from apps.tasks.models import (
 from apps.tasks.viewspec import LIMIT_STEP, TaskViewOptions, sort_choices
 
 from .forms import LabelForm, ProjectForm, StatusForm
+from .keys import KEY_REGEX
 from .models import (
     Project,
     ProjectAccess,
@@ -404,21 +406,39 @@ def project_settings_update(request, pk):
     name = request.POST.get('name', '').strip()
     description = request.POST.get('description', '').strip()
     github_repo_url = request.POST.get('github_repo_url', '').strip()
+    # A form without the field keeps the key; an empty field is an error.
+    key = request.POST.get('key', project.key).strip().upper()
 
     errors = {}
     if not name:
         errors['name'] = 'Name is required.'
+    if not re.fullmatch(KEY_REGEX, key, flags=re.ASCII):
+        errors['key'] = '2 to 6 capital letters or digits, starting with a letter.'
+    elif Project.objects.filter(key=key).exclude(pk=project.pk).exists():
+        errors['key'] = 'This key is already used by another project.'
 
     if errors:
         return render(request, 'projects/partials/settings_general_form.html', {
             'project': project,
             'errors': errors,
+            'key': key,
         })
 
     project.name = name
     project.description = description
     project.github_repo_url = github_repo_url
-    project.save()
+    project.key = key
+    try:
+        with transaction.atomic():
+            project.save(update_fields=['name', 'description', 'github_repo_url', 'key', 'updated_at'])
+    except IntegrityError:
+        # Another project took the key between the check and the save.
+        project.refresh_from_db()
+        return render(request, 'projects/partials/settings_general_form.html', {
+            'project': project,
+            'errors': {'key': 'This key is already used by another project.'},
+            'key': key,
+        })
 
     return render(request, 'projects/partials/settings_general_form.html', {
         'project': project,

@@ -10,9 +10,10 @@ class SubtaskInline(admin.TabularInline):
 
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
-    list_display = ('title', 'project', 'status', 'assignee', 'priority', 'due_date')
+    list_display = ('title', 'number', 'project', 'status', 'assignee', 'priority', 'due_date')
     list_filter = ('project', 'status', 'priority', 'assignee')
     search_fields = ('title', 'description')
+    readonly_fields = ('number',)
     inlines = [SubtaskInline]
 
 

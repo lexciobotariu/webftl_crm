@@ -1,7 +1,10 @@
 from django.conf import settings
+from django.core.validators import RegexValidator
 from django.db import models
 
 from apps.clients.models import Client
+
+from .keys import KEY_MAX_LENGTH, KEY_REGEX, derive_key
 
 
 class Project(models.Model):
@@ -10,6 +13,20 @@ class Project(models.Model):
     description = models.TextField(blank=True)
     github_repo_url = models.URLField(blank=True)
     github_sync_enabled = models.BooleanField(default=False)
+    # The prefix of every task id on this project ("CUST" in CUST-12). Derived
+    # from the name when the project is created and never changed by a rename.
+    key = models.CharField(
+        max_length=KEY_MAX_LENGTH,
+        unique=True,
+        blank=True,
+        validators=[RegexValidator(
+            KEY_REGEX,
+            '2 to 6 capital letters or digits, starting with a letter.',
+        )],
+    )
+    # The last task number handed out. Only Task.save() moves it, with an
+    # atomic increment; see ``save`` for why a full project save leaves it alone.
+    task_counter = models.PositiveIntegerField(default=0, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -21,6 +38,16 @@ class Project(models.Model):
 
     def save(self, *args, **kwargs):
         is_new = self.pk is None
+        if not self.key:
+            taken = set(Project.objects.exclude(pk=self.pk).values_list('key', flat=True))
+            self.key = derive_key(self.name, taken, pk=self.pk)
+        if not self._state.adding and kwargs.get('update_fields') is None:
+            # A project loaded before a task was created holds a stale counter;
+            # writing it back would hand out the same task numbers again.
+            kwargs['update_fields'] = [
+                field.name for field in self._meta.concrete_fields
+                if not field.primary_key and field.name != 'task_counter'
+            ]
         super().save(*args, **kwargs)
         if is_new:
             self._create_default_statuses()

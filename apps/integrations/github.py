@@ -90,35 +90,43 @@ def create_github_issue(task: Task, token: str):
     return None
 
 
-def extract_task_id_from_message(message: str) -> int | None:
-    """Extract task ID from commit message like 'fix: update #TASK-123'."""
-    match = re.search(r'#TASK-(\d+)', message)
+LEGACY_TASK_REF = re.compile(r'#TASK-(\d+)')
+
+
+def find_referenced_task(message: str, project: Project) -> Task | None:
+    """The task on ``project`` that a commit or PR text points at.
+
+    ``CUST-12`` with this project's exact key, as a whole word, or the older
+    ``#TASK-<pk>`` form, which links written before task numbers still use.
+    """
+    message = message or ''
+    match = re.search(rf'\b{re.escape(project.key)}-(\d{{1,9}})\b', message) if project.key else None
     if match:
-        return int(match.group(1))
+        task = Task.objects.filter(project=project, number=int(match.group(1))).first()
+        if task:
+            return task
+    match = LEGACY_TASK_REF.search(message)
+    if match:
+        return Task.objects.filter(project=project, pk=int(match.group(1))).first()
     return None
 
 
 def process_webhook_push(payload: dict, project: Project):
     """Process push webhook and link commits to tasks."""
     for commit in payload.get('commits', []):
-        task_id = extract_task_id_from_message(commit['message'])
-        if not task_id:
+        task = find_referenced_task(commit['message'], project)
+        if task is None:
             continue
-
-        try:
-            task = Task.objects.get(pk=task_id, project=project)
-            GitHubCommit.objects.update_or_create(
-                sha=commit['id'],
-                defaults={
-                    'task': task,
-                    'message': commit['message'],
-                    'author': commit['author']['name'],
-                    'url': commit['url'],
-                    'created_at': datetime.fromisoformat(commit['timestamp'].replace('Z', '+00:00')),
-                }
-            )
-        except Task.DoesNotExist:
-            pass
+        GitHubCommit.objects.update_or_create(
+            sha=commit['id'],
+            defaults={
+                'task': task,
+                'message': commit['message'],
+                'author': commit['author']['name'],
+                'url': commit['url'],
+                'created_at': datetime.fromisoformat(commit['timestamp'].replace('Z', '+00:00')),
+            }
+        )
 
 
 def process_webhook_issue(payload: dict, project: Project):
@@ -162,27 +170,19 @@ def process_webhook_pull_request(payload: dict, project: Project):
     pr = payload.get('pull_request', {})
     body = pr.get('body', '') or ''
 
-    task_id = extract_task_id_from_message(body)
-    if not task_id:
-        task_id = extract_task_id_from_message(pr.get('title', ''))
-
-    if not task_id:
+    task = find_referenced_task(body, project) or find_referenced_task(pr.get('title', ''), project)
+    if task is None:
         return
 
-    try:
-        task = Task.objects.get(pk=task_id, project=project)
-        status = 'merged' if pr.get('merged') else pr.get('state', 'open')
-
-        GitHubPullRequest.objects.update_or_create(
-            task=task,
-            number=pr['number'],
-            defaults={
-                'title': pr['title'],
-                'status': status,
-                'url': pr['html_url'],
-                'created_at': datetime.fromisoformat(pr['created_at'].replace('Z', '+00:00')),
-                'updated_at': datetime.fromisoformat(pr['updated_at'].replace('Z', '+00:00')),
-            }
-        )
-    except Task.DoesNotExist:
-        pass
+    status = 'merged' if pr.get('merged') else pr.get('state', 'open')
+    GitHubPullRequest.objects.update_or_create(
+        task=task,
+        number=pr['number'],
+        defaults={
+            'title': pr['title'],
+            'status': status,
+            'url': pr['html_url'],
+            'created_at': datetime.fromisoformat(pr['created_at'].replace('Z', '+00:00')),
+            'updated_at': datetime.fromisoformat(pr['updated_at'].replace('Z', '+00:00')),
+        }
+    )

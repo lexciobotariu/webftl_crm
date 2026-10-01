@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Case, Count, Exists, F, OuterRef, Q, Value, When
 from django.db.models.functions import Lower
 from django.utils import timezone
@@ -208,6 +208,8 @@ class Task(models.Model):
     ]
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tasks')
+    # 12 in CUST-12: counts up per project from 1 and is never reused.
+    number = models.PositiveIntegerField(editable=False)
     status = models.ForeignKey(Status, on_delete=models.RESTRICT, related_name='tasks')
     title = models.CharField(max_length=1000)
     description = models.TextField(blank=True)
@@ -241,10 +243,30 @@ class Task(models.Model):
                 condition=Q(github_issue_id__isnull=False),
                 name='unique_github_issue_per_project',
             ),
+            models.UniqueConstraint(
+                fields=['project', 'number'],
+                name='unique_task_number_per_project',
+            ),
         ]
 
     def __str__(self):
         return self.title
+
+    def save(self, *args, **kwargs):
+        if self.number is not None:
+            return super().save(*args, **kwargs)
+        with transaction.atomic():
+            # The UPDATE locks the project row until this transaction commits, so
+            # a concurrent create waits and then reads the next value.
+            projects = Project.objects.filter(pk=self.project_id)
+            projects.update(task_counter=F('task_counter') + 1)
+            self.number = projects.values_list('task_counter', flat=True).get()
+            super().save(*args, **kwargs)
+
+    @property
+    def identifier(self):
+        """``CUST-12``. Loads the project unless it is already on the instance."""
+        return f'{self.project.key}-{self.number}'
 
     @property
     def is_overdue(self):

@@ -68,36 +68,52 @@ class TestTasks:
 
         assert services.search(user, 'login').tasks == []
 
-    def test_a_number_matches_the_id_and_a_prefixed_number_ignores_the_prefix(self):
+    def test_a_key_and_number_find_that_task_of_that_project(self):
         user = _member()
-        project = ProjectFactory(name='Custom CRM')
-        ProjectAccessFactory(project=project, user=user)
-        # Two characters are the minimum, so the id has to have two digits.
-        TaskFactory.create_batch(10, project=project)
-        target = TaskFactory(project=project, title='Unrelated title')
-        assert target.pk >= 10
-        TaskFactory(project=project, title=f'Mentions {target.pk}')
+        alpha = ProjectFactory(name='Alpha', key='ALPH')
+        beta = ProjectFactory(name='Beta', key='BETA')
+        for project in (alpha, beta):
+            ProjectAccessFactory(project=project, user=user)
+        TaskFactory.create_batch(11, project=alpha)
+        TaskFactory.create_batch(12, project=beta)
+        target = TaskFactory(project=alpha, title='Unrelated title')
+        assert target.number == 12
+        TaskFactory(project=alpha, title='Mentions ALPH-12')
 
-        for query in (str(target.pk), f'CUST-{target.pk}', f'anything-{target.pk}'):
+        for query in ('ALPH-12', 'alph-12', 'Alph-12'):
             tasks = services.search(user, query).tasks
             assert tasks[0] == target, query
+            assert beta.tasks.get(number=12) not in tasks, query
 
-    def test_the_prefix_may_hold_spaces_and_any_letters(self):
-        # The prefix is the first four characters of the project name, whatever they are.
+    def test_a_plain_number_finds_that_number_in_every_visible_project(self):
         user = _member()
-        project = ProjectFactory(name='My Website')
+        alpha = ProjectFactory(name='Alpha')
+        beta = ProjectFactory(name='Beta')
+        hidden = ProjectFactory(name='Hidden')
+        for project in (alpha, beta):
+            ProjectAccessFactory(project=project, user=user)
+        for project in (alpha, beta, hidden):
+            TaskFactory.create_batch(12, project=project)
+
+        tasks = services.search(user, '12').tasks
+
+        assert {(t.project_id, t.number) for t in tasks} == {(alpha.pk, 12), (beta.pk, 12)}
+
+    def test_an_unknown_key_or_the_old_name_prefix_finds_nothing(self):
+        user = _member()
+        project = ProjectFactory(name='My Website', key='WEB')
         ProjectAccessFactory(project=project, user=user)
-        TaskFactory.create_batch(10, project=project)
-        target = TaskFactory(project=project, title='Unrelated title')
+        TaskFactory.create_batch(12, project=project)
 
-        for query in (f'MY W-{target.pk}', f'R&D -{target.pk}', f'ÉLAN-{target.pk}'):
-            assert services.search(user, query).tasks[0] == target, query
+        for query in ('ZZZ-12', 'MY W-12', 'WEBX-12'):
+            assert services.search(user, query).tasks == [], query
 
-    def test_a_single_digit_is_a_task_id_and_nothing_else(self):
+    def test_a_single_digit_is_a_task_number_and_nothing_else(self):
         user = _member()
         project = ProjectFactory(name='Project 7')
         ProjectAccessFactory(project=project, user=user)
-        target = TaskFactory(project=project, id=7, title='Seventh')
+        TaskFactory.create_batch(6, project=project)
+        target = TaskFactory(project=project, title='Seventh')
         TaskFactory(project=project, title='Has a 7 in the title')
 
         results = services.search(user, '7')
@@ -112,7 +128,7 @@ class TestTasks:
         user = _member()
         hidden = TaskFactory()
 
-        assert services.search(user, f'ABC-{hidden.pk}').tasks == []
+        assert services.search(user, hidden.identifier).tasks == []
 
     def test_a_huge_number_does_not_break_the_query(self):
         user = _member()
@@ -265,7 +281,7 @@ class TestView:
 
         assert f'href="{reverse("task_full_page", args=[project.pk, task.pk])}"' in content
         assert f'data-detail-url="{reverse("task_detail", args=[task.pk])}"' in content
-        assert f'CUST-{task.pk}' in content
+        assert '>CUST-1<' in content
         assert 'role="option"' in content
         assert '<html' not in content
 

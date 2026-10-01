@@ -9,7 +9,7 @@
     {% csrf_token %}
     <div class="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-border-subtle">
         <div class="flex items-center gap-2 min-w-0">
-            <span class="text-xs text-zinc-500 bg-elevated px-2 py-0.5 rounded border border-border-subtle font-mono shrink-0">{{ project.name|slice:":4"|upper }}</span>
+            <span class="text-xs text-zinc-500 bg-elevated px-2 py-0.5 rounded border border-border-subtle font-mono shrink-0">{{ project.key }}</span>
             <h2 class="text-sm font-medium text-zinc-100 truncate">New task</h2>
             {% if selected_status %}
             {% include "tasks/partials/status_dropdown_create.html" %}
