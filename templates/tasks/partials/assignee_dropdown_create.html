@@ -1,4 +1,4 @@
-<div class="relative" x-data="{ open: false, selectedId: '{{ form.assignee.value|default:'' }}', selectedName: '{% if form.assignee.value %}{{ form.instance.assignee.name|default:''|escapejs }}{% endif %}' }">
+<div class="relative" x-data="{ open: false, selectedId: '{{ form.assignee.value|default:'' }}', selectedName: '{% if selected_assignee %}{{ selected_assignee.name|escapejs }}{% endif %}' }">
     <input type="hidden" name="assignee" :value="selectedId">
     <button type="button" @click="open = !open"
             class="flex items-center gap-2 px-2 py-1.5 rounded-control text-sm text-zinc-300 hover:bg-elevated transition-colors w-full">

@@ -1,40 +1,57 @@
-<div class="slide-over-panel p-6">
-    <div class="flex justify-between items-start pb-4 border-b border-border-subtle">
-        <div>
-            <h2 class="text-xl font-semibold text-zinc-100">New Task</h2>
-            <div class="flex items-center gap-2 mt-2">
-                <p class="text-xs uppercase tracking-[0.2em] text-zinc-500">{{ project.name }}</p>
-                {% if selected_status %}
-                <span class="text-xs text-zinc-600">/</span>
-                <span class="text-xs px-2 py-0.5 rounded-full bg-elevated border border-border-subtle text-zinc-400">{{ selected_status.name }}</span>
-                {% endif %}
-            </div>
+{% comment %}The create drawer. The form is the whole panel: header, scrolling fields, a footer that stays in view. Ctrl/Cmd+Enter submits from any field, hx-sync drops a second submit while the first is in flight, and "Create more" keeps the drawer open on a fresh form (the choice is remembered in localStorage).{% endcomment %}
+<form method="post" hx-post="{% url 'task_create' project.pk %}"
+      hx-target="#slide-over" hx-swap="innerHTML" hx-sync="this:drop"
+      x-data="{ more: localStorage.getItem('taskCreateMore') === '1' }"
+      x-effect="localStorage.setItem('taskCreateMore', more ? '1' : '0')"
+      @keydown.ctrl.enter.prevent="$el.requestSubmit()"
+      @keydown.meta.enter.prevent="$el.requestSubmit()"
+      class="flex flex-col h-full">
+    {% csrf_token %}
+    <div class="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-border-subtle">
+        <div class="flex items-center gap-2 min-w-0">
+            <span class="text-xs text-zinc-500 bg-elevated px-2 py-0.5 rounded border border-border-subtle font-mono shrink-0">{{ project.name|slice:":4"|upper }}</span>
+            <h2 class="text-sm font-medium text-zinc-100 truncate">New task</h2>
+            {% if selected_status %}
+            {% include "tasks/partials/status_dropdown_create.html" %}
+            {% endif %}
         </div>
-        <button onclick="closeSlideOver()"
-                class="w-8 h-8 flex items-center justify-center rounded-control bg-panel border border-border-subtle text-zinc-400 hover:text-zinc-200 hover:border-border-strong">&times;</button>
+        <button type="button" onclick="closeSlideOver()" aria-label="Close"
+                class="text-zinc-500 hover:text-zinc-300 transition-colors p-1.5 hover:bg-elevated rounded-control">
+            <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
     </div>
 
-    <form method="post" hx-post="{% url 'task_create' project.pk %}"
-          hx-target="#slide-over" hx-swap="innerHTML"
-          class="space-y-5 mt-5">
-        {% csrf_token %}
-        {% include "components/form_error_banner.html" %}
-        {% if selected_status %}
-        <input type="hidden" name="status_id" value="{{ selected_status.pk }}">
+    <div class="flex-1 min-h-0 overflow-y-auto p-4 space-y-5">
+        {% if created_title %}
+        <p role="status" class="flex items-center gap-2 text-sm text-zinc-400">
+            <span class="text-success">{% include "components/icons/tabler-check.svg" %}</span>
+            <span class="truncate">Created <span class="text-zinc-200">{{ created_title }}</span></span>
+        </p>
         {% endif %}
+        {% include "components/form_error_banner.html" %}
         {% include "tasks/task_form_fields.html" %}
+    </div>
 
-        <div class="flex gap-3 pt-2">
-            <button type="submit" class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm hover:bg-accent-hover transition-colors">
-                Create Task
-            </button>
+    <div class="flex-shrink-0 flex items-center justify-between gap-3 px-4 py-3 border-t border-border-subtle">
+        <label class="inline-flex items-center gap-2 text-sm text-zinc-400 cursor-pointer select-none">
+            <input type="checkbox" name="create_more" value="1" x-model="more"
+                   class="rounded border-border-subtle bg-panel accent-accent">
+            Create more
+        </label>
+        <div class="flex items-center gap-2">
             <button type="button" onclick="closeSlideOver()"
-                    class="bg-elevated border border-border-subtle px-4 py-2 rounded-control text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
+                    class="bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
                 Cancel
             </button>
+            <button type="submit" title="Ctrl/Cmd+Enter"
+                    class="bg-accent text-on-accent px-3 py-1.5 rounded-control text-sm hover:bg-accent-hover transition-colors">
+                Create task
+            </button>
         </div>
-    </form>
-</div>
+    </div>
+</form>
 <script>
 openSlideOver();
+// The title is where typing starts. After "Create more" this runs again on the fresh form.
+document.querySelector('#slide-over input[name="title"]').focus();
 </script>

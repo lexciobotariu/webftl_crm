@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Features
 - Status, priority and assignee can be changed straight from a task row or board card, without opening the drawer; the list keeps its scroll position afterwards
 - Keyboard on the Tasks pages: `J` / `K` or the arrows move a selection through rows and cards (`H` / `L` between board columns), `Enter` opens the task, `/` searches, `C` creates a task, `S` / `P` / `A` change status, priority and assignee on the selected row, and `?` lists the shortcuts
+- The new-task drawer is faster: the title is focused when it opens, Enter or Ctrl/Cmd+Enter creates the task, and a double submit makes one task
+- The new-task drawer has a status picker, so the status it was opened with can be changed before creating
+- "Create more" in the new-task drawer keeps it open on a fresh form in the same status (remembered between visits)
+- A "+" on each status, priority and assignee group header in the Tasks list opens the new-task drawer with that value filled in
 - Escape closes one thing at a time: shortcut list, quick menu, dropdown, drawer, then the selection
 
 ### Changes
@@ -18,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Picking the status a task already has no longer moves its card to the end of the column
 
 ### Fixes
+- Opening the new-task drawer with a status that is not a number no longer fails with a server error
 - A template comment that spanned two lines was printed as text on the Tasks and My Tasks pages; a test now catches multi-line `{# #}` comments
 
 ## [0.8.0] - 2026-10-01
