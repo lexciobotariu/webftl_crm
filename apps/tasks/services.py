@@ -289,6 +289,37 @@ def add_comment(task, content, user):
     )
 
 
+def can_change_comment(user, comment):
+    """The author while they can still edit the task, or an admin.
+
+    Same rule as :func:`require_entry_edit`: ``tasks_edit_all`` does not let
+    anyone change someone else's words.
+    """
+    if user.is_admin:
+        return True
+    return comment.user_id == user.pk and can_edit_task(user, comment.task)
+
+
+def require_comment_change(user, comment):
+    if not can_change_comment(user, comment):
+        raise TaskPermissionError('You can only change your own comments')
+
+
+def edit_comment(comment, content, user):
+    require_comment_change(user, comment)
+    if content == comment.content:
+        return comment
+    comment.content = content
+    comment.edited_at = timezone.now()
+    comment.save(update_fields=['content', 'edited_at'])
+    return comment
+
+
+def delete_comment(comment, user):
+    require_comment_change(user, comment)
+    comment.delete()
+
+
 def validate_upload(file):
     """
     Validate a file for upload.
@@ -360,6 +391,22 @@ def delete_task(task, user):
     task.delete()
 
 
+def log_label_change(task, label, user, added):
+    """One row per label put on or taken off a task.
+
+    Labels are a many-to-many field, so a Task save never sees them change:
+    the places that change them call this (toggle_label and the edit form).
+    """
+    TaskActivity.objects.create(
+        task=task,
+        user=user,
+        activity_type='label_added' if added else 'label_removed',
+        old_value='' if added else label.name,
+        new_value=label.name if added else '',
+        content=f'added label {label.name}' if added else f'removed label {label.name}',
+    )
+
+
 def toggle_label(task, label, user):
     """
     Toggle a label on a task (add if not present, remove if present).
@@ -374,10 +421,12 @@ def toggle_label(task, label, user):
     """
     require_access(user, task.project)
 
-    if label in task.labels.all():
+    if task.labels.filter(pk=label.pk).exists():
         task.labels.remove(label)
+        log_label_change(task, label, user, added=False)
     else:
         task.labels.add(label)
+        log_label_change(task, label, user, added=True)
 
 
 def close_expired_timers(now=None):

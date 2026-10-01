@@ -1,0 +1,33 @@
+{% comment %}A comment being edited, in place of its #activity-<pk> row. Escape in Write cancels; in Preview the editor goes back to Write first.{% endcomment %}
+<div id="activity-{{ activity.pk }}" class="relative flex gap-3 py-2"
+     x-data="{
+        cancel(event) {
+            if (event.defaultPrevented) return;
+            event.preventDefault();
+            htmx.ajax('GET', '{% url 'comment_edit' activity.task_id activity.pk %}?cancel=1', {target: '#activity-{{ activity.pk }}', swap: 'outerHTML'});
+        },
+     }">
+    <div class="relative z-10 flex-shrink-0 w-6 h-6 rounded-full bg-panel border border-border-subtle flex items-center justify-center">
+        <i data-lucide="message-square" class="w-3 h-3 text-zinc-500"></i>
+    </div>
+    <form class="flex-1 min-w-0 bg-elevated/50 border border-border-subtle rounded-card p-3 space-y-2"
+          hx-post="{% url 'comment_edit' activity.task_id activity.pk %}"
+          hx-target="#activity-{{ activity.pk }}" hx-swap="outerHTML"
+          hx-sync="this:drop"
+          @keydown.escape="cancel($event)">
+        {% csrf_token %}
+        {% with pk_str=activity.pk|stringformat:"s" %}
+        {% include "tasks/partials/markdown_editor.html" with uid="comment-edit-"|add:pk_str name="content" value=activity.content rows=3 placeholder="Edit comment..." autofocus=True %}
+        {% endwith %}
+        <div class="flex items-center gap-2">
+            <button type="submit"
+                    class="bg-accent text-on-accent px-3 py-1.5 rounded-control text-xs font-medium hover:bg-accent-hover transition-colors">
+                Save
+            </button>
+            <button type="button" @click="cancel($event)"
+                    class="text-zinc-500 hover:text-zinc-300 px-3 py-1.5 text-xs transition-colors">
+                Cancel
+            </button>
+        </div>
+    </form>
+</div>
