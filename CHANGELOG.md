@@ -14,7 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changes
 - Clicking a link in a description opens the link instead of starting an edit
-- Raw HTML typed into a description or comment is shown as text, images are not embedded, and links open in a new tab without access to the opener; only `http`, `https` and `mailto` links are kept
+- Raw HTML typed into a description or comment is shown as text and images are not embedded. Links open in a new tab without access to the opener; a link with another scheme (`javascript:`, `data:` and so on) loses its target
+- Descriptions and comments are limited to 100,000 characters
 - Descriptions imported from Perfex that contain HTML will show their tags as text
 
 ## [0.11.0] - 2026-10-01

@@ -178,3 +178,76 @@ class TestWhereItRenders:
             assert 'role="tablist"' in html
             assert '>Write</button>' in html and '>Preview</button>' in html
             assert reverse('markdown_preview') in html
+
+
+class TestReviewFixes:
+    def test_a_scheme_only_the_sanitizer_stops_has_no_href(self):
+        # markdown-it lets data:image through; nh3's scheme list must drop it.
+        html = render_markdown('[x](data:image/png;base64,AAAA)')
+
+        assert 'data:image' not in html
+
+    def test_text_over_the_limit_is_shown_escaped_without_parsing(self):
+        from apps.tasks.templatetags.task_markdown import MAX_LENGTH
+
+        text = '**not bold** <b>x</b>\n' + 'a' * MAX_LENGTH
+        html = render_markdown(text)
+
+        assert '<strong>' not in html
+        assert '&lt;b&gt;x&lt;/b&gt;' in html
+        assert '<br>' in html or '<p>' in html
+
+
+@pytest.mark.django_db
+class TestLengthLimitsOnSave:
+    def test_a_too_long_description_is_refused(self, client):
+        from apps.tasks.templatetags.task_markdown import MAX_LENGTH
+
+        task = TaskFactory(description='keep')
+        client.force_login(AdminUserFactory())
+
+        response = client.post(reverse('task_edit_description', args=[task.pk]), {'description': 'x' * (MAX_LENGTH + 1)})
+
+        assert response.status_code == 400
+        task.refresh_from_db()
+        assert task.description == 'keep'
+
+    def test_a_too_long_comment_is_refused(self, client):
+        from apps.tasks.templatetags.task_markdown import MAX_LENGTH
+
+        task = TaskFactory()
+        client.force_login(AdminUserFactory())
+
+        response = client.post(reverse('comment_create', args=[task.pk]), {'content': 'x' * (MAX_LENGTH + 1)})
+
+        assert response.status_code == 400
+        assert not task.activities.filter(activity_type='comment').exists()
+
+    def test_the_task_form_refuses_a_too_long_description(self):
+        from apps.tasks.forms import TaskForm
+        from apps.tasks.templatetags.task_markdown import MAX_LENGTH
+
+        task = TaskFactory()
+        form = TaskForm(task.project, data={'title': 'T', 'description': 'x' * (MAX_LENGTH + 1)})
+
+        assert not form.is_valid()
+        assert 'description' in form.errors
+
+    def test_the_comment_form_drops_a_second_submit_while_one_is_in_flight(self, client):
+        task = TaskFactory()
+        client.force_login(AdminUserFactory())
+
+        html = client.get(reverse('task_detail', args=[task.pk])).content.decode()
+
+        assert 'hx-sync="this:drop"' in html
+
+    def test_escape_in_the_description_editor_is_handled_on_the_form(self, client):
+        task = TaskFactory()
+        client.force_login(AdminUserFactory())
+
+        html = client.get(reverse('task_edit_description', args=[task.pk])).content.decode()
+
+        # One handler on the form covers the textarea and the tab buttons, and it
+        # leaves an Escape the Preview tab already handled alone.
+        assert '@keydown.escape="cancel($event)"' in html
+        assert "addEventListener('keydown'" not in html

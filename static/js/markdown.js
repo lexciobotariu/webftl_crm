@@ -22,16 +22,19 @@
                 request: 0,
 
                 init() {
-                    const form = this.$el.closest('form');
+                    const form = this.$root.closest('form');
                     if (form) form.addEventListener('reset', () => { this.tab = 'write'; });
                 },
 
                 show(tab, focusTab) {
                     this.tab = tab;
                     if (tab === 'preview') this.renderPreview();
+                    // Focus always lands inside the editor: a click does not focus a button in
+                    // every browser, and with the textarea hidden it would stay on <body>,
+                    // where Escape closes the drawer instead of returning to Write.
                     this.$nextTick(() => {
-                        if (focusTab) this.$el.querySelector(`[role="tab"][aria-selected="true"]`).focus();
-                        else if (tab === 'write') this.$refs.input.focus();
+                        if (tab === 'write' && !focusTab) this.$refs.input.focus();
+                        else this.$root.querySelector('[role="tab"][aria-selected="true"]').focus();
                     });
                 },
 
@@ -66,7 +69,7 @@
                 },
 
                 submit() {
-                    const form = this.$el.closest('form');
+                    const form = this.$root.closest('form');
                     if (form) form.requestSubmit();
                 },
             };

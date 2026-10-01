@@ -24,6 +24,7 @@ from apps.tasks.models import Label, can_create_task, can_edit_task, can_view_ta
 from .forms import SubtaskForm, TaskForm, TimeEntryForm
 from .listview import apply_url_headers, build_groups, filter_options, group_choices, resolve_view
 from .models import MyTasksView, Subtask, Task, TimeEntry
+from .templatetags.task_markdown import MAX_LENGTH as MARKDOWN_MAX_LENGTH
 from .viewspec import CATEGORIES, LIMIT_STEP, TaskViewOptions, sort_choices
 
 
@@ -486,6 +487,8 @@ def comment_create(request, pk):
     content = request.POST.get('content', '').strip()
     if not content:
         return HttpResponse(status=400)
+    if len(content) > MARKDOWN_MAX_LENGTH:
+        return HttpResponse('Comment is too long.', status=400)
     try:
         from apps.tasks import services
         activity = services.add_comment(task, content, request.user)
@@ -494,17 +497,13 @@ def comment_create(request, pk):
     return render(request, 'tasks/partials/activity_item.html', {'activity': activity})
 
 
-# Generous for a description, small enough that a preview cannot tie up a worker.
-MARKDOWN_PREVIEW_MAX = 100_000
-
-
 @login_required
 @require_permission('access_tasks')
 @require_POST
 def markdown_preview(request):
     """The Preview tab: the text rendered with the same filter as saved text."""
     text = request.POST.get('text', '')
-    if len(text) > MARKDOWN_PREVIEW_MAX:
+    if len(text) > MARKDOWN_MAX_LENGTH:
         return HttpResponse('Too long to preview.', status=400)
     return render(request, 'tasks/partials/markdown_preview.html', {'text': text})
 
@@ -679,7 +678,10 @@ def task_edit_description(request, pk):
     if request.GET.get('cancel') == '1':
         return render(request, 'tasks/partials/description_display.html', {'task': task})
     if request.method == 'POST':
-        task.description = request.POST.get('description', '')
+        description = request.POST.get('description', '')
+        if len(description) > MARKDOWN_MAX_LENGTH:
+            return HttpResponse('Description is too long.', status=400)
+        task.description = description
         task._changed_by = request.user
         task.save()
         return render(request, 'tasks/partials/description_display.html', {'task': task})

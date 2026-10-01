@@ -7,6 +7,7 @@ Images are not rendered, so a description cannot load a tracking pixel.
 """
 import nh3
 from django import template
+from django.utils.html import linebreaks
 from django.utils.safestring import mark_safe
 from markdown_it import MarkdownIt
 
@@ -28,10 +29,17 @@ ALLOWED_ATTRIBUTES = {
 }
 URL_SCHEMES = {'http', 'https', 'mailto'}
 
+# Longest description or comment that is saved, and parsed. Parsing time grows
+# faster than the text, so anything longer (from before the limit) is shown as
+# escaped plain text instead.
+MAX_LENGTH = 100_000
+
 
 def markdown_to_html(text):
     if not text:
         return ''
+    if len(text) > MAX_LENGTH:
+        return linebreaks(text, autoescape=True)
     return nh3.clean(
         _markdown.render(text),
         tags=ALLOWED_TAGS,

@@ -1,8 +1,17 @@
-<div x-data="{ saving: false }">
+{% comment %}Escape cancels the edit from the textarea or the tab buttons; in Preview the editor handles it first (goes back to Write) and marks it handled.{% endcomment %}
+<div x-data="{
+        saving: false,
+        cancel(event) {
+            if (event.defaultPrevented) return;
+            event.preventDefault();
+            htmx.ajax('GET', '{% url 'task_edit_description' task.pk %}?cancel=1', {target: '#task-description-{{ task.pk }}', swap: 'innerHTML'});
+        },
+     }">
     <form hx-post="{% url 'task_edit_description' task.pk %}"
           hx-target="#task-description-{{ task.pk }}"
           hx-swap="innerHTML"
           @htmx:before-request="saving = true"
+          @keydown.escape="cancel($event)"
           class="space-y-2">
         {% csrf_token %}
         {% with pk_str=task.pk|stringformat:"s" %}
@@ -25,12 +34,3 @@
         </div>
     </form>
 </div>
-<script>
-// Escape in Write cancels the edit; in Preview the editor takes it first.
-document.querySelector('#task-description-{{ task.pk }} textarea').addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        htmx.ajax('GET', '{% url 'task_edit_description' task.pk %}?cancel=1', {target: '#task-description-{{ task.pk }}', swap: 'innerHTML'});
-        e.preventDefault();
-    }
-});
-</script>

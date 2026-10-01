@@ -22,6 +22,7 @@
     <form hx-post="{% url 'comment_create' task.pk %}"
           hx-target="#activity-items-{{ task.pk }}"
           hx-swap="beforeend"
+          hx-sync="this:drop"
           hx-on::after-request="if(event.detail.successful) this.reset()"
           class="mt-4 border border-border-subtle rounded-card overflow-hidden">
         <div class="px-3 pt-2">
