@@ -307,6 +307,8 @@ def require_comment_change(user, comment):
 
 def edit_comment(comment, content, user):
     require_comment_change(user, comment)
+    if content == comment.content:
+        return comment
     comment.content = content
     comment.edited_at = timezone.now()
     comment.save(update_fields=['content', 'edited_at'])

@@ -3,10 +3,11 @@
         <h3 class="text-sm font-semibold text-zinc-300">Activity</h3>
     </div>
 
-    <!-- Timeline -->
+    <!-- Timeline. It does not refresh while a comment is being edited in it, so the
+         edit is not replaced; the next change after that brings it up to date. -->
     <div id="activity-list-{{ task.pk }}" class="relative"
          hx-get="{% url 'task_activity_list' task.pk %}"
-         hx-trigger="activityUpdated from:body"
+         hx-trigger="activityUpdated[!document.querySelector('#activity-items-{{ task.pk }} form')] from:body"
          hx-target="#activity-items-{{ task.pk }}"
          hx-swap="innerHTML">
         <!-- Vertical timeline line -->

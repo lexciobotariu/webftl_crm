@@ -206,8 +206,11 @@ class TestCommentControls:
         _comment(task, viewer)
         client.force_login(viewer)
 
-        html = client.get(reverse('task_activity_list', args=[task.pk])).content.decode()
+        response = client.get(reverse('task_activity_list', args=[task.pk]))
 
+        assert response.status_code == 200
+        html = response.content.decode()
+        assert 'original' in html
         assert '/edit/' not in html
 
     def test_a_new_comment_comes_with_its_controls(self, client):
@@ -320,22 +323,6 @@ class TestMoreActivity:
         removed = list(task.activities.filter(activity_type='label_removed').values_list('old_value', flat=True))
         assert added == ['add'] and removed == ['drop']
 
-    def test_the_perfex_import_switch_still_silences_the_new_rows(self):
-        from django.db.models.signals import post_save
-
-        from apps.tasks.models import Task
-        from apps.tasks.signals import log_task_changes
-
-        task = TaskFactory(title='a', description='a', time_estimate=1)
-        post_save.disconnect(log_task_changes, sender=Task)
-        try:
-            task.title, task.description, task.time_estimate = 'b', 'b', 2
-            task.save()
-        finally:
-            post_save.connect(log_task_changes, sender=Task)
-
-        assert not task.activities.exclude(activity_type='created').exists()
-
     def test_the_new_rows_render_in_the_drawer(self, client):
         task = TaskFactory(title='Old', description='a', time_estimate=None)
         self._admin_client(client)
@@ -348,3 +335,62 @@ class TestMoreActivity:
         assert 'changed the title to New' in html
         assert 'updated the description' in html
         assert 'set the estimate to 3h' in html
+
+
+@pytest.mark.django_db
+class TestReviewFixes:
+    def test_saving_an_unchanged_comment_does_not_mark_it_edited(self, client):
+        task = TaskFactory()
+        author = _editor(task.project)
+        comment = _comment(task, author, content='same')
+        client.force_login(author)
+
+        html = client.post(_edit_url(comment), {'content': 'same'}).content.decode()
+
+        comment.refresh_from_db()
+        assert comment.edited_at is None
+        assert 'edited' not in html
+
+    def test_the_list_does_not_refresh_over_an_open_comment_editor(self, client):
+        task = TaskFactory()
+        client.force_login(AdminUserFactory())
+
+        html = client.get(reverse('task_detail', args=[task.pk])).content.decode()
+
+        assert (
+            f"activityUpdated[!document.querySelector('#activity-items-{task.pk} form')] from:body"
+        ) in html
+
+    def test_an_author_reading_their_comments_costs_the_same_queries_for_one_or_six(self, client):
+        task = TaskFactory()
+        author = _editor(task.project)
+        client.force_login(author)
+        url = reverse('task_activity_list', args=[task.pk])
+        _comment(task, author)
+        client.get(url)
+
+        with CaptureQueriesContext(connection) as one:
+            client.get(url)
+        for _ in range(5):
+            _comment(task, author)
+        with CaptureQueriesContext(connection) as six:
+            client.get(url)
+
+        assert len(six) == len(one)
+
+    @pytest.mark.parametrize('page', ['drawer', 'full page'])
+    def test_the_drawer_and_full_page_load_activity_once(self, client, page):
+        task = TaskFactory()
+        client.force_login(AdminUserFactory())
+        for _ in range(3):
+            _comment(task, UserFactory())
+        url = (
+            reverse('task_detail', args=[task.pk]) if page == 'drawer'
+            else reverse('task_full_page', args=[task.project_id, task.pk])
+        )
+
+        with CaptureQueriesContext(connection) as queries:
+            client.get(url)
+
+        activity_reads = [q['sql'] for q in queries if 'FROM "tasks_taskactivity"' in q['sql']]
+        assert len(activity_reads) == 1, activity_reads

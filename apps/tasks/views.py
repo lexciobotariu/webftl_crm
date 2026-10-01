@@ -254,7 +254,7 @@ def task_create(request, project_pk):
 def task_detail(request, pk):
     task = get_object_or_404(
         Task.objects.select_related('project', 'status', 'assignee')
-        .prefetch_related('subtasks', 'activities__user', 'attachments', 'labels', 'project__labels'),
+        .prefetch_related('subtasks', 'attachments', 'labels', 'project__labels'),
         pk=pk
     )
     if not can_view_task(request.user, task):
@@ -599,7 +599,7 @@ def task_full_page(request, project_pk, task_pk):
     """Full page task view with properties sidebar."""
     task = get_object_or_404(
         Task.objects.select_related('project', 'status', 'assignee')
-        .prefetch_related('subtasks', 'activities__user', 'labels', 'project__labels'),
+        .prefetch_related('subtasks', 'labels', 'project__labels'),
         pk=task_pk, project_id=project_pk
     )
     if not can_view_task(request.user, task):
