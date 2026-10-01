@@ -40,10 +40,20 @@ def permissions(request):
         .select_related('task', 'task__project')
         .first()
     )
+    user = request.user
+
+    def inbox_unread():
+        # Called by the template only when the sidebar renders, so HTMX fragments
+        # that never show the badge do not pay for the count.
+        from apps.notifications.services import unread_count
+
+        return unread_count(user) if user.has_app_permission('access_tasks') else 0
+
     return {
         'perms_map': {
             key: request.user.has_app_permission(key)
             for key in PERMISSION_KEYS
         },
         'running_timer': running_timer,
+        'inbox_unread': inbox_unread,
     }

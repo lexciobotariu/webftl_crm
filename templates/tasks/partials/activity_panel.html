@@ -1,3 +1,4 @@
+{% load task_activity %}
 <div>
     <div class="flex items-center justify-between mb-4">
         <h3 class="text-sm font-semibold text-zinc-300">Activity</h3>
@@ -25,13 +26,17 @@
           hx-swap="beforeend"
           hx-sync="this:drop"
           hx-on::after-request="if(event.detail.successful) this.reset()"
-          class="mt-4 border border-border-subtle rounded-card overflow-hidden">
+          class="mt-4 border border-border-subtle rounded-card">
         <div class="px-3 pt-2">
             {% with pk_str=task.pk|stringformat:"s" %}
-            {% include "tasks/partials/markdown_editor.html" with uid="comment-"|add:pk_str name="content" value="" rows=2 placeholder="Add comment..." textarea_class="w-full bg-transparent py-1 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none resize-y" %}
+            {% with people_id="mention-people-"|add:pk_str %}
+            {% mention_people task request.user as people %}
+            {{ people|json_script:people_id }}
+            {% include "tasks/partials/markdown_editor.html" with uid="comment-"|add:pk_str name="content" value="" rows=2 placeholder="Add comment... (@ to mention)" mentions_id=people_id textarea_class="w-full bg-transparent py-1 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none resize-y" %}
+            {% endwith %}
             {% endwith %}
         </div>
-        <div class="flex items-center justify-end gap-3 px-3 py-2 border-t border-border-subtle bg-elevated/50">
+        <div class="flex items-center justify-end gap-3 px-3 py-2 border-t border-border-subtle bg-elevated/50 rounded-b-card">
             <span class="text-[11px] text-zinc-600">Ctrl/Cmd+Enter</span>
             <button type="submit"
                     class="bg-zinc-700 text-zinc-300 px-3 py-1 rounded text-xs font-medium hover:bg-zinc-600 transition-colors disabled:opacity-50">

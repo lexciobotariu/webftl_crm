@@ -261,7 +261,7 @@ def delete_subtask(subtask, user):
     subtask.delete()
 
 
-def add_comment(task, content, user):
+def add_comment(task, content, user, mentions=()):
     """
     Add a comment to a task.
 
@@ -272,6 +272,7 @@ def add_comment(task, content, user):
         task: Task to comment on
         content: Comment text
         user: User making the comment
+        mentions: User ids picked in the @ menu
 
     Returns:
         The created TaskActivity instance
@@ -279,14 +280,20 @@ def add_comment(task, content, user):
     Raises:
         TaskPermissionError: If user lacks editor access
     """
+    from apps.notifications.services import notify_comment
+
     require_access(user, task.project)
 
-    return TaskActivity.objects.create(
+    comment = TaskActivity.objects.create(
         task=task,
         user=user,
         activity_type='comment',
         content=content
     )
+    # ``mentions`` are the ids picked in the @ menu; notify_comment keeps the
+    # ones who can see the task and are still named in the text.
+    notify_comment(comment, mentions)
+    return comment
 
 
 def can_change_comment(user, comment):

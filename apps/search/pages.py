@@ -32,6 +32,7 @@ PAGES = (
     Page('Dashboard', 'dashboard', 'access_dashboard'),
     Page('Clients', 'client_list', 'access_clients'),
     Page('Projects', 'project_list', 'access_projects'),
+    Page('Inbox', 'inbox', 'access_tasks'),
     Page('My Tasks', 'my_tasks', 'access_tasks'),
     Page('My Week', 'time_week', 'access_tasks'),
     Page('Salaries', 'salary_list', 'access_salaries'),

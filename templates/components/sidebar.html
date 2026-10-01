@@ -61,6 +61,21 @@
         </a>
         {% endif %}
         {% if perms_map.access_tasks %}
+        {% with unread=inbox_unread %}
+        <a href="{% url 'inbox' %}"
+           class="flex items-center gap-2.5 px-3 py-2 rounded-control text-[13px] font-medium transition-colors duration-150
+                  {% if request.resolver_match.url_name == 'inbox' %}
+                  bg-elevated text-zinc-100 border border-border-subtle
+                  {% else %}
+                  text-zinc-400 hover:text-zinc-200 hover:bg-hover
+                  {% endif %}">
+            <i data-lucide="inbox" class="w-4 h-4"></i>
+            Inbox
+            <span data-inbox-badge data-count-url="{% url 'inbox_count' %}" aria-label="{{ unread }} unread"
+                  class="ml-auto min-w-[1.25rem] px-1.5 py-px rounded-full bg-accent text-on-accent text-[10px] font-semibold text-center leading-4"
+                  {% if not unread %}hidden{% endif %}>{{ unread }}</span>
+        </a>
+        {% endwith %}
         <a href="{% url 'my_tasks' %}"
            class="flex items-center gap-2.5 px-3 py-2 rounded-control text-[13px] font-medium transition-colors duration-150
                   {% if request.resolver_match.url_name == 'my_tasks' %}

@@ -502,7 +502,7 @@ def comment_create(request, pk):
         return HttpResponse('Comment is too long.', status=400)
     try:
         from apps.tasks import services
-        activity = services.add_comment(task, content, request.user)
+        activity = services.add_comment(task, content, request.user, request.POST.getlist('mentions'))
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
     # Whoever may comment may also change their own comment.

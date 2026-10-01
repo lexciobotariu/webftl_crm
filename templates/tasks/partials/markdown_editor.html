@@ -1,4 +1,4 @@
-{% comment %}A textarea with Write and Preview tabs. Include with uid (unique per page), name, value, rows, placeholder, and optionally autofocus and textarea_class. Escape in Preview goes back to Write; Ctrl/Cmd+Enter submits the form around it (static/js/markdown.js).{% endcomment %}
+{% comment %}A textarea with Write and Preview tabs. Include with uid (unique per page), name, value, rows, placeholder, and optionally autofocus, textarea_class and mentions_id (the json_script id of the people the @ menu offers, static/js/mentions.js). Escape in Preview goes back to Write; Ctrl/Cmd+Enter submits the form around it (static/js/markdown.js).{% endcomment %}
 <div x-data="markdownEditor('{% url 'markdown_preview' %}')"
      @keydown.escape="escape($event)"
      @keydown.ctrl.enter.prevent="submit()"
@@ -14,11 +14,16 @@
                 class="px-2 py-0.5 rounded-control text-xs text-zinc-500 hover:text-zinc-300 aria-selected:bg-elevated aria-selected:text-zinc-200 transition-colors">Preview</button>
         <span class="ml-auto text-[11px] text-zinc-600">Markdown</span>
     </div>
-    <div role="tabpanel" id="{{ uid }}-write" aria-labelledby="{{ uid }}-write-tab" x-show="tab === 'write'">
+    <div role="tabpanel" id="{{ uid }}-write" aria-labelledby="{{ uid }}-write-tab" x-show="tab === 'write'" class="relative">
         <textarea name="{{ name }}" rows="{{ rows|default:4 }}" x-ref="input"
+                  {% if mentions_id %}data-mentions="{{ mentions_id }}" aria-autocomplete="list" aria-haspopup="listbox" aria-controls="{{ uid }}-mentions"{% endif %}
                   aria-label="{{ placeholder }}" placeholder="{{ placeholder }}"
                   class="{{ textarea_class|default:'w-full bg-panel border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-border-strong focus:outline-none resize-y' }}"
                   {% if autofocus %}autofocus{% endif %}>{{ value|default:"" }}</textarea>
+        {% if mentions_id %}
+        <ul role="listbox" id="{{ uid }}-mentions" aria-label="People to mention" hidden
+            class="absolute left-0 bottom-full z-20 mb-1 w-64 max-h-56 overflow-y-auto py-1 bg-panel border border-border-strong rounded-card shadow-lg"></ul>
+        {% endif %}
     </div>
     <div role="tabpanel" id="{{ uid }}-preview" aria-labelledby="{{ uid }}-preview-tab" tabindex="0" x-ref="preview" x-show="tab === 'preview'" x-cloak
          aria-live="polite" :aria-busy="loading"
