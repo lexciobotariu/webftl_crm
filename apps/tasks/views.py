@@ -23,7 +23,7 @@ from apps.tasks.models import Label, can_create_task, can_edit_task, can_view_ta
 
 from .forms import SubtaskForm, TaskForm, TimeEntryForm
 from .listview import apply_url_headers, build_groups, filter_options, group_choices, resolve_view
-from .models import MyTasksView, Subtask, Task, TimeEntry
+from .models import MyTasksView, Subtask, Task, TaskActivity, TimeEntry
 from .templatetags.task_markdown import MAX_LENGTH as MARKDOWN_MAX_LENGTH
 from .viewspec import CATEGORIES, LIMIT_STEP, TaskViewOptions, sort_choices
 
@@ -273,6 +273,15 @@ def task_detail(request, pk):
     })
 
 
+def _log_label_changes(task, before, after, user):
+    from apps.tasks.services import log_label_change
+
+    for label in sorted(after - before, key=lambda label: label.name):
+        log_label_change(task, label, user, added=True)
+    for label in sorted(before - after, key=lambda label: label.name):
+        log_label_change(task, label, user, added=False)
+
+
 @login_required
 @require_permission('access_tasks')
 def task_edit(request, pk):
@@ -282,8 +291,10 @@ def task_edit(request, pk):
     if request.method == 'POST':
         form = TaskForm(task.project, request.POST, instance=task)
         if form.is_valid():
+            labels_before = set(task.labels.all())
             task._changed_by = request.user
             form.save()
+            _log_label_changes(task, labels_before, set(form.cleaned_data['labels']), request.user)
             if request.htmx:
                 return render(request, 'tasks/task_detail.html', {
                     'task': task,
@@ -494,7 +505,56 @@ def comment_create(request, pk):
         activity = services.add_comment(task, content, request.user)
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
+    # Whoever may comment may also change their own comment.
+    activity.can_change = True
     return render(request, 'tasks/partials/activity_item.html', {'activity': activity})
+
+
+def _comment_or_404(task_pk, comment_pk):
+    return get_object_or_404(
+        TaskActivity.objects.select_related('user', 'task__project'),
+        pk=comment_pk, task_id=task_pk, activity_type='comment',
+    )
+
+
+@login_required
+@require_permission('access_tasks')
+def comment_edit(request, pk, comment_pk):
+    """GET: the comment as an editor (or as itself with ?cancel=1). POST: save it.
+
+    Every response replaces only ``#activity-<comment_pk>``.
+    """
+    from apps.tasks import services
+
+    comment = _comment_or_404(pk, comment_pk)
+    if not services.can_change_comment(request.user, comment):
+        return HttpResponseForbidden('You can only change your own comments')
+    comment.can_change = True
+    if request.method == 'POST':
+        content = request.POST.get('content', '').strip()
+        if not content:
+            return HttpResponse('A comment cannot be empty.', status=400)
+        if len(content) > MARKDOWN_MAX_LENGTH:
+            return HttpResponse('Comment is too long.', status=400)
+        services.edit_comment(comment, content, request.user)
+        return render(request, 'tasks/partials/activity_item.html', {'activity': comment})
+    if request.GET.get('cancel') == '1':
+        return render(request, 'tasks/partials/activity_item.html', {'activity': comment})
+    return render(request, 'tasks/partials/comment_edit.html', {'activity': comment})
+
+
+@login_required
+@require_permission('access_tasks')
+@require_POST
+def comment_delete(request, pk, comment_pk):
+    from apps.tasks import services
+
+    comment = _comment_or_404(pk, comment_pk)
+    try:
+        services.delete_comment(comment, request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
+    return HttpResponse('')
 
 
 @login_required
@@ -512,7 +572,7 @@ def markdown_preview(request):
 @require_permission('access_tasks')
 def task_activity_list(request, pk):
     """Return just the activity list for a task (for HTMX refresh)."""
-    task = get_object_or_404(Task, pk=pk)
+    task = get_object_or_404(Task.objects.select_related('project'), pk=pk)
     if not can_view_task(request.user, task):
         return HttpResponseForbidden("You don't have access to this task")
     return render(request, 'tasks/partials/activity_list.html', {'task': task})
@@ -645,7 +705,7 @@ def task_update_estimate(request, pk):
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
     response = render(request, 'tasks/partials/estimate_input.html', {'task': task})
-    response['HX-Trigger'] = f'taskUpdated-{pk}, taskChanged'
+    response['HX-Trigger'] = f'activityUpdated, taskUpdated-{pk}, taskChanged'
     return response
 
 
@@ -664,7 +724,7 @@ def task_toggle_label(request, pk, label_pk):
     response = render(request, 'tasks/partials/labels_selector.html', {
         'task': task, 'project_labels': project_labels
     })
-    response['HX-Trigger'] = f'taskUpdated-{pk}, taskChanged'
+    response['HX-Trigger'] = f'activityUpdated, taskUpdated-{pk}, taskChanged'
     return response
 
 
@@ -684,7 +744,9 @@ def task_edit_description(request, pk):
         task.description = description
         task._changed_by = request.user
         task.save()
-        return render(request, 'tasks/partials/description_display.html', {'task': task})
+        response = render(request, 'tasks/partials/description_display.html', {'task': task})
+        response['HX-Trigger'] = 'activityUpdated'
+        return response
     return render(request, 'tasks/partials/description_edit.html', {'task': task})
 
 
@@ -707,7 +769,7 @@ def task_edit_title(request, pk):
             task.save()
         template = 'tasks/partials/title_display_full.html' if is_full else 'tasks/partials/title_display.html'
         response = render(request, template, {'task': task})
-        response['HX-Trigger'] = f'taskUpdated-{pk}, taskChanged'
+        response['HX-Trigger'] = f'activityUpdated, taskUpdated-{pk}, taskChanged'
         return response
     template = 'tasks/partials/title_edit_full.html' if is_full else 'tasks/partials/title_edit.html'
     return render(request, template, {'task': task})

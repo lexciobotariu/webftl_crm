@@ -3,6 +3,13 @@ from django.dispatch import receiver
 
 from .models import Task, TaskActivity
 
+# TaskActivity.old_value and new_value are 255 characters; titles go up to 1000.
+VALUE_LENGTH = 255
+
+
+def _estimate_label(hours):
+    return f'{hours}h' if hours is not None else ''
+
 
 @receiver(pre_save, sender=Task)
 def track_task_changes(sender, instance, **kwargs):
@@ -14,6 +21,9 @@ def track_task_changes(sender, instance, **kwargs):
             instance._old_assignee = old_task.assignee
             instance._old_priority = old_task.priority
             instance._old_due_date = old_task.due_date
+            instance._old_title = old_task.title
+            instance._old_description = old_task.description
+            instance._old_time_estimate = old_task.time_estimate
         except Task.DoesNotExist:
             pass
 
@@ -79,4 +89,36 @@ def log_task_changes(sender, instance, created, **kwargs):
             old_value=old_date,
             new_value=new_date,
             content=f'changed due date to {new_date}'
+        )
+
+    if hasattr(instance, '_old_title') and instance._old_title != instance.title:
+        new_title = instance.title[:VALUE_LENGTH]
+        TaskActivity.objects.create(
+            task=instance,
+            user=user,
+            activity_type='title_change',
+            old_value=instance._old_title[:VALUE_LENGTH],
+            new_value=new_title,
+            content=f'changed the title to {new_title}'
+        )
+
+    if hasattr(instance, '_old_description') and instance._old_description != instance.description:
+        # No diff: descriptions are long, and the row only says that it changed.
+        TaskActivity.objects.create(
+            task=instance,
+            user=user,
+            activity_type='description_change',
+            content='updated the description'
+        )
+
+    if hasattr(instance, '_old_time_estimate') and instance._old_time_estimate != instance.time_estimate:
+        old_label = _estimate_label(instance._old_time_estimate)
+        new_label = _estimate_label(instance.time_estimate)
+        TaskActivity.objects.create(
+            task=instance,
+            user=user,
+            activity_type='estimate_change',
+            old_value=old_label,
+            new_value=new_label,
+            content=f'set the estimate to {new_label}' if new_label else 'removed the estimate'
         )

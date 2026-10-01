@@ -398,6 +398,9 @@ class TaskActivity(models.Model):
         ('due_date_change', 'Due Date Changed'),
         ('label_added', 'Label Added'),
         ('label_removed', 'Label Removed'),
+        ('title_change', 'Title Changed'),
+        ('description_change', 'Description Changed'),
+        ('estimate_change', 'Estimate Changed'),
     ]
 
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='activities')
@@ -412,6 +415,8 @@ class TaskActivity(models.Model):
     old_value = models.CharField(max_length=255, blank=True)
     new_value = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    # Set when the author (or an admin) changes a comment's text.
+    edited_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['created_at']

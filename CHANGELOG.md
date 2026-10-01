@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0] - 2026-10-01
+
+### Features
+- Comments can be edited and deleted by their author (while they can still edit the task) or by an admin; an edited comment says so, and editing or deleting changes only that comment, not the whole list
+- Activity also records title changes, description updates ("updated the description", without a diff), estimate changes, and labels added or removed from the drawer or the edit form
+
+### Changes
+- New activity rows appear in the open drawer right after a title, description, estimate or label change
+- The activity list loads every author in one query instead of one per row
+
 ## [0.12.0] - 2026-10-01
 
 ### Features
