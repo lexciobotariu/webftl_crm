@@ -367,3 +367,27 @@ def test_sql_dumps_stay_out_of_the_image():
 
 def test_entrypoint_does_not_run_the_import():
     assert 'import_perfex' not in Path('entrypoint.sh').read_text()
+
+
+@pytest.mark.django_db
+def test_imported_closed_tasks_close_on_their_finish_date(tmp_path):
+    """Imported Done tasks keep their Perfex date, so old ones archive at once
+    instead of all landing on the board for two more weeks."""
+    original = (
+        "INSERT INTO `tbltasks` (`id`, `name`, `description`, `priority`, `dateadded`, `duedate`, `status`, "
+        "`rel_id`, `rel_type`) VALUES (1, 'Ship homepage', 'Line one\\nLine two', 2, '2024-01-03 09:00:00', "
+        "NULL, 5, 1, 'project');"
+    )
+    finished = (
+        "INSERT INTO `tbltasks` (`id`, `name`, `description`, `priority`, `dateadded`, `duedate`, `status`, "
+        "`rel_id`, `rel_type`, `datefinished`) VALUES (1, 'Ship homepage', 'Line one\\nLine two', 2, "
+        "'2024-01-03 09:00:00', NULL, 5, 1, 'project', '2024-02-10 17:00:00');"
+    )
+    sql = dump_sql()
+    assert original in sql
+    _run(sql.replace(original, finished), tmp_path / 'dump.sql', commit=True)
+
+    ship = Task.objects.get(title='Ship homepage')
+    assert ship.closed_at is not None and ship.closed_at.date() == date(2024, 2, 10)
+    assert ship.is_archived
+    assert all(task.closed_at is None for task in Task.objects.exclude(status__category__in=['completed', 'canceled']))

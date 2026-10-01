@@ -5,6 +5,7 @@ Kept apart from the spec (which only knows about URLs) and from the queryset
 """
 from itertools import groupby
 
+from django.conf import settings
 from django.db.models import Q
 from django.db.models.functions import Lower
 from django.shortcuts import redirect
@@ -151,6 +152,7 @@ def filter_options(statuses, spec, assignable_users, labels, categories=()):
     the page filters by, and the assignee group follows the page's options.
     """
     options = {
+        'archive_after_days': settings.TASK_ARCHIVE_AFTER_DAYS,
         'priority_options': priority_filter_options(spec.priorities),
         'label_options': [
             {'value': label.pk, 'label': label.name, 'checked': label.pk in spec.labels}
@@ -204,3 +206,13 @@ def project_assignees(project):
     return User.objects.filter(Q(pk__in=assignable) | Q(pk__in=holders)).order_by(
         Lower('name'), 'email'
     )
+
+
+def archived_matching(tasks, spec):
+    """The archived tasks a view leaves out that pass its other filters.
+
+    Empty when the view already shows archived tasks.
+    """
+    if spec.archived:
+        return tasks.none()
+    return tasks.matching(spec.replace(archived=True)).archived()

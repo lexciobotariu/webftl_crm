@@ -48,6 +48,8 @@ def sync_issues_from_github(project: Project, token: str):
             if 'pull_request' in issue:
                 continue
 
+            # The status only applies to a new task: a sync must not move an
+            # existing one back to the first column.
             Task.objects.update_or_create(
                 project=project,
                 github_issue_id=issue['id'],
@@ -55,8 +57,13 @@ def sync_issues_from_github(project: Project, token: str):
                     'github_issue_number': issue['number'],
                     'title': issue['title'],
                     'description': issue['body'] or '',
+                },
+                create_defaults={
+                    'github_issue_number': issue['number'],
+                    'title': issue['title'],
+                    'description': issue['body'] or '',
                     'status': backlog,
-                }
+                },
             )
 
 
@@ -149,8 +156,13 @@ def process_webhook_issue(payload: dict, project: Project):
                 'github_issue_number': issue['number'],
                 'title': issue['title'],
                 'description': issue['body'] or '',
+            },
+            create_defaults={
+                'github_issue_number': issue['number'],
+                'title': issue['title'],
+                'description': issue['body'] or '',
                 'status': backlog,
-            }
+            },
         )
     elif action == 'closed':
         try:

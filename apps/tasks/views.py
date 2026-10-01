@@ -22,7 +22,14 @@ from apps.projects.models import (
 from apps.tasks.models import Label, can_create_task, can_edit_task, can_view_task, editable_scope
 
 from .forms import SubtaskForm, TaskForm, TimeEntryForm
-from .listview import apply_url_headers, build_groups, filter_options, group_choices, resolve_view
+from .listview import (
+    apply_url_headers,
+    archived_matching,
+    build_groups,
+    filter_options,
+    group_choices,
+    resolve_view,
+)
 from .models import MyTasksView, Subtask, Task, TaskActivity, TimeEntry
 from .templatetags.task_markdown import MAX_LENGTH as MARKDOWN_MAX_LENGTH
 from .viewspec import CATEGORIES, LIMIT_STEP, TaskViewOptions, sort_choices
@@ -107,8 +114,10 @@ def my_tasks(request):
         quick_edit, quick_edit_projects = editable_scope(request.user)
         matching = assigned.matching(spec)
         total_matching = matching.count()
+        archived_count = archived_matching(assigned, spec).count()
         # What the default view leaves out is hidden too, so every page of this
-        # view measures "hidden" against all of the person's tasks.
+        # view measures "hidden" against all of the person's tasks. Archived ones
+        # that pass the filters are counted on their own.
         total_visible = assigned.count()
         page = (
             matching.ordered_for(spec)
@@ -120,7 +129,8 @@ def my_tasks(request):
             'groups': build_groups(page, spec, assigned.group_counts(spec)),
             'total_matching': total_matching,
             'total_visible': total_visible,
-            'hidden_count': total_visible - total_matching,
+            'hidden_count': total_visible - total_matching - archived_count,
+            'archived_count': archived_count,
             'more_url': None,
             'show_all_url': None,
             'page_url': page_url,
@@ -138,7 +148,7 @@ def my_tasks(request):
         if total_matching > spec.limit:
             more = spec.replace(limit=spec.limit + LIMIT_STEP).to_query_string()
             context['more_url'] = f'{page_url}?{more}'
-        everything = spec.replace(categories=MY_TASKS_OPTIONS.categories)
+        everything = spec.replace(categories=MY_TASKS_OPTIONS.categories, archived=True)
         context['show_all_url'] = f'{page_url}?{everything.to_query_string()}'
 
     from apps.todos.models import Todo

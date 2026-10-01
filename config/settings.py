@@ -237,3 +237,7 @@ LOGGING = {
         },
     },
 }
+
+# Tasks closed (completed or canceled) longer ago than this leave the boards and
+# the default lists. They stay in search, counts and "Show archived".
+TASK_ARCHIVE_AFTER_DAYS = 14

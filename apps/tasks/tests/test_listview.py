@@ -68,7 +68,7 @@ class TestGroupChoices:
 class TestFilterOptions:
     def test_a_page_with_only_type_and_priority_filters(self):
         options = filter_options([], my_spec('category=completed'), [], [], categories=MY_OPTIONS.categories)
-        assert set(options) == {'priority_options', 'label_options', 'category_options'}
+        assert set(options) == {'archive_after_days', 'priority_options', 'label_options', 'category_options'}
         checked = {o['value']: o['checked'] for o in options['category_options']}
         assert checked == {
             'backlog': False, 'unstarted': False, 'started': False,

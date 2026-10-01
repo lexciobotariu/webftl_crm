@@ -32,7 +32,11 @@
         </div>
         {# Kept outside the sortable container so it never becomes a drop item. #}
         {% if not status.tasks.all %}
+        {% if status.archived_task_count %}
+        {% include "components/empty_state.html" with icon="archive" message="Only archived tasks" %}
+        {% else %}
         {% include "components/empty_state.html" with icon="inbox" message="Nothing here yet" %}
+        {% endif %}
         {% endif %}
     </div>
 </div>

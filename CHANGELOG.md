@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0] - 2026-10-01
+
+### Features
+- Done and canceled tasks archive themselves 14 days after they were closed: they leave the boards and the default lists, and stay in search, the project counts and the drawer
+- "Show archived" in the Filter menu (list and board) brings them back; the count row says "N archived · Show" next to "hidden by filters", and a Done column holding only archived tasks says so
+- An archived task shows "Archived" in its drawer; reopening it brings it back
+- "Show all" on My Tasks includes archived tasks
+
+### Changes
+- **On deploy, tasks closed more than 14 days ago disappear from boards and default lists.** Existing closed tasks are dated by their last status change, or their last update when there is none
+- Changing a status's type to completed or canceled (or back) closes or reopens the tasks in it
+- Tasks imported from Perfex are dated by their finish date, so old finished work archives at once
+
+### Fixes
+- A GitHub issue sync no longer moves every synced task back to the first status; the first status only applies to a new issue
+
 ## [0.14.1] - 2026-10-01
 
 ### Fixes

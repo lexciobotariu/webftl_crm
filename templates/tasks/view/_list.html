@@ -7,6 +7,7 @@
     <span>{{ hidden_count }} done or canceled hidden</span>
     <a href="{{ show_all_url }}" class="text-zinc-400 hover:text-zinc-200 transition-colors">Show all</a>
     {% endif %}
+    {% include "tasks/view/_archived_note.html" %}
 </div>
 {% if total_matching %}
 <div class="border-t border-border-subtle">

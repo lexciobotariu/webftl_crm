@@ -14,6 +14,7 @@ from django.http import (
 )
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.accounts.decorators import require_permission
@@ -21,6 +22,7 @@ from apps.accounts.models import User
 from apps.clients.models import Client, visible_clients
 from apps.tasks.listview import (
     apply_url_headers,
+    archived_matching,
     build_groups,
     filter_options,
     group_choices,
@@ -205,7 +207,11 @@ def project_tasks(request, pk):
     visible = visible_tasks(request.user, project)
     matching = visible.matching(spec)
     total_matching = matching.count()
-    total_visible = visible.count() if (spec.has_filters or spec.q) else total_matching
+    archived = archived_matching(visible, spec)
+    archived_count = archived.count()
+    # "Hidden by filters" leaves archived tasks out: they have their own count.
+    pool = visible if spec.archived else visible.not_archived()
+    total_visible = pool.count() if (spec.has_filters or spec.q) else total_matching
 
     context = {
         'project': project,
@@ -214,6 +220,7 @@ def project_tasks(request, pk):
         'total_matching': total_matching,
         'total_visible': total_visible,
         'hidden_count': total_visible - total_matching,
+        'archived_count': archived_count,
         'more_url': None,
         'page_url': page_url,
         'can_edit_project': can_edit_project(request.user, project),
@@ -226,7 +233,7 @@ def project_tasks(request, pk):
         **filter_options(statuses, spec, assignees, labels),
     }
     if spec.layout == 'board':
-        context.update(_board_context(project, spec, matching))
+        context.update(_board_context(project, spec, matching, archived))
     else:
         page = (
             matching.ordered_for(spec)
@@ -289,7 +296,7 @@ def project_team_remove(request, pk, user_pk):
     return redirect('project_detail_team', pk=project.pk)
 
 
-def _board_context(project, spec, matching):
+def _board_context(project, spec, matching, archived):
     """Columns and cards for the board layout.
 
     Columns are the statuses shown on the board, minus any the filter hides.
@@ -308,7 +315,11 @@ def _board_context(project, spec, matching):
     columns = (
         project.statuses.filter(visible_on_board=True)
         .exclude(pk__in=spec.hidden_statuses)
-        .annotate(board_task_count=Count('tasks', filter=Q(tasks__in=matching)))
+        .annotate(
+            board_task_count=Count('tasks', filter=Q(tasks__in=matching), distinct=True),
+            # So a column holding only archived tasks can say so.
+            archived_task_count=Count('tasks', filter=Q(tasks__in=archived), distinct=True),
+        )
         # Meta.ordering is ignored once a query aggregates, so say it.
         .order_by('order', 'pk')
         .prefetch_related(Prefetch('tasks', queryset=cards))
@@ -567,4 +578,10 @@ def status_set_category(request, pk, status_pk):
         )
         status.category = category
         status.save(update_fields=['category'])
+        # The same rule Task.save applies, for every task in the column at once;
+        # update() leaves updated_at alone.
+        if status.is_closed:
+            status.tasks.filter(closed_at__isnull=True).update(closed_at=timezone.now())
+        else:
+            status.tasks.update(closed_at=None)
     return render(request, 'projects/partials/status_item.html', _status_item_context(project, status))

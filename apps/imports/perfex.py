@@ -455,7 +455,10 @@ def _import_tasks(rows, projects, clients, admin, stats):
         task.save()
         created = as_datetime(row.get('dateadded'))
         finished = as_datetime(row.get('datefinished'))
-        stamp(Task, task.pk, created_at=created, updated_at=finished or created)
+        # A closed task is dated by when it was finished, so years of done work
+        # archives at once instead of crowding the boards for two more weeks.
+        closed_at = (finished or created) if status.is_closed else None
+        stamp(Task, task.pk, created_at=created, updated_at=finished or created, closed_at=closed_at)
         by_id[str(row.get('id'))] = task
         stats.add('tasks')
     return by_id

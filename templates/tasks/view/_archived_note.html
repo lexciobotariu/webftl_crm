@@ -1,0 +1,7 @@
+{% comment %}"N archived · Show": ticks Show archived in the Filter and submits the toolbar, so the URL, the badge and the saved view all follow.{% endcomment %}
+{% if archived_count %}
+<span>{{ archived_count }} archived</span>
+<button type="button"
+        onclick="const box = document.querySelector('#task-toolbar input[name=archived]'); if (box) { box.checked = true; box.form.requestSubmit(); }"
+        class="text-zinc-400 hover:text-zinc-200 transition-colors">Show</button>
+{% endif %}
