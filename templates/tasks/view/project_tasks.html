@@ -95,7 +95,7 @@
     </script>
 
     <div class="flex-1 min-h-0">
-        <div id="task-view" class="h-full {% if spec.layout == 'board' %}overflow-hidden{% else %}overflow-y-auto{% endif %}">
+        <div id="task-view" data-keep-scroll="view" class="h-full {% if spec.layout == 'board' %}overflow-hidden{% else %}overflow-y-auto{% endif %}">
             {% if spec.layout == 'board' %}
             {% include "tasks/view/_board.html" %}
             {% else %}

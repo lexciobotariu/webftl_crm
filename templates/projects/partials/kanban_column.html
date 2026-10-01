@@ -19,7 +19,7 @@
         </div>
     </div>
     <!-- Tasks container - scrollable, sortable -->
-    <div class="flex-1 overflow-y-auto p-2">
+    <div class="flex-1 overflow-y-auto p-2" data-keep-scroll="column-{{ status.pk }}">
         <div class="space-y-2 min-h-[3rem]"
              id="column-{{ status.pk }}-tasks"
              x-sort:group="kanban"

@@ -28,8 +28,10 @@ from apps.tasks.listview import (
 )
 from apps.tasks.models import (
     Label,
+    Task,
     TaskActivity,
     can_create_task,
+    can_edit_tasks_on,
     visible_tasks,
 )
 from apps.tasks.viewspec import LIMIT_STEP, TaskViewOptions, sort_choices
@@ -214,6 +216,9 @@ def project_tasks(request, pk):
         'page_url': page_url,
         'can_edit_project': can_edit_project(request.user, project),
         'can_create_task': can_create_task(request.user, project),
+        # Asked once for the page; rows and cards only read it.
+        'quick_edit': can_edit_tasks_on(request.user, project),
+        'priority_choices': Task.PRIORITY_CHOICES,
         'sort_choices': sort_choices(),
         'group_choices': group_choices(options),
         **filter_options(statuses, spec, assignees, labels),

@@ -6,6 +6,7 @@ from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.http import HttpResponse, HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_date
@@ -18,7 +19,7 @@ from apps.projects.models import (
     can_access_project,
     get_assignable_users,
 )
-from apps.tasks.models import Label, can_create_task, can_edit_task, can_view_task
+from apps.tasks.models import Label, can_create_task, can_edit_task, can_view_task, editable_scope
 
 from .forms import SubtaskForm, TaskForm, TimeEntryForm
 from .listview import apply_url_headers, build_groups, filter_options, group_choices, resolve_view
@@ -102,6 +103,7 @@ def my_tasks(request):
             return resolved
         spec, from_toolbar = resolved
 
+        quick_edit, quick_edit_projects = editable_scope(request.user)
         matching = assigned.matching(spec)
         total_matching = matching.count()
         # What the default view leaves out is hidden too, so every page of this
@@ -122,6 +124,9 @@ def my_tasks(request):
             'show_all_url': None,
             'page_url': page_url,
             'show_project': True,
+            'quick_edit': quick_edit,
+            'quick_edit_projects': quick_edit_projects,
+            'priority_choices': Task.PRIORITY_CHOICES,
             'empty_message': 'No open tasks assigned to you',
             'sort_choices': sort_choices(),
             'group_choices': group_choices(MY_TASKS_OPTIONS),
@@ -352,6 +357,30 @@ def task_move(request):
 
 @login_required
 @require_permission('access_tasks')
+def task_quick_menu(request, pk, field):
+    """The options of the quick-edit menu on a row or card, for status or assignee.
+
+    Priority has no endpoint: its five options are the same everywhere, so the page
+    carries them once. The fragment is rendered without the request, so none of the
+    context processors run for what is only a list of buttons.
+    """
+    if field not in ('status', 'assignee'):
+        return HttpResponse('Unknown field', status=404)
+    task = get_object_or_404(Task.objects.select_related('project', 'status'), pk=pk)
+    if not can_view_task(request.user, task):
+        return HttpResponseForbidden("You don't have access to this task")
+    if not can_edit_task(request.user, task):
+        return HttpResponseForbidden('You cannot edit this task')
+    context = {'task': task, 'field': field}
+    if field == 'status':
+        context['options'] = task.project.statuses.all()
+    else:
+        context['options'] = get_assignable_users(task.project).order_by('name', 'email')
+    return HttpResponse(render_to_string('tasks/partials/quick_menu_items.html', context))
+
+
+@login_required
+@require_permission('access_tasks')
 @require_POST
 def task_update_status(request, pk):
     task = get_object_or_404(Task, pk=pk)
@@ -359,6 +388,11 @@ def task_update_status(request, pk):
     status = get_object_or_404(Status, pk=status_id, project=task.project)
     try:
         from apps.tasks import services
+        if status.pk == task.status_id:
+            # Picking the status it already has changes nothing; moving it would
+            # send the card to the end of its column.
+            services.require_access(request.user, task.project)
+            return render(request, 'tasks/partials/status_dropdown.html', {'task': task})
         services.move_task(task, status, request.user)
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
@@ -517,13 +551,12 @@ def task_update_assignee(request, pk):
 @require_POST
 def task_update_priority(request, pk):
     task = get_object_or_404(Task, pk=pk)
+    priority = request.POST.get('priority') or ''
+    if priority and priority not in dict(Task.PRIORITY_CHOICES):
+        return HttpResponse('Invalid priority', status=400)
     try:
         from apps.tasks import services
-        services.update_task_field(
-            task, 'priority',
-            request.POST.get('priority') or '',
-            request.user
-        )
+        services.update_task_field(task, 'priority', priority, request.user)
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
     response = render(request, 'tasks/partials/priority_dropdown.html', {

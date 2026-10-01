@@ -18,6 +18,7 @@ urlpatterns = [
     path('<int:pk>/timer/start/', views.timer_start, name='timer_start'),
     path('<int:pk>/time/log/', views.time_log, name='time_log'),
     path('<int:pk>/edit/', views.task_edit, name='task_edit'),
+    path('<int:pk>/quick/<str:field>/', views.task_quick_menu, name='task_quick_menu'),
     path('<int:pk>/status/', views.task_update_status, name='task_update_status'),
     path('<int:pk>/delete/', views.task_delete, name='task_delete'),
     path('<int:pk>/subtasks/', views.subtask_create, name='subtask_create'),

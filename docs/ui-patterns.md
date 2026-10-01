@@ -384,6 +384,36 @@ paging are never saved).
 - **Rows go stale otherwise.** The drawer's property views emit `taskChanged` (plus
   `taskUpdated-<pk>`); the page answers with `refreshFragment('#task-view')`.
 
+### Quick edit on rows and cards
+
+Priority, status and assignee change from the row (cards: priority and assignee, since the
+column is the status) without opening the drawer.
+
+- **One floating menu per page.** `#task-quick-menu` sits in `_view_scripts.html`, outside
+  `#task-view`, and `static/js/task-view.js` opens it from a delegated click on any
+  `[data-quick="priority|status|assignee"]` button. Never add a dropdown per row: a page of
+  rows would carry hundreds of htmx nodes that every swap re-processes.
+- **Options.** Priority is a `<template>` rendered once in the page. Status and assignee come
+  from `GET /tasks/<pk>/quick/<field>/` (`task_quick_menu`), rendered without the request so
+  no context processor runs. The current value is `aria-checked` and choosing it does nothing.
+- **Saving reuses the drawer's endpoints** (`task_update_status/priority/assignee`). The POST
+  goes out with `htmx.ajax(..., {source: '#task-quick-menu', swap: 'none'})`, so
+  `taskChanged` / `taskStatusChanged` reach `body` and the page re-fetches the view, even
+  though the pressed option is gone by then.
+- **The click does not also open the drawer.** Rows use `hx-trigger="click[!event.target.closest('[data-quick]')]"`,
+  and the card's `onclick` has the same guard. Don't use `click consume`: it would also stop
+  click-outside listeners. Opening a menu closes the drawer.
+- **Who gets buttons.** The page works out edit rights once (`quick_edit`, plus
+  `quick_edit_projects` on My Tasks, from `editable_scope`); rows only read them. Anyone
+  else sees the plain icons.
+- **Scroll survives the refresh.** Elements marked `data-keep-scroll="<key>"` (the list, the
+  board, each column) are saved before a refresh or "Show more" swaps `#task-view` and
+  restored after. A filter or search change starts from the top.
+- **Escape.** `static/js/keys.js` is the one Escape handler. It walks palette, quick menu,
+  dropdown, drawer, selection and stops at the first that closes something; new layers
+  register with `registerEscLayer(name, fn)`. A field that handles Escape itself must
+  `preventDefault()`.
+
 ## Kanban Board
 
 The board is the `board` layout of the Tasks page above (`tasks/view/_board.html`), not a
@@ -534,14 +564,14 @@ To add or change one: `curl https://api.iconify.design/<set>/<icon>.svg -o templ
 
 | Icon set | Used for | License |
 | --- | --- | --- |
-| Tabler Icons (`tabler`) | backlog, unstarted, completed, canceled, urgent, no priority, unassigned | MIT |
+| Tabler Icons (`tabler`) | backlog, unstarted, completed, canceled, urgent, no priority, unassigned, check mark in the quick menu | MIT |
 | Material Design Icons (`mdi`) | started (half circle), low / medium / high signal bars | Apache-2.0 |
 
 ---
 
 ## JavaScript Libraries
 
-All are loaded from a CDN, pinned to an exact version and checked with Subresource
+The libraries below are loaded from a CDN, pinned to an exact version and checked with Subresource
 Integrity. Bumping a version means recomputing its `integrity` hash.
 
 - **HTMX 2.0.4** — dynamic HTML updates
@@ -550,5 +580,8 @@ Integrity. Bumping a version means recomputing its `integrity` hash.
 - **@alpinejs/collapse 3.17.1** — `x-collapse` (used by the salary month list)
 - **Lucide 1.38.0** — icon library
 - **Iconify 2.3.0** — supplementary icons
+- **Own scripts** (`static/js/`, served from the app, not the CDN): `keys.js` (the Escape
+  dispatcher, loaded by `base.html`) and `task-view.js` (quick-edit menu, loaded by the Tasks
+  pages). With `DEBUG` off, run `collectstatic` after adding or changing one; CI and Docker do.
 - **Tailwind CSS** (`cdn.tailwindcss.com`) — the one unpinned, unhashed dependency;
   it is a JIT build with no versioned URL. See the README for the tradeoff.

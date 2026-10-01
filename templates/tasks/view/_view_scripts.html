@@ -1,3 +1,4 @@
+{% load static %}
 {% comment %}Re-fetches the view through the current URL after an edit. It sits outside #task-view so it survives every swap.
    Optional refresh_oob: a selector list for anything else the same response should update (My Tasks passes its count badge).{% endcomment %}
 <div id="task-view-refresh" hidden
@@ -20,3 +21,31 @@
         });
     });
 </script>
+
+{% if quick_edit or quick_edit_projects %}
+{% comment %}One menu for the whole page, outside #task-view so a refresh does not replace it. static/js/task-view.js opens it from any [data-quick] button and fills it: priority from the template below, status and assignee from the quick-menu endpoint. The /0/ in the URLs stands for the task id.{% endcomment %}
+<div id="task-quick-menu" role="menu" hidden tabindex="-1"
+     data-priority-url="{% url 'task_update_priority' 0 %}"
+     data-status-url="{% url 'task_update_status' 0 %}"
+     data-assignee-url="{% url 'task_update_assignee' 0 %}"
+     data-quick-url="{% url 'task_quick_menu' 0 'FIELD' %}"
+     style="max-height: min(20rem, calc(100vh - 16px))"
+     class="fixed z-[55] w-56 overflow-y-auto bg-elevated border border-border-subtle rounded-card shadow-lg py-1"></div>
+<template id="task-quick-priority">
+    <button type="button" role="menuitemradio" tabindex="-1" data-value="" aria-checked="false"
+            class="w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm text-zinc-400 hover:bg-hover-strong focus:bg-hover-strong focus:outline-none transition-colors">
+        {% include "components/priority_icon.html" with priority="" %}
+        <span class="flex-1">No priority</span>
+        <span data-check hidden class="text-zinc-400">{% include "components/icons/tabler-check.svg" %}</span>
+    </button>
+    {% for value, label in priority_choices %}
+    <button type="button" role="menuitemradio" tabindex="-1" data-value="{{ value }}" aria-checked="false"
+            class="w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm text-zinc-300 hover:bg-hover-strong focus:bg-hover-strong focus:outline-none transition-colors">
+        {% include "components/priority_icon.html" with priority=value %}
+        <span class="flex-1">{{ label }}</span>
+        <span data-check hidden class="text-zinc-400">{% include "components/icons/tabler-check.svg" %}</span>
+    </button>
+    {% endfor %}
+</template>
+<script src="{% static 'js/task-view.js' %}"></script>
+{% endif %}
