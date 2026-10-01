@@ -1,73 +1,9 @@
 <div id="time-tracking-{{ task.pk }}"
-     hx-get="{% url 'task_time_section' task.pk %}"
+     hx-get="{% url 'task_time_section' task.pk %}{% if full_page %}?full_page=1{% endif %}"
      hx-trigger="timerChanged from:body"
      hx-swap="outerHTML">
     <div class="{% if full_page %}mb-5{% endif %}">
-        <div class="flex items-center justify-between mb-2 gap-2">
-            <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Time</h3>
-            {% if can_log_time %}
-            <div class="flex items-center gap-2">
-                {% if running_timer and running_timer.task_id == task.pk %}
-                <button type="button"
-                        id="time-stop-{{ task.pk }}"
-                        hx-post="{% url 'timer_stop' %}"
-                        hx-swap="none"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-error bg-elevated border border-border-subtle rounded-full hover:text-error hover:border-zinc-600 transition-colors">
-                    <i data-lucide="square" class="w-3.5 h-3.5"></i>
-                    Stop
-                </button>
-                {% else %}
-                <button type="button"
-                        id="time-start-{{ task.pk }}"
-                        hx-post="{% url 'timer_start' task.pk %}"
-                        hx-swap="none"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-zinc-400 bg-elevated border border-border-subtle rounded-full hover:text-zinc-200 hover:border-zinc-600 transition-colors">
-                    <i data-lucide="play" class="w-3.5 h-3.5"></i>
-                    Start
-                </button>
-                {% endif %}
-                <button type="button"
-                        onclick="document.getElementById('time-log-panel-{{ task.pk }}').classList.toggle('hidden')"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-zinc-400 bg-elevated border border-border-subtle rounded-full hover:text-zinc-200 hover:border-zinc-600 transition-colors">
-                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                    Log time
-                </button>
-            </div>
-            {% endif %}
-        </div>
-        {% if can_log_time and running_timer and running_timer.task_id != task.pk %}
-        <p class="text-xs text-zinc-500 mb-2">Starting here stops the timer on {{ running_timer.task.title }}.</p>
-        {% endif %}
-        {% if can_log_time %}
-        <form id="time-log-panel-{{ task.pk }}"
-              hx-post="{% url 'time_log' task.pk %}"
-              hx-swap="none"
-              class="hidden mb-2 bg-elevated border border-border-subtle rounded-card p-3 space-y-2">
-            {% csrf_token %}
-            <input type="hidden" name="inline" value="1">
-            <div class="text-xs font-medium text-zinc-300">Log time</div>
-            <div class="grid grid-cols-2 gap-2">
-                <label class="block text-xs text-zinc-500">
-                    Start
-                    <input type="datetime-local" name="started_at" required
-                           class="mt-1 w-full bg-panel border border-border-subtle rounded-control px-2 py-1.5 text-sm text-zinc-100 focus:border-border-strong focus:outline-none">
-                </label>
-                <label class="block text-xs text-zinc-500">
-                    End
-                    <input type="datetime-local" name="ended_at" required
-                           class="mt-1 w-full bg-panel border border-border-subtle rounded-control px-2 py-1.5 text-sm text-zinc-100 focus:border-border-strong focus:outline-none">
-                </label>
-            </div>
-            <input type="text" name="note" placeholder="Note (optional)"
-                   class="w-full bg-panel border border-border-subtle rounded-control px-2 py-1.5 text-sm text-zinc-100 placeholder-zinc-500 focus:border-border-strong focus:outline-none">
-            <div class="flex items-center gap-3">
-                <button type="submit" class="text-sm text-zinc-200 hover:text-zinc-50 font-medium">Save</button>
-                <button type="button"
-                        onclick="this.closest('form').classList.add('hidden')"
-                        class="text-sm text-zinc-500 hover:text-zinc-300">Cancel</button>
-            </div>
-        </form>
-        {% endif %}
+        <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Time</h3>
         <div id="time-entry-list-{{ task.pk }}" class="space-y-1">
             {% for entry in time_entries %}
             {% include "tasks/partials/time_entry_item.html" %}

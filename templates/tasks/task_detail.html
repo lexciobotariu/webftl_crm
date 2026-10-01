@@ -12,6 +12,7 @@
             {% include "tasks/partials/archived_badge.html" %}
         </div>
         <div class="flex items-center gap-1">
+            {% include "tasks/partials/time_header_button.html" %}
             <button x-data="{ copied: false }"
                     @click="navigator.clipboard.writeText(window.location.origin + '{% url 'task_full_page' task.project.pk task.pk %}'); copied = true; setTimeout(() => copied = false, 2000); $nextTick(() => lucide.createIcons())"
                     x-effect="if (copied !== undefined) $nextTick(() => lucide.createIcons())"

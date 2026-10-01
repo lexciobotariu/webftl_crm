@@ -7,6 +7,7 @@ import re
 from decimal import ROUND_HALF_UP, Decimal
 
 MAX_MINUTES = 1000 * 60  # 1000 hours; keeps absurd input out of the database
+MAX_DAY_MINUTES = 24 * 60
 _MAX_INPUT_LENGTH = 32
 
 _COLON = re.compile(r'([0-9]+):([0-9]{2})')

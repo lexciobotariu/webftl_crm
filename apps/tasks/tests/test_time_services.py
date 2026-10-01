@@ -264,7 +264,7 @@ class TestTimePermissions:
         entry = services.log_manual(task, user, _at(3), _at(2), 'first')
 
         updated = services.update_entry(
-            entry, user, started_at=_at(4), ended_at=_at(2), note='revised'
+            entry, user, minutes=120, day=timezone.localdate(), note='revised'
         )
 
         assert updated.note == 'revised'
@@ -278,7 +278,7 @@ class TestTimePermissions:
         entry = services.log_manual(task, owner, _at(3), _at(1), 'mine')
 
         with pytest.raises(PermissionDenied):
-            services.update_entry(entry, other, started_at=_at(3), ended_at=_at(1), note='nope')
+            services.update_entry(entry, other, minutes=60, day=timezone.localdate(), note='nope')
         with pytest.raises(PermissionDenied):
             services.delete_entry(entry, other)
 
@@ -293,7 +293,7 @@ class TestTimePermissions:
 
         with pytest.raises(PermissionDenied):
             services.update_entry(
-                entry, manager, started_at=_at(3), ended_at=_at(1), note='nope'
+                entry, manager, minutes=60, day=timezone.localdate(), note='nope'
             )
         with pytest.raises(PermissionDenied):
             services.delete_entry(entry, manager)
@@ -301,7 +301,7 @@ class TestTimePermissions:
     def test_manager_can_edit_own_entry(self):
         manager, task = _member('manager')
         entry = services.log_manual(task, manager, _at(2), _at(1), 'own')
-        services.update_entry(entry, manager, started_at=_at(2), ended_at=_at(1), note='edited')
+        services.update_entry(entry, manager, minutes=30, day=timezone.localdate(), note='edited')
         entry.refresh_from_db()
         assert entry.note == 'edited'
 
@@ -310,7 +310,7 @@ class TestTimePermissions:
         admin = AdminUserFactory()
         entry = services.log_manual(task, owner, _at(3), _at(1), 'mine')
 
-        services.update_entry(entry, admin, started_at=_at(3), ended_at=_at(1), note='admin')
+        services.update_entry(entry, admin, minutes=30, day=timezone.localdate(), note='admin')
         entry.refresh_from_db()
         assert entry.note == 'admin'
         services.delete_entry(entry, admin)
@@ -330,22 +330,9 @@ class TestTimePermissions:
         entry = TimeEntryFactory(user=user, task=task, started_at=_at(2), ended_at=_at(1))
 
         with pytest.raises(PermissionDenied):
-            services.update_entry(entry, user, started_at=_at(2), ended_at=_at(1), note='no')
+            services.update_entry(entry, user, minutes=30, day=timezone.localdate(), note='no')
         with pytest.raises(PermissionDenied):
             services.delete_entry(entry, user)
-
-    def test_update_rejects_a_future_end_and_an_end_before_start(self):
-        user, task = _member()
-        entry = services.log_manual(task, user, _at(3), _at(1), '')
-        with pytest.raises(services.TimeEntryValidationError, match='future'):
-            services.update_entry(
-                entry, user,
-                started_at=_at(1),
-                ended_at=timezone.now() + timedelta(minutes=5),
-                note='',
-            )
-        with pytest.raises(services.TimeEntryValidationError, match='after start'):
-            services.update_entry(entry, user, started_at=_at(1), ended_at=_at(2), note='')
 
 
 def _monday_start():

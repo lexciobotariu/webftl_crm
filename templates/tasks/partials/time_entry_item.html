@@ -1,9 +1,6 @@
 <div class="flex items-center gap-2 text-sm" id="time-entry-{{ entry.pk }}">
     <i data-lucide="clock" class="w-3.5 h-3.5 text-zinc-500 flex-shrink-0"></i>
-    <span class="text-zinc-300 whitespace-nowrap">
-        {{ entry.started_at|date:"M j, H:i" }}
-        {% if entry.ended_at %}– {{ entry.ended_at|date:"H:i" }}{% else %}– running{% endif %}
-    </span>
+    <span class="text-zinc-300 whitespace-nowrap">{{ entry.started_at|date:"M j" }}</span>
     <span class="text-zinc-500 whitespace-nowrap">{{ entry.duration_label }}</span>
     {% if entry.user_id != request.user.id %}
     <span class="text-zinc-500 truncate">{{ entry.user.name }}</span>

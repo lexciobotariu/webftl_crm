@@ -21,8 +21,8 @@ from apps.projects.models import (
 )
 from apps.tasks.models import Label, can_create_task, can_edit_task, can_view_task, editable_scope
 
-from .durations import format_seconds, parse_duration
-from .forms import SubtaskForm, TaskForm, TimeEntryForm
+from .durations import format_minutes, format_seconds, parse_duration
+from .forms import DurationEntryForm, SubtaskForm, TaskForm
 from .listview import (
     apply_url_headers,
     archived_matching,
@@ -41,11 +41,23 @@ def _time_context(user, task):
     from apps.tasks import services
 
     services.close_expired_timers()
-    return {
+    logged_seconds = services.logged_seconds_on_task(task)
+    logged_minutes = logged_seconds // 60
+    estimate = task.estimate_minutes
+    context = {
         'time_entries': services.entries_on_task(user, task),
         'can_log_time': can_edit_task(user, task),
-        'logged_label': format_seconds(services.logged_seconds_on_task(task), zero='0m'),
+        'logged_label': format_seconds(logged_seconds, zero='0m'),
+        'logged_minutes': logged_minutes,
     }
+    if estimate:
+        over = logged_minutes - estimate
+        context.update({
+            'time_percent': min(100, logged_minutes * 100 // estimate),
+            'time_bar_now': min(logged_minutes, estimate),
+            'time_over_label': format_minutes(over) if over > 0 else '',
+        })
+    return context
 
 
 def _monday(day):
@@ -854,19 +866,24 @@ def task_time_section(request, pk):
         return denied
     return render(request, 'tasks/partials/time_section.html', {
         'task': task,
+        'full_page': request.GET.get('full_page') == '1',
         **_time_context(request.user, task),
     })
 
 
 @login_required
 @require_permission('access_tasks')
-def task_logged_total(request, pk):
-    """Read-only logged-hours row. Viewers and above."""
+def task_time_property(request, pk):
+    """What the "Time" property redraws: logged time, the bar, Start/Stop and the header button.
+
+    The first element replaces the one that asked; the rest come out of band. The popovers
+    (log time, estimate) are not in it, so a refresh never closes one that is open.
+    """
     task = get_object_or_404(Task.objects.select_related('project'), pk=pk)
     denied = _require_task_viewer(request.user, task)
     if denied:
         return denied
-    return render(request, 'tasks/partials/logged_total.html', {
+    return render(request, 'tasks/partials/time_property_live.html', {
         'task': task,
         **_time_context(request.user, task),
     })
@@ -905,9 +922,20 @@ def _time_entry_drawer(request, task, form, *, heading, form_action):
     })
 
 
+def _first_error(form):
+    for errors in form.errors.values():
+        return errors[0]
+    return 'Check the duration and the day.'
+
+
 @login_required
 @require_permission('access_tasks')
+@require_POST
 def time_log(request, pk):
+    """Log time from the "Time" property's popover.
+
+    An empty answer means it worked; anything else is the reason, shown in the popover.
+    """
     task = get_object_or_404(Task.objects.select_related('project'), pk=pk)
     denied = _require_task_viewer(request.user, task)
     if denied:
@@ -915,43 +943,23 @@ def time_log(request, pk):
     if not can_edit_task(request.user, task):
         return HttpResponseForbidden("You can't edit this task")
 
-    if request.method == 'POST':
-        form = TimeEntryForm(request.POST)
-        inline = request.POST.get('inline') == '1'
-        if form.is_valid():
-            try:
-                from apps.tasks import services
-                services.log_manual(
-                    task,
-                    request.user,
-                    form.cleaned_data['started_at'],
-                    form.cleaned_data['ended_at'],
-                    form.cleaned_data.get('note') or '',
-                )
-            except PermissionDenied as e:
-                return HttpResponseForbidden(str(e))
-            except ValueError as e:
-                form.add_error(None, str(e))
-            else:
-                response = HttpResponse('')
-                response['HX-Trigger'] = json.dumps({
-                    'closeSlideOver': True,
-                    'timerChanged': True,
-                })
-                return response
-        if inline:
-            message = form.errors.get('__all__') or form.errors.get('ended_at') or form.errors.get('started_at')
-            text = message[0] if message else 'Check the start and end.'
-            return HttpResponse(text, status=400)
-    else:
-        form = TimeEntryForm()
-    return _time_entry_drawer(
-        request,
-        task,
-        form,
-        heading='Log time',
-        form_action=reverse('time_log', args=[task.pk]),
-    )
+    form = DurationEntryForm(request.POST)
+    if form.is_valid():
+        try:
+            from apps.tasks import services
+            services.log_duration(
+                task,
+                request.user,
+                form.cleaned_data['duration'],
+                form.cleaned_data['day'],
+                form.cleaned_data.get('note') or '',
+            )
+        except PermissionDenied as e:
+            return HttpResponseForbidden(str(e))
+        except ValueError as e:
+            return HttpResponse(str(e))
+        return _timer_changed(HttpResponse(''))
+    return HttpResponse(_first_error(form))
 
 
 @login_required
@@ -972,15 +980,15 @@ def time_entry_edit(request, entry_pk):
         return HttpResponseForbidden(str(e))
 
     if request.method == 'POST':
-        form = TimeEntryForm(request.POST)
+        form = DurationEntryForm(request.POST)
         if form.is_valid():
             try:
                 from apps.tasks import services
                 services.update_entry(
                     entry,
                     request.user,
-                    started_at=form.cleaned_data['started_at'],
-                    ended_at=form.cleaned_data['ended_at'],
+                    minutes=form.cleaned_data['duration'],
+                    day=form.cleaned_data['day'],
                     note=form.cleaned_data.get('note') or '',
                 )
             except PermissionDenied as e:
@@ -995,9 +1003,11 @@ def time_entry_edit(request, entry_pk):
                 })
                 return response
     else:
-        form = TimeEntryForm(initial={
-            'started_at': entry.started_at,
-            'ended_at': entry.ended_at,
+        if entry.ended_at is None:
+            return HttpResponse('Stop the timer before editing it.', status=400)
+        form = DurationEntryForm(initial={
+            'duration': format_minutes(max(1, round(entry.duration.total_seconds() / 60))),
+            'day': timezone.localdate(entry.started_at),
             'note': entry.note,
         })
     return _time_entry_drawer(

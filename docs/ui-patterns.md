@@ -364,6 +364,26 @@ filters or pagination, so nothing is lost there.
 - Any `x-show` panel whose expression is false at load must carry `x-cloak`; the
   global `[x-cloak]` rule lives in `base.html` `<head>`.
 
+### Time on a task
+
+- **One "Time" property** (`tasks/partials/time_property.html`) reads `logged / estimate` with a thin
+  bar (`role="progressbar"`); going over is written out ("Over by 15m"), not only coloured, and there is
+  no bar without an estimate. Start/Stop, "Log time" and the estimate popover live in it.
+- **Durations are text.** The estimate and the log form take `1h 30m`, `45m`, `1.5h`, `1:30`
+  (`apps/tasks/durations.py`); a bare number is hours in the estimate and refused when logging. Time is
+  logged as **duration + date**, never start and end, and shown as date + duration.
+- **`timerChanged`** (an `HX-Trigger`, sent by start, stop, log, edit and delete) is the one event for
+  time. Listeners: the running-timer bar, the entry list, and `#time-logged-<pk>` — the single listener
+  of the Time property. Its answer (`task_time_property`) replaces itself and brings the bar, the
+  Start/Stop button and the task header's Start/Stop button along with `hx-swap-oob`, so nothing
+  listens twice. Changing the estimate sends `taskUpdated-<pk>`, which the same element hears.
+- **Popovers are never part of a refresh.** Each one is its own `x-data="dropdown"` with
+  `@click.away`, so Escape closes it and not the drawer (see Escape above), and a half-typed log
+  survives `timerChanged`. Anchor a popover to the property row (`left-0 right-0` / `left-2 right-2`
+  on a `relative` parent), not to its button: the sidebar is `overflow-hidden` and clips anything wider.
+- **Logging answers with an empty body**; anything else is the reason, swapped into the popover's
+  error line. The popover does not close the drawer.
+
 **Deprecated:** POSTing into list containers (`#client-list`, `#notes-list`, `#preset-list`) — causes broken empty states and nested IDs.
 
 ---
