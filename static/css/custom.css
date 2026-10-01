@@ -178,3 +178,16 @@ html [data-task-row].task-selected {
 .markdown th,
 .markdown td { padding: 0.3em 0.6em; border: 1px solid rgb(var(--border-subtle)); text-align: left; }
 .markdown th { font-weight: 600; background: rgb(var(--elevated)); }
+
+/* Activity tabs (All / Comments / Work log). They only hide rows: the list is always
+   whole, so a refresh or a new comment never has to know which tab is open. */
+.activity-feed [data-empty] { display: none; }
+.activity-feed[data-filter="all"] [data-kind="summary"],
+.activity-feed[data-filter="comments"] [data-kind]:not([data-kind="comment"]),
+.activity-feed[data-filter="work"] [data-kind]:not([data-kind="work"]):not([data-kind="summary"]) {
+    display: none;
+}
+.activity-feed[data-filter="comments"]:not(:has([data-kind="comment"])) [data-empty="comments"],
+.activity-feed[data-filter="work"]:not(:has([data-kind="work"])) [data-empty="work"] {
+    display: block;
+}

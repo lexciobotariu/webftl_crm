@@ -257,6 +257,8 @@ def test_commit_maps_the_fabricated_dump(tmp_path):
     assert entry.note == 'worked'
     assert entry.user == admin
     assert entry.ended_at - entry.started_at == timedelta(hours=1)
+    # Old work sits where it was done in the timeline, not at the moment of the import.
+    assert entry.created_at == entry.ended_at
     assert TimeEntry.objects.count() == 1
 
     paid = Invoice.objects.get(number=10)

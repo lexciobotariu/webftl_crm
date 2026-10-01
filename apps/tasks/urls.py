@@ -14,7 +14,6 @@ urlpatterns = [
     path('markdown/preview/', views.markdown_preview, name='markdown_preview'),
     path('project/<int:project_pk>/create/', views.task_create, name='task_create'),
     path('<int:pk>/', views.task_detail, name='task_detail'),
-    path('<int:pk>/time/', views.task_time_section, name='task_time_section'),
     path('<int:pk>/time-property/', views.task_time_property, name='task_time_property'),
     path('<int:pk>/timer/start/', views.timer_start, name='timer_start'),
     path('<int:pk>/time/log/', views.time_log, name='time_log'),

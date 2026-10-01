@@ -130,7 +130,7 @@ class TestTimerViews:
         })
         assert 'closeSlideOver' not in response.headers['HX-Trigger']
 
-    def test_editing_an_entry_closes_its_drawer_and_keeps_the_start(self, client):
+    def test_editing_an_entry_changes_duration_and_day_and_keeps_the_real_start(self, client):
         user, task = _member()
         started = timezone.now() - timedelta(hours=2)
         entry = TimeEntryFactory(user=user, task=task, started_at=started, ended_at=started + timedelta(hours=1))
@@ -144,7 +144,7 @@ class TestTimerViews:
         response = client.post(url, {
             'duration': '2h 15m', 'day': timezone.localdate(started).isoformat(), 'note': 'longer',
         })
-        assert 'closeSlideOver' in response.headers['HX-Trigger']
+        assert response.headers['HX-Trigger'] == 'timerChanged'
         entry.refresh_from_db()
         assert entry.started_at == started
         assert entry.ended_at == started + timedelta(minutes=135)
@@ -461,35 +461,18 @@ class TestTimeProperty:
         client.force_login(UserFactory())
         assert client.get(reverse('task_time_property', args=[task.pk])).status_code == 403
 
-    def test_the_body_no_longer_has_start_stop_or_the_two_date_form(self, client):
-        user, task = _member()
-        client.force_login(user)
-        section = client.get(reverse('task_time_section', args=[task.pk])).content.decode()
-        assert f'id="time-start-{task.pk}"' not in section
-        assert 'datetime-local' not in section
-        assert 'No time logged yet.' in section
-
-    def test_the_full_page_list_keeps_its_spacing_when_it_refreshes(self, client):
-        user, task = _member()
-        client.force_login(user)
-        page = client.get(reverse('task_full_page', args=[task.project.pk, task.pk])).content.decode()
-        refresh_url = reverse('task_time_section', args=[task.pk]) + '?full_page=1'
-        assert refresh_url in page
-        assert 'mb-5' in client.get(refresh_url).content.decode()
-        assert 'mb-5' not in client.get(reverse('task_time_section', args=[task.pk])).content.decode()
-
-    def test_entries_show_a_date_and_a_duration_and_no_clock_times(self, client):
+    def test_the_feed_shows_a_date_and_a_duration_and_no_clock_times(self, client):
         user, task = _member()
         day = timezone.localdate() - timedelta(days=2)
         started = timezone.make_aware(datetime.combine(day, time(9, 41)))
         TimeEntryFactory(user=user, task=task, started_at=started, ended_at=started + timedelta(minutes=90))
         client.force_login(user)
 
-        section = client.get(reverse('task_time_section', args=[task.pk])).content.decode()
+        feed = client.get(reverse('task_activity_list', args=[task.pk])).content.decode()
 
-        assert f'{day:%b} {day.day}' in section
-        assert '1h 30m' in section
-        assert '09:41' not in section and '11:11' not in section
+        assert f'{day:%b} {day.day}' in feed
+        assert '1h 30m' in feed
+        assert '09:41' not in feed and '11:11' not in feed
 
     def test_my_week_has_date_and_duration_columns(self, client):
         user, task = _member()

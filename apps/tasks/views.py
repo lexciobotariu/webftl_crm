@@ -37,7 +37,7 @@ from .viewspec import CATEGORIES, LIMIT_STEP, TaskViewOptions, sort_choices
 
 
 def _time_context(user, task):
-    """Close expired timers, then the entries, edit flag, and logged total."""
+    """Close expired timers, then the edit flag and the logged total behind the Time property."""
     from apps.tasks import services
 
     services.close_expired_timers()
@@ -45,7 +45,6 @@ def _time_context(user, task):
     logged_minutes = logged_seconds // 60
     estimate = task.estimate_minutes
     context = {
-        'time_entries': services.entries_on_task(user, task),
         'can_log_time': can_edit_task(user, task),
         'logged_label': format_seconds(logged_seconds, zero='0m'),
         'logged_minutes': logged_minutes,
@@ -859,20 +858,6 @@ def running_timer_indicator(request):
 
 @login_required
 @require_permission('access_tasks')
-def task_time_section(request, pk):
-    task = get_object_or_404(Task.objects.select_related('project'), pk=pk)
-    denied = _require_task_viewer(request.user, task)
-    if denied:
-        return denied
-    return render(request, 'tasks/partials/time_section.html', {
-        'task': task,
-        'full_page': request.GET.get('full_page') == '1',
-        **_time_context(request.user, task),
-    })
-
-
-@login_required
-@require_permission('access_tasks')
 def task_time_property(request, pk):
     """What the "Time" property redraws: logged time, the bar, Start/Stop and the header button.
 
@@ -911,15 +896,6 @@ def timer_stop(request):
     services.close_expired_timers()
     services.stop_timer(request.user)
     return _timer_changed(HttpResponse(status=204))
-
-
-def _time_entry_drawer(request, task, form, *, heading, form_action):
-    return render(request, 'tasks/partials/time_entry_drawer.html', {
-        'task': task,
-        'form': form,
-        'heading': heading,
-        'form_action': form_action,
-    })
 
 
 def _first_error(form):
@@ -962,28 +938,37 @@ def time_log(request, pk):
     return HttpResponse(_first_error(form))
 
 
+def _work_log_row(request, entry, template='tasks/partials/work_log_item.html', **extra):
+    """One Work log row, or its edit form. Every answer replaces only ``#time-entry-<pk>``."""
+    entry.item_type = 'work'
+    entry.can_change = True
+    return render(request, template, {'entry': entry, 'task': entry.task, **extra})
+
+
 @login_required
 @require_permission('access_tasks')
 def time_entry_edit(request, entry_pk):
+    """GET: the entry as a form in place of its row (or as itself with ?cancel=1). POST: save it."""
+    from apps.tasks import services
+
     entry = get_object_or_404(
         TimeEntry.objects.select_related('task__project', 'user'),
         pk=entry_pk,
     )
-    task = entry.task
-    denied = _require_task_viewer(request.user, task)
+    denied = _require_task_viewer(request.user, entry.task)
     if denied:
         return denied
     try:
-        from apps.tasks import services
         services.require_entry_edit(request.user, entry)
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
+    if entry.ended_at is None:
+        return HttpResponse('Stop the timer before editing it.', status=400)
 
     if request.method == 'POST':
         form = DurationEntryForm(request.POST)
         if form.is_valid():
             try:
-                from apps.tasks import services
                 services.update_entry(
                     entry,
                     request.user,
@@ -996,27 +981,16 @@ def time_entry_edit(request, entry_pk):
             except ValueError as e:
                 form.add_error(None, str(e))
             else:
-                response = HttpResponse('')
-                response['HX-Trigger'] = json.dumps({
-                    'closeSlideOver': True,
-                    'timerChanged': True,
-                })
-                return response
+                return _timer_changed(_work_log_row(request, entry))
+    elif request.GET.get('cancel') == '1':
+        return _work_log_row(request, entry)
     else:
-        if entry.ended_at is None:
-            return HttpResponse('Stop the timer before editing it.', status=400)
         form = DurationEntryForm(initial={
             'duration': format_minutes(max(1, round(entry.duration.total_seconds() / 60))),
             'day': timezone.localdate(entry.started_at),
             'note': entry.note,
         })
-    return _time_entry_drawer(
-        request,
-        task,
-        form,
-        heading='Edit time',
-        form_action=reverse('time_entry_edit', args=[entry.pk]),
-    )
+    return _work_log_row(request, entry, 'tasks/partials/work_log_edit.html', form=form)
 
 
 @login_required
@@ -1032,4 +1006,5 @@ def time_entry_delete(request, entry_pk):
         services.delete_entry(entry, request.user)
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
-    return _timer_changed(HttpResponse(status=204))
+    # An empty 200, not a 204: the row is the swap target and has to go.
+    return _timer_changed(HttpResponse(''))

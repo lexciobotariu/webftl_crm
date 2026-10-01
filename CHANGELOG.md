@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.0] - 2026-10-01
+
+### Features
+- Time you log now appears in a task's **Activity**, in order with comments and changes: "Lex logged 1h 30m — note". A time entry sits where it was logged, so an entry logged now for yesterday is next to today's activity
+- Activity has **All / Comments / Work log** tabs. Work log opens with each person's total (and "Others" for time you cannot see, so the sum matches the Time property). Every task opens on All; writing a comment from Work log returns to All
+- Edit and delete a time entry right in Activity, like a comment. A running timer shows as "timer running"
+- The activity list also refreshes when a timer starts or stops, or time is logged, edited or deleted
+
+### Changes
+- The "Time" section in the task body is gone: its entries live in Activity, and Start/Stop and Log time are in the Time property and the task header
+- Time entries record when they were logged. Existing entries are dated by when they ended, and Perfex imports by their finish time
+
 ## [0.17.0] - 2026-10-01
 
 ### Features

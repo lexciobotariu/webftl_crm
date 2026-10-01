@@ -1,0 +1,38 @@
+{% comment %}A row of the Work log in Activity. Needs entry (can_change set) and task. Own id space: time-entry-<pk>.{% endcomment %}
+<div id="time-entry-{{ entry.pk }}" data-kind="work" class="relative flex gap-3 py-2">
+    <div class="relative z-10 flex-shrink-0 w-6 h-6 rounded-full bg-panel border border-border-subtle flex items-center justify-center">
+        <i data-lucide="timer" class="w-3 h-3 text-zinc-500"></i>
+    </div>
+    <div class="flex-1 min-w-0 pt-0.5">
+        <div class="flex items-center gap-1.5 flex-wrap text-sm">
+            <span class="font-medium text-zinc-200">{{ entry.user.name|default:"Someone" }}</span>
+            {% if entry.ended_at %}
+            <span class="text-zinc-400">logged <span class="text-zinc-200">{{ entry.duration_label }}</span>{% if entry.note %} — {{ entry.note }}{% endif %}</span>
+            <span class="text-zinc-500 text-xs">{{ entry.started_at|date:"M j" }} · {{ entry.created_at|timesince }} ago</span>
+            {% else %}
+            <span class="inline-flex h-2 w-2 rounded-full bg-success animate-soft-pulse"></span>
+            <span class="text-zinc-400">timer running</span>
+            <span class="text-zinc-500 text-xs">since {{ entry.started_at|timesince }} ago</span>
+            {% endif %}
+            {% if entry.can_change %}
+            <span class="ml-auto flex items-center gap-0.5">
+                {% if entry.ended_at %}
+                <button type="button" aria-label="Edit time"
+                        hx-get="{% url 'time_entry_edit' entry.pk %}"
+                        hx-target="#time-entry-{{ entry.pk }}" hx-swap="outerHTML"
+                        class="p-1 rounded-control text-zinc-500 hover:text-zinc-300 hover:bg-hover transition-colors">
+                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                </button>
+                {% endif %}
+                <button type="button" aria-label="Delete time"
+                        hx-post="{% url 'time_entry_delete' entry.pk %}"
+                        hx-target="#time-entry-{{ entry.pk }}" hx-swap="outerHTML"
+                        hx-confirm="Delete this time entry?"
+                        class="p-1 rounded-control text-zinc-500 hover:text-error hover:bg-hover transition-colors">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+            </span>
+            {% endif %}
+        </div>
+    </div>
+</div>

@@ -499,6 +499,9 @@ class TimeEntry(models.Model):
     started_at = models.DateTimeField()
     ended_at = models.DateTimeField(null=True, blank=True)
     note = models.TextField(blank=True)
+    # When the entry was logged, which is where it sits in the activity timeline;
+    # ``started_at`` is the day the work was done on.
+    created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         ordering = ['-started_at']

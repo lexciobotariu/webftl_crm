@@ -1,7 +1,25 @@
 {% load task_activity %}
 {% task_activities task request.user as activities %}
-{% for activity in activities %}
-{% include "tasks/partials/activity_item.html" %}
+{% work_log_totals task activities request.user as work_totals %}
+{% if work_totals %}
+<div data-kind="summary" class="pl-9 pb-2 pt-1">
+    <ul class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-zinc-400">
+        {% for row in work_totals.rows %}
+        <li>{{ row.name }} <span class="font-medium text-zinc-200">{{ row.label }}</span></li>
+        {% endfor %}
+    </ul>
+    <p class="mt-1 text-xs text-zinc-500">Total <span class="text-zinc-300">{{ work_totals.total }}</span></p>
+</div>
+{% endif %}
+{% for item in activities %}
+{% if item.item_type == 'work' %}
+{% include "tasks/partials/work_log_item.html" with entry=item %}
+{% else %}
+{% include "tasks/partials/activity_item.html" with activity=item %}
+{% endif %}
 {% empty %}
 <p class="text-sm text-zinc-500 py-3 pl-8">No activity yet.</p>
 {% endfor %}
+{# Shown by the tabs (custom.css) when what they filter to is empty. #}
+<p data-empty="comments" class="text-sm text-zinc-500 py-3 pl-8">No comments yet.</p>
+<p data-empty="work" class="text-sm text-zinc-500 py-3 pl-8">No time logged yet.</p>

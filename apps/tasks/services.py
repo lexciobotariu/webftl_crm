@@ -472,18 +472,15 @@ def logged_seconds_on_task(task, now=None):
     if now is None:
         now = timezone.now()
     close_expired_timers(now=now)
-    limit = int(TIMER_LIMIT.total_seconds())
-    total = 0
-    for entry in task.time_entries.all():
-        if entry.ended_at is None:
-            elapsed = int((now - entry.started_at).total_seconds())
-            if elapsed > limit:
-                elapsed = limit
-            total += max(elapsed, 0)
-        else:
-            span = int((entry.ended_at - entry.started_at).total_seconds())
-            total += max(span, 0)
-    return total
+    return sum(entry_seconds(entry, now) for entry in task.time_entries.all())
+
+
+def entry_seconds(entry, now):
+    """Seconds one entry counts for: its span, or for a running timer the time so far, up to 12 hours."""
+    if entry.ended_at is None:
+        elapsed = int((now - entry.started_at).total_seconds())
+        return max(min(elapsed, int(TIMER_LIMIT.total_seconds())), 0)
+    return max(int((entry.ended_at - entry.started_at).total_seconds()), 0)
 
 
 def _close_open_entry(entry, now):

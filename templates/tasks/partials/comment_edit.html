@@ -1,5 +1,5 @@
 {% comment %}A comment being edited, in place of its #activity-<pk> row. Escape in Write cancels; in Preview the editor goes back to Write first.{% endcomment %}
-<div id="activity-{{ activity.pk }}" class="relative flex gap-3 py-2"
+<div id="activity-{{ activity.pk }}" class="relative flex gap-3 py-2" data-kind="comment"
      x-data="{
         cancel(event) {
             if (event.defaultPrevented) return;

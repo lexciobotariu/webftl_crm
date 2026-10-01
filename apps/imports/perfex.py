@@ -557,6 +557,7 @@ def import_timers(rows, tasks, users, stats):
             user=user,
             started_at=started,
             ended_at=ended,
+            created_at=ended,
             note=str(row.get('note') or ''),
         )
         stats.add('timers')
