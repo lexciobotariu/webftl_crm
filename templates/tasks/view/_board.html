@@ -12,7 +12,7 @@
         </span>
         {% endif %}
     </div>
-    <div class="flex-1 min-h-0 overflow-x-auto overflow-y-hidden">
+    <div class="flex-1 min-h-0 overflow-x-auto overflow-y-hidden" data-keep-scroll="board">
         <div id="kanban-board-content" class="flex gap-3 px-4 pb-4 h-full min-w-max">
             {% for status in visible_statuses %}
             {% include "projects/partials/kanban_column.html" %}

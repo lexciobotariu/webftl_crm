@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Features
+- Status, priority and assignee can be changed straight from a task row or board card, without opening the drawer; the list keeps its scroll position afterwards
+- Escape closes one thing at a time: quick menu, then dropdown, then drawer
+
+### Changes
+- Closing the drawer empties it, so it stops fetching activity for a task nobody is looking at
+- Setting a task's priority to a value that is not one of the choices is refused instead of saved
+- Picking the status a task already has no longer moves its card to the end of the column
+
 ### Fixes
 - A template comment that spanned two lines was printed as text on the Tasks and My Tasks pages; a test now catches multi-line `{# #}` comments
 

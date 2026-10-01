@@ -1,0 +1,29 @@
+{% comment %}Options of the quick-edit menu for a status or an assignee. Rendered without a request, so keep it to plain markup. The current value is checked; choosing it again does nothing.{% endcomment %}
+{% if field == 'status' %}
+{% for status in options %}
+<button type="button" role="menuitemradio" tabindex="-1" data-field="status" data-value="{{ status.pk }}"
+        aria-checked="{% if status.pk == task.status_id %}true{% else %}false{% endif %}"
+        class="w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm text-zinc-300 hover:bg-hover-strong focus:bg-hover-strong focus:outline-none transition-colors">
+    {% include "components/status_icon.html" with category=status.category %}
+    <span class="flex-1 min-w-0 truncate">{{ status.name }}</span>
+    {% if status.pk == task.status_id %}<span class="text-zinc-400">{% include "components/icons/tabler-check.svg" %}</span>{% endif %}
+</button>
+{% endfor %}
+{% else %}
+<button type="button" role="menuitemradio" tabindex="-1" data-field="assignee" data-value=""
+        aria-checked="{% if not task.assignee_id %}true{% else %}false{% endif %}"
+        class="w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm text-zinc-400 hover:bg-hover-strong focus:bg-hover-strong focus:outline-none transition-colors">
+    {% include "components/avatar.html" with user=None size=18 %}
+    <span class="flex-1 min-w-0 truncate">Unassigned</span>
+    {% if not task.assignee_id %}<span class="text-zinc-400">{% include "components/icons/tabler-check.svg" %}</span>{% endif %}
+</button>
+{% for person in options %}
+<button type="button" role="menuitemradio" tabindex="-1" data-field="assignee" data-value="{{ person.pk }}"
+        aria-checked="{% if person.pk == task.assignee_id %}true{% else %}false{% endif %}"
+        class="w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm text-zinc-300 hover:bg-hover-strong focus:bg-hover-strong focus:outline-none transition-colors">
+    {% include "components/avatar.html" with user=person size=18 %}
+    <span class="flex-1 min-w-0 truncate">{{ person.name|default:person.email }}</span>
+    {% if person.pk == task.assignee_id %}<span class="text-zinc-400">{% include "components/icons/tabler-check.svg" %}</span>{% endif %}
+</button>
+{% endfor %}
+{% endif %}

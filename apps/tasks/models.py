@@ -315,6 +315,25 @@ def can_edit_task(user, task):
     return can_edit_tasks_on(user, task.project)
 
 
+def editable_scope(user):
+    """Where ``user`` may edit tasks, for a list that spans projects.
+
+    Returns ``(everywhere, project_ids)``: when ``everywhere`` is true the ids are
+    unused. A list asks this once and checks each row against the answer, instead of
+    calling :func:`can_edit_tasks_on` (one query) per row. At most one query.
+    """
+    if user.is_admin or user.has_app_permission('tasks_edit_all'):
+        return True, frozenset()
+    if not user.has_app_permission('tasks_edit_own'):
+        return False, frozenset()
+    if not user.has_app_permission('tasks_view_all'):
+        # Without view-all every task the person can see is on a project they have
+        # an access row for, which is exactly what edit-own needs.
+        return True, frozenset()
+    ids = ProjectAccess.objects.filter(user=user).values_list('project_id', flat=True)
+    return False, frozenset(ids)
+
+
 def visible_tasks(user, project=None):
     """Tasks ``user`` may see.
 

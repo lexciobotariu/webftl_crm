@@ -1,12 +1,20 @@
 {# The card does not refresh itself: the Tasks page re-fetches the whole view on taskChanged, which also lets a card leave when an edit takes it out of the current filter. #}
 <div class="group bg-card/90 rounded-card border border-border-subtle p-3 transition-all duration-150 hover:bg-elevated/90 hover:border-border-strong"
-     id="task-{{ task.pk }}"
+     id="task-{{ task.pk }}" data-task-row
      x-sort:item="{{ task.pk }}">
     <div class="flex items-stretch gap-2">
         <div class="flex-1 min-w-0 cursor-pointer"
-             onclick="htmx.ajax('GET', '{% url 'task_detail' task.pk %}', {target: '#slide-over', swap: 'innerHTML'})">
+             onclick="if (!event.target.closest('[data-quick]')) htmx.ajax('GET', '{% url 'task_detail' task.pk %}', {target: '#slide-over', swap: 'innerHTML'})">
             <div class="flex items-center gap-2 mb-1.5" title="{{ task.get_priority_display|default:'No priority' }}">
+                {% if quick_edit %}
+                <button type="button" data-quick="priority" data-current="{{ task.priority }}" aria-haspopup="menu" aria-expanded="false"
+                        aria-label="Priority: {{ task.get_priority_display|default:'none' }}"
+                        class="shrink-0 -ml-[7px] -mr-1 -my-1.5 w-7 h-7 inline-flex items-center justify-center rounded-control hover:bg-hover-strong focus-visible:outline focus-visible:outline-1 focus-visible:outline-border-strong transition-colors">
+                    {% include "components/priority_icon.html" with priority=task.priority %}
+                </button>
+                {% else %}
                 {% include "components/priority_icon.html" with priority=task.priority %}
+                {% endif %}
                 <span class="font-mono text-[11px] text-zinc-500">{{ project.name|slice:":4"|upper }}-{{ task.pk }}</span>
             </div>
             <div class="text-sm font-medium text-zinc-100 mb-1.5">{{ task.title }}</div>
@@ -46,7 +54,15 @@
                  title="Drag to move">
                 <i data-lucide="grip-vertical" class="w-3.5 h-3.5"></i>
             </div>
+            {% if quick_edit %}
+            <button type="button" data-quick="assignee" aria-haspopup="menu" aria-expanded="false"
+                    aria-label="Assignee: {% if task.assignee %}{% firstof task.assignee.name task.assignee.email %}{% else %}unassigned{% endif %}"
+                    class="-m-1 w-7 h-7 inline-flex items-center justify-center rounded-control hover:bg-hover-strong focus-visible:outline focus-visible:outline-1 focus-visible:outline-border-strong transition-colors">
+                {% include "components/avatar.html" with user=task.assignee size=20 %}
+            </button>
+            {% else %}
             {% include "components/avatar.html" with user=task.assignee size=20 %}
+            {% endif %}
         </div>
     </div>
 </div>

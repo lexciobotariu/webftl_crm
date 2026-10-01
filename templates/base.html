@@ -106,6 +106,7 @@
             integrity="sha384-63H0EhkXL6M4HAjkA3bbnT+mkm0SbHKtxxj4Iv1hXtM6FDH+c6XqvuXgDKBJdJNG"
             crossorigin="anonymous"></script>
     <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+    <script src="{% static 'js/keys.js' %}"></script>
     <style>[x-cloak] { display: none !important; }</style>
 </head>
 <body class="h-full bg-bg text-zinc-100 antialiased selection:bg-border-strong selection:text-zinc-50" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' hx-indicator="#htmx-indicator">
@@ -197,7 +198,10 @@
             lucide.createIcons();
         };
         window.closeSlideOver = function () {
-            document.getElementById('slide-over').classList.add('hidden');
+            const panel = document.getElementById('slide-over');
+            panel.classList.add('hidden');
+            // Empty it, so what was open stops polling and fetching for a task nobody sees.
+            panel.replaceChildren();
         };
         document.body.addEventListener('closeSlideOver', window.closeSlideOver);
 

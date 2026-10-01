@@ -26,7 +26,7 @@
     {% if active_tab == 'tasks' %}
     {% include "tasks/view/_toolbar.html" %}
     <div class="flex-1 min-h-0">
-        <div id="task-view" class="h-full overflow-y-auto">
+        <div id="task-view" data-keep-scroll="view" class="h-full overflow-y-auto">
             {% include "tasks/view/_list.html" %}
         </div>
     </div>
