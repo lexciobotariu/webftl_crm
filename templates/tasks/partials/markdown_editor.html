@@ -1,0 +1,26 @@
+{% comment %}A textarea with Write and Preview tabs. Include with uid (unique per page), name, value, rows, placeholder, and optionally autofocus and textarea_class. Escape in Preview goes back to Write; Ctrl/Cmd+Enter submits the form around it (static/js/markdown.js).{% endcomment %}
+<div x-data="markdownEditor('{% url 'markdown_preview' %}')"
+     @keydown.escape="escape($event)"
+     @keydown.ctrl.enter.prevent="submit()"
+     @keydown.meta.enter.prevent="submit()">
+    <div role="tablist" aria-label="Editor mode" class="flex items-center gap-1 mb-1.5"
+         @keydown.arrow-right.prevent="show(tab === 'write' ? 'preview' : 'write', true)"
+         @keydown.arrow-left.prevent="show(tab === 'write' ? 'preview' : 'write', true)">
+        <button type="button" role="tab" id="{{ uid }}-write-tab" aria-controls="{{ uid }}-write"
+                aria-selected="true" :aria-selected="tab === 'write'" tabindex="0" :tabindex="tab === 'write' ? 0 : -1" @click="show('write')"
+                class="px-2 py-0.5 rounded-control text-xs text-zinc-500 hover:text-zinc-300 aria-selected:bg-elevated aria-selected:text-zinc-200 transition-colors">Write</button>
+        <button type="button" role="tab" id="{{ uid }}-preview-tab" aria-controls="{{ uid }}-preview"
+                aria-selected="false" :aria-selected="tab === 'preview'" tabindex="-1" :tabindex="tab === 'preview' ? 0 : -1" @click="show('preview')"
+                class="px-2 py-0.5 rounded-control text-xs text-zinc-500 hover:text-zinc-300 aria-selected:bg-elevated aria-selected:text-zinc-200 transition-colors">Preview</button>
+        <span class="ml-auto text-[11px] text-zinc-600">Markdown</span>
+    </div>
+    <div role="tabpanel" id="{{ uid }}-write" aria-labelledby="{{ uid }}-write-tab" x-show="tab === 'write'">
+        <textarea name="{{ name }}" rows="{{ rows|default:4 }}" x-ref="input"
+                  aria-label="{{ placeholder }}" placeholder="{{ placeholder }}"
+                  class="{{ textarea_class|default:'w-full bg-panel border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-border-strong focus:outline-none resize-y' }}"
+                  {% if autofocus %}autofocus{% endif %}>{{ value|default:"" }}</textarea>
+    </div>
+    <div role="tabpanel" id="{{ uid }}-preview" aria-labelledby="{{ uid }}-preview-tab" tabindex="0" x-ref="preview" x-show="tab === 'preview'" x-cloak
+         aria-live="polite" :aria-busy="loading"
+         class="markdown text-sm text-zinc-300 min-h-[4rem] px-3 py-2 border border-border-subtle rounded-control focus:outline-none focus-visible:border-border-strong"></div>
+</div>

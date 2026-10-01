@@ -1,10 +1,12 @@
 from django import forms
+from django.core.validators import MaxLengthValidator
 from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.projects.models import get_assignable_users
 
 from .models import Label, Subtask, Task
+from .templatetags.task_markdown import MAX_LENGTH as MARKDOWN_MAX_LENGTH
 
 INPUT_CLASSES = 'w-full bg-panel border border-border-subtle rounded-control px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none transition-colors'
 
@@ -31,6 +33,8 @@ class TaskForm(forms.ModelForm):
             self.fields['assignee'].queryset = get_assignable_users(project)
         else:
             self.fields['assignee'].queryset = User.objects.none()
+        self.fields['description'].max_length = MARKDOWN_MAX_LENGTH
+        self.fields['description'].validators.append(MaxLengthValidator(MARKDOWN_MAX_LENGTH))
 
 
 DATETIME_INPUT_FORMATS = [

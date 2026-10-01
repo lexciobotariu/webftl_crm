@@ -1,14 +1,22 @@
-<div x-data="{ saving: false }">
+{% comment %}Escape cancels the edit from the textarea or the tab buttons; in Preview the editor handles it first (goes back to Write) and marks it handled.{% endcomment %}
+<div x-data="{
+        saving: false,
+        cancel(event) {
+            if (event.defaultPrevented) return;
+            event.preventDefault();
+            htmx.ajax('GET', '{% url 'task_edit_description' task.pk %}?cancel=1', {target: '#task-description-{{ task.pk }}', swap: 'innerHTML'});
+        },
+     }">
     <form hx-post="{% url 'task_edit_description' task.pk %}"
           hx-target="#task-description-{{ task.pk }}"
           hx-swap="innerHTML"
           @htmx:before-request="saving = true"
+          @keydown.escape="cancel($event)"
           class="space-y-2">
         {% csrf_token %}
-        <textarea name="description" rows="4"
-                  class="w-full bg-panel border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-border-strong focus:outline-none resize-none"
-                  placeholder="Add a description..."
-                  autofocus>{{ task.description|default:"" }}</textarea>
+        {% with pk_str=task.pk|stringformat:"s" %}
+        {% include "tasks/partials/markdown_editor.html" with uid="description-"|add:pk_str name="description" value=task.description rows=6 placeholder="Add a description..." autofocus=True %}
+        {% endwith %}
         <div class="flex items-center gap-2">
             <button type="submit"
                     :disabled="saving"
@@ -26,12 +34,3 @@
         </div>
     </form>
 </div>
-<script>
-// Cancel on Escape
-document.querySelector('#task-description-{{ task.pk }} textarea').addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        htmx.ajax('GET', '{% url 'task_edit_description' task.pk %}?cancel=1', {target: '#task-description-{{ task.pk }}', swap: 'innerHTML'});
-        e.preventDefault();
-    }
-});
-</script>

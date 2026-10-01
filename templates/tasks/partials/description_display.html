@@ -1,14 +1,23 @@
-<div hx-get="{% url 'task_edit_description' task.pk %}"
-     hx-target="#task-description-{{ task.pk }}"
-     hx-swap="innerHTML"
-     class="cursor-pointer group">
-    {% if task.description %}
-    <div class="text-sm text-zinc-300 prose prose-invert prose-sm max-w-none">
-        {{ task.description|linebreaks }}
+{% load task_markdown %}
+<div class="group relative">
+    <div hx-get="{% url 'task_edit_description' task.pk %}"
+         hx-target="#task-description-{{ task.pk }}"
+         hx-swap="innerHTML"
+         hx-trigger="click[!event.target.closest('a')]"
+         class="cursor-pointer pr-8">
+        {% if task.description %}
+        <div class="markdown text-sm text-zinc-300">{{ task.description|render_markdown }}</div>
+        {% else %}
+        <div class="text-sm text-zinc-500 italic group-hover:text-zinc-400 transition-colors">
+            Click to add description...
+        </div>
+        {% endif %}
     </div>
-    {% else %}
-    <div class="text-sm text-zinc-500 italic group-hover:text-zinc-400 transition-colors">
-        Click to add description...
-    </div>
-    {% endif %}
+    <button type="button" aria-label="Edit description"
+            hx-get="{% url 'task_edit_description' task.pk %}"
+            hx-target="#task-description-{{ task.pk }}"
+            hx-swap="innerHTML"
+            class="absolute top-0 right-0 p-1 rounded-control text-zinc-500 hover:text-zinc-300 hover:bg-hover opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity">
+        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+    </button>
 </div>
