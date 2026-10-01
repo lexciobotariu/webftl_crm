@@ -146,6 +146,20 @@ class TestSubmitting:
         assert Task.objects.get(title='First').priority == 'high'
         assert TaskActivity.objects.filter(task__title='First', user=user).exists()
 
+    def test_create_more_keeps_the_assignee_and_priority(self, client, setup):
+        # A run of tasks started from a group "+" should all land in that group.
+        user, project = setup
+
+        response = _post(client, project, {
+            'title': 'First', 'assignee': user.pk, 'priority': 'urgent', 'create_more': '1',
+        })
+
+        form = response.context['form']
+        assert not form.is_bound
+        assert form['assignee'].value() == user.pk
+        assert form['priority'].value() == 'urgent'
+        assert response.context['selected_assignee'] == user
+
     def test_create_more_escapes_the_title_it_echoes(self, client, setup):
         _, project = setup
 

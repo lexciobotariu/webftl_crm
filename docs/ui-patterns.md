@@ -341,6 +341,12 @@ filters or pagination, so nothing is lost there.
   instead of hand-writing `document.getElementById('slide-over')...`. `openSlideOver`
   is a no-op when the request failed, so an error never opens an empty drawer.
 - `closeSlideOver` event listener closes the drawer
+- **Closing empties the drawer, a moment later.** `closeSlideOver()` hides the panel at once
+  and removes its content only when the response being handled has dispatched all its
+  `HX-Trigger` events and no request sent from inside the drawer is still in flight. Emptying
+  detaches the element that sent the request, and an event dispatched on a detached element
+  never reaches `<body>`; a response of `{"closeSlideOver": true, "taskStatusChanged": true}`
+  would otherwise close the drawer and lose the list refresh.
 - **Click-outside close** — one global `click` listener closes the drawer when the
   click lands outside `#slide-over`. It covers every opener because closing is
   centralized in `closeSlideOver()`; nothing per-drawer is needed. The opening
@@ -407,12 +413,15 @@ column is the status) without opening the drawer.
   `quick_edit_projects` on My Tasks, from `editable_scope`); rows only read them. Anyone
   else sees the plain icons.
 - **Scroll survives the refresh.** Elements marked `data-keep-scroll="<key>"` (the list, the
-  board, each column) are saved before a refresh or "Show more" swaps `#task-view` and
-  restored after. A filter or search change starts from the top.
+  board, each column) are saved before `#task-view` is swapped and restored after: the
+  refresh after an edit, "Show more", and the board's refresh after a drag. Only a request
+  sent from the toolbar (filter, layout, search) is a different view and starts from the top.
 - **Escape.** `static/js/keys.js` is the one Escape handler. It walks shortcut help, palette,
   quick menu, dropdown, drawer, selection and stops at the first that closes something; new layers
   register with `registerEscLayer(name, fn)`. A field that handles Escape itself must
-  `preventDefault()`.
+  `preventDefault()`. The dropdown layer closes an Alpine component only when it has `open`
+  *and* a panel with `@click.away` (or `.outside`); a collapsible section that also uses `open`
+  is left alone.
 
 ### Selection and keyboard shortcuts
 
@@ -448,7 +457,8 @@ with "Create more", Cancel and Create.
   posts `status_id`. It lives in the slide-over template, not in `task_form_fields.html`, which
   the full-page form shares and which has no status.
 - **Create more.** The checkbox is remembered in `localStorage` (`taskCreateMore`). On success the
-  view returns a fresh form in the same status with a "Created <title>" line and fires only
+  view returns a fresh form with the same status, assignee and priority (so a run started from a
+  group "+" stays in that group), a "Created <title>" line, and fires only
   `taskStatusChanged`, so the drawer stays open while the list behind it refreshes.
 - **Prefill.** `?status=`, `?assignee=` and `?priority=` open the drawer with that value. A status
   or assignee that is not a number, or a priority that is not a choice, is ignored; a status from

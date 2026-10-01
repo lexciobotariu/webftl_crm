@@ -107,7 +107,8 @@
         position();
         fetch(endpoint('quickUrl', state.pk, kind), { credentials: 'same-origin' })
             .then((response) => {
-                if (!response.ok) throw new Error('quick menu ' + response.status);
+                // fetch follows a redirect to the login page and reports 200 for it.
+                if (!response.ok || response.redirected) throw new Error('quick menu ' + response.status);
                 return response.text();
             })
             .then((html) => {
@@ -366,9 +367,11 @@
         help().addEventListener('click', (event) => {
             if (event.target === help() || event.target.closest('[data-shortcuts-close]')) hideHelp();
         });
-        // Nothing else in the dialog is focusable, so Tab stays where it is.
+        // Close is the only control, so Tab lands on it and stays inside the dialog.
         help().addEventListener('keydown', (event) => {
-            if (event.key === 'Tab') event.preventDefault();
+            if (event.key !== 'Tab') return;
+            event.preventDefault();
+            help().querySelector('[data-shortcuts-close]').focus();
         });
     });
 
@@ -395,9 +398,12 @@
     // back to the top. Elements opt in with data-keep-scroll="<key>".
     let scrolls = null;
 
+    // A change made in the toolbar (filter, layout, search) is a different view and
+    // starts at the top. Everything else that swaps #task-view is the same view again:
+    // the refresh after an edit, "Show more", and the board's refresh after a drag.
     function isRefresh(detail) {
         const source = detail.requestConfig && detail.requestConfig.elt;
-        return !!source && (source.id === 'task-view-refresh' || source.id === 'task-more');
+        return !(source && source.closest && source.closest('#task-toolbar'));
     }
 
     document.body.addEventListener('htmx:beforeSwap', (event) => {

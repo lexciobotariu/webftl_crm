@@ -126,6 +126,16 @@ def build_groups(tasks, spec, counts):
             group['label'] = CATEGORY_LABELS.get(first.status.category, first.status.category)
         else:
             group['label'] = PRIORITY_LABELS[first.priority]
+        # What the "+" on the header fills in for a new task. None for a group a
+        # task cannot be created into (a project of My Tasks, a status type).
+        if spec.group == 'status':
+            group['create_query'] = f'status={first.status_id}'
+        elif spec.group == 'priority':
+            group['create_query'] = f'priority={first.priority}' if first.priority else ''
+        elif spec.group == 'assignee':
+            group['create_query'] = f'assignee={first.assignee_id}' if first.assignee_id else ''
+        else:
+            group['create_query'] = None
         groups.append(group)
     return groups
 
