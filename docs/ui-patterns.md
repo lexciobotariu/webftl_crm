@@ -409,10 +409,31 @@ column is the status) without opening the drawer.
 - **Scroll survives the refresh.** Elements marked `data-keep-scroll="<key>"` (the list, the
   board, each column) are saved before a refresh or "Show more" swaps `#task-view` and
   restored after. A filter or search change starts from the top.
-- **Escape.** `static/js/keys.js` is the one Escape handler. It walks palette, quick menu,
-  dropdown, drawer, selection and stops at the first that closes something; new layers
+- **Escape.** `static/js/keys.js` is the one Escape handler. It walks shortcut help, palette,
+  quick menu, dropdown, drawer, selection and stops at the first that closes something; new layers
   register with `registerEscLayer(name, fn)`. A field that handles Escape itself must
   `preventDefault()`.
+
+### Selection and keyboard shortcuts
+
+Every row and card carries `data-task-row`; `static/js/task-view.js` keeps one of them
+selected (`.task-selected`, defined in `custom.css` from the theme tokens, plus `tabindex="0"`,
+`aria-current` and real focus).
+
+- **Move:** `J` / `K` or `↓` / `↑` through the visible rows (rows in a collapsed group are
+  skipped). On the board they stay in the column, and `H` / `L` or `←` / `→` jump to the nearest
+  column that has cards, keeping the position.
+- **Act:** `Enter` opens the drawer, `/` focuses the search box (`Esc` leaves it), `C` clicks
+  `#task-new` (project page only), `S` / `P` / `A` open the quick menu on the selected row
+  (a card has no status trigger, so `S` does nothing there), `?` lists them in `#task-shortcuts`.
+  A click on a row or card selects it too.
+- **When keys count.** Only with focus on `body` or inside `#task-view`; never in a field,
+  with Ctrl / Cmd / Alt held, during IME composition, or while the drawer, quick menu or help
+  is open. Shift does not matter. `Enter` on a focused button stays that button's click.
+- **Refresh.** The selection is put back at `htmx:afterSettle`. If its row is gone (a filter
+  now hides it) the row at the same position is selected. Focus only moves back when nothing
+  else has it, so a refresh never pulls it out of the search box or the drawer. Closing the
+  drawer returns focus to the selected row (`slideover:closed`).
 
 ## Kanban Board
 

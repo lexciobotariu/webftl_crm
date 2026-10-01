@@ -78,6 +78,15 @@ html.light {
     background: rgb(var(--scrollbar-thumb-hover, var(--border)));
 }
 
+/* The row or card the keyboard is on (static/js/task-view.js). It reads the theme
+   tokens, so it works on both themes. The extra `html` beats the hover backgrounds
+   Tailwind puts on rows and cards. */
+html [data-task-row].task-selected {
+    background: var(--hover-strong);
+    outline: 1px solid rgb(var(--border-strong));
+    outline-offset: -1px;
+}
+
 /* Fixed table header over a scrolling body: reserve the same scrollbar gutter on
    both so their columns line up and the scrollbar only spans the body rows. */
 .scrollbar-gutter-stable {

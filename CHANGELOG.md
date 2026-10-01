@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Features
 - Status, priority and assignee can be changed straight from a task row or board card, without opening the drawer; the list keeps its scroll position afterwards
-- Escape closes one thing at a time: quick menu, then dropdown, then drawer
+- Keyboard on the Tasks pages: `J` / `K` or the arrows move a selection through rows and cards (`H` / `L` between board columns), `Enter` opens the task, `/` searches, `C` creates a task, `S` / `P` / `A` change status, priority and assignee on the selected row, and `?` lists the shortcuts
+- Escape closes one thing at a time: shortcut list, quick menu, dropdown, drawer, then the selection
 
 ### Changes
 - Closing the drawer empties it, so it stops fetching activity for a task nobody is looking at

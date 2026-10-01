@@ -1,10 +1,10 @@
 // One Escape handler for the whole app. Each layer says whether it handled the
 // key; the first that did stops the walk, so one press closes one thing.
-// Order, topmost first: palette, quick menu, dropdown, drawer, selection.
+// Order, topmost first: help, palette, quick menu, dropdown, drawer, selection.
 // A field that handles Escape itself (the title and description editors) calls
 // preventDefault first, and this leaves the key alone.
 (function () {
-    const ORDER = ['palette', 'menu', 'dropdown', 'drawer', 'selection'];
+    const ORDER = ['help', 'palette', 'menu', 'dropdown', 'drawer', 'selection'];
     const layers = {};
 
     // A layer is a function(event) that returns true when it closed something.
