@@ -508,6 +508,32 @@ with "Create more", Cancel and Create.
   priority or assignee. The group buttons show only with `can_create_task and project`, so not
   on My Tasks.
 
+## Inbox (split view)
+
+The Inbox is a stream of events, not a work list, so it deliberately does not
+look like My Tasks. It reads like a mail client (`templates/notifications/inbox.html`):
+
+- **Left column** (`w-[380px]`, full width below `lg`): header, an All / Unread /
+  Mentions segmented control, and `#inbox-list` (`role="listbox"`). Rows
+  (`partials/item.html`) are real links (`?show=…&n=<pk>`) on three lines: who and
+  when, the task (status, ID, title), and what happened. Sticky day separators
+  (Today / Yesterday / This week / Older) do not fold.
+- **Right pane** `#inbox-pane`: a context bar (who did what, position, previous /
+  next, read toggle, delete) above the task drawer's content rendered with
+  `render_task_drawer(..., embedded=True)`, which leaves out the back and close
+  buttons and does not call `openSlideOver()`. Below `lg` the pane covers the
+  list while something is selected (`data-selected` on `#inbox`).
+- **Opening** posts to `notification_open`: the pane, the row and the Unread count
+  come back in one response, the notification is marked read and the address is
+  replaced (`HX-Replace-Url`), so moving does not fill the history. A GET with
+  `?n=` shows the pane without changing anything; the pane then posts its own
+  read.
+- **Keyboard** (`static/js/inbox.js`, not `task-view.js`): J / K open the next or
+  previous one, Enter opens the selected one, E toggles read, Backspace / Delete
+  deletes and opens the next, ? lists the keys, Esc closes the pane (after the
+  palette, dialogs and menus). The comment that raised a notification is scrolled
+  to and briefly highlighted (`.inbox-flash`).
+
 ## Command palette (Ctrl/Cmd+K)
 
 Search and jump, no actions. `Cmd+K` on a Mac, `Ctrl+K` elsewhere (or the Search button at the top

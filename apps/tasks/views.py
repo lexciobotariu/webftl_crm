@@ -258,13 +258,17 @@ def task_create(request, project_pk):
     return render(request, 'tasks/task_form.html', context)
 
 
-@login_required
-@require_permission('access_tasks')
-def task_detail(request, pk):
+def render_task_drawer(request, task_id, embedded=False):
+    """The task drawer, or a 403 when the person may not view the task.
+
+    Shared by ``task_detail`` and the Inbox. ``embedded`` is the same content
+    placed in a page (the Inbox's right pane) instead of the slide-over: no
+    back or close buttons, and it does not open the drawer.
+    """
     task = get_object_or_404(
         Task.objects.select_related('project', 'status', 'assignee')
         .prefetch_related('subtasks', 'attachments', 'labels', 'project__labels'),
-        pk=pk
+        pk=task_id
     )
     if not can_view_task(request.user, task):
         return HttpResponseForbidden("You don't have access to this task")
@@ -278,8 +282,15 @@ def task_detail(request, pk):
         'team_members': team_members,
         'project_labels': project_labels,
         'priority_choices': priority_choices,
+        'embedded': embedded,
         **_time_context(request.user, task),
     })
+
+
+@login_required
+@require_permission('access_tasks')
+def task_detail(request, pk):
+    return render_task_drawer(request, pk)
 
 
 def _log_label_changes(task, before, after, user):

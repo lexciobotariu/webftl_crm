@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.0] - 2026-10-02
+
+### Changes
+- The **Inbox** now works like a mail client: notifications in a column on the left, on three lines each (who and when, the task, what happened), and the one you pick open on the right with the whole task, so you can reply, change its status or log time without leaving the Inbox. It no longer looks like My Tasks, because it is a stream of what happened rather than a list of work
+- Moving with J / K opens the next or previous notification and marks it read, as in a mail client; the count in the sidebar and on the Unread tab follow at once
+- For a comment or a mention, the pane scrolls to that comment and highlights it
+- Tabs show All, Unread or Mentions; notifications are separated by day (Today, Yesterday, This week, Older); "Show more" loads 50 at a time
+- The address names the open notification, so a reload or a shared link opens the same one; opening it from a link marks it read only once the page has loaded
+
+### Features
+- Mark a notification unread again, or delete it, from the bar above the task; deleting opens the next one
+- Keyboard in the Inbox: J / K to move, Enter to open, E to mark read or unread, Backspace or Delete to delete, ? for the list, Esc to close the notification
+- On a narrow screen the open notification covers the list, with a back button
+
 ## [0.18.1] - 2026-10-02
 
 ### Fixes

@@ -1,23 +1,32 @@
-{% comment %}One notification. A click on the link opens the task in the drawer (the full page is the plain link), and the click bubbles to the <li>, which marks it read and swaps in its read version.{% endcomment %}
-<li id="notification-{{ note.pk }}"
-    {% if not note.read_at %}hx-post="{% url 'notification_read' note.pk %}" hx-trigger="click" hx-swap="outerHTML"{% endif %}
-    class="flex items-start gap-3 px-4 py-3 {% if note.read_at %}bg-transparent{% else %}bg-elevated/40{% endif %} hover:bg-hover transition-colors">
-    <span class="mt-1.5 w-2 h-2 shrink-0 rounded-full {% if note.read_at %}bg-transparent{% else %}bg-accent{% endif %}" aria-hidden="true"></span>
-    <span class="mt-0.5 w-6 h-6 shrink-0 rounded-full bg-elevated border border-border-subtle flex items-center justify-center text-[10px] font-medium text-zinc-200" aria-hidden="true">{{ note.actor.name|slice:":1"|upper|default:"?" }}</span>
-    <div class="flex-1 min-w-0">
-        <a href="{% url 'task_full_page' note.task.project_id note.task_id %}"
-           hx-get="{% url 'task_detail' note.task_id %}" hx-target="#slide-over" hx-swap="innerHTML"
-           class="block text-sm text-zinc-300 hover:text-zinc-100">
-            {% if not note.read_at %}<span class="sr-only">Unread: </span>{% endif %}
-            <span class="font-medium text-zinc-100">{{ note.actor.name|default:"Someone" }}</span>
-            {{ note.verb }}
-            {% if note.kind == 'mentioned' %}on{% endif %}
-            <span class="font-mono text-xs text-zinc-500">{{ note.task.identifier }}</span>
-            <span class="text-zinc-100">{{ note.task.title }}</span>
-        </a>
-        {% if note.activity and note.activity.content %}
-        <p class="mt-0.5 text-xs text-zinc-500 truncate">{{ note.activity.content|truncatechars:140 }}</p>
-        {% endif %}
-    </div>
-    <span class="shrink-0 text-xs text-zinc-500" title="{{ note.created_at }}">{{ note.created_at|timesince }} ago</span>
-</li>
+{% load notification_tags %}
+{% comment %}One notification in the left column, three lines like a message in a mail client. It is a real link (Ctrl/Cmd-click or a reload opens it through ?n=); a plain click posts to notification_open, which fills the pane and marks it read. Selection is kept by static/js/inbox.js, which sets aria-selected; with oob the row replaces itself from another response.{% endcomment %}
+{% with who=note.actor.name|default:"Someone" %}
+<a id="notification-{{ note.pk }}" role="option" data-notification{% if oob %} hx-swap-oob="true"{% endif %}
+   href="?show={{ show|default:'all' }}&amp;n={{ note.pk }}"
+   aria-selected="{% if note.pk == selected_pk %}true{% else %}false{% endif %}"
+   data-unread="{% if note.read_at %}0{% else %}1{% endif %}"
+   data-can-unread="{% if note.can_mark_unread %}1{% else %}0{% endif %}"
+   data-read-url="{% url 'notification_read' note.pk %}"
+   data-unread-url="{% url 'notification_unread' note.pk %}"
+   data-delete-url="{% url 'notification_delete' note.pk %}"
+   hx-post="{% url 'notification_open' note.pk %}?show={{ show|default:'all' }}"
+   hx-trigger="click[!ctrlKey && !metaKey && !shiftKey]"
+   hx-target="#inbox-pane" hx-swap="innerHTML"
+   class="relative block pl-4 pr-3 py-2.5 border-b border-border-subtle hover:bg-hover aria-selected:bg-hover-strong focus:outline-none focus-visible:bg-hover-strong transition-colors before:absolute before:left-0 before:inset-y-0 before:w-0.5 before:bg-transparent aria-selected:before:bg-accent">
+    <span class="flex items-center gap-2">
+        <span class="shrink-0 w-1.5 h-1.5 rounded-full {% if note.read_at %}bg-transparent{% else %}bg-accent{% endif %}" aria-hidden="true"></span>
+        {% include "components/avatar.html" with user=note.actor size=18 %}
+        <span class="min-w-0 truncate text-sm {% if note.read_at %}text-zinc-400{% else %}font-medium text-zinc-100{% endif %}">{% if not note.read_at %}<span class="sr-only">Unread: </span>{% endif %}{{ who }}</span>
+        <span class="ml-auto shrink-0 text-xs text-zinc-500 tabular-nums" title="{{ note.created_at }}">{{ note.created_at|short_age }}</span>
+    </span>
+    <span class="mt-1 flex items-center gap-1.5 pl-[34px] min-w-0">
+        {% include "components/status_icon.html" with category=note.task.status.category size=12 %}
+        <span class="shrink-0 font-mono text-[11px] text-zinc-500">{{ note.task.identifier }}</span>
+        <span class="min-w-0 truncate text-[13px] {% if note.read_at %}text-zinc-500{% else %}text-zinc-200{% endif %}">{{ note.task.title }}</span>
+    </span>
+    <span class="mt-0.5 flex items-center gap-1.5 pl-[34px] min-w-0 text-xs text-zinc-500">
+        <i data-lucide="{% if note.kind == 'assigned' %}user-plus{% elif note.kind == 'mentioned' %}at-sign{% else %}message-square{% endif %}" class="shrink-0 w-3 h-3" aria-hidden="true"></i>
+        <span class="min-w-0 truncate">{% include "notifications/partials/summary.html" %}</span>
+    </span>
+</a>
+{% endwith %}

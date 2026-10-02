@@ -1,0 +1,1 @@
+{% if note.kind == 'assigned' %}assigned you{% elif note.kind == 'mentioned' %}mentioned you{% else %}commented{% endif %}{% if note.kind != 'assigned' and note.activity and note.activity.content %}: “{{ note.activity.content|truncatechars:90 }}”{% endif %}

@@ -201,3 +201,12 @@ html [data-task-row].task-selected {
     left: auto;
     right: 0;
 }
+
+/* The comment that raised an Inbox notification, lit up for a moment when the
+   notification opens (static/js/inbox.js). */
+.inbox-flash {
+    border-radius: 6px;
+    background: rgba(139, 92, 246, 0.16);
+    box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.5);
+    transition: background 0.6s ease, box-shadow 0.6s ease;
+}
