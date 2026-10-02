@@ -533,6 +533,20 @@ look like My Tasks. It reads like a mail client (`templates/notifications/inbox.
   deletes and opens the next, ? lists the keys, Esc closes the pane (after the
   palette, dialogs and menus). The comment that raised a notification is scrolled
   to and briefly highlighted (`.inbox-flash`).
+- **The open notification stays in the list.** Every request that redraws the list
+  (the refresh after a task change, "Show more", "Mark all read") names the open
+  one (`n=<pk>`), and the Unread tab keeps it although opening marked it read;
+  otherwise the pane's buttons would have no row to act on. Such a request also
+  sends `list=1`, so the view does not render the pane (a whole task) for it.
+- **Replacing the pane asks first when something is being written in it**
+  (`mayLeavePane()` in `inbox.js`): J / K, a click on another row, Esc and delete
+  all go through it, whatever has the focus.
+- **Requests that change one notification** (read, unread, delete) are sent with
+  `#inbox-opener` as target, not the pane: htmx fires `afterSwap` on the target even
+  for a swap of "none", and that would scroll the pane back to the comment.
+- **A task embedded in a page shares no ids with the drawer.** The sub-task and
+  attachment lists are named per task (`subtask-list-<pk>`), so a drawer opened
+  over the Inbox for another task appends to its own lists.
 
 ## Command palette (Ctrl/Cmd+K)
 

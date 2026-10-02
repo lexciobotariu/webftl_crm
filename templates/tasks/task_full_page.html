@@ -60,7 +60,7 @@
                     <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
                         Sub-tasks <span id="subtask-counter-{{ task.pk }}">{% if task.subtask_progress %}({{ task.subtask_progress }}){% endif %}</span>
                     </h3>
-                    <div id="subtask-list" class="space-y-1 mb-3">
+                    <div id="subtask-list-{{ task.pk }}" class="space-y-1 mb-3">
                         {% for subtask in task.subtasks.all %}
                         {% include "tasks/partials/subtask_item.html" %}
                         {% empty %}
@@ -74,7 +74,7 @@
                     <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
                         Attachments
                     </h3>
-                    <div id="attachment-list" class="space-y-1 mb-3">
+                    <div id="attachment-list-{{ task.pk }}" class="space-y-1 mb-3">
                         {% for attachment in task.attachments.all %}
                         {% include "tasks/partials/attachment_item.html" %}
                         {% empty %}
@@ -96,7 +96,7 @@
                         <input type="file" class="hidden"
                                hx-post="{% url 'attachment_upload' task.pk %}"
                                hx-trigger="change"
-                               hx-target="#attachment-list"
+                               hx-target="#attachment-list-{{ task.pk }}"
                                hx-swap="beforeend"
                                hx-encoding="multipart/form-data"
                                name="file">
@@ -104,7 +104,7 @@
                 </div>
 
                 <!-- Inline subtask form -->
-                <form hx-post="{% url 'subtask_create' task.pk %}" hx-target="#subtask-list" hx-swap="beforeend"
+                <form hx-post="{% url 'subtask_create' task.pk %}" hx-target="#subtask-list-{{ task.pk }}" hx-swap="beforeend"
                       hx-on::after-request="if(event.detail.successful) { this.reset(); this.classList.add('hidden'); }"
                       class="hidden flex items-center gap-2 bg-elevated border border-border-subtle rounded-card px-3 py-2 mb-6"
                       id="subtask-form-full">

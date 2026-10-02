@@ -15,11 +15,13 @@
     {% endfor %}
     {% comment %}Inside the list, so it always asks for as many rows as are shown: a change to the open task (status, title) refreshes the list and leaves the pane alone.{% endcomment %}
     <div hidden hx-get="{{ refresh_url }}" hx-trigger="taskChanged from:body, taskStatusChanged from:body"
+         hx-vals='js:{n: document.getElementById("inbox").dataset.selected || "", list: 1}'
          hx-target="#inbox-list" hx-select="#inbox-list" hx-swap="outerHTML"></div>
     {% if more_url %}
     <div class="flex items-center justify-center py-4">
         <button type="button" id="inbox-more"
                 hx-get="{{ more_url }}" hx-target="#inbox-list" hx-select="#inbox-list" hx-swap="outerHTML"
+                hx-vals='js:{n: document.getElementById("inbox").dataset.selected || "", list: 1}'
                 class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
             Show more
             <span class="text-zinc-500 tabular-nums">{{ total }} in total</span>

@@ -37,6 +37,43 @@
     const show = () => (root() && root().dataset.show) || 'all';
     let selectedId = null;
     let openAfterMore = false;
+    // An "open" that was overtaken by the next one still marked its notification read
+    // on the server, but its row update was thrown away; the list is refreshed once
+    // the pane settles.
+    let staleRows = false;
+    let deleting = false;
+
+    // Text being written in the pane (a reply, a description, a comment being edited).
+    function hasDraft() {
+        if (!pane()) return false;
+        return Array.from(pane().querySelectorAll('textarea')).some((field) => field.value.trim() && field.value !== field.defaultValue);
+    }
+
+    // Replacing the pane throws that text away, whatever has the focus: ask first.
+    function mayLeavePane() {
+        return !hasDraft() || window.confirm('Discard the text you were writing?');
+    }
+
+    function refreshList() {
+        const selected = root().dataset.selected || '';
+        const url = `${list().dataset.refreshUrl}&list=1&n=${encodeURIComponent(selected)}`;
+        htmx.ajax('GET', url, { target: '#inbox-list', select: '#inbox-list', swap: 'outerHTML' }).catch(() => {});
+    }
+
+    // After a failed open the pane still shows the notification from before; the
+    // selection goes back to it, so the pane's buttons act on what is on screen.
+    function syncSelectionToPane() {
+        const shown = pane() && pane().querySelector('[data-pane-for]');
+        const row = shown && document.getElementById(`notification-${shown.dataset.paneFor}`);
+        if (row) {
+            selectedId = row.id;
+            root().dataset.selected = shown.dataset.paneFor;
+        } else {
+            selectedId = null;
+            delete root().dataset.selected;
+        }
+        markSelected(false);
+    }
 
     function selectedRow() {
         return selectedId ? document.getElementById(selectedId) : null;
@@ -73,15 +110,16 @@
     // Requests go out from #inbox-opener, whose hx-sync="this:replace" aborts the one
     // still in flight: pressing J twice quickly must end on the second notification.
     function open(row) {
-        if (!row) return;
+        if (!row || !mayLeavePane()) return;
         select(row);
-        // An aborted request (superseded by the next J) rejects; nothing to report.
+        // An aborted request (superseded by the next J) rejects; its row needs a refresh.
         htmx.ajax('POST', row.dataset.openUrl, { source: '#inbox-opener', target: '#inbox-pane', swap: 'innerHTML' })
-            .catch(() => {});
+            .catch(() => { staleRows = true; });
         list().focus({ preventScroll: true });
     }
 
-    function clearPane() {
+    function clearPane(force) {
+        if (!force && !mayLeavePane()) return false;
         selectedId = null;
         delete root().dataset.selected;
         const empty = document.getElementById('inbox-pane-empty');
@@ -90,6 +128,7 @@
         markSelected(false);
         history.replaceState(history.state, '', `?show=${encodeURIComponent(show())}`);
         list().focus({ preventScroll: true });
+        return true;
     }
 
     function move(delta) {
@@ -116,7 +155,9 @@
         let url = null;
         if (row.dataset.unread === '1') url = row.dataset.readUrl;
         else if (row.dataset.canUnread === '1') url = row.dataset.unreadUrl;
-        if (url) htmx.ajax('POST', withShow(url), { target: '#inbox-pane', swap: 'none' });
+        // Not targeted at the pane: even a swap of "none" fires afterSwap on its target,
+        // which would scroll the pane back to the comment on every toggle.
+        if (url) htmx.ajax('POST', withShow(url), { target: '#inbox-opener', swap: 'none' }).catch(() => {});
     }
 
     function removeEmptyDays() {
@@ -127,20 +168,24 @@
 
     function deleteSelected() {
         const row = selectedRow();
-        if (!row) return;
+        // One at a time: a second press before the answer would delete the next one too.
+        if (!row || deleting || !mayLeavePane()) return;
+        deleting = true;
         const all = rows();
         const index = all.indexOf(row);
         // Like archiving a mail: the next one opens, or the one above at the end.
         const next = all[index + 1] || all[index - 1] || null;
-        htmx.ajax('POST', withShow(row.dataset.deleteUrl), { target: '#inbox-pane', swap: 'none' }).then(() => {
+        htmx.ajax('POST', withShow(row.dataset.deleteUrl), { target: '#inbox-opener', swap: 'none' }).then(() => {
             if (document.getElementById(row.id)) return; // refused: nothing changed
             list().dataset.total = String(Math.max(0, Number(list().dataset.total) - 1));
             removeEmptyDays();
+            // The draft question was already answered above.
+            pane().querySelectorAll('textarea').forEach((field) => { field.value = field.defaultValue; });
             if (next && document.getElementById(next.id)) open(document.getElementById(next.id));
-            else clearPane();
+            else clearPane(true);
             // The last one gone: let the server draw the empty state and the totals.
-            if (!rows().length) htmx.ajax('GET', list().dataset.refreshUrl, { target: '#inbox-list', select: '#inbox-list', swap: 'outerHTML' });
-        });
+            if (!rows().length) refreshList();
+        }).catch(() => {}).finally(() => { deleting = false; });
     }
 
     // The comment that raised the notification: bring it into view and light it up.
@@ -183,10 +228,12 @@
         let handled = true;
         if (key === 'j' || (key === 'ArrowDown' && inList)) move(1);
         else if (key === 'k' || (key === 'ArrowUp' && inList)) move(-1);
-        else if (key === 'Enter' && inList && event.target.closest('[data-notification]') === null) open(selectedRow() || rows()[0]);
+        // Enter on a focused control ("Show more", a row link) is that control's own click.
+        else if (key === 'Enter' && inList && !event.target.closest('a, button')) open(selectedRow() || rows()[0]);
         else if (key === 'e' || key === 'E') toggleRead();
         // Only from the list: Backspace on a button in the pane must not delete anything.
-        else if ((key === 'Backspace' || key === 'Delete') && selectedId && inList) deleteSelected();
+        // Not on auto-repeat: a held key would delete one notification after another.
+        else if ((key === 'Backspace' || key === 'Delete') && selectedId && inList) { if (!event.repeat) deleteSelected(); }
         else if (key === '?') showHelp();
         else handled = false;
         if (handled) event.preventDefault();
@@ -227,13 +274,31 @@
         if (event.target === pane()) {
             highlightActivity();
             updatePosition();
+            if (staleRows) {
+                staleRows = false;
+                refreshList();
+            }
         }
+    });
+
+    // An open that failed (the notification is gone, the server erred, no network)
+    // leaves the pane as it was; so does a "Show more" that failed.
+    ['htmx:responseError', 'htmx:sendError'].forEach((name) => {
+        document.addEventListener(name, (event) => {
+            if (!root()) return;
+            const elt = event.detail.elt;
+            if (elt && elt.id === 'inbox-opener') syncSelectionToPane();
+            if (elt && elt.id === 'inbox-more') openAfterMore = false;
+        });
     });
 
     document.addEventListener('htmx:afterSettle', (event) => {
         if (!root()) return;
         markSelected(false);
-        if (openAfterMore && event.target.id === 'inbox-list') {
+        // Only the answer to "Show more" carries on to the next row; another refresh of
+        // the list settling in between must not open anything.
+        const source = event.detail.requestConfig && event.detail.requestConfig.elt;
+        if (openAfterMore && event.target.id === 'inbox-list' && source && source.id === 'inbox-more') {
             openAfterMore = false;
             move(1);
         }
@@ -245,7 +310,7 @@
         const elt = event.detail.elt;
         if (elt && pane().contains(elt) && /\/tasks\/\d+\/delete\/$/.test(event.detail.requestConfig.path)) {
             // Its response also sends taskStatusChanged, which refreshes the list.
-            clearPane();
+            clearPane(true);
         }
     });
 
@@ -260,6 +325,7 @@
         // Not while typing: Esc in a comment being written leaves the draft alone.
         window.registerEscLayer('selection', (event) => {
             if (!selectedId || (event && typing(event.target))) return false;
+            // Handled either way: a draft the person chose to keep keeps the pane open.
             clearPane();
             return true;
         });

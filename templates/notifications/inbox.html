@@ -15,7 +15,7 @@
             <div class="flex items-center gap-1">
                 <button type="button" title="Mark all read" aria-label="Mark all read"
                         hx-post="{% url 'notification_read_all' %}?show={{ show }}"
-                        hx-vals='js:{limit: document.getElementById("inbox-list").dataset.limit}'
+                        hx-vals='js:{limit: document.getElementById("inbox-list").dataset.limit, n: document.getElementById("inbox").dataset.selected || ""}'
                         hx-target="#inbox-list" hx-select="#inbox-list" hx-swap="outerHTML"
                         class="inline-flex items-center justify-center w-7 h-7 rounded-control text-zinc-500 hover:text-zinc-200 hover:bg-hover transition-colors">
                     <i data-lucide="check-check" class="w-4 h-4"></i>

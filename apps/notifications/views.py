@@ -4,6 +4,7 @@ from urllib.parse import urlencode
 
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError, transaction
+from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.template.loader import render_to_string
@@ -82,10 +83,17 @@ def _mark_unread_possible(user, notes):
     return notes
 
 
-def _filtered(user, show):
+def _filtered(user, show, keep=None):
+    """The notifications of a tab. ``keep`` is the one open in the pane.
+
+    Opening a notification marks it read, so on the Unread tab it would drop out of
+    the list at the next refresh while the pane still shows it, and the pane's
+    controls would have no row to act on. It stays for as long as it is open.
+    """
     notes = inbox_for(user).select_related('task__status')
     if show == 'unread':
-        return notes.filter(read_at__isnull=True)
+        unread = Q(read_at__isnull=True)
+        return notes.filter(unread | Q(pk=keep)) if keep else notes.filter(unread)
     if show == 'mentions':
         return notes.filter(kind=Notification.MENTIONED)
     return notes
@@ -103,13 +111,20 @@ def _page_url(show, pk=None):
     return f"{reverse('inbox')}?{urlencode(params)}"
 
 
-def _list_context(user, show='all', limit=PAGE_SIZE):
+def _pk(raw):
+    """A notification id from the address, or None; ``str.isdigit`` alone accepts "²"."""
+    raw = raw or ''
+    return int(raw) if raw.isascii() and raw.isdigit() else None
+
+
+def _list_context(user, show='all', limit=PAGE_SIZE, keep=None):
     show = _show(show)
-    notes = _filtered(user, show)
+    notes = _filtered(user, show, keep)
     total = notes.count()
     rows = _mark_unread_possible(user, notes[:limit])
     more_url = None
-    if total > limit:
+    # At MAX_LIMIT there is no next page to ask for: the button would do nothing.
+    if total > limit and limit < MAX_LIMIT:
         more_url = '?' + urlencode({'show': show, 'limit': limit + PAGE_SIZE})
     return {
         'tabs': TABS,
@@ -162,13 +177,17 @@ def _oob_only(request, note):
 @login_required
 @require_permission('access_tasks')
 def inbox(request):
-    context = _list_context(request.user, request.GET.get('show'), _limit(request.GET.get('limit')))
+    open_pk = _pk(request.GET.get('n'))
+    context = _list_context(
+        request.user, request.GET.get('show'), _limit(request.GET.get('limit')), keep=open_pk
+    )
     selected = None
-    raw = request.GET.get('n') or ''
-    if raw.isascii() and raw.isdigit():
+    # A list refresh only names the open notification so it is kept; it swaps the
+    # list alone, so the pane (the whole task) is not rendered for it.
+    if open_pk is not None and request.GET.get('list') != '1':
         # A link or a reload names a notification: show it, but a GET changes
         # nothing; the pane marks it read with its own POST once it loads.
-        selected = inbox_for(request.user).select_related('task__status').filter(pk=int(raw)).first()
+        selected = inbox_for(request.user).select_related('task__status').filter(pk=open_pk).first()
     if selected is not None:
         context.update(_pane_context(request, selected, context['show']))
         context['selected_pk'] = selected.pk
@@ -248,5 +267,5 @@ def notification_read_all(request):
     """Every unread notification of the person, whatever the tab or page shows."""
     Notification.objects.filter(recipient=request.user, read_at__isnull=True).update(read_at=timezone.now())
     limit = _limit(request.POST.get('limit') or request.GET.get('limit'))
-    context = _list_context(request.user, request.GET.get('show'), limit)
+    context = _list_context(request.user, request.GET.get('show'), limit, keep=_pk(request.POST.get('n')))
     return _changed(render(request, 'notifications/partials/list.html', {**context, 'oob_chip': True}))

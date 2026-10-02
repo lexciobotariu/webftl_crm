@@ -1036,3 +1036,73 @@ class TestSplitViewReviewFixes:
         assert re.search(r'id="inbox"[^>]*hx-history="false"', html)
         pane = re.search(r'<section id="inbox-pane"[^>]*>', html).group(0)
         assert 'aria-live' not in pane
+
+
+@pytest.mark.django_db
+class TestSecondReviewOfTheSplitView:
+    def test_the_open_notification_stays_on_the_unread_tab_once_read(self, client):
+        # Opening marks it read. Without this the next refresh drops its row while the
+        # pane still shows it, and the pane's buttons have nothing to act on.
+        project = ProjectFactory()
+        user = _member(project)
+        task = TaskFactory(project=project)
+        opened = _note(user, task, read_at=timezone.now())
+        other_read = _note(user, TaskFactory(project=project), read_at=timezone.now())
+        unread = _note(user, TaskFactory(project=project))
+        client.force_login(user)
+
+        html = client.get(reverse('inbox'), {'show': 'unread', 'n': opened.pk, 'list': '1'}).content.decode()
+
+        assert f'id="notification-{opened.pk}"' in html
+        assert f'id="notification-{unread.pk}"' in html
+        assert f'id="notification-{other_read.pk}"' not in html
+        # Without a notification open, the tab is only what is unread.
+        plain = client.get(reverse('inbox'), {'show': 'unread'}).content.decode()
+        assert f'id="notification-{opened.pk}"' not in plain
+
+    def test_a_list_refresh_does_not_render_the_pane(self, client):
+        project = ProjectFactory()
+        user = _member(project)
+        note = _note(user, TaskFactory(project=project, title='Whole task in the pane'))
+        client.force_login(user)
+
+        refresh = client.get(reverse('inbox'), {'show': 'all', 'n': note.pk, 'list': '1'})
+        page = client.get(reverse('inbox'), {'show': 'all', 'n': note.pk})
+
+        assert 'data-pane-for' not in refresh.content.decode()
+        assert f'data-pane-for="{note.pk}"' in page.content.decode()
+
+    def test_no_show_more_once_the_list_is_at_its_limit(self):
+        from apps.notifications import views
+
+        user = UserFactory()
+        task = TaskFactory()
+        Notification.objects.bulk_create(
+            Notification(recipient=user, actor=None, task=task, kind='commented', read_at=timezone.now())
+            for _ in range(60)
+        )
+        ProjectAccessFactory(project=task.project, user=user)
+
+        assert views._list_context(user, 'all', limit=50)['more_url'] is not None
+        # 60 rows, pretend the limit is the ceiling: the button would ask for a page that never comes.
+        original = views.MAX_LIMIT
+        views.MAX_LIMIT = 50
+        try:
+            assert views._list_context(user, 'all', limit=50)['more_url'] is None
+        finally:
+            views.MAX_LIMIT = original
+
+    def test_the_drawer_names_its_lists_per_task(self, client):
+        # The Inbox pane embeds a task in the page; a drawer opened over it for another
+        # task must not share element ids with it, or its sub-tasks land in the pane.
+        project = ProjectFactory()
+        user = _member(project)
+        task = TaskFactory(project=project)
+        client.force_login(user)
+
+        html = client.get(reverse('task_detail', args=[task.pk]), HTTP_HX_REQUEST='true').content.decode()
+
+        assert f'id="subtask-list-{task.pk}"' in html
+        assert f'hx-target="#subtask-list-{task.pk}"' in html
+        assert f'id="attachment-list-{task.pk}"' in html
+        assert 'id="subtask-list"' not in html and 'id="attachment-list"' not in html
