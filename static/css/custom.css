@@ -188,6 +188,6 @@ html [data-task-row].task-selected {
     display: none;
 }
 .activity-feed[data-filter="comments"]:not(:has([data-kind="comment"])) [data-empty="comments"],
-.activity-feed[data-filter="work"]:not(:has([data-kind="work"])) [data-empty="work"] {
+.activity-feed[data-filter="work"]:not(:has([data-kind="work"])):not(:has([data-kind="summary"])) [data-empty="work"] {
     display: block;
 }

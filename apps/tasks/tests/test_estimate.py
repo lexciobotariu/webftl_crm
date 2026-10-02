@@ -135,7 +135,8 @@ class TestCreateDrawerEstimate:
             self._url(task), {'title': 'New one', 'estimate': "x'};alert(1)//"}, **HTMX
         )
         html = response.content.decode()
-        # The value lives in an escaped input, not in an x-data string.
+        # The value lives in an escaped attribute that Alpine reads, not in the x-data
+        # expression: that only ever holds an empty string.
         assert "x'};alert(1)//" not in html
-        assert 'estimate:' not in html
-        assert 'x-data="dropdown"' in html
+        assert 'data-estimate="x&#x27;};alert(1)//"' in html
+        assert "estimate: ''" in html

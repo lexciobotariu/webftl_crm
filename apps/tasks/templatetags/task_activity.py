@@ -55,30 +55,31 @@ def work_log_totals(task, items, user):
     What ``user`` is not allowed to see is one "Others" line, worked out from the task's
     full total, so the sum matches the Time property. None when there is no time at all.
     """
-    now = None
+    # One reading of the clock for everything below: a running timer measured at two
+    # moments would leave a second for a phantom "Others" line.
+    now = timezone.now()
     people = {}
     seen = 0
     for item in items:
         if item.item_type != 'work':
             continue
-        if now is None:
-            now = timezone.now()
         seconds = services.entry_seconds(item, now)
         seen += seconds
-        name = item.user.name or item.user.email
-        people[name] = people.get(name, 0) + seconds
+        # Keyed by person, so two people with the same name stay two lines.
+        name, so_far = people.get(item.user_id, (item.user.name or item.user.email, 0))
+        people[item.user_id] = (name, so_far + seconds)
 
     total = seen
     others = 0
     if not (user.is_admin or user.has_app_permission('tasks_view_all')):
-        total = services.logged_seconds_on_task(task)
+        total = services.logged_seconds_on_task(task, now=now)
         others = max(total - seen, 0)
     if not total:
         return None
 
     rows = [
         {'name': name, 'label': format_seconds(seconds, zero='0m')}
-        for name, seconds in sorted(people.items(), key=lambda pair: (-pair[1], pair[0]))
+        for name, seconds in sorted(people.values(), key=lambda pair: (-pair[1], pair[0]))
     ]
     if others:
         rows.append({'name': 'Others', 'label': format_seconds(others)})

@@ -981,12 +981,16 @@ def time_entry_edit(request, entry_pk):
             except ValueError as e:
                 form.add_error(None, str(e))
             else:
-                return _timer_changed(_work_log_row(request, entry))
+                # After the swap, not with it: the activity list skips a refresh while a
+                # form is open in it, and this form is only gone once the row is back.
+                response = _work_log_row(request, entry)
+                response['HX-Trigger-After-Settle'] = 'timerChanged'
+                return response
     elif request.GET.get('cancel') == '1':
         return _work_log_row(request, entry)
     else:
         form = DurationEntryForm(initial={
-            'duration': format_minutes(max(1, round(entry.duration.total_seconds() / 60))),
+            'duration': format_minutes(services.entry_minutes(entry)),
             'day': timezone.localdate(entry.started_at),
             'note': entry.note,
         })
