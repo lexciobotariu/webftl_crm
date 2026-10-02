@@ -10,7 +10,7 @@
         <form hx-post="{% url 'time_log' task.pk %}"
               hx-target="#time-log-error-{{ task.pk }}"
               hx-swap="innerHTML"
-              @htmx:after-request="if (!$event.detail.xhr.responseText) { $el.reset(); close(); }"
+              @htmx:after-request="if ($event.detail.successful && !$event.detail.xhr.responseText) { $el.reset(); close(); }"
               class="space-y-2">
             {% csrf_token %}
             <label class="block text-xs text-zinc-500">

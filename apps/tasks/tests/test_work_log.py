@@ -232,7 +232,10 @@ class TestInPlaceEditAndDelete:
         })
 
         assert response.status_code == 200
-        assert response.headers['HX-Trigger'] == 'timerChanged'
+        # After the swap: while the edit form is still in the list, the list skips a
+        # refresh, and the Work log totals would keep the old duration.
+        assert response.headers['HX-Trigger-After-Settle'] == 'timerChanged'
+        assert 'HX-Trigger' not in response.headers
         text = _text(response.content.decode())
         assert 'logged 2h — longer' in text
         assert '<form' not in response.content.decode()
@@ -363,3 +366,83 @@ class TestTabs:
         for page in (self._page(client, task), client.get(reverse('task_detail', args=[task.pk])).content.decode()):
             assert f'id="time-tracking-{task.pk}"' not in page
             assert 'No time logged yet.' not in page.split('id="activity-items-')[0]
+
+
+@pytest.mark.django_db
+class TestEditReviewFixes:
+    def test_a_refused_edit_keeps_the_date(self, client):
+        user, task = _member()
+        entry = _log(task, user, 90, days_ago=1)
+        day = (timezone.localdate() - timedelta(days=1)).isoformat()
+        client.force_login(user)
+
+        html = client.post(reverse('time_entry_edit', args=[entry.pk]), {
+            'duration': '15', 'day': day, 'note': '',
+        }).content.decode()
+
+        assert 'Add a unit' in html
+        assert f'name="day" id="id_day-{entry.pk}" value="{day}"' in html
+
+    def test_editing_only_the_note_leaves_the_times_alone(self, client):
+        # A timer of 29m 45s shows as 29m. Saving a note must not round it to 30m.
+        user, task = _member()
+        start = timezone.now() - timedelta(hours=2)
+        entry = TimeEntryFactory(task=task, user=user, started_at=start,
+                                 ended_at=start + timedelta(minutes=29, seconds=45))
+        client.force_login(user)
+
+        form = client.get(reverse('time_entry_edit', args=[entry.pk])).content.decode()
+        assert 'value="29m"' in form
+
+        services.update_entry(entry, user, minutes=29, day=timezone.localdate(start), note='noted')
+        entry.refresh_from_db()
+
+        assert entry.note == 'noted'
+        assert entry.ended_at - entry.started_at == timedelta(minutes=29, seconds=45)
+
+    def test_the_note_of_an_entry_longer_than_a_day_can_still_be_edited(self):
+        # log_manual (imports) allows any length; the 24-hour rule is for new durations.
+        user, task = _member()
+        start = timezone.now() - timedelta(days=3)
+        entry = TimeEntryFactory(task=task, user=user, started_at=start, ended_at=start + timedelta(hours=30))
+
+        services.update_entry(entry, user, minutes=30 * 60, day=timezone.localdate(start), note='imported')
+        entry.refresh_from_db()
+
+        assert entry.note == 'imported'
+        assert entry.ended_at - entry.started_at == timedelta(hours=30)
+
+    def test_a_day_with_a_mistyped_year_is_refused(self):
+        from datetime import date
+
+        user, task = _member()
+
+        with pytest.raises(ValueError, match='year'):
+            services.log_duration(task, user, 30, date(25, 10, 1))
+        assert not TimeEntry.objects.exists()
+
+
+@pytest.mark.django_db
+class TestTotalsReviewFixes:
+    def test_two_people_with_the_same_name_are_two_lines(self, client):
+        user, task = _member(name='Alex')
+        twin = _teammate(task, 'Alex')
+        boss = _view_all_user(task)
+        _log(task, user, 60)
+        _log(task, twin, 30)
+        client.force_login(boss)
+
+        text = _text(_feed_html(client, task))
+
+        assert 'Alex 1h' in text and 'Alex 30m' in text
+        assert 'Total 1h 30m' in text
+
+    def test_a_running_timer_never_leaves_a_phantom_others_line(self, client):
+        # The summary reads the clock once; two readings could differ by a second.
+        user, task = _member()
+        services.start_timer(task, user)
+        client.force_login(user)
+
+        text = _text(_feed_html(client, task))
+
+        assert 'Others' not in text

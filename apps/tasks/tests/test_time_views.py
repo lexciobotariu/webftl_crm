@@ -144,7 +144,7 @@ class TestTimerViews:
         response = client.post(url, {
             'duration': '2h 15m', 'day': timezone.localdate(started).isoformat(), 'note': 'longer',
         })
-        assert response.headers['HX-Trigger'] == 'timerChanged'
+        assert response.headers['HX-Trigger-After-Settle'] == 'timerChanged'
         entry.refresh_from_db()
         assert entry.started_at == started
         assert entry.ended_at == started + timedelta(minutes=135)

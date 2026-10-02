@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.1] - 2026-10-02
+
+### Fixes
+- Editing a time entry in the Work log updates the totals above it straight away, instead of leaving the old duration until the next refresh
+- Changing only the note of a time entry leaves its times alone: a timer of 29m 45s is no longer rounded to 30m, and an entry longer than a day (an import) can still have its note edited
+- A refused edit of a time entry keeps the date that was typed
+- A day with a mistyped year (a two-digit year becomes the year 25) is refused instead of logging time in the distant past
+- The estimate on the new-task and edit forms shows what was typed and can be cleared again
+- A duration written with dozens of digits is refused with a message instead of a server error
+- The Work log no longer says "No time logged yet." next to an "Others" total, shows two people with the same name as two lines, and cannot show a phantom "Others <1m" while a timer runs
+- A failed request no longer closes the Log time popover and discards what was typed
+- On the full task page, the State, Assignee, Priority and Labels menus open inside the Properties sidebar instead of running past the edge of the window and being cut off
+
 ## [0.18.0] - 2026-10-01
 
 ### Features

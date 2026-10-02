@@ -29,7 +29,7 @@
             </div>
             <div>
                 <label class="block text-xs text-zinc-500 mb-1" for="{{ form.day.id_for_label }}-{{ entry.pk }}">Date</label>
-                <input type="date" name="day" id="{{ form.day.id_for_label }}-{{ entry.pk }}" value="{{ form.day.value|date:'Y-m-d' }}" required
+                <input type="date" name="day" id="{{ form.day.id_for_label }}-{{ entry.pk }}" value="{% if form.is_bound %}{{ form.day.value|default:'' }}{% else %}{{ form.day.value|date:'Y-m-d' }}{% endif %}" required
                        class="w-full bg-panel border border-border-subtle rounded-control px-2 py-1.5 text-sm text-zinc-100 focus:border-border-strong focus:outline-none">
                 {% if form.day.errors %}<p class="mt-1 text-xs text-error">{{ form.day.errors.0 }}</p>{% endif %}
             </div>

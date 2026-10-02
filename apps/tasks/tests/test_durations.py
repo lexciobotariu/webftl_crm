@@ -67,3 +67,14 @@ def test_format_minutes_empty():
 def test_round_trip():
     for n in [1, 5, 59, 60, 61, 90, 480, 1439, 1440, 6000]:
         assert parse_duration(format_minutes(n)) == n
+
+
+class TestVeryLongNumbers:
+    def test_a_number_too_long_for_the_arithmetic_is_refused_not_an_error(self):
+        import pytest as _pytest
+
+        from apps.tasks.durations import parse_duration
+
+        for text in ('9' * 28 + 'h', '9' * 30):
+            with _pytest.raises(ValueError, match='at most'):
+                parse_duration(text, bare_unit='hours')

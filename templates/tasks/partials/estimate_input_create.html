@@ -1,18 +1,18 @@
-<div class="relative" x-data="dropdown">
-    <button type="button" @click="toggle()"
+{% comment %}The estimate on the create and edit forms. The typed value is read from data-estimate, not written into the Alpine expression, so no input can break out of it. The button shows what the field holds.{% endcomment %}
+<div class="relative" data-estimate="{{ form.estimate.value|default:'' }}"
+     x-data="{ open: false, estimate: '' }" x-init="estimate = $el.dataset.estimate">
+    <button type="button" @click="open = !open; if (open) $nextTick(() => $refs.estimate.focus())"
             class="flex items-center gap-2 px-2 py-1.5 rounded-control text-sm text-zinc-300 hover:bg-elevated transition-colors w-full">
-        {% if form.estimate.value %}
-        {{ form.estimate.value }}
-        {% else %}
-        <span class="text-zinc-500">Add estimate</span>
-        {% endif %}
+        <span x-show="estimate" x-text="estimate">{{ form.estimate.value|default:'' }}</span>
+        <span x-show="!estimate" class="text-zinc-500"{% if form.estimate.value %} x-cloak{% endif %}>Add estimate</span>
     </button>
-    <div x-show="open" x-cloak @click.away="close()"
+    <div x-show="open" x-cloak @click.away="open = false"
          x-transition
-         class="absolute left-0 top-full mt-1 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 p-3">
-        <input type="text" name="estimate" value="{{ form.estimate.value|default:'' }}"
-               placeholder="e.g. 1h 30m" autocomplete="off" aria-label="Estimate" @keydown.enter.prevent="close()"
+         class="absolute left-0 top-full mt-1 flex items-center gap-2 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 p-3">
+        <input type="text" name="estimate" x-model="estimate" x-ref="estimate"
+               placeholder="e.g. 1h 30m" autocomplete="off" aria-label="Estimate" @keydown.enter.prevent="open = false"
                class="w-28 bg-panel border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:outline-none">
-        <button type="button" @click="close()" class="bg-accent text-on-accent px-3 py-1 rounded-control text-xs ml-2">Done</button>
+        <button type="button" @click="open = false" class="bg-accent text-on-accent px-3 py-1 rounded-control text-xs">Done</button>
+        <button type="button" x-show="estimate" @click="estimate = ''; open = false" class="text-xs text-zinc-500 hover:text-zinc-300">Clear</button>
     </div>
 </div>

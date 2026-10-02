@@ -29,7 +29,11 @@ def parse_duration(text, *, bare_unit=None):
     if len(text) > _MAX_INPUT_LENGTH:
         raise ValueError('That duration is too long.')
 
-    minutes = _to_minutes(text, bare_unit)
+    try:
+        minutes = _to_minutes(text, bare_unit)
+    except ArithmeticError:
+        # Twenty-odd digits overflow Decimal's precision before the cap below is reached.
+        raise ValueError(f'The duration can be at most {format_minutes(MAX_MINUTES)}.') from None
     if minutes is None:
         raise ValueError('Use hours and minutes, like 1h 30m, 45m or 1.5h.')
     if minutes < 1:

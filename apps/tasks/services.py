@@ -13,7 +13,7 @@ Key patterns:
 """
 import os
 from dataclasses import dataclass
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
@@ -594,12 +594,23 @@ def log_manual(task, user, started_at, ended_at, note=''):
     )
 
 
+EARLIEST_DAY = date(2000, 1, 1)
+
+
+def entry_minutes(entry):
+    """Whole minutes of a closed entry, as its row shows them (never less than one)."""
+    return max(1, int(entry.duration.total_seconds()) // 60)
+
+
 def _validate_duration_and_day(minutes, day):
     """The rules for a logged duration: a day that is not ahead, and 1 minute to 24 hours."""
     if day is None:
         raise TimeEntryValidationError('Pick the day.')
     if day > timezone.localdate():
         raise TimeEntryValidationError('The day cannot be in the future.')
+    if day < EARLIEST_DAY:
+        # A date input turns a two-digit year into the year 25.
+        raise TimeEntryValidationError('Check the year of the day.')
     if minutes is None or not 1 <= minutes <= MAX_DAY_MINUTES:
         raise TimeEntryValidationError('The duration must be between 1 minute and 24 hours.')
 
@@ -639,8 +650,16 @@ def update_entry(entry, user, *, minutes, day, note=''):
     require_entry_edit(user, entry)
     if entry.ended_at is None:
         raise TimeEntryValidationError('A running timer cannot be edited. Stop it first.')
+    same_day = timezone.localdate(entry.started_at) == day
+    if same_day and minutes == entry_minutes(entry):
+        # Only the note changed. Leave the times as they are: the row shows whole
+        # minutes, so rewriting the end would drop the seconds of a timer, and an
+        # entry longer than a day (an import) would be refused for its length.
+        entry.note = note or ''
+        entry.save(update_fields=['note'])
+        return entry
     _validate_duration_and_day(minutes, day)
-    if timezone.localdate(entry.started_at) != day:
+    if not same_day:
         entry.started_at = _start_of_day(day)
     entry.ended_at = entry.started_at + timedelta(minutes=minutes)
     entry.note = note or ''
