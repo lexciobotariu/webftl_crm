@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.1] - 2026-10-02
+
+### Documentation
+- `docs/roadmap.md` records the tasks roadmap: the four points (unified view, speed, depth, time tracking), the pull requests and versions that delivered each, the decisions that still hold, and what was left out or declined. The README links it next to the changelog and the UI patterns
+
 ## [0.19.0] - 2026-10-02
 
 ### Changes

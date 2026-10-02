@@ -147,6 +147,12 @@ dependency on the CDN, and a slower first paint than a compiled stylesheet. It i
 a deliberate tradeoff to keep the project buildless; replacing it with a compiled
 Tailwind build is the first thing to do if you deploy this somewhere that matters.
 
+## Documentation
+
+- [`CHANGELOG.md`](CHANGELOG.md) — what changed in each version (the in-app changelog page reads it)
+- [`docs/roadmap.md`](docs/roadmap.md) — the tasks roadmap: what was planned, what shipped, and the decisions that still bind future work
+- [`docs/ui-patterns.md`](docs/ui-patterns.md) — how the UI is built and the conventions a new screen should follow
+
 ## GitHub integration
 
 The GitHub sync (repo issues ↔ tasks, plus the webhook) is **experimental**. It
