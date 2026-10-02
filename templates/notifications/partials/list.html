@@ -1,20 +1,32 @@
-<div id="inbox-list" class="space-y-6">
-    <section aria-labelledby="inbox-unread">
-        <h2 id="inbox-unread" class="mb-2 text-[11px] uppercase tracking-[0.18em] text-zinc-500">Unread</h2>
-        {% if unread %}
-        <ul class="border border-border-subtle rounded-card overflow-hidden divide-y divide-border-subtle">
-            {% for note in unread %}{% include "notifications/partials/item.html" %}{% endfor %}
-        </ul>
-        {% else %}
-        <p class="text-sm text-zinc-500 py-6 text-center border border-dashed border-border-subtle rounded-card">You are all caught up.</p>
-        {% endif %}
+{% comment %}The notification column below the tabs: day separators, the rows and "Show more". Refreshes and "Mark all read" swap it whole; static/js/inbox.js puts the selection back afterwards. With oob_chip the response also updates the Unread count.{% endcomment %}
+<div id="inbox-list" role="listbox" aria-label="Notifications" tabindex="0" data-total="{{ total }}"
+     data-limit="{{ limit }}" data-refresh-url="{{ refresh_url }}"
+     class="flex-1 min-h-0 overflow-y-auto focus:outline-none">
+    {% for group in groups %}
+    <section data-day aria-label="{{ group.label }}">
+        <h2 class="sticky top-0 z-10 bg-panel/95 backdrop-blur px-3 py-1 border-b border-border-subtle text-[11px] uppercase tracking-[0.18em] text-zinc-500">{{ group.label }}</h2>
+        {% for note in group.rows %}{% include "notifications/partials/item.html" %}{% endfor %}
     </section>
-    {% if earlier %}
-    <section aria-labelledby="inbox-earlier">
-        <h2 id="inbox-earlier" class="mb-2 text-[11px] uppercase tracking-[0.18em] text-zinc-500">Earlier</h2>
-        <ul class="border border-border-subtle rounded-card overflow-hidden divide-y divide-border-subtle">
-            {% for note in earlier %}{% include "notifications/partials/item.html" %}{% endfor %}
-        </ul>
-    </section>
+    {% empty %}
+    <div class="flex flex-col items-center justify-center py-16 px-6 text-center text-zinc-500">
+        <i data-lucide="{% if show == 'mentions' %}at-sign{% elif show == 'unread' %}check-check{% else %}inbox{% endif %}" class="w-10 h-10 mb-3 opacity-30"></i>
+        <p class="text-sm">{% if show == 'unread' %}No unread notifications{% elif show == 'mentions' %}No mentions yet{% else %}You are all caught up{% endif %}</p>
+    </div>
+    {% endfor %}
+    {% comment %}Inside the list, so it always asks for as many rows as are shown: a change to the open task (status, title) refreshes the list and leaves the pane alone.{% endcomment %}
+    <div hidden hx-get="{{ refresh_url }}" hx-trigger="taskChanged from:body, taskStatusChanged from:body"
+         hx-vals='js:{n: document.getElementById("inbox").dataset.selected || "", list: 1}'
+         hx-target="#inbox-list" hx-select="#inbox-list" hx-swap="outerHTML"></div>
+    {% if more_url %}
+    <div class="flex items-center justify-center py-4">
+        <button type="button" id="inbox-more"
+                hx-get="{{ more_url }}" hx-target="#inbox-list" hx-select="#inbox-list" hx-swap="outerHTML"
+                hx-vals='js:{n: document.getElementById("inbox").dataset.selected || "", list: 1}'
+                class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
+            Show more
+            <span class="text-zinc-500 tabular-nums">{{ total }} in total</span>
+        </button>
+    </div>
     {% endif %}
 </div>
+{% if oob_chip %}{% include "notifications/partials/unread_chip.html" with oob=True %}{% endif %}

@@ -1,0 +1,2 @@
+{% comment %}The count on the Unread tab. With oob it is an out-of-band swap that any response may carry.{% endcomment %}
+<span id="inbox-unread-count"{% if oob %} hx-swap-oob="true"{% endif %} class="bg-hover-strong text-[10px] leading-none px-1.5 py-0.5 rounded tabular-nums">{{ unread_total }}</span>

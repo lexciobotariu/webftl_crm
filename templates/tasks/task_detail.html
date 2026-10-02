@@ -2,10 +2,12 @@
     <!-- Header -->
     <div class="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-border-subtle">
         <div class="flex items-center gap-3">
+            {% if not embedded %}
             <button onclick="closeSlideOver()"
                     class="text-zinc-500 hover:text-zinc-300 transition-colors">
                 <i data-lucide="arrow-left" class="w-4 h-4"></i>
             </button>
+            {% endif %}
             <span class="text-xs text-zinc-500 bg-elevated px-2 py-0.5 rounded border border-border-subtle font-mono">
                 {{ task.identifier }}
             </span>
@@ -26,10 +28,12 @@
                title="Open full page">
                 <i data-lucide="maximize-2" class="w-4 h-4"></i>
             </a>
+            {% if not embedded %}
             <button onclick="closeSlideOver()"
                     class="text-zinc-500 hover:text-zinc-300 transition-colors p-1.5 hover:bg-elevated rounded-control">
                 <i data-lucide="x" class="w-4 h-4"></i>
             </button>
+            {% endif %}
         </div>
     </div>
 
@@ -52,7 +56,7 @@
                     Sub-tasks <span id="subtask-counter-{{ task.pk }}">{% if task.subtask_progress %}({{ task.subtask_progress }}){% endif %}</span>
                 </h3>
             </div>
-            <div id="subtask-list" class="space-y-1 mb-2">
+            <div id="subtask-list-{{ task.pk }}" class="space-y-1 mb-2">
                 {% for subtask in task.subtasks.all %}
                 {% include "tasks/partials/subtask_item.html" %}
                 {% empty %}
@@ -68,7 +72,7 @@
                     Attachments
                 </h3>
             </div>
-            <div id="attachment-list" class="space-y-1 mb-2">
+            <div id="attachment-list-{{ task.pk }}" class="space-y-1 mb-2">
                 {% for attachment in task.attachments.all %}
                 {% include "tasks/partials/attachment_item.html" %}
                 {% empty %}
@@ -79,8 +83,8 @@
 
         <!-- Action Buttons -->
         <div class="flex flex-wrap items-center gap-2">
-            <button x-data="{ showForm: false }"
-                    @click="showForm = !showForm; if(showForm) $nextTick(() => $refs.subtaskInput.focus())"
+            <button type="button"
+                    onclick="const form = document.getElementById('subtask-form-{{ task.pk }}'); form.classList.toggle('hidden'); if (!form.classList.contains('hidden')) form.querySelector('input[name=title]').focus();"
                     class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-zinc-400 bg-elevated border border-border-subtle rounded-full hover:text-zinc-200 hover:border-zinc-600 transition-colors">
                 <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                 Add sub-task
@@ -91,7 +95,7 @@
                 <input type="file" class="hidden"
                        hx-post="{% url 'attachment_upload' task.pk %}"
                        hx-trigger="change"
-                       hx-target="#attachment-list"
+                       hx-target="#attachment-list-{{ task.pk }}"
                        hx-swap="beforeend"
                        hx-encoding="multipart/form-data"
                        name="file">
@@ -99,7 +103,7 @@
         </div>
 
         <!-- Inline subtask form -->
-        <form hx-post="{% url 'subtask_create' task.pk %}" hx-target="#subtask-list" hx-swap="beforeend"
+        <form hx-post="{% url 'subtask_create' task.pk %}" hx-target="#subtask-list-{{ task.pk }}" hx-swap="beforeend"
               hx-on::after-request="if(event.detail.successful) { this.reset(); this.classList.add('hidden'); }"
               class="hidden flex items-center gap-2 bg-elevated border border-border-subtle rounded-card px-3 py-2"
               id="subtask-form-{{ task.pk }}">
@@ -128,8 +132,8 @@
         <div class="border-t border-border-subtle pt-4">
             <button hx-post="{% url 'task_delete' task.pk %}"
                     hx-confirm="Delete this task?"
-                    hx-target="#task-{{ task.pk }}"
-                    hx-swap="delete"
+                    {% if embedded %}hx-swap="none"{% else %}hx-target="#task-{{ task.pk }}"
+                    hx-swap="delete"{% endif %}
                     class="text-error text-sm hover:text-error transition-colors">
                 Delete task
             </button>
@@ -138,18 +142,5 @@
     </div>
 </div>
 <script>
-openSlideOver();
-// Wire up the Add sub-task button to show the form
-document.querySelectorAll('[data-lucide="plus"]').forEach(el => {
-    const btn = el.closest('button');
-    if (btn && btn.textContent.includes('Add sub-task')) {
-        btn.addEventListener('click', () => {
-            const form = document.getElementById('subtask-form-{{ task.pk }}');
-            form.classList.toggle('hidden');
-            if (!form.classList.contains('hidden')) {
-                form.querySelector('input[name="title"]').focus();
-            }
-        });
-    }
-});
+{% if not embedded %}openSlideOver();{% endif %}
 </script>

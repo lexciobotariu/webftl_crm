@@ -1,0 +1,45 @@
+{% load notification_tags %}
+{% comment %}The right pane: what happened, then the task itself (the drawer's content, embedded). data-activity names the comment that raised it, which static/js/inbox.js scrolls to and highlights. A pane loaded by GET (a link or a reload) marks itself read with the hidden POST below.{% endcomment %}
+<div class="flex flex-col h-full min-h-0" data-pane-for="{{ note.pk }}"{% if note.activity_id and note.kind != 'assigned' %} data-activity="{{ note.activity_id }}"{% endif %}>
+    <div class="flex-shrink-0 flex items-center gap-2 min-h-[45px] px-3 py-2 border-b border-border-subtle bg-panel/80">
+        <button type="button" data-inbox-action="close" aria-label="Back to the list" title="Back (Esc)"
+                class="lg:hidden inline-flex items-center justify-center w-7 h-7 rounded-control text-zinc-500 hover:text-zinc-200 hover:bg-hover transition-colors">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        </button>
+        {% include "components/avatar.html" with user=note.actor size=20 %}
+        <p class="min-w-0 truncate text-sm text-zinc-400">
+            <span class="font-medium text-zinc-100">{{ note.actor.name|default:"Someone" }}</span>
+            {% if note.kind == 'assigned' %}assigned you{% elif note.kind == 'mentioned' %}mentioned you on{% else %}commented on{% endif %}
+            <span class="font-mono text-xs text-zinc-300">{{ note.task.identifier }}</span>
+            <span class="text-zinc-500" title="{{ note.created_at }}">· {{ note.created_at|short_age }}</span>
+        </p>
+        <div class="ml-auto flex items-center gap-0.5 shrink-0">
+            <span data-inbox-position class="hidden sm:inline mr-1 text-xs text-zinc-500 tabular-nums"></span>
+            <button type="button" data-inbox-action="prev" aria-label="Previous (K)" title="Previous (K)"
+                    class="inline-flex items-center justify-center w-7 h-7 rounded-control text-zinc-500 hover:text-zinc-200 hover:bg-hover transition-colors">
+                <i data-lucide="chevron-up" class="w-4 h-4"></i>
+            </button>
+            <button type="button" data-inbox-action="next" aria-label="Next (J)" title="Next (J)"
+                    class="inline-flex items-center justify-center w-7 h-7 rounded-control text-zinc-500 hover:text-zinc-200 hover:bg-hover transition-colors">
+                <i data-lucide="chevron-down" class="w-4 h-4"></i>
+            </button>
+            <span class="mx-1 h-4 w-px bg-border-subtle" aria-hidden="true"></span>
+            <button type="button" data-inbox-action="toggle" aria-label="Mark read or unread (E)" title="Mark read or unread (E)"
+                    class="inline-flex items-center justify-center w-7 h-7 rounded-control text-zinc-500 hover:text-zinc-200 hover:bg-hover transition-colors">
+                <i data-lucide="circle-dot" class="w-4 h-4"></i>
+            </button>
+            <button type="button" data-inbox-action="delete" aria-label="Delete (Backspace)" title="Delete (Backspace)"
+                    class="inline-flex items-center justify-center w-7 h-7 rounded-control text-zinc-500 hover:text-error hover:bg-hover transition-colors">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </div>
+    <div class="flex-1 min-h-0">
+        {% if task_html %}{{ task_html }}{% else %}
+        <p class="p-6 text-sm text-zinc-500">This task is no longer available.</p>
+        {% endif %}
+    </div>
+    {% if not note.read_at %}
+    <div hidden hx-post="{% url 'notification_read' note.pk %}?show={{ show }}" hx-trigger="load" hx-swap="none"></div>
+    {% endif %}
+</div>

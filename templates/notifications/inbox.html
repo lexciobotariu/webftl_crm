@@ -3,22 +3,69 @@
 {% block title %}Inbox - WebFTL CRM{% endblock %}
 
 {% block full_content %}
-<div class="flex-1 overflow-auto p-4">
-<div class="max-w-3xl mx-auto py-8 px-4">
-    <div class="mb-6 flex items-center justify-between gap-3">
-        <div>
-            <h1 class="text-xl font-semibold text-zinc-100">Inbox</h1>
-            <p class="text-sm text-zinc-500">Assignments, mentions and comments on tasks you follow.</p>
+{% comment %}The Inbox reads like an email client: notifications in a column on the left, the one you pick open on the right. static/js/inbox.js keeps the selection, the keyboard and the address in step. data-selected on the root shows the pane on narrow screens, where it covers the list.{% endcomment %}
+<div id="inbox" hx-history="false" class="group flex h-full overflow-hidden"{% if selected_pk %} data-selected="{{ selected_pk }}"{% endif %}
+     data-show="{{ show }}">
+    <section aria-label="Notifications" class="w-full lg:w-[380px] shrink-0 flex flex-col min-h-0 bg-panel border-r border-border-subtle">
+        <div class="flex-shrink-0 flex items-center justify-between gap-2 min-h-[45px] px-3 py-2 border-b border-border-subtle">
+            <div class="flex items-center gap-2 min-w-0">
+                <i data-lucide="inbox" class="w-4 h-4 text-zinc-500"></i>
+                <h1 class="text-sm font-medium text-zinc-100">Inbox</h1>
+            </div>
+            <div class="flex items-center gap-1">
+                <button type="button" title="Mark all read" aria-label="Mark all read"
+                        hx-post="{% url 'notification_read_all' %}?show={{ show }}"
+                        hx-vals='js:{limit: document.getElementById("inbox-list").dataset.limit, n: document.getElementById("inbox").dataset.selected || ""}'
+                        hx-target="#inbox-list" hx-select="#inbox-list" hx-swap="outerHTML"
+                        class="inline-flex items-center justify-center w-7 h-7 rounded-control text-zinc-500 hover:text-zinc-200 hover:bg-hover transition-colors">
+                    <i data-lucide="check-check" class="w-4 h-4"></i>
+                </button>
+                <button type="button" data-inbox-action="help" title="Keyboard shortcuts" aria-label="Keyboard shortcuts"
+                        class="inline-flex items-center justify-center w-7 h-7 rounded-control text-xs text-zinc-500 hover:text-zinc-200 hover:bg-hover transition-colors">?</button>
+            </div>
         </div>
-        <button type="button"
-                hx-post="{% url 'notification_read_all' %}"
-                hx-target="#inbox-list" hx-swap="outerHTML"
-                class="flex items-center gap-1.5 px-3 py-1.5 rounded-control text-xs text-zinc-300 border border-border-subtle hover:bg-hover transition-colors">
-            <i data-lucide="check-check" class="w-3.5 h-3.5"></i>
-            Mark all read
-        </button>
-    </div>
-    {% include "notifications/partials/list.html" %}
+        <nav aria-label="Filter" class="flex-shrink-0 px-3 py-2 border-b border-border-subtle">
+            <div class="inline-flex items-center bg-elevated border border-border-subtle rounded-control p-0.5 text-xs">
+                {% for value, label in tabs %}
+                <a href="?show={{ value }}"{% if show == value %} aria-current="page"{% endif %}
+                   class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] transition-colors {% if show == value %}bg-hover-strong text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200{% endif %}">
+                    {{ label }}
+                    {% if value == 'unread' %}{% include "notifications/partials/unread_chip.html" %}{% endif %}
+                </a>
+                {% endfor %}
+            </div>
+        </nav>
+        {% include "notifications/partials/list.html" %}
+    </section>
+
+    <section id="inbox-pane" aria-label="Notification"
+             class="hidden group-data-[selected]:flex lg:flex fixed inset-0 z-40 lg:static lg:z-auto flex-1 min-w-0 min-h-0 flex-col bg-panel">
+        {% if note %}
+        {% include "notifications/partials/pane.html" %}
+        {% else %}
+        {% include "notifications/partials/pane_empty.html" %}
+        {% endif %}
+    </section>
+
 </div>
+
+{# The source of every "open" request; hx-sync aborts the previous one still in flight. #}
+<div id="inbox-opener" hidden hx-sync="this:replace"></div>
+<template id="inbox-pane-empty">{% include "notifications/partials/pane_empty.html" %}</template>
+
+<div id="task-shortcuts" hidden class="fixed inset-0 z-[70] bg-black/50">
+    <div role="dialog" aria-modal="true" aria-labelledby="inbox-shortcuts-title" tabindex="-1"
+         class="mx-auto mt-24 w-[calc(100%-2rem)] max-w-sm focus:outline-none bg-panel border border-border-subtle rounded-card shadow-lg p-4">
+        <div class="flex items-center justify-between mb-3">
+            <h2 id="inbox-shortcuts-title" class="text-sm font-medium text-zinc-100">Keyboard shortcuts</h2>
+            <button type="button" data-shortcuts-close aria-label="Close"
+                    class="p-1 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded transition-colors">
+                {% include "components/icons/tabler-x.svg" %}
+            </button>
+        </div>
+        <dl class="space-y-1.5 text-sm">
+            {% include "notifications/partials/_shortcuts.html" %}
+        </dl>
+    </div>
 </div>
 {% endblock %}

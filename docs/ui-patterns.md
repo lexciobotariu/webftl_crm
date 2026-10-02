@@ -508,6 +508,46 @@ with "Create more", Cancel and Create.
   priority or assignee. The group buttons show only with `can_create_task and project`, so not
   on My Tasks.
 
+## Inbox (split view)
+
+The Inbox is a stream of events, not a work list, so it deliberately does not
+look like My Tasks. It reads like a mail client (`templates/notifications/inbox.html`):
+
+- **Left column** (`w-[380px]`, full width below `lg`): header, an All / Unread /
+  Mentions segmented control, and `#inbox-list` (`role="listbox"`). Rows
+  (`partials/item.html`) are real links (`?show=…&n=<pk>`) on three lines: who and
+  when, the task (status, ID, title), and what happened. Sticky day separators
+  (Today / Yesterday / This week / Older) do not fold.
+- **Right pane** `#inbox-pane`: a context bar (who did what, position, previous /
+  next, read toggle, delete) above the task drawer's content rendered with
+  `render_task_drawer(..., embedded=True)`, which leaves out the back and close
+  buttons and does not call `openSlideOver()`. Below `lg` the pane covers the
+  list while something is selected (`data-selected` on `#inbox`).
+- **Opening** posts to `notification_open`: the pane, the row and the Unread count
+  come back in one response, the notification is marked read and the address is
+  replaced (`HX-Replace-Url`), so moving does not fill the history. A GET with
+  `?n=` shows the pane without changing anything; the pane then posts its own
+  read.
+- **Keyboard** (`static/js/inbox.js`, not `task-view.js`): J / K open the next or
+  previous one, Enter opens the selected one, E toggles read, Backspace / Delete
+  deletes and opens the next, ? lists the keys, Esc closes the pane (after the
+  palette, dialogs and menus). The comment that raised a notification is scrolled
+  to and briefly highlighted (`.inbox-flash`).
+- **The open notification stays in the list.** Every request that redraws the list
+  (the refresh after a task change, "Show more", "Mark all read") names the open
+  one (`n=<pk>`), and the Unread tab keeps it although opening marked it read;
+  otherwise the pane's buttons would have no row to act on. Such a request also
+  sends `list=1`, so the view does not render the pane (a whole task) for it.
+- **Replacing the pane asks first when something is being written in it**
+  (`mayLeavePane()` in `inbox.js`): J / K, a click on another row, Esc and delete
+  all go through it, whatever has the focus.
+- **Requests that change one notification** (read, unread, delete) are sent with
+  `#inbox-opener` as target, not the pane: htmx fires `afterSwap` on the target even
+  for a swap of "none", and that would scroll the pane back to the comment.
+- **A task embedded in a page shares no ids with the drawer.** The sub-task and
+  attachment lists are named per task (`subtask-list-<pk>`), so a drawer opened
+  over the Inbox for another task appends to its own lists.
+
 ## Command palette (Ctrl/Cmd+K)
 
 Search and jump, no actions. `Cmd+K` on a Mac, `Ctrl+K` elsewhere (or the Search button at the top
