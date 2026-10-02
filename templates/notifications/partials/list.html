@@ -1,5 +1,6 @@
 {% comment %}The notification column below the tabs: day separators, the rows and "Show more". Refreshes and "Mark all read" swap it whole; static/js/inbox.js puts the selection back afterwards. With oob_chip the response also updates the Unread count.{% endcomment %}
 <div id="inbox-list" role="listbox" aria-label="Notifications" tabindex="0" data-total="{{ total }}"
+     data-limit="{{ limit }}" data-refresh-url="{{ refresh_url }}"
      class="flex-1 min-h-0 overflow-y-auto focus:outline-none">
     {% for group in groups %}
     <section data-day aria-label="{{ group.label }}">
@@ -12,6 +13,9 @@
         <p class="text-sm">{% if show == 'unread' %}No unread notifications{% elif show == 'mentions' %}No mentions yet{% else %}You are all caught up{% endif %}</p>
     </div>
     {% endfor %}
+    {% comment %}Inside the list, so it always asks for as many rows as are shown: a change to the open task (status, title) refreshes the list and leaves the pane alone.{% endcomment %}
+    <div hidden hx-get="{{ refresh_url }}" hx-trigger="taskChanged from:body, taskStatusChanged from:body"
+         hx-target="#inbox-list" hx-select="#inbox-list" hx-swap="outerHTML"></div>
     {% if more_url %}
     <div class="flex items-center justify-center py-4">
         <button type="button" id="inbox-more"

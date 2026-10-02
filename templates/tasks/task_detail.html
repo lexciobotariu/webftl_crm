@@ -132,8 +132,8 @@
         <div class="border-t border-border-subtle pt-4">
             <button hx-post="{% url 'task_delete' task.pk %}"
                     hx-confirm="Delete this task?"
-                    hx-target="#task-{{ task.pk }}"
-                    hx-swap="delete"
+                    {% if embedded %}hx-swap="none"{% else %}hx-target="#task-{{ task.pk }}"
+                    hx-swap="delete"{% endif %}
                     class="text-error text-sm hover:text-error transition-colors">
                 Delete task
             </button>

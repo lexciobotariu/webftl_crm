@@ -1,5 +1,5 @@
 {% load notification_tags %}
-{% comment %}One notification in the left column, three lines like a message in a mail client. It is a real link (Ctrl/Cmd-click or a reload opens it through ?n=); a plain click posts to notification_open, which fills the pane and marks it read. Selection is kept by static/js/inbox.js, which sets aria-selected; with oob the row replaces itself from another response.{% endcomment %}
+{% comment %}One notification in the left column, three lines like a message in a mail client. It is a real link, so Ctrl/Cmd-click opens it in a new tab through ?n=. A plain click is taken by static/js/inbox.js, which posts to data-open-url (fills the pane, marks it read) and keeps the selection in aria-selected. No htmx on the row: htmx cancels a click on a link before its trigger filter runs. The list is the tab stop (role=listbox, aria-activedescendant), so rows are not. With oob the row replaces itself from another response.{% endcomment %}
 {% with who=note.actor.name|default:"Someone" %}
 <a id="notification-{{ note.pk }}" role="option" data-notification{% if oob %} hx-swap-oob="true"{% endif %}
    href="?show={{ show|default:'all' }}&amp;n={{ note.pk }}"
@@ -9,9 +9,8 @@
    data-read-url="{% url 'notification_read' note.pk %}"
    data-unread-url="{% url 'notification_unread' note.pk %}"
    data-delete-url="{% url 'notification_delete' note.pk %}"
-   hx-post="{% url 'notification_open' note.pk %}?show={{ show|default:'all' }}"
-   hx-trigger="click[!ctrlKey && !metaKey && !shiftKey]"
-   hx-target="#inbox-pane" hx-swap="innerHTML"
+   data-open-url="{% url 'notification_open' note.pk %}?show={{ show|default:'all' }}"
+   tabindex="-1"
    class="relative block pl-4 pr-3 py-2.5 border-b border-border-subtle hover:bg-hover aria-selected:bg-hover-strong focus:outline-none focus-visible:bg-hover-strong transition-colors before:absolute before:left-0 before:inset-y-0 before:w-0.5 before:bg-transparent aria-selected:before:bg-accent">
     <span class="flex items-center gap-2">
         <span class="shrink-0 w-1.5 h-1.5 rounded-full {% if note.read_at %}bg-transparent{% else %}bg-accent{% endif %}" aria-hidden="true"></span>

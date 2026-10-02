@@ -40,6 +40,6 @@
         {% endif %}
     </div>
     {% if not note.read_at %}
-    <div hidden hx-post="{% url 'notification_read' note.pk %}" hx-trigger="load" hx-swap="none"></div>
+    <div hidden hx-post="{% url 'notification_read' note.pk %}?show={{ show }}" hx-trigger="load" hx-swap="none"></div>
     {% endif %}
 </div>

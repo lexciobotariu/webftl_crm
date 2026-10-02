@@ -49,13 +49,15 @@
         label.textContent = index < 0 ? '' : `${index + 1} / ${list().dataset.total}`;
     }
 
-    function markSelected() {
+    // ``scroll`` only when the selection itself moved: a refresh after an edit in the
+    // pane must not pull the list away from where the person is scrolling.
+    function markSelected(scroll) {
         if (!list()) return;
         rows().forEach((row) => row.setAttribute('aria-selected', row.id === selectedId ? 'true' : 'false'));
         const row = selectedRow();
         if (row) {
             list().setAttribute('aria-activedescendant', row.id);
-            row.scrollIntoView({ block: 'nearest' });
+            if (scroll) row.scrollIntoView({ block: 'nearest' });
         } else {
             list().removeAttribute('aria-activedescendant');
         }
@@ -65,13 +67,17 @@
     function select(row) {
         selectedId = row.id;
         root().dataset.selected = row.id.replace('notification-', '');
-        markSelected();
+        markSelected(true);
     }
 
+    // Requests go out from #inbox-opener, whose hx-sync="this:replace" aborts the one
+    // still in flight: pressing J twice quickly must end on the second notification.
     function open(row) {
         if (!row) return;
         select(row);
-        htmx.ajax('POST', row.getAttribute('hx-post'), { target: '#inbox-pane', swap: 'innerHTML' });
+        // An aborted request (superseded by the next J) rejects; nothing to report.
+        htmx.ajax('POST', row.dataset.openUrl, { source: '#inbox-opener', target: '#inbox-pane', swap: 'innerHTML' })
+            .catch(() => {});
         list().focus({ preventScroll: true });
     }
 
@@ -81,7 +87,7 @@
         const empty = document.getElementById('inbox-pane-empty');
         if (empty) pane().replaceChildren(empty.content.cloneNode(true));
         if (window.lucide) lucide.createIcons();
-        markSelected();
+        markSelected(false);
         history.replaceState(history.state, '', `?show=${encodeURIComponent(show())}`);
         list().focus({ preventScroll: true });
     }
@@ -93,7 +99,7 @@
         const next = all[index + delta];
         if (next) {
             open(next);
-        } else if (delta > 0 && document.getElementById('inbox-more')) {
+        } else if (delta > 0 && document.getElementById('inbox-more') && !openAfterMore) {
             // At the end of what is loaded: load the next page, then keep going.
             openAfterMore = true;
             document.getElementById('inbox-more').click();
@@ -132,6 +138,8 @@
             removeEmptyDays();
             if (next && document.getElementById(next.id)) open(document.getElementById(next.id));
             else clearPane();
+            // The last one gone: let the server draw the empty state and the totals.
+            if (!rows().length) htmx.ajax('GET', list().dataset.refreshUrl, { target: '#inbox-list', select: '#inbox-list', swap: 'outerHTML' });
         });
     }
 
@@ -177,7 +185,8 @@
         else if (key === 'k' || (key === 'ArrowUp' && inList)) move(-1);
         else if (key === 'Enter' && inList && event.target.closest('[data-notification]') === null) open(selectedRow() || rows()[0]);
         else if (key === 'e' || key === 'E') toggleRead();
-        else if ((key === 'Backspace' || key === 'Delete') && selectedId) deleteSelected();
+        // Only from the list: Backspace on a button in the pane must not delete anything.
+        else if ((key === 'Backspace' || key === 'Delete') && selectedId && inList) deleteSelected();
         else if (key === '?') showHelp();
         else handled = false;
         if (handled) event.preventDefault();
@@ -197,22 +206,34 @@
             return;
         }
         const row = event.target.closest('[data-notification]');
-        if (row && !event.ctrlKey && !event.metaKey && !event.shiftKey) select(row);
+        // A modified click keeps the link's own behaviour (a new tab through ?n=).
+        if (row && !event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) {
+            event.preventDefault();
+            open(row);
+        }
         if (help() && (event.target === help() || event.target.closest('[data-shortcuts-close]'))) hideHelp();
+    });
+
+    // A slower answer for a notification that is no longer selected is not shown.
+    document.addEventListener('htmx:beforeSwap', (event) => {
+        if (!root() || event.detail.target !== pane()) return;
+        const match = /data-pane-for="(\d+)"/.exec(event.detail.serverResponse || '');
+        if (match && `notification-${match[1]}` !== selectedId) event.detail.shouldSwap = false;
     });
 
     document.addEventListener('htmx:afterSwap', (event) => {
         if (!root()) return;
-        if (event.detail.target === pane()) {
+        // The pane itself, not the out-of-band row and count that ride along.
+        if (event.target === pane()) {
             highlightActivity();
             updatePosition();
         }
     });
 
-    document.addEventListener('htmx:afterSettle', () => {
+    document.addEventListener('htmx:afterSettle', (event) => {
         if (!root()) return;
-        markSelected();
-        if (openAfterMore) {
+        markSelected(false);
+        if (openAfterMore && event.target.id === 'inbox-list') {
             openAfterMore = false;
             move(1);
         }
@@ -232,12 +253,13 @@
         if (!root()) return;
         if (root().dataset.selected) {
             selectedId = `notification-${root().dataset.selected}`;
-            markSelected();
+            markSelected(true);
             highlightActivity();
         }
         window.registerEscLayer('help', hideHelp);
-        window.registerEscLayer('selection', () => {
-            if (!selectedId) return false;
+        // Not while typing: Esc in a comment being written leaves the draft alone.
+        window.registerEscLayer('selection', (event) => {
+            if (!selectedId || (event && typing(event.target))) return false;
             clearPane();
             return true;
         });

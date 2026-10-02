@@ -299,8 +299,8 @@ class TestInbox:
         html = client.get(reverse('inbox')).content.decode()
 
         url = reverse('notification_open', args=[note.pk])
-        assert f'hx-post="{url}?show=all"' in html
-        assert 'hx-target="#inbox-pane"' in html
+        assert f'data-open-url="{url}?show=all"' in html
+        assert 'id="inbox-pane"' in html
         # Ctrl/Cmd-click and a reload open it through the address.
         assert f'href="?show=all&amp;n={note.pk}"' in html
         assert task.identifier in html
@@ -851,9 +851,9 @@ class TestPane:
         note.refresh_from_db()
         assert note.read_at is None
         assert f'data-pane-for="{note.pk}"' in html and 'Select a notification</p>' not in html.split('id="inbox-pane"')[1].split('</section>')[0]
-        assert f'data-selected="{note.pk}"' in html and 'aria-selected="true"' in html
+        assert f'data-selected="{note.pk}"' in html
         # The pane marks it read itself, with a POST, once it has loaded.
-        assert f'hx-post="{reverse("notification_read", args=[note.pk])}" hx-trigger="load"' in html
+        assert f'hx-post="{reverse("notification_read", args=[note.pk])}?show=all" hx-trigger="load"' in html
 
     def test_a_read_notification_in_the_link_does_not_post_again(self, client):
         project = ProjectFactory()
@@ -863,6 +863,7 @@ class TestPane:
 
         html = client.get(reverse('inbox'), {'n': note.pk}).content.decode()
 
+        assert f'data-pane-for="{note.pk}"' in html
         assert 'hx-trigger="load"' not in html
 
     @pytest.mark.parametrize('raw', ['999999', 'abc', ''])
@@ -939,3 +940,99 @@ class TestPane:
         assert 'id="inbox"' in html and 'id="inbox-list"' in html and 'id="inbox-pane"' in html
         assert 'id="task-view"' not in html and 'data-task-row' not in html
         assert 'id="task-shortcuts"' in html and 'Delete and open the next' in html
+
+
+@pytest.mark.django_db
+class TestSplitViewReviewFixes:
+    def test_delete_task_in_the_pane_does_not_need_a_task_row(self, client):
+        project = ProjectFactory()
+        admin = AdminUserFactory()
+        task = TaskFactory(project=project)
+        note = Notification.objects.create(recipient=admin, task=task, kind='assigned', actor=UserFactory())
+        client.force_login(admin)
+
+        pane = client.post(reverse('notification_open', args=[note.pk])).content.decode()
+        drawer = client.get(reverse('task_detail', args=[task.pk])).content.decode()
+
+        delete_url = re.escape(reverse('task_delete', args=[task.pk]))
+        delete = re.search(rf'<button hx-post="{delete_url}"[^>]*>', pane).group(0)
+        assert 'hx-swap="none"' in delete and 'hx-target' not in delete
+        assert f'hx-target="#task-{task.pk}"' in drawer
+
+    def test_a_row_is_a_plain_link_the_script_opens(self, client):
+        project = ProjectFactory()
+        me = _member(project)
+        note = _note(me, TaskFactory(project=project))
+        client.force_login(me)
+
+        html = client.get(reverse('inbox')).content.decode()
+        row = re.search(rf'<a id="notification-{note.pk}"[^>]*>', html, re.S).group(0)
+
+        # No htmx on the row: htmx would cancel a Ctrl/Cmd-click before its filter ran.
+        assert 'hx-post' not in row and 'hx-trigger' not in row
+        assert f'data-open-url="{reverse("notification_open", args=[note.pk])}?show=all"' in row
+        assert 'tabindex="-1"' in row
+
+    def test_a_non_ascii_digit_in_n_is_the_empty_pane(self, client):
+        client.force_login(_member())
+
+        response = client.get(reverse('inbox'), {'n': '²'})
+
+        assert response.status_code == 200
+        assert 'Select a notification' in response.content.decode()
+
+    def test_the_read_on_load_keeps_the_tab(self, client):
+        project = ProjectFactory()
+        me = _member(project)
+        note = _note(me, TaskFactory(project=project), kind='mentioned')
+        client.force_login(me)
+
+        html = client.get(reverse('inbox'), {'n': note.pk, 'show': 'mentions'}).content.decode()
+
+        assert f'hx-post="{reverse("notification_read", args=[note.pk])}?show=mentions" hx-trigger="load"' in html
+
+    def test_the_selected_row_is_marked_on_the_row(self, client):
+        project = ProjectFactory()
+        me = _member(project)
+        note = _note(me, TaskFactory(project=project))
+        other = _note(me, TaskFactory(project=project), kind='commented')
+        client.force_login(me)
+
+        html = client.get(reverse('inbox'), {'n': note.pk}).content.decode()
+
+        assert re.search(rf'<a id="notification-{note.pk}"[^>]*aria-selected="true"', html, re.S)
+        assert re.search(rf'<a id="notification-{other.pk}"[^>]*aria-selected="false"', html, re.S)
+
+    def test_the_list_carries_its_own_refresh_and_page_size(self, client):
+        project = ProjectFactory()
+        me = _member(project)
+        _note(me, TaskFactory(project=project))
+        client.force_login(me)
+
+        html = client.get(reverse('inbox'), {'limit': 100}).content.decode()
+        listing = html.split('id="inbox-list"')[1].split('id="inbox-pane"')[0]
+
+        assert 'data-limit="100"' in html
+        assert 'taskChanged from:body' in listing and 'limit=100' in listing
+
+    def test_mark_all_read_keeps_the_page_size_sent_with_it(self, client):
+        project = ProjectFactory()
+        me = _member(project)
+        task = TaskFactory(project=project)
+        for kind in ('assigned', 'mentioned', 'commented'):
+            for _ in range(20):
+                _note(me, task, kind=kind, read_at=timezone.now())
+        client.force_login(me)
+
+        html = client.post(reverse('notification_read_all') + '?show=all', {'limit': 100}).content.decode()
+
+        assert len(re.findall(r'\sdata-notification[\s>]', html)) == 60
+
+    def test_the_page_is_kept_out_of_the_history_cache_and_the_pane_is_not_live(self, client):
+        client.force_login(_member())
+
+        html = client.get(reverse('inbox')).content.decode()
+
+        assert re.search(r'id="inbox"[^>]*hx-history="false"', html)
+        pane = re.search(r'<section id="inbox-pane"[^>]*>', html).group(0)
+        assert 'aria-live' not in pane

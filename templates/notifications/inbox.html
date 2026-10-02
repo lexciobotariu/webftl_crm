@@ -4,7 +4,7 @@
 
 {% block full_content %}
 {% comment %}The Inbox reads like an email client: notifications in a column on the left, the one you pick open on the right. static/js/inbox.js keeps the selection, the keyboard and the address in step. data-selected on the root shows the pane on narrow screens, where it covers the list.{% endcomment %}
-<div id="inbox" class="group flex h-full overflow-hidden"{% if selected_pk %} data-selected="{{ selected_pk }}"{% endif %}
+<div id="inbox" hx-history="false" class="group flex h-full overflow-hidden"{% if selected_pk %} data-selected="{{ selected_pk }}"{% endif %}
      data-show="{{ show }}">
     <section aria-label="Notifications" class="w-full lg:w-[380px] shrink-0 flex flex-col min-h-0 bg-panel border-r border-border-subtle">
         <div class="flex-shrink-0 flex items-center justify-between gap-2 min-h-[45px] px-3 py-2 border-b border-border-subtle">
@@ -14,7 +14,8 @@
             </div>
             <div class="flex items-center gap-1">
                 <button type="button" title="Mark all read" aria-label="Mark all read"
-                        hx-post="{% url 'notification_read_all' %}?show={{ show }}&amp;limit={{ limit }}"
+                        hx-post="{% url 'notification_read_all' %}?show={{ show }}"
+                        hx-vals='js:{limit: document.getElementById("inbox-list").dataset.limit}'
                         hx-target="#inbox-list" hx-select="#inbox-list" hx-swap="outerHTML"
                         class="inline-flex items-center justify-center w-7 h-7 rounded-control text-zinc-500 hover:text-zinc-200 hover:bg-hover transition-colors">
                     <i data-lucide="check-check" class="w-4 h-4"></i>
@@ -37,7 +38,7 @@
         {% include "notifications/partials/list.html" %}
     </section>
 
-    <section id="inbox-pane" aria-label="Notification" aria-live="polite"
+    <section id="inbox-pane" aria-label="Notification"
              class="hidden group-data-[selected]:flex lg:flex fixed inset-0 z-40 lg:static lg:z-auto flex-1 min-w-0 min-h-0 flex-col bg-panel">
         {% if note %}
         {% include "notifications/partials/pane.html" %}
@@ -46,11 +47,10 @@
         {% endif %}
     </section>
 
-    {% comment %}Refreshes the list when the open task changes (a new status or title), keeping the pane as it is.{% endcomment %}
-    <div hidden hx-get="{{ refresh_url }}" hx-trigger="taskChanged from:body, taskStatusChanged from:body"
-         hx-target="#inbox-list" hx-select="#inbox-list" hx-swap="outerHTML"></div>
 </div>
 
+{# The source of every "open" request; hx-sync aborts the previous one still in flight. #}
+<div id="inbox-opener" hidden hx-sync="this:replace"></div>
 <template id="inbox-pane-empty">{% include "notifications/partials/pane_empty.html" %}</template>
 
 <div id="task-shortcuts" hidden class="fixed inset-0 z-[70] bg-black/50">

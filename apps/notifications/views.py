@@ -164,8 +164,8 @@ def _oob_only(request, note):
 def inbox(request):
     context = _list_context(request.user, request.GET.get('show'), _limit(request.GET.get('limit')))
     selected = None
-    raw = request.GET.get('n')
-    if raw and raw.isdigit():
+    raw = request.GET.get('n') or ''
+    if raw.isascii() and raw.isdigit():
         # A link or a reload names a notification: show it, but a GET changes
         # nothing; the pane marks it read with its own POST once it loads.
         selected = inbox_for(request.user).select_related('task__status').filter(pk=int(raw)).first()
@@ -247,5 +247,6 @@ def notification_delete(request, pk):
 def notification_read_all(request):
     """Every unread notification of the person, whatever the tab or page shows."""
     Notification.objects.filter(recipient=request.user, read_at__isnull=True).update(read_at=timezone.now())
-    context = _list_context(request.user, request.GET.get('show'), _limit(request.GET.get('limit')))
+    limit = _limit(request.POST.get('limit') or request.GET.get('limit'))
+    context = _list_context(request.user, request.GET.get('show'), limit)
     return _changed(render(request, 'notifications/partials/list.html', {**context, 'oob_chip': True}))
