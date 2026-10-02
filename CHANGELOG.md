@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A duration written with dozens of digits is refused with a message instead of a server error
 - The Work log no longer says "No time logged yet." next to an "Others" total, shows two people with the same name as two lines, and cannot show a phantom "Others <1m" while a timer runs
 - A failed request no longer closes the Log time popover and discards what was typed
+- On the full task page, the State, Assignee, Priority and Labels menus open inside the Properties sidebar instead of running past the edge of the window and being cut off
 
 ## [0.18.0] - 2026-10-01
 

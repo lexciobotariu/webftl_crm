@@ -191,3 +191,13 @@ html [data-task-row].task-selected {
 .activity-feed[data-filter="work"]:not(:has([data-kind="work"])):not(:has([data-kind="summary"])) [data-empty="work"] {
     display: block;
 }
+
+/* The Properties sidebar of the full task page is narrow and ends at the edge of the
+   window. The menus of its rows (state, assignee, priority, due date, labels) are
+   written to open from the left of the value, which fits the drawer but runs past the
+   sidebar here and gets cut off. Open them from the right edge of the row instead.
+   The ones that already span the row (left-0 right-0) are left as they are. */
+.task-props-sidebar .absolute.left-0:not(.right-0) {
+    left: auto;
+    right: 0;
+}
