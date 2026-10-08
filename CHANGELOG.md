@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.23.0] - 2026-10-08
+
+### Features
+- **Projects have a start date and a deadline.** Both can be set in the New Project drawer and in project settings; a deadline before the start date is refused. The overview shows them, and the project lists show "Due <date>" under an open project's name, in red once it is overdue
+- **Billing type per project: Hourly or Fixed price.** Hourly keeps the hourly rate. Fixed price takes the amount the client pays for the whole project, in the client's currency. Time on a fixed-price project is shown in hours only on the time page and in its CSV, without an amount. The overview shows how the project is billed
+
+### Migrations
+- `projects.0019` adds the start date, deadline, billing type (every existing project is Hourly) and fixed price
+
 ## [0.22.0] - 2026-10-08
 
 ### Features

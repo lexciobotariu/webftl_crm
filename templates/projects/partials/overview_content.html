@@ -36,6 +36,28 @@
                 <dd class="text-zinc-300">{% include 'projects/partials/project_status_badge.html' %}</dd>
             </div>
             <div>
+                <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Dates</dt>
+                <dd class="text-zinc-300">
+                    {% if project.start_date or project.deadline %}
+                    {% if project.start_date %}{{ project.start_date|date:"M d, Y" }}{% else %}<span class="text-zinc-600">No start date</span>{% endif %}
+                    <span class="text-zinc-600">to</span>
+                    {% if project.deadline %}<span class="{% if project.is_overdue %}text-error{% endif %}">{{ project.deadline|date:"M d, Y" }}</span>{% if project.is_overdue %} <span class="text-xs text-error">Overdue</span>{% endif %}{% else %}<span class="text-zinc-600">no deadline</span>{% endif %}
+                    {% else %}
+                    <span class="text-zinc-600">Not set</span>
+                    {% endif %}
+                </dd>
+            </div>
+            <div>
+                <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Billing</dt>
+                <dd class="text-zinc-300">
+                    {% if project.billing_type == 'fixed' %}
+                    Fixed price{% if project.fixed_price is not None %} · <span class="tabular-nums">{{ project.fixed_price }}</span> {{ project.client.currency.code }}{% endif %}
+                    {% else %}
+                    Hourly{% if project.hourly_rate is not None %} · <span class="tabular-nums">{{ project.hourly_rate }}</span> {{ project.client.currency.code }}/h{% else %} <span class="text-zinc-600">(no rate)</span>{% endif %}
+                    {% endif %}
+                </dd>
+            </div>
+            <div>
                 <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Created</dt>
                 <dd class="text-zinc-300">{{ project.created_at|date:"M d, Y" }}</dd>
             </div>

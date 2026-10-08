@@ -36,9 +36,10 @@ def _currency(project):
 def entry_amount(entry):
     """What a stopped, billable entry is worth, or ``None`` when it has no price."""
     project = entry.task.project
-    if not entry.task.billable or project.hourly_rate is None or entry.duration is None:
+    rate = project.billing_rate
+    if not entry.task.billable or rate is None or entry.duration is None:
         return None
-    return Decimal(_seconds(entry)) / Decimal(3600) * project.hourly_rate
+    return Decimal(_seconds(entry)) / Decimal(3600) * rate
 
 
 @dataclass
@@ -145,7 +146,7 @@ def write_entries_csv(out, entries):
             entry.user.name,
             _hours(_seconds(entry)) if entry.duration is not None else 'running',
             'yes' if task.billable else 'no',
-            project.hourly_rate if project.hourly_rate is not None else '',
+            project.billing_rate if project.billing_rate is not None else '',
             amount.quantize(CENT, rounding=ROUND_HALF_UP) if amount is not None else '',
             currency.code if (currency and amount is not None) else '',
             entry.note,

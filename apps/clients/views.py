@@ -219,6 +219,8 @@ def client_create_project(request, pk):
             'form_name': form.data.get('name', ''),
             'form_description': form.data.get('description', ''),
             'form_github_repo_url': form.data.get('github_repo_url', ''),
+            'form_start_date': form.data.get('start_date', ''),
+            'form_deadline': form.data.get('deadline', ''),
         })
 
     return render(request, 'projects/partials/project_create_drawer.html', {'client': client})

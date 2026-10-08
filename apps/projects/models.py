@@ -24,6 +24,13 @@ class Project(models.Model):
     # Open projects show on the projects page by default; closed ones behind a toggle.
     OPEN_STATUSES = (ACTIVE, ON_HOLD)
 
+    HOURLY = 'hourly'
+    FIXED = 'fixed'
+    BILLING_CHOICES = [
+        (HOURLY, 'Hourly'),
+        (FIXED, 'Fixed price'),
+    ]
+
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='projects')
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
@@ -48,6 +55,14 @@ class Project(models.Model):
     # What an hour of billable time is worth, in the client's currency. Blank: no
     # amounts on the time page, only hours.
     hourly_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    # Hourly: billable time is valued at ``hourly_rate``. Fixed price: the client pays
+    # ``fixed_price`` whatever the hours, so time is shown in hours only.
+    billing_type = models.CharField(
+        max_length=10, choices=BILLING_CHOICES, default=HOURLY, db_default=HOURLY
+    )
+    fixed_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    start_date = models.DateField(null=True, blank=True)
+    deadline = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -121,6 +136,16 @@ class Project(models.Model):
     @property
     def is_open(self):
         return self.status in self.OPEN_STATUSES
+
+    @property
+    def billing_rate(self):
+        """The rate billable time is valued at, or ``None`` (fixed price, or no rate)."""
+        return self.hourly_rate if self.billing_type == self.HOURLY else None
+
+    @property
+    def is_overdue(self):
+        """An open project past its deadline."""
+        return bool(self.deadline) and self.is_open and self.deadline < timezone.localdate()
 
     @property
     def task_count(self):
