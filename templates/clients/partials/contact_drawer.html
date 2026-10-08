@@ -1,0 +1,82 @@
+<div class="flex flex-col h-full">
+    <div class="flex-shrink-0 px-4 py-3 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <i data-lucide="user-round" class="w-4 h-4 text-zinc-500"></i>
+                <h2 class="text-sm font-medium text-zinc-100">{% if contact %}Edit contact{% else %}New contact{% endif %}</h2>
+                <span class="text-xs text-zinc-500 truncate">{{ client.name }}</span>
+            </div>
+            <button onclick="closeSlideOver()"
+                    class="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </div>
+
+    <form hx-post="{% if contact %}{% url 'client_contact_edit' client.pk contact.pk %}{% else %}{% url 'client_contact_create' client.pk %}{% endif %}"
+          hx-target="#slide-over"
+          hx-swap="innerHTML"
+          class="flex-1 overflow-y-auto p-4">
+        {% csrf_token %}
+        {% include "components/form_error_banner.html" %}
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Name</label>
+                <input type="text" name="name" value="{{ form.name.value|default_if_none:'' }}"
+                       class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none" required>
+                {% if form.name.errors %}
+                <p class="text-xs text-error mt-1">{{ form.name.errors.0 }}</p>
+                {% endif %}
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Role</label>
+                <input type="text" name="role" value="{{ form.role.value|default_if_none:'' }}"
+                       class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
+                {% if form.role.errors %}
+                <p class="text-xs text-error mt-1">{{ form.role.errors.0 }}</p>
+                {% endif %}
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Email</label>
+                <input type="email" name="email" value="{{ form.email.value|default_if_none:'' }}"
+                       class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
+                {% if form.email.errors %}
+                <p class="text-xs text-error mt-1">{{ form.email.errors.0 }}</p>
+                {% endif %}
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Phone</label>
+                <input type="text" name="phone" value="{{ form.phone.value|default_if_none:'' }}"
+                       class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
+                {% if form.phone.errors %}
+                <p class="text-xs text-error mt-1">{{ form.phone.errors.0 }}</p>
+                {% endif %}
+            </div>
+            <div class="pt-4 border-t border-border-subtle space-y-3">
+            <label class="flex items-start gap-2 text-sm text-zinc-300">
+                <input type="checkbox" name="is_primary" value="on" {% if form.is_primary.value %}checked{% endif %}
+                       class="mt-0.5 rounded border-border-subtle bg-elevated">
+                <span>Primary contact<span class="block text-xs text-zinc-500">The main person to talk to. Only one per client.</span></span>
+            </label>
+            <label class="flex items-start gap-2 text-sm text-zinc-300">
+                <input type="checkbox" name="is_billing" value="on" {% if form.is_billing.value %}checked{% endif %}
+                       class="mt-0.5 rounded border-border-subtle bg-elevated">
+                <span>Billing contact<span class="block text-xs text-zinc-500">Gets the invoices when the client has no billing email. Only one per client.</span></span>
+            </label>
+            </div>
+        </div>
+
+        <div class="flex gap-3 mt-6 pt-4 border-t border-border-subtle">
+            <button type="submit"
+                    class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">
+                {% if contact %}Save Changes{% else %}Add contact{% endif %}
+            </button>
+            <button type="button"
+                    onclick="closeSlideOver()"
+                    class="bg-elevated border border-border-subtle px-4 py-2 rounded-control text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
+                Cancel
+            </button>
+        </div>
+    </form>
+</div>

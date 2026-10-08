@@ -2,6 +2,7 @@ import json
 
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Count, ProtectedError
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
@@ -13,8 +14,8 @@ from apps.accounts.decorators import require_permission
 from apps.projects.models import visible_projects
 from apps.projects.services import with_task_counts
 
-from .forms import ClientDrawerForm, ClientForm
-from .models import Client, visible_clients
+from .forms import ClientContactForm, ClientDrawerForm, ClientForm
+from .models import Client, ClientContact, visible_clients
 
 CLIENTS_PER_PAGE = 20
 
@@ -325,3 +326,80 @@ def client_archive(request, pk):
         response['HX-Redirect'] = reverse('client_detail', args=[client.pk])
         return response
     return redirect('client_detail', pk=client.pk)
+
+
+def _editable_client_or_error(user, pk):
+    """The client for a contact change, or the response refusing it."""
+    client = _visible_client_or_404(user, pk)
+    if not user.has_app_permission('clients_edit'):
+        return client, HttpResponseForbidden("Permission required to edit clients")
+    return client, None
+
+
+def _contacts_changed():
+    response = HttpResponse('')
+    response['HX-Trigger'] = json.dumps({'closeSlideOver': True, 'profileChanged': True})
+    return response
+
+
+@transaction.atomic
+def save_contact(form, client):
+    """Save a contact; marking it primary or billing takes that mark from the others."""
+    contact = form.save(commit=False)
+    contact.client = client
+    others = client.contacts.exclude(pk=contact.pk)
+    if contact.is_primary:
+        others.filter(is_primary=True).update(is_primary=False)
+    if contact.is_billing:
+        others.filter(is_billing=True).update(is_billing=False)
+    contact.save()
+    return contact
+
+
+def _contact_drawer(request, client, form, contact=None):
+    return render(request, 'clients/partials/contact_drawer.html', {
+        'client': client, 'form': form, 'contact': contact,
+    })
+
+
+@login_required
+@require_permission('access_clients')
+def client_contact_create(request, pk):
+    client, refused = _editable_client_or_error(request.user, pk)
+    if refused:
+        return refused
+    if request.method == 'POST':
+        form = ClientContactForm(request.POST)
+        if form.is_valid():
+            save_contact(form, client)
+            return _contacts_changed()
+        return _contact_drawer(request, client, form)
+    # The first contact starts as the primary one.
+    return _contact_drawer(request, client, ClientContactForm(initial={'is_primary': not client.contacts.exists()}))
+
+
+@login_required
+@require_permission('access_clients')
+def client_contact_edit(request, pk, contact_pk):
+    client, refused = _editable_client_or_error(request.user, pk)
+    if refused:
+        return refused
+    contact = get_object_or_404(ClientContact, pk=contact_pk, client=client)
+    if request.method == 'POST':
+        form = ClientContactForm(request.POST, instance=contact)
+        if form.is_valid():
+            save_contact(form, client)
+            return _contacts_changed()
+        return _contact_drawer(request, client, form, contact)
+    return _contact_drawer(request, client, ClientContactForm(instance=contact), contact)
+
+
+@login_required
+@require_permission('access_clients')
+@require_POST
+def client_contact_delete(request, pk, contact_pk):
+    client, refused = _editable_client_or_error(request.user, pk)
+    if refused:
+        return refused
+    get_object_or_404(ClientContact, pk=contact_pk, client=client).delete()
+    return _contacts_changed()

@@ -85,9 +85,10 @@ def search(user, raw_query):
         )
 
     if user.has_app_permission('access_clients'):
-        # Archived clients stay out, as on the client list.
+        # Archived clients stay out, as on the client list. A contact's name or email finds its client.
+        matching = Q(name__icontains=query) | Q(contacts__name__icontains=query) | Q(contacts__email__icontains=query)
         results.clients = list(
-            active_clients(visible_clients(user)).filter(name__icontains=query).order_by('name')[:PER_SECTION]
+            active_clients(visible_clients(user)).filter(matching).distinct().order_by('name')[:PER_SECTION]
         )
 
     needle = query.lower()

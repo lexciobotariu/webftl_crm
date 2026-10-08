@@ -2,7 +2,7 @@ from django import forms
 
 from apps.crm.models import Currency
 
-from .models import Client
+from .models import Client, ClientContact
 
 INPUT_CLASSES = 'w-full bg-panel border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none'
 
@@ -22,8 +22,8 @@ class ClientForm(forms.ModelForm):
             'tax_id': 'Tax ID',
         }
         help_texts = {
-            'billing_name': 'A blank value uses the contact name.',
-            'billing_email': 'A blank value uses the contact email.',
+            'billing_name': 'A blank value uses the client name.',
+            'billing_email': 'A blank value uses the billing contact email, else the client email.',
         }
         widgets = {
             'name': forms.TextInput(attrs={'class': INPUT_CLASSES}),
@@ -70,3 +70,9 @@ class ClientDrawerForm(ClientForm):
             'billing_name', 'billing_email', 'tax_id',
             'currency',
         ]
+
+
+class ClientContactForm(forms.ModelForm):
+    class Meta:
+        model = ClientContact
+        fields = ['name', 'role', 'email', 'phone', 'is_primary', 'is_billing']

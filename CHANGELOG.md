@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.24.0] - 2026-10-08
+
+### Features
+- **Contacts per client.** The client profile has a Contacts card listing the people at the client, each with a name, role, email and phone. Anyone who can edit clients adds, edits and removes them in a drawer. One contact can be marked Primary and one Billing; marking another moves the mark. The first contact added starts as Primary
+- The billing contact's email is used on new invoices when the client has no billing email of its own, before falling back to the client email
+- The search palette finds a client by a contact's name or email
+
+### Changes
+- The client's own email, phone and address now sit under "Company details" on the profile
+
+### Migrations
+- `clients.0006` adds the client contacts table. Existing clients start with no contacts; their email and phone stay as company details
+
 ## [0.23.1] - 2026-10-08
 
 ### Changes
