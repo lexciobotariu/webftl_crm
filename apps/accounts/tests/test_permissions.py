@@ -1082,11 +1082,12 @@ class TestPresetModuleCards:
             'access_tasks',
             'access_todos',
             'access_notes',
-            'access_salaries',
-            'access_invoices',
             'access_team',
         ):
             assert 'checked' in _checkbox_attrs(html, name)
+        # Money is opt-in on a new preset.
+        for name in ('access_salaries', 'access_invoices'):
+            assert 'checked' not in _checkbox_attrs(html, name)
         for name in (
             'clients_view_all',
             'clients_create',
@@ -1101,17 +1102,17 @@ class TestPresetModuleCards:
             'tasks_edit_all',
             'notes_view_all',
             'notes_edit_public',
-            'salaries_view_all',
-            'salaries_edit',
-            'invoices_view_all',
-            'invoices_create',
-            'invoices_edit',
             'team_create',
             'team_edit',
         ):
             attrs = _checkbox_attrs(html, name)
             assert 'checked' not in attrs.split()
             assert 'disabled' not in attrs.split()
+        # Under a module that starts off, the extras start disabled too.
+        for name in ('salaries_view_all', 'salaries_edit', 'invoices_view_all', 'invoices_create', 'invoices_edit'):
+            attrs = _checkbox_attrs(html, name)
+            assert 'checked' not in attrs.split()
+            assert 'disabled' in attrs.split()
 
         developer = PermissionPreset.objects.get(name='Developer')
         developer_html = client.get(reverse('preset_edit', args=[developer.pk])).content.decode()

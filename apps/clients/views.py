@@ -11,6 +11,7 @@ from django.views.decorators.http import require_POST
 
 from apps.accounts.decorators import require_permission
 from apps.projects.models import visible_projects
+from apps.projects.services import with_task_counts
 
 from .forms import ClientDrawerForm, ClientForm
 from .models import Client, visible_clients
@@ -117,7 +118,7 @@ def client_detail(request, pk):
     todo_count = todos_qs.count()
 
     notes_count = notes_visible_to_user(request.user, client.note_objects.all()).count()
-    projects = _visible_projects(request.user, client).annotate(num_tasks=Count('tasks', distinct=True))
+    projects = with_task_counts(_visible_projects(request.user, client), request.user)
     client_invoices = []
     invoice_count = 0
     if request.user.has_app_permission('access_invoices'):
@@ -133,8 +134,8 @@ def client_detail(request, pk):
         'notes_count': notes_count,
         'client_invoices': client_invoices,
         'invoice_count': invoice_count,
-        # Delete is offered only where it can succeed: invoices protect a client.
-        'has_invoices': client.invoices.exists(),
+        # Delete is offered only where it can succeed: invoices and logged time protect a client.
+        'can_delete': not client_delete_blocker(client),
         'show_completed': False,
         'today': timezone.localdate(),
         'active_tab': active_tab,
@@ -212,7 +213,7 @@ def client_create_project(request, pk):
             response = HttpResponse('')
             response['HX-Redirect'] = reverse('project_tasks', args=[project.pk])
             return response
-        return render(request, 'clients/partials/project_create_drawer.html', {
+        return render(request, 'projects/partials/project_create_drawer.html', {
             'client': client,
             'error': next(iter(form.errors.values()))[0],
             'form_name': form.data.get('name', ''),
@@ -220,7 +221,7 @@ def client_create_project(request, pk):
             'form_github_repo_url': form.data.get('github_repo_url', ''),
         })
 
-    return render(request, 'clients/partials/project_create_drawer.html', {'client': client})
+    return render(request, 'projects/partials/project_create_drawer.html', {'client': client})
 
 
 @login_required
@@ -281,15 +282,30 @@ def client_delete(request, pk):
     client = _visible_client_or_404(request.user, pk)
     if not request.user.is_admin:
         return HttpResponseForbidden("Admin access required")
+    blocker = client_delete_blocker(client)
+    if blocker:
+        return HttpResponse(blocker, status=400)
     try:
         client.delete()
     except ProtectedError:
-        return HttpResponse('This client has invoices, so it cannot be deleted. Archive it instead.', status=400)
+        # An invoice or logged time arrived after the check.
+        return HttpResponse(client_delete_blocker(client) or 'This client cannot be deleted. Archive it instead.', status=400)
     if request.htmx:
         response = HttpResponse('')
         response['HX-Redirect'] = '/clients/'
         return response
     return redirect('client_list')
+
+
+def client_delete_blocker(client):
+    """Why ``client`` cannot be deleted, or ''. Such a client is archived instead."""
+    from apps.tasks.models import TimeEntry
+
+    if client.invoices.exists():
+        return 'This client has invoices, so it cannot be deleted. Archive it instead.'
+    if TimeEntry.objects.filter(task__project__client=client).exists():
+        return 'This client has logged time on its projects, so it cannot be deleted. Archive it instead.'
+    return ''
 
 
 @login_required

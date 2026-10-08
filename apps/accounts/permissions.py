@@ -44,8 +44,9 @@ class PermissionPreset(models.Model):
     access_tasks = models.BooleanField(default=True)
     access_todos = models.BooleanField(default=True)
     access_notes = models.BooleanField(default=True)
-    access_salaries = models.BooleanField(default=True)
-    access_invoices = models.BooleanField(default=True)
+    # Money is opt-in: a new preset sees no salaries or invoices until ticked.
+    access_salaries = models.BooleanField(default=False)
+    access_invoices = models.BooleanField(default=False)
     access_team = models.BooleanField(default=True)
 
     # Unchecked means view own. Admins still see everything via has_app_permission.

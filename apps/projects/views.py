@@ -50,8 +50,10 @@ from .models import (
     Status,
     can_access_project,
     can_edit_project,
+    project_delete_blocker,
     visible_projects,
 )
+from .services import with_task_counts
 
 PROJECTS_PER_PAGE = 20
 
@@ -95,11 +97,12 @@ def _addable_users(project):
 @require_permission('access_projects')
 def project_list(request):
     projects_qs = (
-        visible_projects(request.user)
+        with_task_counts(visible_projects(request.user), request.user)
         .select_related('client')
-        .annotate(num_tasks=Count('tasks', distinct=True))
         .order_by('name')
     )
+    # Finished and cancelled projects stay out of the way unless asked for.
+    show_closed = request.GET.get('closed') == '1'
     clients = Client.objects.none()
     client_filter = None
     linkable_client_ids = set()
@@ -113,6 +116,10 @@ def project_list(request):
         # A project can be visible while its client is not; that name stays plain text.
         linkable_client_ids = set(clients.values_list('pk', flat=True))
 
+    open_q = Q(status__in=Project.OPEN_STATUSES)
+    closed_count = projects_qs.exclude(open_q).count()
+    projects_qs = projects_qs.exclude(open_q) if show_closed else projects_qs.filter(open_q)
+
     paginator = Paginator(projects_qs, PROJECTS_PER_PAGE)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
@@ -123,28 +130,60 @@ def project_list(request):
         'clients': clients,
         'client_filter': client_filter,
         'linkable_client_ids': linkable_client_ids,
+        'show_closed': show_closed,
+        'closed_count': closed_count,
+        # ``?new=1`` (an old link to the create page) opens the New Project drawer.
+        'open_create_drawer': (
+            request.GET.get('new') == '1' and request.user.has_app_permission('projects_create')
+        ),
+        'new_client': request.GET.get('new_client', '') if request.GET.get('new_client', '').isdigit() else '',
     })
 
 
 @login_required
 @require_permission('access_projects')
 def project_create(request):
+    """The New Project drawer opened from the projects page.
+
+    The same drawer the client page opens, with a client picker. Opened as a
+    page (an old link or a new tab), it lands on the projects list with the
+    drawer open.
+    """
     if not request.user.has_app_permission('projects_create'):
         return HttpResponseForbidden("You can't create projects")
-
-    initial = {}
-    if request.GET.get('client'):
-        initial['client'] = request.GET.get('client')
 
     if request.method == 'POST':
         form = ProjectForm(request.POST, user=request.user)
         if form.is_valid():
             project = form.save()
             ProjectAccess.objects.create(project=project, user=request.user)
-            return redirect('project_tasks', pk=project.pk)
-    else:
-        form = ProjectForm(initial=initial, user=request.user)
-    return render(request, 'projects/project_form.html', {'form': form})
+            target = reverse('project_tasks', args=[project.pk])
+            if request.htmx:
+                response = HttpResponse('')
+                response['HX-Redirect'] = target
+                return response
+            return redirect(target)
+        return render(request, 'projects/partials/project_create_drawer.html', {
+            'form': form,
+            'clients': form.fields['client'].queryset,
+            'error': next(iter(form.errors.values()))[0],
+            'form_client': form.data.get('client', ''),
+            'form_name': form.data.get('name', ''),
+            'form_description': form.data.get('description', ''),
+            'form_github_repo_url': form.data.get('github_repo_url', ''),
+        })
+
+    client_id = request.GET.get('client', '')
+    client_id = client_id if client_id.isdigit() else ''
+    if not request.htmx:
+        query = '?new=1' + (f'&new_client={client_id}' if client_id else '')
+        return redirect(reverse('project_list') + query)
+    form = ProjectForm(user=request.user)
+    return render(request, 'projects/partials/project_create_drawer.html', {
+        'form': form,
+        'clients': form.fields['client'].queryset,
+        'form_client': client_id,
+    })
 
 
 @login_required
@@ -156,13 +195,15 @@ def project_detail(request, pk):
         return HttpResponseForbidden("You don't have access to this project")
 
     # Calculate stats. "Done" is whatever the project files under the completed status type,
-    # so renaming a column cannot break these numbers. These counts stay on every
-    # visible task; the Tasks page has its own filters and never changes them.
-    tasks = visible_tasks(request.user, project).select_related('status', 'assignee')
+    # so renaming a column cannot break these numbers. Archived tasks are left out, as on
+    # the Tasks page and in the project lists, and counted on their own.
+    visible = visible_tasks(request.user, project)
+    tasks = visible.not_archived()
     total_tasks = tasks.count()
     completed_tasks = tasks.done().count()
     active_tasks = tasks.active().count()
     overdue_tasks = tasks.overdue().count()
+    archived_tasks = visible.archived().count()
 
     # Recent activity (last 5 across tasks this person can view)
     recent_activities = TaskActivity.objects.filter(
@@ -191,6 +232,7 @@ def project_detail(request, pk):
         'completed_tasks': completed_tasks,
         'active_tasks': active_tasks,
         'overdue_tasks': overdue_tasks,
+        'archived_tasks': archived_tasks,
         'recent_activities': recent_activities,
         'active_tab': active_tab,
         'can_edit_project': editable,
@@ -384,8 +426,12 @@ def project_edit(request, pk):
 def project_delete(request, pk):
     if not request.user.is_admin:
         return HttpResponseForbidden("Admin access required")
-    project = get_object_or_404(Project, pk=pk)
-    project.delete()
+    with transaction.atomic():
+        project = get_object_or_404(Project.objects.select_for_update(), pk=pk)
+        blocker = project_delete_blocker(project)
+        if blocker:
+            return HttpResponse(blocker, status=400)
+        project.delete()
     if request.htmx:
         response = HttpResponse('')
         response['HX-Redirect'] = '/projects/'
@@ -438,6 +484,8 @@ def project_settings(request, pk):
         'back_url': back_url,
         'client_linkable': _client_linkable(request.user, project),
         'can_edit_project': can_edit_project(request.user, project),
+        'status_choices': Project.STATUS_CHOICES,
+        'delete_blocker': project_delete_blocker(project),
     })
 
 
@@ -483,7 +531,13 @@ def project_settings_update(request, pk):
         if rate_error:
             hourly_rate = rate_text.strip()  # shown back in the form, never saved
 
+    # A form without the field keeps the status.
+    status = request.POST.get('status', project.status)
+
     # The form re-renders from ``project``, so an error keeps what was typed.
+    status_known = status in dict(Project.STATUS_CHOICES)
+    if status_known:
+        project.status = status
     project.name = name
     project.description = description
     project.github_repo_url = github_repo_url
@@ -492,6 +546,8 @@ def project_settings_update(request, pk):
     project.hourly_rate = hourly_rate
 
     errors = project_field_errors(name, github_repo_url)
+    if not status_known:
+        errors['status'] = 'Choose a status from the list.'
     if rate_error:
         errors['hourly_rate'] = rate_error
     if not re.fullmatch(KEY_REGEX, key, flags=re.ASCII):
@@ -504,7 +560,7 @@ def project_settings_update(request, pk):
             with transaction.atomic():
                 project.save(update_fields=[
                     'name', 'description', 'github_repo_url', 'github_sync_enabled', 'key',
-                    'hourly_rate', 'updated_at',
+                    'hourly_rate', 'status', 'updated_at',
                 ])
         except IntegrityError:
             # Another project took the key between the check and the save.
@@ -514,11 +570,13 @@ def project_settings_update(request, pk):
         return render(request, 'projects/partials/settings_general_form.html', {
             'project': project,
             'errors': errors,
+            'status_choices': Project.STATUS_CHOICES,
         })
 
     return render(request, 'projects/partials/settings_general_form.html', {
         'project': project,
         'success': True,
+        'status_choices': Project.STATUS_CHOICES,
     })
 
 

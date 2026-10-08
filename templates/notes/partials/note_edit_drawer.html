@@ -40,10 +40,10 @@
             </div>
 
             <div>
-                <label for="id_description" class="text-xs text-zinc-500 uppercase tracking-wide mb-2 block">
+                <label class="text-xs text-zinc-500 uppercase tracking-wide mb-2 block">
                     Description
                 </label>
-                {{ form.description }}
+                {% include "tasks/partials/markdown_editor.html" with uid="note-edit-description" name="description" value=form.description.value rows=8 placeholder="Enter note description..." textarea_class="w-full px-3 py-2 bg-elevated border border-border-subtle rounded-control text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-border-strong resize-y" %}
             </div>
 
             <div class="flex items-center gap-3 p-3 bg-elevated/50 rounded-card border border-border-subtle">

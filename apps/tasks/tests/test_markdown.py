@@ -116,11 +116,12 @@ class TestPreview:
 
         assert 'Nothing to preview' in client.post(reverse('markdown_preview'), {'text': '  '}).content.decode()
 
-    def test_it_needs_a_login_post_and_the_tasks_module(self, client):
+    def test_it_needs_a_login_and_a_post(self, client):
         assert client.post(reverse('markdown_preview'), {'text': 'x'}).status_code == 302
 
+        # Notes and project descriptions use the editor too, so the tasks module is not needed.
         client.force_login(_member(access_tasks=False))
-        assert client.post(reverse('markdown_preview'), {'text': 'x'}).status_code == 403
+        assert client.post(reverse('markdown_preview'), {'text': 'x'}).status_code == 200
 
         client.force_login(_member(access_tasks=True))
         assert client.get(reverse('markdown_preview')).status_code == 405

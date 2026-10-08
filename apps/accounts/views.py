@@ -5,7 +5,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import IntegrityError, models, transaction
-from django.db.models import Q
+from django.db.models import ProtectedError, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
@@ -65,8 +65,11 @@ def dashboard(request):
         context['client_count'] = active_clients(visible_clients(request.user)).count()
 
     if request.user.has_app_permission('access_projects'):
-        from apps.projects.models import visible_projects
-        context['project_count'] = visible_projects(request.user).count()
+        from apps.projects.models import Project, visible_projects
+        # Open projects, the same set the projects page starts on.
+        context['project_count'] = visible_projects(request.user).filter(
+            status__in=Project.OPEN_STATUSES
+        ).count()
 
     if request.user.has_app_permission('access_tasks'):
         from apps.tasks.models import Task
@@ -468,7 +471,7 @@ def user_delete_confirm(request, pk):
     from apps.notes.models import Note
     from apps.projects.models import ProjectAccess
     from apps.salaries.models import EmployeeSalary, Payment, SalaryMonth
-    from apps.tasks.models import Attachment, Task, TaskActivity
+    from apps.tasks.models import Attachment, Task, TaskActivity, TimeEntry
     from apps.todos.models import Todo
 
     counts = {
@@ -490,6 +493,7 @@ def user_delete_confirm(request, pk):
         counts['salary'] = False
         counts['salary_months'] = 0
         counts['payments'] = 0
+    counts['time_entries'] = TimeEntry.objects.filter(user=user_obj).count()
 
     counts['has_data'] = any([
         counts['todos'], counts['notes'], counts['comments'],
@@ -500,7 +504,24 @@ def user_delete_confirm(request, pk):
     return render(request, 'accounts/partials/user_delete_confirm.html', {
         'user_obj': user_obj,
         'counts': counts,
+        'blocked_reason': _user_delete_blocker(user_obj),
     })
+
+
+def _user_delete_blocker(user_obj):
+    """Why this person cannot be deleted, or ''.
+
+    Salary records and logged time are kept for the books; such a person is
+    deactivated instead.
+    """
+    from apps.salaries.models import EmployeeSalary
+    from apps.tasks.models import TimeEntry
+
+    if EmployeeSalary.objects.filter(user=user_obj).exists():
+        return 'This user has salary records. Deactivate them instead.'
+    if TimeEntry.objects.filter(user=user_obj).exists():
+        return 'This user has logged time. Deactivate them instead.'
+    return ''
 
 
 @login_required
@@ -522,9 +543,14 @@ def user_delete(request, pk):
     if user_obj.role == 'admin' and len(role_admins) <= 1:
         return HttpResponse('Cannot delete the last admin.', status=400)
 
-    from apps.salaries.models import EmployeeSalary
-    if EmployeeSalary.objects.filter(user=user_obj).exists():
-        return HttpResponse('Cannot delete user with salary records.', status=400)
+    blocker = _user_delete_blocker(user_obj)
+    if blocker:
+        return HttpResponse(blocker, status=400)
 
-    user_obj.delete()
+    try:
+        user_obj.delete()
+    except ProtectedError:
+        # Time was logged between the check and the delete. The collector raises
+        # before deleting anything, so nothing needs undoing.
+        return HttpResponse(_user_delete_blocker(user_obj) or 'This user cannot be deleted.', status=400)
     return HttpResponse('')

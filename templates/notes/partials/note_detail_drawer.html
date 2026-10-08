@@ -1,3 +1,4 @@
+{% load task_markdown %}
 <div class="flex flex-col h-full">
     <!-- Drawer header -->
     <div class="flex-shrink-0 px-4 py-3 border-b border-border-subtle bg-panel/80">
@@ -19,7 +20,7 @@
         {% if note.description %}
         <div class="mb-4">
             <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-2">Description</label>
-            <div class="text-sm text-zinc-300 whitespace-pre-wrap">{{ note.description }}</div>
+            <div class="markdown text-sm text-zinc-300">{{ note.description|render_markdown }}</div>
         </div>
         {% endif %}
 

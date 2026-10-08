@@ -11,6 +11,12 @@
                     {% if client %}To-Dos{% else %}Personal To-Dos{% endif %}
                 </h2>
                 <span id="todos-count-badge" class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ todo_count|default:todos.count }}</span>
+                {% if client %}
+                <span class="hidden sm:inline-flex items-center gap-1 text-xs text-zinc-500" data-testid="todos-private-note">
+                    <i data-lucide="lock" class="w-3 h-3"></i>
+                    Only you see these
+                </span>
+                {% endif %}
             </div>
             <div class="flex items-center gap-3">
                 <!-- Show completed toggle -->

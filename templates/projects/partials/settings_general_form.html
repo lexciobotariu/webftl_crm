@@ -34,6 +34,20 @@
     </div>
 
     <div>
+        <label for="project-status" class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Status</label>
+        <select id="project-status" name="status" aria-describedby="project-status-help"
+                class="w-full max-w-[14rem] bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
+            {% for value, label in status_choices %}
+            <option value="{{ value }}"{% if project.status == value %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        {% if errors.status %}
+        <p class="text-error text-xs mt-1">{{ errors.status }}</p>
+        {% endif %}
+        <p id="project-status-help" class="text-zinc-500 text-xs mt-1">Finished and cancelled projects leave the projects list; they are shown with "Show finished and cancelled".</p>
+    </div>
+
+    <div>
         <label for="project-key" class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Task ID prefix</label>
         <input type="text" id="project-key" name="key" value="{{ project.key }}" required
                maxlength="6" autocomplete="off" spellcheck="false"
@@ -48,8 +62,7 @@
 
     <div>
         <label class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Description</label>
-        <textarea name="description" rows="3" placeholder="Project description..."
-                  class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none resize-none">{{ project.description }}</textarea>
+        {% include "tasks/partials/markdown_editor.html" with uid="project-description" name="description" value=project.description rows=4 placeholder="Project description..." textarea_class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none resize-y" %}
     </div>
 
     <div>

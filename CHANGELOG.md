@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.0] - 2026-10-08
+
+### Features
+- **Projects have a status:** Active, On hold, Finished or Cancelled, set in project settings and shown on the overview. The projects page lists open projects (Active and On hold); "Show finished and cancelled" lists the rest. The client page still lists every project, with its status when it is not Active, and the dashboard counts open projects
+- **Project descriptions and notes use Markdown,** with the same Write/Preview editor as task descriptions, and are shown formatted on the project overview and in the note drawer
+
+### Changes
+- **One New Project drawer.** "Add Project" on the projects page opens the same drawer as on a client page, with a client picker; the separate create page is gone (an old link opens the projects page with the drawer open)
+- **Task counts agree everywhere.** The project list, the client's projects tab and the project overview count the tasks the person can see, without archived ones, the same number the Tasks page starts from. The overview shows archived tasks as "+N archived"
+- **New permission presets start without Salaries and Invoices.** They are ticked on purpose when a preset should see money. Existing presets keep what they have
+- The client To-Dos tab says "Only you see these": client to-dos are personal
+- The Markdown preview works for everyone signed in, not only people with the tasks module, since notes and projects use it too
+
+### Fixes
+- Deleting a person no longer deletes the time they logged. Someone with logged time (or salary records) cannot be deleted; the confirmation says so and offers no Delete button, and they are deactivated instead
+- A project with logged time or on an invoice cannot be deleted; settings say to set it Finished or Cancelled instead. A client whose projects have logged time cannot be deleted either and is archived instead
+
+### Migrations
+- `projects.0018` adds the project status (every existing project is Active)
+- `accounts.0013` makes Salaries and Invoices off by default for new presets (no existing row changes)
+- `tasks.0025` protects logged time from a user delete
+
 ## [0.21.0] - 2026-10-08
 
 ### Features

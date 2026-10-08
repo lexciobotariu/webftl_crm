@@ -19,7 +19,12 @@
                 <div class="flex items-center justify-between gap-3">
                     <div class="flex items-center gap-3">
                         <span class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ total_count }}</span>
-                        <span class="text-xs text-zinc-500">project{{ total_count|pluralize }}</span>
+                        <span class="text-xs text-zinc-500">{% if show_closed %}closed {% endif %}project{{ total_count|pluralize }}</span>
+                        {% if show_closed %}
+                        <a href="{% querystring closed=None page=None %}" class="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">Back to open projects</a>
+                        {% elif closed_count %}
+                        <a href="{% querystring closed=1 page=None %}" class="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">Show finished and cancelled ({{ closed_count }})</a>
+                        {% endif %}
                     </div>
                     <div class="flex items-center gap-2">
                         {% if perms_map.access_clients %}
@@ -34,11 +39,14 @@
                         </select>
                         {% endif %}
                         {% if perms_map.projects_create %}
-                        <a href="{% url 'project_create' %}"
-                           class="inline-flex items-center gap-1.5 bg-accent text-on-accent px-3 py-1.5 rounded-control text-xs font-medium hover:bg-accent-hover transition-colors">
+                        <button hx-get="{% url 'project_create' %}{% if client_filter %}?client={{ client_filter }}{% endif %}"
+                                hx-target="#slide-over"
+                                hx-swap="innerHTML"
+                                hx-on::after-request="openSlideOver(event)"
+                                class="inline-flex items-center gap-1.5 bg-accent text-on-accent px-3 py-1.5 rounded-control text-xs font-medium hover:bg-accent-hover transition-colors">
                             <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                             Add Project
-                        </a>
+                        </button>
                         {% endif %}
                     </div>
                 </div>
@@ -82,4 +90,12 @@
         </div>
     </div>
 </div>
+{% if open_create_drawer %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        htmx.ajax('GET', '{% url "project_create" %}{% if new_client %}?client={{ new_client }}{% endif %}', {target: '#slide-over', swap: 'innerHTML'})
+            .then(() => openSlideOver());
+    });
+</script>
+{% endif %}
 {% endblock %}

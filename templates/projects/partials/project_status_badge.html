@@ -1,0 +1,9 @@
+{% if project.status == 'on_hold' %}
+<span class="ml-1.5 px-2 py-0.5 text-[10px] rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">On hold</span>
+{% elif project.status == 'finished' %}
+<span class="ml-1.5 px-2 py-0.5 text-[10px] rounded bg-success/10 text-success border border-success/20">Finished</span>
+{% elif project.status == 'cancelled' %}
+<span class="ml-1.5 px-2 py-0.5 text-[10px] rounded bg-zinc-500/10 text-zinc-500 border border-border-subtle">Cancelled</span>
+{% else %}
+<span class="px-2 py-0.5 text-[10px] rounded bg-sky-500/10 text-sky-300 border border-sky-500/20">Active</span>
+{% endif %}
