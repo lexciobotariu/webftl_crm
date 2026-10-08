@@ -30,11 +30,12 @@ from .listview import (
     build_groups,
     filter_options,
     group_choices,
+    group_slots,
     resolve_view,
 )
 from .models import MyTasksView, Subtask, Task, TaskActivity, TimeEntry
 from .templatetags.task_markdown import MAX_LENGTH as MARKDOWN_MAX_LENGTH
-from .viewspec import CATEGORIES, LIMIT_STEP, TaskViewOptions, sort_choices
+from .viewspec import CATEGORIES, LIMIT_STEP, SORTS, TaskViewOptions, sort_choices
 
 TITLE_MAX_LENGTH = Task._meta.get_field('title').max_length
 
@@ -86,6 +87,8 @@ def _format_total(entries):
 MY_TASKS_OPTIONS = TaskViewOptions(
     layouts=('list',),
     groups=('project', 'category', 'priority', 'none'),
+    # Manual order is per project column, so it means nothing across projects.
+    sorts=tuple(value for value in SORTS if value != 'manual'),
     categories=frozenset(CATEGORIES),
     has_assignee_filter=False,
     default_group='project',
@@ -135,7 +138,7 @@ def my_tasks(request):
         )
         context.update({
             'spec': spec,
-            'groups': build_groups(page, spec, assigned.group_counts(spec)),
+            'groups': build_groups(page, spec, assigned.group_counts(spec), group_slots(spec)),
             'total_matching': total_matching,
             'total_visible': total_visible,
             'hidden_count': total_visible - total_matching - archived_count,
@@ -148,7 +151,7 @@ def my_tasks(request):
             'quick_edit_projects': quick_edit_projects,
             'priority_choices': Task.PRIORITY_CHOICES,
             'empty_message': 'No open tasks assigned to you',
-            'sort_choices': sort_choices(),
+            'sort_choices': sort_choices(MY_TASKS_OPTIONS),
             'group_choices': group_choices(MY_TASKS_OPTIONS),
             **filter_options(
                 [], spec, [], [], categories=MY_TASKS_OPTIONS.categories
@@ -455,10 +458,11 @@ def task_update_status(request, pk):
         from apps.tasks import services
         if status.pk == task.status_id:
             # Picking the status it already has changes nothing; moving it would
-            # send the card to the end of its column.
+            # send the card to the top of its column.
             services.require_access(request.user, task.project)
             return render(request, 'tasks/partials/status_dropdown.html', {'task': task, 'can_edit': True})
-        services.move_task(task, status, request.user)
+        # Lands at the top of the new column, as a new task does.
+        services.move_task(task, status, request.user, after_id=None)
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
     except Task.DoesNotExist:

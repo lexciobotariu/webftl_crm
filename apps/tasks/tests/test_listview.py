@@ -56,10 +56,10 @@ class TestBuildGroups:
 class TestGroupChoices:
     def test_follows_the_page_options(self):
         assert group_choices(MY_OPTIONS) == [
-            ('project', 'Project'), ('category', 'Status type'),
-            ('priority', 'Priority'), ('none', 'No grouping'),
+            ('project', 'Project', 'priority', False), ('category', 'Status type', 'priority', False),
+            ('priority', 'Priority', 'priority', False), ('none', 'No grouping', 'priority', False),
         ]
-        assert [value for value, _ in group_choices(TaskViewOptions())] == [
+        assert [value for value, *_ in group_choices(TaskViewOptions())] == [
             'status', 'assignee', 'priority', 'none',
         ]
 

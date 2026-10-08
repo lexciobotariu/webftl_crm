@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.0] - 2026-10-08
+
+### Changes
+- The task list can be ordered **Manual**: the order the cards were dragged into on the board. It is the default when the list is grouped by status, so the list and the board show the same order. Other groupings still default to Priority. My Tasks does not offer it, since the order belongs to one project's columns
+- **Show empty groups** in the Display menu lists the groups that have no task, with a count of 0, so an empty status no longer disappears from the list. It is on by default when grouping by status and off for the other groupings. Changing "Group by" also moves the order and this switch to the new grouping's defaults, unless you had changed them yourself
+- The list search finds a task by its id as well as its title: "CUST-12", "cust-12", "12" or "#12"
+- Anyone who can see a task can now comment on it, not only people who may edit it. Changing or deleting a comment is still for its author or an admin
+- A task whose status changes from the drawer or the quick menu lands at the top of its new board column, the same place a new task goes. Dragging still puts it where it is dropped
+- Board column headers show the status icon, as the list's group headers do
+
+### Documentation
+- `docs/ui-patterns.md` records the rules above, and why rows show at most three labels (then "+N") while cards show them all
+
 ## [0.19.2] - 2026-10-08
 
 ### Fixes

@@ -72,7 +72,7 @@
             </div>
         </div>
 
-        <div class="relative" x-show="layout === 'list'" x-data="{ open: false }">
+        <div class="relative" x-show="layout === 'list'" x-data="{ open: false, previousGroup: null }">
             <button type="button" @click="open = !open"
                     class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
                 <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>
@@ -82,17 +82,30 @@
                  class="absolute left-0 top-full mt-1 w-60 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 p-3 space-y-3">
                 <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-medium">
                     Group by
-                    <select name="group" @change="$el.form.requestSubmit()"
+                    {# A sort or empty-groups setting still at the old grouping's default follows the new grouping's default (viewspec.default_sort / default_show_empty); one the person chose stays. #}
+                    <select name="group"
+                            x-init="previousGroup = $el.selectedOptions[0]"
+                            @change="
+                                const previous = previousGroup, next = $el.selectedOptions[0];
+                                if ($refs.sort.value === previous.dataset.sort && [...$refs.sort.options].some(o => o.value === next.dataset.sort)) {
+                                    $refs.sort.value = next.dataset.sort;
+                                    $refs.dir.value = $refs.sort.selectedOptions[0].dataset.dir;
+                                }
+                                if ($refs.empty.checked === (previous.dataset.empty === '1')) {
+                                    $refs.empty.checked = next.dataset.empty === '1';
+                                }
+                                previousGroup = next;
+                                $el.form.requestSubmit()"
                             class="mt-1 w-full bg-panel border border-border-subtle rounded-control px-2 py-1.5 text-sm text-zinc-200 normal-case tracking-normal focus:border-border-strong focus:outline-none">
-                        {% for value, label in group_choices %}
-                        <option value="{{ value }}" {% if spec.group == value %}selected{% endif %}>{{ label }}</option>
+                        {% for value, label, default_sort, default_empty in group_choices %}
+                        <option value="{{ value }}" data-sort="{{ default_sort }}" data-empty="{{ default_empty|yesno:'1,0' }}" {% if spec.group == value %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
                     </select>
                 </label>
                 <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-medium">
                     Order by
                     {# Each sort carries its own default direction (viewspec.DEFAULT_DIR), so changing the sort resets the direction the way the server would. #}
-                    <select name="sort"
+                    <select name="sort" x-ref="sort"
                             @change="$refs.dir.value = $el.selectedOptions[0].dataset.dir; $el.form.requestSubmit()"
                             class="mt-1 w-full bg-panel border border-border-subtle rounded-control px-2 py-1.5 text-sm text-zinc-200 normal-case tracking-normal focus:border-border-strong focus:outline-none">
                         {% for value, label, default_dir in sort_choices %}
@@ -107,6 +120,14 @@
                         <option value="asc" {% if spec.dir == 'asc' %}selected{% endif %}>Ascending</option>
                         <option value="desc" {% if spec.dir == 'desc' %}selected{% endif %}>Descending</option>
                     </select>
+                </label>
+                <label class="{% if spec.group == 'none' %}hidden{% else %}flex{% endif %} items-center justify-between gap-2 text-xs text-zinc-300">
+                    Show empty groups
+                    {# Unchecked still sends "0" (the last value wins), so "off" is not read as "default". #}
+                    <input type="hidden" name="empty" value="0">
+                    <input type="checkbox" name="empty" value="1" x-ref="empty" @change="$el.form.requestSubmit()"
+                           {% if spec.show_empty %}checked{% endif %}
+                           class="rounded border-border-subtle bg-panel text-accent focus:ring-0">
                 </label>
             </div>
         </div>

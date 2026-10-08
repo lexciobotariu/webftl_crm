@@ -401,6 +401,9 @@ filters or pagination, so nothing is lost there.
 - **A time row has its own ids** (`time-entry-<pk>`), reads "Lex logged 1h 30m — note", and edits in
   place like a comment (the refresh guard `#activity-items-<pk> form` covers it). Delete answers an
   empty 200 so the row goes. A running timer reads "timer running" and can only be deleted.
+- **Who may comment.** Anyone who can open the task, editor or not (`services.add_comment`).
+  Changing or deleting a comment stays with its author (while they can still see the task)
+  or an admin (`can_change_comment`).
 - **Work log totals** per person come from the rows already read. What the viewer cannot see is one
   "Others" line, taken from the task's full total, so the sum matches the Time property.
 
@@ -429,6 +432,20 @@ paging are never saved).
   and the spec translates them.
 - **Rows go stale otherwise.** The drawer's property views emit `taskChanged` (plus
   `taskUpdated-<pk>`); the page answers with `refreshFragment('#task-view')`.
+- **Order by "Manual"** is the board's order (`order`, newest first on a tie). It is the
+  default when grouping by status, so the list and the board agree; any other grouping
+  defaults to Priority. Only a sort that differs from the grouping's default goes in the
+  URL (`viewspec.default_sort`). My Tasks does not offer it: the order is per project column.
+  Changing "Group by" in the menu moves a sort still at the old default to the new one;
+  a sort someone picked stays.
+- **Show empty groups** (`empty=1`/`0`) lists the groups with no task too, with a count of 0
+  (`listview.group_slots`). On by default when grouping by status, off otherwise. Filters
+  still apply: a hidden status or an unchecked priority is not listed. When only a page of
+  rows is loaded, empty groups after the last loaded one wait for "Show more".
+- **Search** matches the title, or a task id: `CUST-12` (key in any case), `12` or `#12`.
+  A bare number matches that number in every project the page covers.
+- **Labels** show at most 3 on a row, then `+N`; a card shows every label. A row is one
+  line and must not wrap, a card has room to wrap. The drawer always shows them all.
 
 ### Quick edit on rows and cards
 
@@ -604,6 +621,11 @@ layout a person last chose wins.
   `refreshFragment('#task-view')`, so filters stay.
 - Known limit: with filters on, dropping above the first visible card puts the task first
   in the whole column, even if hidden cards sit above it.
+- **A task that arrives in a column lands at the top**, whether it was just created
+  (`order=0`, newest first on a tie) or moved there from the drawer or the quick menu
+  (`task_update_status` passes `after_id=None`). Only a drag picks another place.
+- **Column headers** carry the status type icon (`components/status_icon.html`), as the
+  list's group headers do.
 - **Hidden columns:** the strip above the board counts filtered tasks that sit in statuses
   hidden from the board (`hidden_task_count`).
 

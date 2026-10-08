@@ -1,3 +1,4 @@
+import re
 from datetime import timedelta
 
 from django.conf import settings
@@ -158,7 +159,7 @@ class TaskQuerySet(models.QuerySet):
                 )
             )
         if spec.q:
-            qs = qs.filter(title__icontains=spec.q)
+            qs = qs.filter(_search_query(spec.q))
         return qs
 
     def ordered_for(self, spec):
@@ -179,7 +180,17 @@ class TaskQuerySet(models.QuerySet):
             ordering.append(_category_rank().asc())
 
         descending = spec.dir == 'desc'
-        if spec.sort == 'priority':
+        if spec.sort == 'manual':
+            # The board's column order: status first (a no-op when grouped by
+            # status), then the dragged position, newest first on a tie as the
+            # board shows it.
+            if spec.group != 'status':
+                ordering.extend(['status__order', 'status_id'])
+            if descending:
+                ordering.extend(['-order', 'created_at'])
+            else:
+                ordering.extend(['order', '-created_at'])
+        elif spec.sort == 'priority':
             key = _priority_rank()
             ordering.append(key.desc() if descending else key.asc())
         elif spec.sort == 'due':
@@ -222,6 +233,26 @@ class TaskQuerySet(models.QuerySet):
         project they cannot view stay out.
         """
         return visible_tasks(user).filter(assignee=user)
+
+
+TASK_ID_RE = re.compile(r'^(?:(?P<key>[A-Za-z][A-Za-z0-9]*)-)?#?(?P<number>\d{1,9})$')
+
+
+def _search_query(text):
+    """Title contains ``text``, or ``text`` is a task id: "CUST-12", "12" or "#12".
+
+    A bare number matches that number in every project the view covers; with a
+    key it must be that project's key (any case).
+    """
+    query = Q(title__icontains=text)
+    match = TASK_ID_RE.match(text.strip())
+    if match:
+        number = int(match['number'])
+        id_query = Q(number=number)
+        if match['key']:
+            id_query &= Q(project__key__iexact=match['key'])
+        query |= id_query
+    return query
 
 
 class Task(models.Model):

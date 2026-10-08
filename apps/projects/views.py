@@ -25,6 +25,7 @@ from apps.tasks.listview import (
     build_groups,
     filter_options,
     group_choices,
+    group_slots,
     project_assignees,
     resolve_view,
 )
@@ -227,7 +228,7 @@ def project_tasks(request, pk):
         # Asked once for the page; rows and cards only read it.
         'quick_edit': can_edit_tasks_on(request.user, project),
         'priority_choices': Task.PRIORITY_CHOICES,
-        'sort_choices': sort_choices(),
+        'sort_choices': sort_choices(options),
         'group_choices': group_choices(options),
         **filter_options(statuses, spec, assignees, labels),
     }
@@ -239,7 +240,9 @@ def project_tasks(request, pk):
             .select_related('project', 'status', 'assignee')
             .prefetch_related('labels')[: spec.limit]
         )
-        context['groups'] = build_groups(page, spec, visible.group_counts(spec))
+        context['groups'] = build_groups(
+            page, spec, visible.group_counts(spec), group_slots(spec, statuses, assignees)
+        )
         if total_matching > spec.limit:
             more = spec.replace(limit=spec.limit + LIMIT_STEP).to_query_string()
             context['more_url'] = f'{page_url}?{more}'

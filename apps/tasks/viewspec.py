@@ -20,6 +20,7 @@ LAYOUTS = ('list', 'board')
 # they are listed in the URL and in the filter.
 CATEGORIES = tuple(value for value, _label in Status.CATEGORY_CHOICES)
 SORT_CHOICES = (
+    ('manual', 'Manual'),
     ('priority', 'Priority'),
     ('due', 'Due date'),
     ('created', 'Created'),
@@ -30,7 +31,9 @@ SORTS = tuple(value for value, _label in SORT_CHOICES)
 DIRECTIONS = ('asc', 'desc')
 # "asc" means the natural order of the key: most urgent first, earliest due
 # date first, oldest first, A to Z. Dates of activity read better newest first.
+# "Manual" is the order cards were dragged into on the board.
 DEFAULT_DIR = {
+    'manual': 'asc',
     'priority': 'asc',
     'due': 'asc',
     'created': 'desc',
@@ -45,13 +48,27 @@ MAX_LIMIT = 5000
 MAX_QUERY_LENGTH = 100
 
 
-def sort_choices():
+def sort_choices(options=None):
     """``(value, label, default direction)`` for the Display menu.
 
     The template reads the default direction from here, so the menu and the
-    server can never disagree about what "no ``dir``" means for a sort.
+    server can never disagree about what "no ``dir``" means for a sort. Only the
+    sorts ``options`` allows are listed.
     """
-    return [(value, label, DEFAULT_DIR[value]) for value, label in SORT_CHOICES]
+    allowed = options.sorts if options is not None else SORTS
+    return [(value, label, DEFAULT_DIR[value]) for value, label in SORT_CHOICES if value in allowed]
+
+
+def default_sort(group, options):
+    """Grouped by status, the list follows the board's manual order by default."""
+    if group == 'status' and 'manual' in options.sorts:
+        return 'manual'
+    return 'priority'
+
+
+def default_show_empty(group):
+    """Status columns are a fixed set, so they stay visible when empty; other groups do not."""
+    return group == 'status'
 
 
 @dataclass(frozen=True)
@@ -70,6 +87,7 @@ class TaskViewOptions:
     label_ids: frozenset = frozenset()
     layouts: tuple = LAYOUTS
     groups: tuple = ('status', 'assignee', 'priority', 'none')
+    sorts: tuple = SORTS
     categories: frozenset = frozenset()
     has_assignee_filter: bool = True
     default_group: str = 'status'
@@ -127,8 +145,10 @@ class TaskViewSpec:
     labels: tuple = ()
     q: str = ''
     group: str = 'status'
-    sort: str = 'priority'
+    sort: str = 'manual'
     dir: str = 'asc'
+    # Groups with no task are listed too (with zero), so a status can be seen empty.
+    show_empty: bool = True
     limit: int = DEFAULT_LIMIT
     categories: frozenset = frozenset()
     # Closed tasks past TASK_ARCHIVE_AFTER_DAYS are left out unless this is on.
@@ -178,7 +198,10 @@ class TaskViewSpec:
             + [str(pk) for pk in sorted(assignee_ids)]
         )
 
-        sort = _choice(_getone(params, 'sort'), SORTS, 'priority')
+        group = _choice(_getone(params, 'group'), options.groups, options.default_group)
+        sort = _choice(_getone(params, 'sort'), options.sorts, default_sort(group, options))
+        empty = _getone(params, 'empty')
+        show_empty = empty == '1' if empty in ('0', '1') else default_show_empty(group)
         spec = cls(
             layout=_choice(_getone(params, 'layout'), options.layouts, options.layouts[0]),
             hidden_statuses=frozenset(hidden),
@@ -186,9 +209,10 @@ class TaskViewSpec:
             assignees=assignee_tokens,
             labels=tuple(sorted(_ids(_getlist(params, 'label'), options.label_ids))),
             q=(_getone(params, 'q') or '').strip()[:MAX_QUERY_LENGTH],
-            group=_choice(_getone(params, 'group'), options.groups, options.default_group),
+            group=group,
             sort=sort,
             dir=_choice(_getone(params, 'dir'), DIRECTIONS, DEFAULT_DIR[sort]),
+            show_empty=show_empty,
             limit=_limit(_getone(params, 'limit')),
             categories=categories,
             archived=_getone(params, 'archived') == '1',
@@ -249,10 +273,12 @@ class TaskViewSpec:
             params['q'] = self.q
         if self.group != self.options.default_group:
             params['group'] = self.group
-        if self.sort != 'priority':
+        if self.sort != default_sort(self.group, self.options):
             params['sort'] = self.sort
         if self.dir != DEFAULT_DIR[self.sort]:
             params['dir'] = self.dir
+        if self.show_empty != default_show_empty(self.group):
+            params['empty'] = '1' if self.show_empty else '0'
         if self.limit != DEFAULT_LIMIT:
             params['limit'] = str(self.limit)
         return params

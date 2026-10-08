@@ -279,7 +279,7 @@ def add_comment(task, content, user, mentions=()):
     Add a comment to a task.
 
     Comments are stored as TaskActivity with type 'comment'.
-    Editors can add comments, same as creating a task or starting a timer.
+    Anyone who can see the task may comment on it, editor or not.
 
     Args:
         task: Task to comment on
@@ -291,11 +291,12 @@ def add_comment(task, content, user, mentions=()):
         The created TaskActivity instance
 
     Raises:
-        TaskPermissionError: If user lacks editor access
+        TaskPermissionError: If user cannot see the task
     """
     from apps.notifications.services import notify_comment
 
-    require_access(user, task.project)
+    if not can_view_task(user, task):
+        raise TaskPermissionError("You don't have access to this task")
 
     comment = TaskActivity.objects.create(
         task=task,
@@ -310,14 +311,14 @@ def add_comment(task, content, user, mentions=()):
 
 
 def can_change_comment(user, comment):
-    """The author while they can still edit the task, or an admin.
+    """The author while they can still see the task, or an admin.
 
-    Same rule as :func:`require_entry_edit`: ``tasks_edit_all`` does not let
-    anyone change someone else's words.
+    Whoever may comment may change their own comment (:func:`add_comment`), and
+    ``tasks_edit_all`` does not let anyone change someone else's words.
     """
     if user.is_admin:
         return True
-    return comment.user_id == user.pk and can_edit_task(user, comment.task)
+    return comment.user_id == user.pk and can_view_task(user, comment.task)
 
 
 def require_comment_change(user, comment):
