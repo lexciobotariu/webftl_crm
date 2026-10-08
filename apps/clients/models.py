@@ -42,8 +42,16 @@ class Client(models.Model):
         return self.billing_name or self.name
 
     @property
+    def billing_contact(self):
+        return self.contacts.filter(is_billing=True).first()
+
+    @property
     def bill_to_email(self):
-        return self.billing_email or self.email
+        """The billing email, else the billing contact's email, else the client email."""
+        if self.billing_email:
+            return self.billing_email
+        contact = self.billing_contact
+        return (contact.email if contact else '') or self.email
 
     @property
     def project_count(self):
@@ -52,6 +60,34 @@ class Client(models.Model):
     @property
     def is_archived(self):
         return self.archived_at is not None
+
+
+class ClientContact(models.Model):
+    """A person at a client. At most one is the primary contact and one the billing contact."""
+
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='contacts')
+    name = models.CharField(max_length=255)
+    role = models.CharField(max_length=100, blank=True)
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=50, blank=True)
+    is_primary = models.BooleanField(default=False, db_default=False)
+    is_billing = models.BooleanField(default=False, db_default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-is_primary', '-is_billing', 'name']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['client'], condition=models.Q(is_primary=True), name='one_primary_contact_per_client',
+            ),
+            models.UniqueConstraint(
+                fields=['client'], condition=models.Q(is_billing=True), name='one_billing_contact_per_client',
+            ),
+        ]
+
+    def __str__(self):
+        return self.name
 
 
 def active_clients(queryset):

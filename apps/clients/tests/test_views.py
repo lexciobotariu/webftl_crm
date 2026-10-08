@@ -192,8 +192,8 @@ class TestClientBillingFields:
             assert 'name="billing_name"' in html
             assert 'name="billing_email"' in html
             assert 'name="tax_id"' in html
-            assert 'A blank value uses the contact name.' in html
-            assert 'A blank value uses the contact email.' in html
+            assert 'A blank value uses the client name.' in html
+            assert 'A blank value uses the billing contact email, else the client email.' in html
             assert '>Billing<' in html
 
         assert 'value="Kept Billing"' in edit_drawer
@@ -226,7 +226,7 @@ class TestClientBillingFields:
         )
         html = client.get(reverse('client_detail', args=[overridden.pk])).content.decode()
         billing = html.split('>Billing</h2>', 1)[1].split('>Notes</h2>', 1)[0]
-        contact = html.split('>Contact Information</h2>', 1)[1].split('>Billing</h2>', 1)[0]
+        contact = html.split('>Company details</h2>', 1)[1].split('>Billing</h2>', 1)[0]
         assert 'Invoice Co' in billing
         assert 'invoice@client.com' in billing
         assert 'RO123456' in billing

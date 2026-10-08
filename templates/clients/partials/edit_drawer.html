@@ -67,7 +67,7 @@
                 <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Billing name</label>
                 <input type="text" name="billing_name" value="{{ form.billing_name.value|default_if_none:'' }}"
                        class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
-                <p class="text-xs text-zinc-500 mt-1">A blank value uses the contact name.</p>
+                <p class="text-xs text-zinc-500 mt-1">A blank value uses the client name.</p>
                 {% if form.billing_name.errors %}
                 <p class="text-xs text-error mt-1">{{ form.billing_name.errors.0 }}</p>
                 {% endif %}
@@ -77,7 +77,7 @@
                 <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Billing email</label>
                 <input type="email" name="billing_email" value="{{ form.billing_email.value|default_if_none:'' }}"
                        class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
-                <p class="text-xs text-zinc-500 mt-1">A blank value uses the contact email.</p>
+                <p class="text-xs text-zinc-500 mt-1">A blank value uses the billing contact email, else the client email.</p>
                 {% if form.billing_email.errors %}
                 <p class="text-xs text-error mt-1">{{ form.billing_email.errors.0 }}</p>
                 {% endif %}
