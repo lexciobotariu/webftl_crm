@@ -9,8 +9,8 @@ from dataclasses import dataclass, field
 
 from django.db.models import Case, IntegerField, Q, Value, When
 
-from apps.clients.models import visible_clients
-from apps.projects.models import visible_projects
+from apps.clients.models import active_clients, visible_clients
+from apps.projects.models import Project, visible_projects
 from apps.tasks.models import visible_tasks
 from apps.tasks.viewspec import MAX_QUERY_LENGTH
 
@@ -77,11 +77,18 @@ def search(user, raw_query):
 
     if user.has_app_permission('access_projects'):
         results.projects = list(
-            visible_projects(user).filter(name__icontains=query).select_related('client').order_by('name')[:PER_SECTION]
+            # Finished and cancelled projects stay out, as on the projects page.
+            visible_projects(user)
+            .filter(name__icontains=query, status__in=Project.OPEN_STATUSES)
+            .select_related('client')
+            .order_by('name')[:PER_SECTION]
         )
 
     if user.has_app_permission('access_clients'):
-        results.clients = list(visible_clients(user).filter(name__icontains=query).order_by('name')[:PER_SECTION])
+        # Archived clients stay out, as on the client list.
+        results.clients = list(
+            active_clients(visible_clients(user)).filter(name__icontains=query).order_by('name')[:PER_SECTION]
+        )
 
     needle = query.lower()
     results.pages = [page for page in pages_for(user) if needle in page.label.lower()][:PER_SECTION]
