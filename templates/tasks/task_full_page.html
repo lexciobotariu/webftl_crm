@@ -83,13 +83,17 @@
                     </div>
                 </div>
 
-                <!-- Action Buttons -->
+                {% if can_edit or can_add_subtask %}
+                <!-- Action Buttons: Add sub-task for whoever may add one, Attach for editors. -->
                 <div class="flex flex-wrap items-center gap-2 mb-6">
+                    {% if can_add_subtask %}
                     <button onclick="document.getElementById('subtask-form-full').classList.toggle('hidden'); document.getElementById('subtask-form-full').querySelector('input').focus();"
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-zinc-400 bg-elevated border border-border-subtle rounded-full hover:text-zinc-200 hover:border-zinc-600 transition-colors">
                         <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                         Add sub-task
                     </button>
+                    {% endif %}
+                    {% if can_edit %}
                     <label class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-zinc-400 bg-elevated border border-border-subtle rounded-full hover:text-zinc-200 hover:border-zinc-600 transition-colors cursor-pointer">
                         <i data-lucide="paperclip" class="w-3.5 h-3.5"></i>
                         Attach
@@ -101,6 +105,7 @@
                                hx-encoding="multipart/form-data"
                                name="file">
                     </label>
+                    {% endif %}
                 </div>
 
                 <!-- Inline subtask form -->
@@ -117,6 +122,7 @@
                         <i data-lucide="x" class="w-4 h-4"></i>
                     </button>
                 </form>
+                {% endif %}
 
                 <!-- Activity -->
                 <div class="border-t border-border-subtle pt-6">

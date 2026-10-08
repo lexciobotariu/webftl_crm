@@ -32,9 +32,9 @@ def permissions(request):
 
     from apps.accounts.permissions import PERMISSION_KEYS
     from apps.tasks.models import TimeEntry
-    from apps.tasks.services import close_expired_timers
+    from apps.tasks.services import close_expired_timers_for
 
-    close_expired_timers()
+    close_expired_timers_for(request)
     running_timer = (
         TimeEntry.objects.filter(user=request.user, ended_at__isnull=True)
         .select_related('task', 'task__project')

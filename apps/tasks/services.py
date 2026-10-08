@@ -145,9 +145,12 @@ def move_task(task, new_status, user, position=None, after_id=AFTER_UNSET):
         raise Task.DoesNotExist('Task was deleted during the move.')
     old_status_id = locked_task.status_id
 
-    locked_task.status = new_status
-    locked_task._changed_by = user
-    locked_task.save()
+    if old_status_id != new_status.pk:
+        locked_task.status = new_status
+        locked_task._changed_by = user
+        # Only what a status change changes: a reorder within a column is not an
+        # update to the task, so it leaves ``updated_at`` (and "Order by: Updated") alone.
+        locked_task.save(update_fields=['status', 'updated_at'])
 
     destination = list(
         Task.objects.filter(project_id=locked_task.project_id, status=new_status)
@@ -191,6 +194,15 @@ def move_task(task, new_status, user, position=None, after_id=AFTER_UNSET):
     task.order = locked_task.order
 
 
+def can_add_subtask(user, task):
+    """Whoever may edit the task, and whoever may create tasks on its project.
+
+    Ticking and deleting a sub-task are edits (:func:`require_access`); adding one
+    is also open to people who may create tasks, as creating a task is.
+    """
+    return can_edit_task(user, task) or can_create_task(user, task.project)
+
+
 @transaction.atomic
 def create_subtask(task, title, user):
     """
@@ -205,10 +217,10 @@ def create_subtask(task, title, user):
         The created Subtask instance
 
     Raises:
-        TaskPermissionError: If user lacks editor access
+        TaskPermissionError: If user may neither edit the task nor create tasks
     """
-    if not can_create_task(user, task.project):
-        raise TaskPermissionError('You cannot create tasks on this project')
+    if not can_add_subtask(user, task):
+        raise TaskPermissionError('You cannot add sub-tasks to this task')
 
     max_order = task.subtasks.aggregate(Max('order'))['order__max']
     next_order = 0 if max_order is None else max_order + 1
@@ -462,16 +474,27 @@ def close_expired_timers(now=None):
     )
 
 
+def close_expired_timers_for(request):
+    """:func:`close_expired_timers`, at most once per request.
+
+    The context processor runs on every template a request renders, and some views
+    need the timers closed before they query; one UPDATE per request is enough.
+    """
+    if getattr(request, '_expired_timers_closed', False):
+        return
+    request._expired_timers_closed = True
+    close_expired_timers()
+
+
 def logged_seconds_on_task(task, now=None):
     """Seconds logged on ``task`` by everyone.
 
-    Closes timers past 12 hours first. A closed row counts
-    ``ended_at - started_at``. A timer that is still running counts
-    elapsed time so far, and never more than 12 hours.
+    A closed row counts ``ended_at - started_at``. A timer that is still
+    running counts elapsed time so far, and never more than 12 hours, so the
+    total is the same whether or not expired timers have been closed yet.
     """
     if now is None:
         now = timezone.now()
-    close_expired_timers(now=now)
     return sum(entry_seconds(entry, now) for entry in task.time_entries.all())
 
 

@@ -1,9 +1,10 @@
 <div class="relative" id="status-dropdown-{{ task.pk }}" x-data="dropdown">
-    <button @click="toggle()"
-            class="flex items-center gap-2 px-2 py-1 rounded-control text-sm text-zinc-300 hover:bg-elevated transition-colors">
+    <button {% if can_edit %}@click="toggle()"{% else %}disabled{% endif %}
+            class="flex items-center gap-2 px-2 py-1 rounded-control text-sm text-zinc-300 hover:bg-elevated transition-colors disabled:cursor-default disabled:hover:bg-transparent">
         {% include "components/status_icon.html" with category=task.status.category %}
         <span>{{ task.status.name }}</span>
     </button>
+    {% if can_edit %}
     <div x-show="open" x-cloak @click.away="close()"
          x-transition
          class="absolute left-0 top-full mt-1 w-48 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 py-1">
@@ -19,4 +20,5 @@
         </button>
         {% endfor %}
     </div>
+    {% endif %}
 </div>

@@ -1,13 +1,14 @@
 <div class="relative" x-data="dropdown">
-    <button @click="toggle()"
-            class="flex items-center gap-2 px-2 py-1 rounded-control text-sm text-zinc-300 hover:bg-elevated transition-colors">
+    <button {% if can_edit %}@click="toggle()"{% else %}disabled{% endif %}
+            class="flex items-center gap-2 px-2 py-1 rounded-control text-sm text-zinc-300 hover:bg-elevated transition-colors disabled:cursor-default disabled:hover:bg-transparent">
         {% if task.due_date %}
         <i data-lucide="calendar" class="w-3.5 h-3.5 text-zinc-500"></i>
         {{ task.due_date|date:"M d, Y" }}
         {% else %}
-        <span class="text-zinc-500">Add due date</span>
+        <span class="text-zinc-500">{% if can_edit %}Add due date{% else %}No due date{% endif %}</span>
         {% endif %}
     </button>
+    {% if can_edit %}
     <div x-show="open" x-cloak @click.away="close()"
          x-transition
          class="absolute left-0 top-full mt-1 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 p-3">
@@ -32,4 +33,5 @@
             </div>
         </form>
     </div>
+    {% endif %}
 </div>

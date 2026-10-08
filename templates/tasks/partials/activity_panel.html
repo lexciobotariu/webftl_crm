@@ -34,6 +34,7 @@
         </div>
     </div>
 
+    {% if can_edit %}
     <!-- Comment input (Plane.so style) -->
     <form hx-post="{% url 'comment_create' task.pk %}"
           hx-target="#activity-items-{{ task.pk }}"
@@ -59,4 +60,5 @@
             </button>
         </div>
     </form>
+    {% endif %}
 </div>

@@ -1,3 +1,4 @@
+{% load task_dates %}
 {% comment %}A row opens the drawer on click, except on a [data-quick] trigger, which opens the quick-edit menu instead. Triggers are buttons only for people who may edit the task; the page works out who that is once (quick_edit, quick_edit_projects).{% endcomment %}
 <div id="task-{{ task.pk }}" data-task-row
      class="flex items-center gap-3 h-9 px-4 border-b border-border-subtle text-sm hover:bg-elevated/50 transition-colors cursor-pointer"
@@ -40,7 +41,8 @@
     </span>
     {% endif %}
     {% endwith %}
-    <span class="w-14 shrink-0 text-right text-xs {% if task.is_overdue %}text-error{% else %}text-zinc-500{% endif %}">{% if task.due_date %}{{ task.due_date|date:"M d" }}{% endif %}</span>
+    {# Wide enough for "Jan 05, 2027": a date in another year carries its year. #}
+    <span class="w-20 shrink-0 text-right text-xs whitespace-nowrap {% if task.is_overdue %}text-error{% else %}text-zinc-500{% endif %}">{{ task.due_date|short_date }}</span>
     {% if quick_edit or task.project_id in quick_edit_projects %}
     <button type="button" data-quick="assignee" aria-haspopup="menu" aria-expanded="false"
             aria-label="Assignee: {% if task.assignee %}{% firstof task.assignee.name task.assignee.email %}{% else %}unassigned{% endif %}"

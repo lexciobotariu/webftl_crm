@@ -84,8 +84,9 @@ def log_task_changes(sender, instance, created, **kwargs):
         )
 
     if hasattr(instance, '_old_due_date') and instance._old_due_date != instance.due_date:
-        old_date = instance._old_due_date.strftime('%b %d') if instance._old_due_date else 'None'
-        new_date = instance.due_date.strftime('%b %d') if instance.due_date else 'None'
+        # With the year: the row stays in the timeline long after the year turns.
+        old_date = instance._old_due_date.strftime('%b %d, %Y') if instance._old_due_date else 'None'
+        new_date = instance.due_date.strftime('%b %d, %Y') if instance.due_date else 'None'
         TaskActivity.objects.create(
             task=instance,
             user=user,
