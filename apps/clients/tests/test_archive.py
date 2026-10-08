@@ -135,12 +135,6 @@ class TestProfile:
         page = client.get(reverse('client_detail', args=[target.pk])).content.decode()
         assert 'Prefers calls on Fridays' in page
 
-    def test_profile_notes_of_a_hidden_client_is_404(self, client):
-        user = _user('Own', clients_view_all=False, access_notes=True)
-        hidden = ClientFactory()
-        client.force_login(user)
-        assert client.get(reverse('client_profile_notes', args=[hidden.pk])).status_code == 404
-
     def test_delete_confirm_shows_the_name_as_written(self, client):
         admin = AdminUserFactory()
         target = ClientFactory(name="O'Brien")

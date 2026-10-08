@@ -144,8 +144,13 @@ def mark_sent(invoice):
 
 
 def record_payment(invoice, *, date, amount, note=''):
+    """Record money received. A draft is not owed yet and a cancelled invoice not at all."""
     with transaction.atomic():
         locked = Invoice.objects.select_for_update().get(pk=invoice.pk)
+        if locked.sent_at is None:
+            raise ValidationError('Mark the invoice sent before recording a payment.')
+        if locked.cancelled_at is not None:
+            raise ValidationError('This invoice has been cancelled.')
         payment = Payment(
             invoice=locked,
             date=date,

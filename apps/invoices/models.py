@@ -274,10 +274,11 @@ class InvoiceLine(models.Model):
 
 
 class Payment(models.Model):
-    """Money recorded against a sent invoice. The amount cannot exceed the balance.
+    """Money recorded against an invoice. The amount cannot exceed the balance.
 
-    A draft is not owed yet and a cancelled invoice is not owed at all, so
-    neither takes a new payment.
+    ``record_payment`` only takes one for a sent invoice that is not cancelled.
+    The model does not refuse it, because the Perfex import stores payments
+    before it stamps ``sent_at``.
     """
 
     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='payments')
@@ -301,11 +302,6 @@ class Payment(models.Model):
     def clean(self):
         if self.amount is None or self.amount <= 0:
             raise ValidationError({'amount': 'Amount must be greater than zero.'})
-        if self._state.adding and self.invoice_id:
-            if self.invoice.sent_at is None:
-                raise ValidationError('Mark the invoice sent before recording a payment.')
-            if self.invoice.cancelled_at is not None:
-                raise ValidationError('This invoice has been cancelled.')
         if self.invoice_id and self.amount > self.invoice.balance:
             raise ValidationError({'amount': 'Amount cannot exceed the balance.'})
 

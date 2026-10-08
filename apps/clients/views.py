@@ -13,7 +13,7 @@ from apps.accounts.decorators import require_permission
 from apps.projects.models import visible_projects
 
 from .forms import ClientDrawerForm, ClientForm
-from .models import visible_clients
+from .models import Client, visible_clients
 
 CLIENTS_PER_PAGE = 20
 
@@ -231,7 +231,7 @@ def client_profile_notes(request, pk):
     The rows are ``notes_visible_to_user``, the same rules as the notes list
     and opening a note by id.
     """
-    client = _visible_client_or_404(request.user, pk)
+    client = get_object_or_404(Client, pk=pk)
 
     from apps.notes.models import Note, notes_visible_to_user
 

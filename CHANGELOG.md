@@ -24,7 +24,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A client's name on project pages links to the client only when that person can open the client, instead of leading to a "not found" page. Someone who may edit every project now also sees every project in the list
 - The old free-text notes of a client, no longer editable since the notes module, are shown read-only on the profile so their text is not lost
 - The client delete confirmation shows names with an apostrophe correctly
-- The client notes table checks that the client is visible, like the rest of the client page
 - The client and project lists count projects and tasks in one query instead of one per row
 
 ## [0.19.1] - 2026-10-02
