@@ -61,8 +61,8 @@ def dashboard(request):
     }
 
     if request.user.has_app_permission('access_clients'):
-        from apps.clients.models import visible_clients
-        context['client_count'] = visible_clients(request.user).count()
+        from apps.clients.models import active_clients, visible_clients
+        context['client_count'] = active_clients(visible_clients(request.user)).count()
 
     if request.user.has_app_permission('access_projects'):
         from apps.projects.models import visible_projects

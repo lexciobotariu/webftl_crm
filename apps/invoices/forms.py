@@ -2,6 +2,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django import forms
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.clients.models import Client, visible_clients
@@ -44,9 +45,13 @@ class InvoiceForm(forms.Form):
         initial=Decimal('0.00'),
     )
 
-    def __init__(self, *args, user, **kwargs):
+    def __init__(self, *args, user, current_client_id=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['client'].queryset = visible_clients(user).order_by('name')
+        # Archived clients are not offered, except the one a draft already has.
+        clients = visible_clients(user).filter(
+            Q(archived_at__isnull=True) | Q(pk=current_client_id)
+        )
+        self.fields['client'].queryset = clients.order_by('name')
         self.fields['client'].empty_label = 'Select a client'
         if not self.is_bound and 'issue_date' not in self.initial:
             today = timezone.localdate()

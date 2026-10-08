@@ -38,7 +38,7 @@ from apps.tasks.models import (
 )
 from apps.tasks.viewspec import LIMIT_STEP, TaskViewOptions, sort_choices
 
-from .forms import LabelForm, ProjectForm, StatusForm
+from .forms import LabelForm, ProjectForm, StatusForm, project_field_errors
 from .keys import KEY_REGEX
 from .models import (
     Project,
@@ -55,6 +55,18 @@ PROJECTS_PER_PAGE = 20
 
 def _status_item_context(project, status):
     return {'status': status, 'project': project, 'category_choices': Status.CATEGORY_CHOICES}
+
+
+def _client_linkable(user, project):
+    """Whether the project's client name may link to the client page.
+
+    A project can be visible (``projects_view_all``) while its client is not;
+    then the name stays plain text instead of leading to a 404.
+    """
+    return (
+        user.has_app_permission('access_clients')
+        and visible_clients(user).filter(pk=project.client_id).exists()
+    )
 
 
 def _can_join_project(user):
@@ -79,14 +91,24 @@ def _addable_users(project):
 @login_required
 @require_permission('access_projects')
 def project_list(request):
-    projects_qs = visible_projects(request.user).select_related('client').order_by('name')
+    projects_qs = (
+        visible_projects(request.user)
+        .select_related('client')
+        .annotate(num_tasks=Count('tasks', distinct=True))
+        .order_by('name')
+    )
     clients = Client.objects.none()
     client_filter = None
+    linkable_client_ids = set()
     if request.user.has_app_permission('access_clients'):
         client_filter = request.GET.get('client')
-        if client_filter:
+        if client_filter and client_filter.isdigit():
             projects_qs = projects_qs.filter(client_id=client_filter)
+        else:
+            client_filter = None
         clients = visible_clients(request.user).order_by('name')
+        # A project can be visible while its client is not; that name stays plain text.
+        linkable_client_ids = set(clients.values_list('pk', flat=True))
 
     paginator = Paginator(projects_qs, PROJECTS_PER_PAGE)
     page_number = request.GET.get('page', 1)
@@ -97,6 +119,7 @@ def project_list(request):
         'total_count': paginator.count,
         'clients': clients,
         'client_filter': client_filter,
+        'linkable_client_ids': linkable_client_ids,
     })
 
 
@@ -111,13 +134,13 @@ def project_create(request):
         initial['client'] = request.GET.get('client')
 
     if request.method == 'POST':
-        form = ProjectForm(request.POST)
+        form = ProjectForm(request.POST, user=request.user)
         if form.is_valid():
             project = form.save()
             ProjectAccess.objects.create(project=project, user=request.user)
             return redirect('project_tasks', pk=project.pk)
     else:
-        form = ProjectForm(initial=initial)
+        form = ProjectForm(initial=initial, user=request.user)
     return render(request, 'projects/project_form.html', {'form': form})
 
 
@@ -169,6 +192,7 @@ def project_detail(request, pk):
         'active_tab': active_tab,
         'can_edit_project': editable,
         'can_create_task': can_create_task(request.user, project),
+        'client_linkable': _client_linkable(request.user, project),
         'access_rows': access_rows,
         'addable_users': addable_users,
     })
@@ -222,6 +246,7 @@ def project_tasks(request, pk):
         'archived_count': archived_count,
         'more_url': None,
         'page_url': page_url,
+        'client_linkable': _client_linkable(request.user, project),
         'can_edit_project': can_edit_project(request.user, project),
         'can_create_task': can_create_task(request.user, project),
         # Asked once for the page; rows and cards only read it.
@@ -400,6 +425,7 @@ def project_settings(request, pk):
         'category_choices': Status.CATEGORY_CHOICES,
         'label_form': label_form,
         'back_url': back_url,
+        'client_linkable': _client_linkable(request.user, project),
         'can_edit_project': can_edit_project(request.user, project),
     })
 
@@ -418,16 +444,21 @@ def project_settings_update(request, pk):
     github_repo_url = request.POST.get('github_repo_url', '').strip()
     # A form without the field keeps the key; an empty field is an error.
     key = request.POST.get('key', project.key).strip().upper()
+    # A form without the sync checkbox keeps the setting; without a repository, sync is off.
+    if 'github_sync_field' in request.POST:
+        github_sync_enabled = request.POST.get('github_sync_enabled') == 'on'
+    else:
+        github_sync_enabled = project.github_sync_enabled
+    github_sync_enabled = github_sync_enabled and bool(github_repo_url)
 
     # The form re-renders from ``project``, so an error keeps what was typed.
     project.name = name
     project.description = description
     project.github_repo_url = github_repo_url
+    project.github_sync_enabled = github_sync_enabled
     project.key = key
 
-    errors = {}
-    if not name:
-        errors['name'] = 'Name is required.'
+    errors = project_field_errors(name, github_repo_url)
     if not re.fullmatch(KEY_REGEX, key, flags=re.ASCII):
         errors['key'] = '2 to 6 capital letters or digits, starting with a letter.'
     elif Project.objects.filter(key=key).exclude(pk=project.pk).exists():
@@ -436,7 +467,9 @@ def project_settings_update(request, pk):
     if not errors:
         try:
             with transaction.atomic():
-                project.save(update_fields=['name', 'description', 'github_repo_url', 'key', 'updated_at'])
+                project.save(update_fields=[
+                    'name', 'description', 'github_repo_url', 'github_sync_enabled', 'key', 'updated_at',
+                ])
         except IntegrityError:
             # Another project took the key between the check and the save.
             errors['key'] = 'This key is already used by another project.'

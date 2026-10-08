@@ -91,6 +91,16 @@ class Project(models.Model):
             Status.objects.create(project=self, name=name, order=i, category=category)
 
     @property
+    def github_link(self):
+        """The repository address when it is safe to render as a link, else ''.
+
+        Older rows were saved without validation, so a value that is not a web
+        address is shown as text, never as an ``href``.
+        """
+        url = self.github_repo_url or ''
+        return url if url.lower().startswith(('https://', 'http://')) else ''
+
+    @property
     def task_count(self):
         """Return total number of tasks across all statuses."""
         from apps.tasks.models import Task
@@ -225,11 +235,12 @@ def _has_access_row(user, project):
 def visible_projects(user):
     """Projects this user may see on the dashboard and in the project list.
 
-    ``projects_view_all`` is every project. Without it, projects where ``user``
-    has a ProjectAccess row. ``role=admin`` bypasses the flag through
+    ``projects_view_all`` or ``projects_edit_all`` is every project, the same
+    rule as :func:`can_access_project`. Without them, projects where ``user``
+    has a ProjectAccess row. ``role=admin`` bypasses the flags through
     ``User.has_app_permission``.
     """
-    if user.has_app_permission('projects_view_all'):
+    if user.has_app_permission('projects_view_all') or user.has_app_permission('projects_edit_all'):
         return Project.objects.all()
     return Project.objects.filter(access__user=user).distinct()
 

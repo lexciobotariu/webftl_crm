@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.0] - 2026-10-08
+
+### Features
+- **Clients can be archived.** Archive (and Restore) sits next to Edit on the client page. An archived client leaves the client list, the dashboard count and the client pickers for new projects and invoices; its projects, invoices, notes and history stay, and "Show archived" on the client list finds it again
+- **A sent invoice can be cancelled.** It keeps its number and lines, shows as Cancelled, owes nothing and takes no payments. An invoice with payments has to have them removed first, and cancelling cannot be undone
+- **A payment recorded by mistake can be removed** from the invoice page (with the invoices edit permission)
+- **GitHub sync can be switched on in project settings,** under the repository address, instead of only in the admin
+
+### Fixes
+- Deleting a client no longer deletes its invoices and payments with it: a client with invoices can only be archived. A client without invoices can still be deleted by an admin, and the confirmation now names everything that goes with it (projects, tasks, logged time, notes, to-dos)
+- Creating a project only offers, and only accepts, active clients the person can see. The "Add project" drawer on a client page no longer works on a client that is hidden from that person
+- A project's repository address must be a web address (http or https). An address saved earlier that is not one is no longer shown as a link
+- A project name over 255 characters or an address over 200 is refused with a message, on the client page drawer and in project settings, instead of a server error
+- `?client=` with something other than a number on the project list is ignored instead of a server error
+- An invoice with no lines, or a total of zero, can no longer be marked sent (it used to show as Paid straight away)
+- Payments can only be recorded on a sent invoice; a draft is not owed yet
+- A client's name on project pages links to the client only when that person can open the client, instead of leading to a "not found" page. Someone who may edit every project now also sees every project in the list
+- The old free-text notes of a client, no longer editable since the notes module, are shown read-only on the profile so their text is not lost
+- The client delete confirmation shows names with an apostrophe correctly
+- The client notes table checks that the client is visible, like the rest of the client page
+- The client and project lists count projects and tasks in one query instead of one per row
+
 ## [0.19.1] - 2026-10-02
 
 ### Documentation

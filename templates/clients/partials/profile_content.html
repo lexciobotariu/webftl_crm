@@ -90,6 +90,20 @@
     </div>
 </div>
 
+{% if client.notes %}
+<!-- The old free-text notes field: no longer edited, shown so its text is not lost. -->
+<div class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden mt-6">
+    <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center gap-3">
+            <i data-lucide="history" class="w-4 h-4 text-zinc-500"></i>
+            <h2 class="text-sm font-medium text-zinc-100">Earlier notes</h2>
+            <span class="text-xs text-zinc-500">read only</span>
+        </div>
+    </div>
+    <div class="p-4 text-sm text-zinc-300">{{ client.notes|linebreaks }}</div>
+</div>
+{% endif %}
+
 <!-- Notes (unified: client + project notes) -->
 <div class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden mt-6" id="notes-section">
     <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">

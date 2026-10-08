@@ -4,6 +4,8 @@
 <span class="px-2 py-0.5 text-[10px] rounded bg-zinc-500/10 text-zinc-300 border border-zinc-500/20">Partial</span>
 {% elif invoice.status == 'overdue' %}
 <span class="px-2 py-0.5 text-[10px] rounded bg-error/10 text-error border border-error/20">Overdue</span>
+{% elif invoice.status == 'cancelled' %}
+<span class="px-2 py-0.5 text-[10px] rounded bg-zinc-500/10 text-zinc-500 border border-border-subtle line-through">Cancelled</span>
 {% elif invoice.status == 'sent' %}
 <span class="px-2 py-0.5 text-[10px] rounded bg-sky-500/10 text-sky-300 border border-sky-500/20">Sent</span>
 {% else %}

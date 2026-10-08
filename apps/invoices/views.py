@@ -12,7 +12,9 @@ from .forms import InvoiceForm, InvoiceLineForm, PaymentForm
 from .models import InvoiceHasPayments, InvoiceLocked, visible_invoices
 from .services import (
     add_line,
+    cancel_invoice,
     create_invoice,
+    delete_payment,
     mark_sent,
     record_payment,
     update_invoice,
@@ -105,7 +107,7 @@ def invoice_edit(request, pk):
         return refused
 
     if request.method == 'POST':
-        form = InvoiceForm(request.POST, user=request.user)
+        form = InvoiceForm(request.POST, user=request.user, current_client_id=invoice.client_id)
         if form.is_valid():
             try:
                 update_invoice(
@@ -124,6 +126,7 @@ def invoice_edit(request, pk):
     else:
         form = InvoiceForm(
             user=request.user,
+            current_client_id=invoice.client_id,
             initial={
                 'client': invoice.client_id,
                 'issue_date': invoice.issue_date,
@@ -146,7 +149,23 @@ def invoice_mark_sent(request, pk):
     invoice = _invoice_or_404(request.user, pk)
     if invoice.sent_at is not None:
         return HttpResponse('This invoice has already been sent.', status=400)
-    mark_sent(invoice)
+    try:
+        mark_sent(invoice)
+    except ValidationError as exc:
+        return HttpResponse(_validation_message(exc), status=400)
+    return _redirect_to('invoice_detail', invoice.pk)
+
+
+@login_required
+@require_permission('access_invoices')
+@require_permission('invoices_edit')
+@require_POST
+def invoice_cancel(request, pk):
+    invoice = _invoice_or_404(request.user, pk)
+    try:
+        cancel_invoice(invoice)
+    except ValidationError as exc:
+        return HttpResponse(_validation_message(exc), status=400)
     return _redirect_to('invoice_detail', invoice.pk)
 
 
@@ -260,6 +279,10 @@ def line_delete(request, pk, line_pk):
 @require_permission('invoices_edit')
 def payment_create(request, pk):
     invoice = _invoice_or_404(request.user, pk)
+    if invoice.sent_at is None:
+        return HttpResponse('Mark the invoice sent before recording a payment.', status=400)
+    if invoice.cancelled_at is not None:
+        return HttpResponse('This invoice has been cancelled.', status=400)
     if request.method == 'POST':
         form = PaymentForm(request.POST, invoice=invoice)
         if form.is_valid():
@@ -281,3 +304,14 @@ def payment_create(request, pk):
         'form': form,
         'invoice': invoice,
     })
+
+
+@login_required
+@require_permission('access_invoices')
+@require_permission('invoices_edit')
+@require_POST
+def payment_delete(request, pk, payment_pk):
+    invoice = _invoice_or_404(request.user, pk)
+    payment = get_object_or_404(invoice.payments, pk=payment_pk)
+    delete_payment(payment)
+    return _redirect_to('invoice_detail', invoice.pk)

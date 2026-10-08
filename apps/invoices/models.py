@@ -70,13 +70,14 @@ def invoice_is_sent(invoice_id):
 class Invoice(models.Model):
     """One invoice for one client.
 
-    Totals and status are derived. ``sent_at`` empty means draft. Bill-to,
+    Totals and status are derived. Deleting a client with invoices is refused
+    (``PROTECT``): archive the client instead. ``sent_at`` empty means draft. Bill-to,
     company, and currency are a snapshot from create time, including which
     side the symbol sits on. Older rows have no currency snapshot, so those
     fields stay blank and amounts print as plain numbers.
     """
 
-    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='invoices')
+    client = models.ForeignKey(Client, on_delete=models.PROTECT, related_name='invoices')
     number = models.PositiveIntegerField(unique=True)
     issue_date = models.DateField()
     due_date = models.DateField()
@@ -94,6 +95,9 @@ class Invoice(models.Model):
     currency_symbol = models.CharField(max_length=16, blank=True, default='')
     symbol_before = models.BooleanField(default=True)
     sent_at = models.DateTimeField(null=True, blank=True)
+    # A sent invoice that no longer stands. It keeps its number and lines, owes
+    # nothing, and cannot be reopened.
+    cancelled_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -140,18 +144,27 @@ class Invoice(models.Model):
         return total
 
     @property
+    def is_cancelled(self):
+        return self.cancelled_at is not None
+
+    @property
     def balance(self):
+        """What is still owed. A cancelled invoice owes nothing."""
+        if self.cancelled_at is not None:
+            return Decimal('0.00')
         return self.total - self.amount_paid
 
     @property
     def status(self):
-        """draft, sent, partial, paid, or overdue.
+        """draft, cancelled, sent, partial, paid, or overdue.
 
         Overdue is a sent invoice that is still owed and whose due date is
         before today. A draft stays a draft. A zero balance is paid.
         """
         if self.sent_at is None:
             return 'draft'
+        if self.cancelled_at is not None:
+            return 'cancelled'
         if self.balance <= 0:
             return 'paid'
         if self.due_date < timezone.localdate():
@@ -164,6 +177,7 @@ class Invoice(models.Model):
     def status_label(self):
         return {
             'draft': 'Draft',
+            'cancelled': 'Cancelled',
             'sent': 'Sent',
             'partial': 'Partial',
             'paid': 'Paid',
@@ -260,7 +274,11 @@ class InvoiceLine(models.Model):
 
 
 class Payment(models.Model):
-    """Money recorded against an invoice. The amount cannot exceed the balance."""
+    """Money recorded against a sent invoice. The amount cannot exceed the balance.
+
+    A draft is not owed yet and a cancelled invoice is not owed at all, so
+    neither takes a new payment.
+    """
 
     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='payments')
     date = models.DateField()
@@ -283,6 +301,11 @@ class Payment(models.Model):
     def clean(self):
         if self.amount is None or self.amount <= 0:
             raise ValidationError({'amount': 'Amount must be greater than zero.'})
+        if self._state.adding and self.invoice_id:
+            if self.invoice.sent_at is None:
+                raise ValidationError('Mark the invoice sent before recording a payment.')
+            if self.invoice.cancelled_at is not None:
+                raise ValidationError('This invoice has been cancelled.')
         if self.invoice_id and self.amount > self.invoice.balance:
             raise ValidationError({'amount': 'Amount cannot exceed the balance.'})
 

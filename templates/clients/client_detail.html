@@ -21,6 +21,9 @@
                         <i data-lucide="building-2" class="w-3.5 h-3.5"></i>
                         <span>{{ client.name }}</span>
                     </span>
+                    {% if client.is_archived %}
+                    <span class="px-2 py-0.5 text-[10px] rounded bg-zinc-500/10 text-zinc-400 border border-border-subtle">Archived</span>
+                    {% endif %}
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -34,9 +37,26 @@
                     Edit
                 </button>
                 {% endif %}
-                {% if request.user.is_admin %}
+                {% if perms_map.clients_edit %}
+                {% if client.is_archived %}
+                <button hx-post="{% url 'client_archive' client.pk %}"
+                        hx-vals='{"restore": "1"}'
+                        class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
+                    <i data-lucide="archive-restore" class="w-3.5 h-3.5"></i>
+                    Restore
+                </button>
+                {% else %}
+                <button hx-post="{% url 'client_archive' client.pk %}"
+                        hx-confirm="Archive {{ client.name }}? It leaves the client list and the pickers; its projects, invoices and history stay."
+                        class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
+                    <i data-lucide="archive" class="w-3.5 h-3.5"></i>
+                    Archive
+                </button>
+                {% endif %}
+                {% endif %}
+                {% if request.user.is_admin and not has_invoices %}
                 <button hx-post="{% url 'client_delete' client.pk %}"
-                        hx-confirm="Delete {{ client.name|escapejs }}? This will also delete all projects and tasks."
+                        hx-confirm="Delete {{ client.name }}? This also deletes its projects, tasks, logged time, notes and to-dos. This cannot be undone."
                         hx-target="body"
                         class="inline-flex items-center gap-1.5 bg-error/10 border border-error/20 text-error px-3 py-1.5 rounded-control text-xs hover:bg-error/20 transition-colors">
                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
@@ -65,7 +85,7 @@
                             <i data-lucide="folder-kanban" class="w-4 h-4"></i>
                             Projects
                         </span>
-                        <span class="text-xs text-zinc-500 bg-panel px-1.5 py-0.5 rounded">{{ projects.count }}</span>
+                        <span class="text-xs text-zinc-500 bg-panel px-1.5 py-0.5 rounded">{{ project_count }}</span>
                     </a>
                     <a href="{% url 'client_detail_todos' client.pk %}"
                        class="w-full flex items-center justify-between px-3 py-2 rounded-control text-sm transition-colors text-left {% if active_tab == 'todos' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">

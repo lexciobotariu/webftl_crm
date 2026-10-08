@@ -127,11 +127,17 @@ def update_line(line, *, project, description, quantity, unit_price):
 
 
 def mark_sent(invoice):
-    """Set ``sent_at``. Sending twice leaves the original timestamp."""
+    """Set ``sent_at``. Sending twice leaves the original timestamp.
+
+    An invoice with nothing to pay is refused: sent with a zero total it would
+    read as paid the moment it went out.
+    """
     with transaction.atomic():
         locked = Invoice.objects.select_for_update().get(pk=invoice.pk)
         if locked.sent_at is not None:
             return locked
+        if locked.total <= 0:
+            raise ValidationError('Add a line with an amount before sending this invoice.')
         locked.sent_at = timezone.now()
         locked.save(update_fields=['sent_at', 'updated_at'])
         return locked
@@ -148,3 +154,30 @@ def record_payment(invoice, *, date, amount, note=''):
         )
         payment.save()
         return payment
+
+
+def cancel_invoice(invoice):
+    """Cancel a sent invoice. It keeps its number and lines and owes nothing.
+
+    A draft is deleted rather than cancelled. An invoice with payments is
+    refused: remove the payments first, so money is never silently written off.
+    Cancelling cannot be undone.
+    """
+    with transaction.atomic():
+        locked = Invoice.objects.select_for_update().get(pk=invoice.pk)
+        if locked.cancelled_at is not None:
+            return locked
+        if locked.sent_at is None:
+            raise ValidationError('A draft is deleted, not cancelled.')
+        if locked.payments.exists():
+            raise ValidationError('Remove the payments before cancelling this invoice.')
+        locked.cancelled_at = timezone.now()
+        locked.save(update_fields=['cancelled_at', 'updated_at'])
+        return locked
+
+
+def delete_payment(payment):
+    """Remove a payment recorded by mistake; the invoice owes that amount again."""
+    with transaction.atomic():
+        Invoice.objects.select_for_update().get(pk=payment.invoice_id)
+        payment.delete()

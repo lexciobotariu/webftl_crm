@@ -6,7 +6,7 @@
     </td>
     <td class="px-4 py-3">
         {% if project.client %}
-        {% if perms_map.access_clients %}
+        {% if project.client_id in linkable_client_ids %}
         <a href="{% url 'client_detail' project.client.pk %}" class="text-sm text-zinc-400 hover:text-zinc-200 transition-colors">
             {{ project.client.name }}
         </a>
@@ -25,7 +25,7 @@
         {% endif %}
     </td>
     <td class="px-4 py-3 text-center">
-        <span class="text-sm text-zinc-400">{{ project.task_count }}</span>
+        <span class="text-sm text-zinc-400">{{ project.num_tasks }}</span>
     </td>
     <td class="px-4 py-3">
         <div class="flex items-center justify-end gap-1">

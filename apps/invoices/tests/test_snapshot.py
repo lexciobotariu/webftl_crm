@@ -100,6 +100,13 @@ class TestInvoiceSnapshot:
                 tax_rate=Decimal('0'),
             )
 
+        add_line(
+            invoice,
+            project=None,
+            description='Work',
+            quantity=Decimal('1'),
+            unit_price=Decimal('10.00'),
+        )
         mark_sent(invoice)
         invoice.refresh_from_db()
         invoice.currency_code = 'USD'
@@ -270,6 +277,7 @@ class TestSymbolPlacement:
                 quantity=Decimal('1'),
                 unit_price=Decimal('10.00'),
             )
+            mark_sent(invoice)
             record_payment(invoice, date=today, amount=Decimal('4.00'))
             made[code] = (billed, invoice)
 
