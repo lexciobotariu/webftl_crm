@@ -68,6 +68,19 @@ projects page ``clients`` is the picker (active clients this person can see).{% 
                        placeholder="https://github.com/org/repo">
             </div>
 
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label for="new-project-start" class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Start date</label>
+                    <input type="date" id="new-project-start" name="start_date" value="{{ form_start_date|default:'' }}"
+                           class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
+                </div>
+                <div>
+                    <label for="new-project-deadline" class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Deadline</label>
+                    <input type="date" id="new-project-deadline" name="deadline" value="{{ form_deadline|default:'' }}"
+                           class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
+                </div>
+            </div>
+
             {% if client %}
             <div class="text-xs text-zinc-500 bg-elevated/50 rounded-card p-3 border border-border-subtle">
                 <div class="flex items-center gap-2 mb-1">

@@ -38,12 +38,26 @@ def project_field_errors(name, github_repo_url):
     return errors
 
 
+def deadline_error(start_date, deadline):
+    """The error for a deadline before the start date, or ''."""
+    if start_date and deadline and deadline < start_date:
+        return 'The deadline cannot be before the start date.'
+    return ''
+
+
 class ClientProjectForm(forms.ModelForm):
     """A new project on a client that is already chosen (the client page drawer)."""
 
     class Meta:
         model = Project
-        fields = ['name', 'description', 'github_repo_url']
+        fields = ['name', 'description', 'github_repo_url', 'start_date', 'deadline']
+
+    def clean(self):
+        cleaned = super().clean()
+        error = deadline_error(cleaned.get('start_date'), cleaned.get('deadline'))
+        if error:
+            self.add_error('deadline', error)
+        return cleaned
 
     def clean_github_repo_url(self):
         url = self.cleaned_data.get('github_repo_url', '')
@@ -61,7 +75,7 @@ class ProjectForm(ClientProjectForm):
 
     class Meta:
         model = Project
-        fields = ['client', 'name', 'description', 'github_repo_url']
+        fields = ['client', 'name', 'description', 'github_repo_url', 'start_date', 'deadline']
         widgets = {
             'client': forms.Select(attrs={'class': INPUT_CLASSES}),
             'name': forms.TextInput(attrs={'class': INPUT_CLASSES}),

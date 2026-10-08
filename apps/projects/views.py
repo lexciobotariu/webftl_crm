@@ -15,6 +15,7 @@ from django.http import (
 )
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_POST
 
 from apps.accounts.decorators import require_permission
@@ -41,7 +42,7 @@ from apps.tasks.models import (
 )
 from apps.tasks.viewspec import LIMIT_STEP, TaskViewOptions, column_choices, sort_choices
 
-from .forms import LabelForm, ProjectForm, StatusForm, project_field_errors
+from .forms import LabelForm, ProjectForm, StatusForm, deadline_error, project_field_errors
 from .keys import KEY_REGEX
 from .models import (
     Project,
@@ -171,6 +172,8 @@ def project_create(request):
             'form_name': form.data.get('name', ''),
             'form_description': form.data.get('description', ''),
             'form_github_repo_url': form.data.get('github_repo_url', ''),
+            'form_start_date': form.data.get('start_date', ''),
+            'form_deadline': form.data.get('deadline', ''),
         })
 
     client_id = request.GET.get('client', '')
@@ -485,6 +488,7 @@ def project_settings(request, pk):
         'client_linkable': _client_linkable(request.user, project),
         'can_edit_project': can_edit_project(request.user, project),
         'status_choices': Project.STATUS_CHOICES,
+        'billing_choices': Project.BILLING_CHOICES,
         'delete_blocker': project_delete_blocker(project),
     })
 
@@ -501,6 +505,25 @@ def parse_hourly_rate(text):
     if not rate.is_finite() or rate < 0 or rate >= Decimal('100000000') or rate != rate.quantize(Decimal('0.01')):
         return None, 'Enter a positive amount with at most 2 decimals.'
     return rate, None
+
+
+def _posted_date(data, name, current):
+    """Return ``(value, error)`` for a date field; missing keeps ``current``, empty clears it.
+
+    An invalid value is returned as typed so the form shows it back.
+    """
+    if name not in data:
+        return current, None
+    text = data.get(name, '').strip()
+    if not text:
+        return None, None
+    try:
+        value = parse_date(text)
+    except ValueError:
+        value = None
+    if value is None:
+        return text, 'Enter a date such as 2026-10-31.'
+    return value, None
 
 
 @login_required
@@ -533,11 +556,27 @@ def project_settings_update(request, pk):
 
     # A form without the field keeps the status.
     status = request.POST.get('status', project.status)
+    billing_type = request.POST.get('billing_type', project.billing_type)
+    # Like the rate: a form without the field keeps the price; an empty field clears it.
+    price_text = request.POST.get('fixed_price')
+    fixed_price, price_error = project.fixed_price, None
+    if price_text is not None:
+        fixed_price, price_error = parse_hourly_rate(price_text)
+        if price_error:
+            fixed_price = price_text.strip()
+    start_date, start_error = _posted_date(request.POST, 'start_date', project.start_date)
+    deadline, deadline_parse_error = _posted_date(request.POST, 'deadline', project.deadline)
 
     # The form re-renders from ``project``, so an error keeps what was typed.
     status_known = status in dict(Project.STATUS_CHOICES)
     if status_known:
         project.status = status
+    billing_known = billing_type in dict(Project.BILLING_CHOICES)
+    if billing_known:
+        project.billing_type = billing_type
+    project.fixed_price = fixed_price
+    project.start_date = start_date
+    project.deadline = deadline
     project.name = name
     project.description = description
     project.github_repo_url = github_repo_url
@@ -548,6 +587,16 @@ def project_settings_update(request, pk):
     errors = project_field_errors(name, github_repo_url)
     if not status_known:
         errors['status'] = 'Choose a status from the list.'
+    if not billing_known:
+        errors['billing_type'] = 'Choose a billing type from the list.'
+    if price_error:
+        errors['fixed_price'] = price_error
+    if start_error:
+        errors['start_date'] = start_error
+    if deadline_parse_error:
+        errors['deadline'] = deadline_parse_error
+    elif not start_error and deadline_error(start_date, deadline):
+        errors['deadline'] = deadline_error(start_date, deadline)
     if rate_error:
         errors['hourly_rate'] = rate_error
     if not re.fullmatch(KEY_REGEX, key, flags=re.ASCII):
@@ -560,7 +609,8 @@ def project_settings_update(request, pk):
             with transaction.atomic():
                 project.save(update_fields=[
                     'name', 'description', 'github_repo_url', 'github_sync_enabled', 'key',
-                    'hourly_rate', 'status', 'updated_at',
+                    'hourly_rate', 'status', 'billing_type', 'fixed_price', 'start_date',
+                    'deadline', 'updated_at',
                 ])
         except IntegrityError:
             # Another project took the key between the check and the save.
@@ -571,12 +621,14 @@ def project_settings_update(request, pk):
             'project': project,
             'errors': errors,
             'status_choices': Project.STATUS_CHOICES,
+        'billing_choices': Project.BILLING_CHOICES,
         })
 
     return render(request, 'projects/partials/settings_general_form.html', {
         'project': project,
         'success': True,
         'status_choices': Project.STATUS_CHOICES,
+        'billing_choices': Project.BILLING_CHOICES,
     })
 
 

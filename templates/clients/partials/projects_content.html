@@ -38,6 +38,9 @@
                     {% if project.status != 'active' %}
                     {% include "projects/partials/project_status_badge.html" %}
                     {% endif %}
+                    {% if project.deadline and project.is_open %}
+                    <span class="block text-xs {% if project.is_overdue %}text-error{% else %}text-zinc-500{% endif %}">Due {{ project.deadline|date:"M d, Y" }}</span>
+                    {% endif %}
                 </td>
                 <td class="px-4 py-3">
                     {% if project.description %}

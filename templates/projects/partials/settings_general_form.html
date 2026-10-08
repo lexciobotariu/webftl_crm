@@ -84,20 +84,72 @@
         <p class="text-zinc-500 text-xs mt-1">Issues opened, closed or reopened on GitHub update the tasks here. Needs a repository address.</p>
     </div>
 
-    <div>
-        <label for="project-hourly-rate" class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Hourly rate</label>
-        <div class="flex items-center gap-2">
-            <input type="text" id="project-hourly-rate" name="hourly_rate" inputmode="decimal" autocomplete="off"
-                   value="{{ project.hourly_rate|default_if_none:'' }}" placeholder="0.00"
-                   aria-describedby="project-hourly-rate-help"
-                   class="w-full max-w-[10rem] bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 tabular-nums focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none {% if errors.hourly_rate %}border-error{% endif %}">
-            {% if project.client.currency %}<span class="text-sm text-zinc-500">{{ project.client.currency.code }}</span>{% endif %}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <label for="project-start-date" class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Start date</label>
+            <input type="date" id="project-start-date" name="start_date"
+                   value="{{ project.start_date|date:'Y-m-d'|default:project.start_date|default_if_none:'' }}"
+                   class="w-full max-w-[12rem] bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none {% if errors.start_date %}border-error{% endif %}">
+            {% if errors.start_date %}
+            <p class="text-error text-xs mt-1">{{ errors.start_date }}</p>
+            {% endif %}
         </div>
-        {% if errors.hourly_rate %}
-        <p id="project-hourly-rate-help" class="text-error text-xs mt-1">{{ errors.hourly_rate }}</p>
-        {% else %}
-        <p id="project-hourly-rate-help" class="text-zinc-500 text-xs mt-1">Used to value billable time on the time page. Leave empty for no amount.</p>
-        {% endif %}
+        <div>
+            <label for="project-deadline" class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Deadline</label>
+            <input type="date" id="project-deadline" name="deadline"
+                   value="{{ project.deadline|date:'Y-m-d'|default:project.deadline|default_if_none:'' }}"
+                   class="w-full max-w-[12rem] bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none {% if errors.deadline %}border-error{% endif %}">
+            {% if errors.deadline %}
+            <p class="text-error text-xs mt-1">{{ errors.deadline }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div x-data="{ billing: '{{ project.billing_type|escapejs }}' }" class="space-y-4">
+        <div>
+            <label for="project-billing-type" class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Billing</label>
+            <select id="project-billing-type" name="billing_type" x-model="billing"
+                    class="w-full max-w-[14rem] bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
+                {% for value, label in billing_choices %}
+                <option value="{{ value }}"{% if project.billing_type == value %} selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            {% if errors.billing_type %}
+            <p class="text-error text-xs mt-1">{{ errors.billing_type }}</p>
+            {% endif %}
+        </div>
+
+        <div x-show="billing === 'hourly'"{% if project.billing_type != 'hourly' %} x-cloak{% endif %}>
+            <label for="project-hourly-rate" class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Hourly rate</label>
+            <div class="flex items-center gap-2">
+                <input type="text" id="project-hourly-rate" name="hourly_rate" inputmode="decimal" autocomplete="off"
+                       value="{{ project.hourly_rate|default_if_none:'' }}" placeholder="0.00"
+                       aria-describedby="project-hourly-rate-help"
+                       class="w-full max-w-[10rem] bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none tabular-nums {% if errors.hourly_rate %}border-error{% endif %}">
+                {% if project.client.currency %}<span class="text-sm text-zinc-500">{{ project.client.currency.code }}</span>{% endif %}
+            </div>
+            {% if errors.hourly_rate %}
+            <p id="project-hourly-rate-help" class="text-error text-xs mt-1">{{ errors.hourly_rate }}</p>
+            {% else %}
+            <p id="project-hourly-rate-help" class="text-zinc-500 text-xs mt-1">Used to value billable time on the time page. Leave empty for no amount.</p>
+            {% endif %}
+        </div>
+
+        <div x-show="billing === 'fixed'"{% if project.billing_type != 'fixed' %} x-cloak{% endif %}>
+            <label for="project-fixed-price" class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Fixed price</label>
+            <div class="flex items-center gap-2">
+                <input type="text" id="project-fixed-price" name="fixed_price" inputmode="decimal" autocomplete="off"
+                       value="{{ project.fixed_price|default_if_none:'' }}" placeholder="0.00"
+                       aria-describedby="project-fixed-price-help"
+                       class="w-full max-w-[10rem] bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none tabular-nums {% if errors.fixed_price %}border-error{% endif %}">
+                {% if project.client.currency %}<span class="text-sm text-zinc-500">{{ project.client.currency.code }}</span>{% endif %}
+            </div>
+            {% if errors.fixed_price %}
+            <p id="project-fixed-price-help" class="text-error text-xs mt-1">{{ errors.fixed_price }}</p>
+            {% else %}
+            <p id="project-fixed-price-help" class="text-zinc-500 text-xs mt-1">What the client pays for the whole project. Time on it is shown in hours, without an amount.</p>
+            {% endif %}
+        </div>
     </div>
 
     <div class="flex justify-end pt-2">

@@ -95,7 +95,7 @@ class TestPaymentFormInitialization:
         """Test that create form prefills payment_date with today."""
         form = PaymentForm(employee_salary=employee_salary)
 
-        assert form.initial['payment_date'] == timezone.now().date()
+        assert form.initial['payment_date'] == timezone.localdate()
 
     def test_edit_form_preserves_payment_date(self, employee_salary, payment):
         """Test that edit form preserves the instance's payment_date."""
