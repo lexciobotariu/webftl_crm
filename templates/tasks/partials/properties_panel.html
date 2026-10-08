@@ -34,6 +34,17 @@
         </div>
     </div>
 
+    <!-- Start Date -->
+    <div class="flex items-center py-2 px-2 hover:bg-hover rounded-card" id="prop-start-date-{{ task.pk }}">
+        <div class="flex items-center gap-2 w-28 text-zinc-500 text-sm">
+            <i data-lucide="calendar-clock" class="w-4 h-4"></i>
+            <span>Start date</span>
+        </div>
+        <div class="flex-1" id="start-date-value-{{ task.pk }}">
+            {% include "tasks/partials/start_date_picker.html" %}
+        </div>
+    </div>
+
     <!-- Due Date -->
     <div class="flex items-center py-2 px-2 hover:bg-hover rounded-card" id="prop-due-date-{{ task.pk }}">
         <div class="flex items-center gap-2 w-28 text-zinc-500 text-sm">
@@ -47,6 +58,17 @@
 
     <!-- Time -->
     {% include "tasks/partials/time_property.html" %}
+
+    <!-- Billable -->
+    <div class="flex items-center py-2 px-2 hover:bg-hover rounded-card" id="prop-billable-{{ task.pk }}">
+        <div class="flex items-center gap-2 w-28 text-zinc-500 text-sm">
+            <i data-lucide="receipt" class="w-4 h-4"></i>
+            <span>Billing</span>
+        </div>
+        <div class="flex-1" id="billable-value-{{ task.pk }}">
+            {% include "tasks/partials/billable_toggle.html" %}
+        </div>
+    </div>
 
     <!-- Labels -->
     <div class="flex items-center py-2 px-2 hover:bg-hover rounded-card" id="prop-labels-{{ task.pk }}">

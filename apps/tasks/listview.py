@@ -16,7 +16,14 @@ from apps.accounts.models import User
 from apps.projects.models import Status, get_assignable_users
 
 from .models import PRIORITY_FILTER_CHOICES, Task, priority_filter_options
-from .viewspec import ASSIGNEE_NONE, CATEGORIES, TaskViewSpec, default_show_empty, default_sort
+from .viewspec import (
+    ASSIGNEE_NONE,
+    CATEGORIES,
+    START_CHOICES,
+    TaskViewSpec,
+    default_show_empty,
+    default_sort,
+)
 
 PRIORITY_LABELS = dict(PRIORITY_FILTER_CHOICES)
 PRIORITY_LABELS[''] = PRIORITY_LABELS['none']
@@ -271,6 +278,7 @@ def filter_options(statuses, spec, assignable_users, labels, categories=()):
     """
     options = {
         'archive_after_days': settings.TASK_ARCHIVE_AFTER_DAYS,
+        'start_choices': START_CHOICES,
         'priority_options': priority_filter_options(spec.priorities),
         'label_options': [
             {'value': label.pk, 'label': label.name, 'checked': label.pk in spec.labels}

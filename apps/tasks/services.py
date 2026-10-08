@@ -741,9 +741,21 @@ def entries_for_week(user, week_start, project=None):
     Everyone else still sees only their own.
     """
     start, end = _week_bounds(week_start)
+    return _entries_between(user, start, end, project)
+
+
+def entries_between(user, first_day, last_day, project=None):
+    """Entries that started from ``first_day`` to ``last_day``, both included,
+    with the same visibility as :func:`entries_for_week`."""
+    start = timezone.make_aware(datetime.combine(first_day, time.min))
+    end = timezone.make_aware(datetime.combine(last_day + timedelta(days=1), time.min))
+    return _entries_between(user, start, end, project)
+
+
+def _entries_between(user, start, end, project):
     entries = (
         TimeEntry.objects.filter(started_at__gte=start, started_at__lt=end)
-        .select_related('task', 'task__project', 'user')
+        .select_related('task', 'task__project', 'task__project__client__currency', 'user')
         .order_by('started_at', 'pk')
     )
     if project is not None:

@@ -19,6 +19,13 @@ LAYOUTS = ('list', 'board')
 # Status types in their natural order; the position in this tuple is the order
 # they are listed in the URL and in the filter.
 CATEGORIES = tuple(value for value, _label in Status.CATEGORY_CHOICES)
+START_CHOICES = (
+    ('', 'Any'),
+    ('started', 'Started'),
+    ('later', 'Not started yet'),
+)
+START_VALUES = tuple(value for value, _ in START_CHOICES)
+
 SORT_CHOICES = (
     ('manual', 'Manual'),
     ('priority', 'Priority'),
@@ -177,6 +184,9 @@ class TaskViewSpec:
     categories: frozenset = frozenset()
     # Closed tasks past TASK_ARCHIVE_AFTER_DAYS are left out unless this is on.
     archived: bool = False
+    # START_CHOICES: '' for any, 'started' (no start date or one today or earlier),
+    # 'later' (a start date after today).
+    start: str = ''
     # Carried so ``to_params`` and ``is_default`` can tell what the page's defaults
     # are. Not part of the state itself, so it stays out of equality and repr.
     options: TaskViewOptions = field(default_factory=TaskViewOptions, compare=False, repr=False)
@@ -247,6 +257,7 @@ class TaskViewSpec:
             limit=_limit(_getone(params, 'limit')),
             categories=categories,
             archived=_getone(params, 'archived') == '1',
+            start=_choice(_getone(params, 'start'), START_VALUES, ''),
             options=options,
         )
         if clearing:
@@ -258,6 +269,7 @@ class TaskViewSpec:
                 labels=(),
                 categories=frozenset(options.default_categories),
                 archived=False,
+                start='',
             )
         return spec
 
@@ -274,7 +286,7 @@ class TaskViewSpec:
         return sum(
             bool(group)
             for group in (self.hidden_statuses, self.priorities, self.assignees, self.labels)
-        ) + (self.categories != self.options.default_categories) + self.archived
+        ) + (self.categories != self.options.default_categories) + self.archived + bool(self.start)
 
     @property
     def is_default(self):
@@ -300,6 +312,8 @@ class TaskViewSpec:
             params['label'] = [str(pk) for pk in self.labels]
         if self.archived:
             params['archived'] = '1'
+        if self.start:
+            params['start'] = self.start
         if self.q:
             params['q'] = self.q
         if self.group != self.options.default_group:

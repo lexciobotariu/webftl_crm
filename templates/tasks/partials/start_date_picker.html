@@ -1,0 +1,37 @@
+<div class="relative" x-data="dropdown">
+    <button {% if can_edit %}@click="toggle()"{% else %}disabled{% endif %}
+            class="flex items-center gap-2 px-2 py-1 rounded-control text-sm text-zinc-300 hover:bg-elevated transition-colors disabled:cursor-default disabled:hover:bg-transparent">
+        {% if task.start_date %}
+        <i data-lucide="calendar-clock" class="w-3.5 h-3.5 text-zinc-500"></i>
+        {{ task.start_date|date:"M d, Y" }}
+        {% else %}
+        <span class="text-zinc-500">{% if can_edit %}Add start date{% else %}No start date{% endif %}</span>
+        {% endif %}
+    </button>
+    {% if can_edit %}
+    <div x-show="open" x-cloak @click.away="close()"
+         x-transition
+         class="absolute left-0 top-full mt-1 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 p-3">
+        <form hx-post="{% url 'task_update_start_date' task.pk %}"
+              hx-target="#start-date-value-{{ task.pk }}"
+              hx-swap="innerHTML"
+              @submit="close()">
+            {% csrf_token %}
+            <input type="date" name="start_date" value="{{ task.start_date|date:'Y-m-d' }}"
+                   class="bg-panel border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:outline-none">
+            <div class="flex gap-2 mt-2">
+                <button type="submit" class="bg-accent text-on-accent px-3 py-1 rounded-control text-xs">Save</button>
+                {% if task.start_date %}
+                <button type="button"
+                        hx-post="{% url 'task_update_start_date' task.pk %}"
+                        hx-vals='{"start_date": ""}'
+                        hx-target="#start-date-value-{{ task.pk }}"
+                        hx-swap="innerHTML"
+                        @click="close()"
+                        class="text-zinc-400 hover:text-error px-3 py-1 text-xs">Clear</button>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+    {% endif %}
+</div>

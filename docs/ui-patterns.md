@@ -384,6 +384,20 @@ filters or pagination, so nothing is lost there.
 - **Logging answers with an empty body**; anything else is the reason, swapped into the popover's
   error line. The popover does not close the drawer.
 
+### Billing, start date and the time page
+
+- **Billable** is a task property (on by default) next to Time; **Hourly rate** is a project setting
+  in the client's currency. Nothing here touches invoices: the time page only shows what billable
+  time is worth (`apps/tasks/timesheet.py`). A project with no rate shows hours and no amount, and
+  amounts in different currencies are listed side by side ("60.00 € + $50.00"), never added.
+- **Start date** sits before Due date. The Filter popover's "Start date" reads Any / Started / Not
+  started yet; "Started" includes tasks with no start date, so a task without one is never hidden.
+- **The time page** (`/tasks/my/week/`) takes `week=<date>` or `month=YYYY-MM`, `by=project|client|person`
+  and `format=csv`. Grouping swaps the entry table for one row per group (billable, non-billable,
+  total, amount); "Person" is offered only to those who see everyone's time on a project. The CSV
+  is the entries, or the grouped totals when a grouping is on, and the footer always splits billable
+  from non-billable.
+
 ### Activity: comments, events and the Work log
 
 - **One list, three tabs** (All / Comments / Work log, `static/js/activity-filter.js`). The list is

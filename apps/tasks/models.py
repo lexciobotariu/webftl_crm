@@ -158,6 +158,12 @@ class TaskQuerySet(models.QuerySet):
                     )
                 )
             )
+        if spec.start:
+            today = timezone.localdate()
+            if spec.start == 'later':
+                qs = qs.filter(start_date__gt=today)
+            else:
+                qs = qs.filter(Q(start_date__isnull=True) | Q(start_date__lte=today))
         if spec.q:
             qs = qs.filter(_search_query(spec.q))
         return qs
@@ -277,8 +283,12 @@ class Task(models.Model):
         related_name='assigned_tasks'
     )
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, blank=True)
+    start_date = models.DateField(null=True, blank=True)
     due_date = models.DateField(null=True, blank=True)
     estimate_minutes = models.PositiveIntegerField(null=True, blank=True, help_text='Estimated time, in minutes')
+    # Time on a billable task counts toward what the client is charged (the time
+    # page totals it apart). Nothing is invoiced from it.
+    billable = models.BooleanField(default=True)
     labels = models.ManyToManyField(Label, blank=True, related_name='tasks')
     order = models.PositiveIntegerField(default=0)
 
@@ -511,6 +521,8 @@ class TaskActivity(models.Model):
         ('title_change', 'Title Changed'),
         ('description_change', 'Description Changed'),
         ('estimate_change', 'Estimate Changed'),
+        ('start_date_change', 'Start Date Changed'),
+        ('billable_change', 'Billable Changed'),
     ]
 
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='activities')

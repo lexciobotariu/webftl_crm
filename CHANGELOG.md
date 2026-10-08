@@ -19,12 +19,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Subscribe / Unsubscribe** next to a task's activity: unsubscribe to stop comment notifications on a task you were assigned, created or commented on, or subscribe to one you have no part in. Mentions still reach you
 - **Properties** in the Display menu choose which columns a list row shows: ID, Labels, Due date and Estimate (plus Project on My Tasks). The choice is kept in the URL and the saved view
 - Sub-tasks can be renamed (click the title) and dragged into another order by people who can edit the task
+- Tasks have a **Billable** switch (on by default) and projects an **Hourly rate** (Settings > General), in the client's currency. The time page splits billable from non-billable time and shows what the billable time is worth. Invoices are not affected
+- Tasks have an optional **Start date** in the drawer, and the Filter menu can show only tasks already started or only those not started yet
+- The time page can show a **Month** as well as a week, **group** the totals by project, client or person (person for those who see everyone's time), and **download a CSV** of the entries or of the grouped totals
 
 ### Migrations
 - `tasks.0023_task_subscription` adds the table behind Subscribe / Unsubscribe. It only creates a table, nothing is rewritten
+- `projects.0017_project_hourly_rate` adds the empty hourly rate to projects
+- `tasks.0024_task_billable_start_date` adds Billable (every existing task becomes billable) and the empty start date to tasks
 
 ### Documentation
-- `docs/ui-patterns.md` records the rules above, and why rows show at most three labels (then "+N") while cards show them all
+- `docs/ui-patterns.md` records the rules above, why rows show at most three labels (then "+N") while cards show them all, and how billing, start dates and the time page fit together
 
 ## [0.19.2] - 2026-10-08
 

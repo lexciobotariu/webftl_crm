@@ -30,6 +30,9 @@ class Project(models.Model):
     # The last task number handed out. Only Task.save() moves it, with an
     # atomic increment; see ``save`` for why a full project save leaves it alone.
     task_counter = models.PositiveIntegerField(default=0, editable=False)
+    # What an hour of billable time is worth, in the client's currency. Blank: no
+    # amounts on the time page, only hours.
+    hourly_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
