@@ -75,6 +75,7 @@ class TestTotals:
         assert invoice.total == Decimal('275.55')
         assert invoice.balance == Decimal('275.55')
 
+        mark_sent(invoice)
         record_payment(invoice, date=_today(), amount=Decimal('100.00'), note='Wire')
         invoice.refresh_from_db()
         assert invoice.amount_paid == Decimal('100.00')
@@ -186,11 +187,13 @@ class TestStatus:
         overdue_partial.refresh_from_db()
         assert overdue_partial.status == 'overdue'
 
-    def test_draft_with_a_payment_is_still_a_draft(self):
+    def test_a_draft_refuses_a_payment(self):
         invoice = self._owed(_invoice(due_in=-1))
-        record_payment(invoice, date=_today(), amount=Decimal('10'))
+        with pytest.raises(ValidationError):
+            record_payment(invoice, date=_today(), amount=Decimal('10'))
         invoice.refresh_from_db()
         assert invoice.status == 'draft'
+        assert invoice.payments.count() == 0
 
 
 @pytest.mark.django_db
@@ -252,6 +255,7 @@ class TestSentLock:
             quantity=Decimal('1'),
             unit_price=Decimal('15'),
         )
+        mark_sent(invoice)
         record_payment(invoice, date=_today(), amount=Decimal('5'))
         with pytest.raises(InvoiceHasPayments):
             invoice.delete()

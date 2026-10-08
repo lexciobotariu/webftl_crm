@@ -43,7 +43,7 @@
                     Mark sent
                 </button>
                 {% endif %}
-                {% if perms_map.invoices_edit and invoice.balance > 0 %}
+                {% if perms_map.invoices_edit and not invoice.is_draft and invoice.balance > 0 %}
                 <button hx-get="{% url 'invoice_payment_create' invoice.pk %}"
                         hx-target="#slide-over"
                         hx-swap="innerHTML"
@@ -51,6 +51,14 @@
                         class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
                     <i data-lucide="banknote" class="w-3.5 h-3.5"></i>
                     Record payment
+                </button>
+                {% endif %}
+                {% if perms_map.invoices_edit and not invoice.is_draft and not invoice.is_cancelled and not invoice.payments.all %}
+                <button hx-post="{% url 'invoice_cancel' invoice.pk %}"
+                        hx-confirm="Cancel {{ invoice.number_label }}? It keeps its number and owes nothing. This cannot be undone."
+                        class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
+                    <i data-lucide="ban" class="w-3.5 h-3.5"></i>
+                    Cancel invoice
                 </button>
                 {% endif %}
                 {% if request.user.is_admin and not invoice.payments.all %}
@@ -221,6 +229,7 @@
                         <th class="px-4 py-2 font-medium">Date</th>
                         <th class="px-4 py-2 font-medium">Note</th>
                         <th class="px-4 py-2 font-medium text-right">Amount</th>
+                        {% if perms_map.invoices_edit %}<th class="px-4 py-2 w-10"></th>{% endif %}
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border-subtle">
@@ -229,6 +238,16 @@
                         <td class="px-4 py-3 text-sm text-zinc-300">{{ payment.date|date:"M j, Y" }}</td>
                         <td class="px-4 py-3 text-sm text-zinc-400">{{ payment.note|default:"—" }}</td>
                         <td class="px-4 py-3 text-sm text-zinc-200 text-right">{% include "invoices/partials/money.html" with amount=payment.amount %}</td>
+                        {% if perms_map.invoices_edit %}
+                        <td class="px-4 py-3 text-right">
+                            <button hx-post="{% url 'invoice_payment_delete' invoice.pk payment.pk %}"
+                                    hx-confirm="Remove this payment? The invoice will owe this amount again."
+                                    class="p-1 text-zinc-500 hover:text-error hover:bg-elevated rounded transition-colors"
+                                    title="Remove payment">
+                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </td>
+                        {% endif %}
                     </tr>
                     {% endfor %}
                 </tbody>

@@ -2,8 +2,10 @@ import json
 
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db.models import Count, ProtectedError
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -36,7 +38,11 @@ def _save_new_client(form, user):
 @login_required
 @require_permission('access_clients')
 def client_list(request):
-    clients_qs = visible_clients(request.user).order_by('name')
+    """Active clients by default; ``?archived=1`` lists the archived ones instead."""
+    visible = visible_clients(request.user)
+    show_archived = request.GET.get('archived') == '1'
+    clients_qs = visible.filter(archived_at__isnull=not show_archived)
+    clients_qs = clients_qs.annotate(num_projects=Count('projects', distinct=True)).order_by('name')
     paginator = Paginator(clients_qs, CLIENTS_PER_PAGE)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
@@ -44,6 +50,8 @@ def client_list(request):
         'clients': page_obj,
         'page_obj': page_obj,
         'total_count': paginator.count,
+        'show_archived': show_archived,
+        'archived_count': None if show_archived else visible.filter(archived_at__isnull=False).count(),
     })
 
 
@@ -109,7 +117,7 @@ def client_detail(request, pk):
     todo_count = todos_qs.count()
 
     notes_count = notes_visible_to_user(request.user, client.note_objects.all()).count()
-    projects = _visible_projects(request.user, client)
+    projects = _visible_projects(request.user, client).annotate(num_tasks=Count('tasks', distinct=True))
     client_invoices = []
     invoice_count = 0
     if request.user.has_app_permission('access_invoices'):
@@ -119,11 +127,14 @@ def client_detail(request, pk):
     return render(request, 'clients/client_detail.html', {
         'client': client,
         'projects': projects,
+        'project_count': projects.count(),
         'todo_count': todo_count,
         'todos': todos_qs,
         'notes_count': notes_count,
         'client_invoices': client_invoices,
         'invoice_count': invoice_count,
+        # Delete is offered only where it can succeed: invoices protect a client.
+        'has_invoices': client.invoices.exists(),
         'show_completed': False,
         'today': timezone.localdate(),
         'active_tab': active_tab,
@@ -176,40 +187,38 @@ def client_edit_drawer(request, pk):
 @login_required
 @require_permission('access_clients')
 def client_create_project(request, pk):
-    """Create a new project for this client via drawer (HTMX)."""
+    """Create a new project for this client via drawer (HTMX).
+
+    Same visibility as the client page and the same validation as
+    ``ProjectForm``. An archived client takes no new projects.
+    """
     if not request.user.has_app_permission('projects_create'):
         return HttpResponseForbidden("You can't create projects")
 
-    from apps.projects.models import Project, ProjectAccess
+    from apps.projects.forms import ClientProjectForm
+    from apps.projects.models import ProjectAccess
 
-    client = get_object_or_404(Client, pk=pk)
+    client = _visible_client_or_404(request.user, pk)
+    if client.is_archived:
+        return HttpResponse('This client is archived. Restore it to add a project.', status=400)
 
     if request.method == 'POST':
-        name = request.POST.get('name', '').strip()
-        description = request.POST.get('description', '').strip()
-        github_repo_url = request.POST.get('github_repo_url', '').strip()
-
-        if not name:
-            return render(request, 'clients/partials/project_create_drawer.html', {
-                'client': client,
-                'error': 'Project name is required.',
-                'form_name': name,
-                'form_description': description,
-                'form_github_repo_url': github_repo_url,
-            })
-
-        project = Project.objects.create(
-            client=client,
-            name=name,
-            description=description,
-            github_repo_url=github_repo_url,
-        )
-        ProjectAccess.objects.create(project=project, user=request.user)
-
-        from django.urls import reverse
-        response = HttpResponse('')
-        response['HX-Redirect'] = reverse('project_tasks', args=[project.pk])
-        return response
+        form = ClientProjectForm(request.POST)
+        if form.is_valid():
+            project = form.save(commit=False)
+            project.client = client
+            project.save()
+            ProjectAccess.objects.create(project=project, user=request.user)
+            response = HttpResponse('')
+            response['HX-Redirect'] = reverse('project_tasks', args=[project.pk])
+            return response
+        return render(request, 'clients/partials/project_create_drawer.html', {
+            'client': client,
+            'error': next(iter(form.errors.values()))[0],
+            'form_name': form.data.get('name', ''),
+            'form_description': form.data.get('description', ''),
+            'form_github_repo_url': form.data.get('github_repo_url', ''),
+        })
 
     return render(request, 'clients/partials/project_create_drawer.html', {'client': client})
 
@@ -267,13 +276,34 @@ def client_profile_notes(request, pk):
 @require_permission('access_clients')
 @require_POST
 def client_delete(request, pk):
+    """Delete a client that was never invoiced. One with invoices is archived instead."""
     # Visibility first: a hidden client is 404, not 403, even when the caller knows the address.
     client = _visible_client_or_404(request.user, pk)
     if not request.user.is_admin:
         return HttpResponseForbidden("Admin access required")
-    client.delete()
+    try:
+        client.delete()
+    except ProtectedError:
+        return HttpResponse('This client has invoices, so it cannot be deleted. Archive it instead.', status=400)
     if request.htmx:
         response = HttpResponse('')
         response['HX-Redirect'] = '/clients/'
         return response
     return redirect('client_list')
+
+
+@login_required
+@require_permission('access_clients')
+@require_POST
+def client_archive(request, pk):
+    """Archive or restore (``restore=1``) a client. Needs ``clients_edit``; nothing is deleted."""
+    client = _visible_client_or_404(request.user, pk)
+    if not request.user.has_app_permission('clients_edit'):
+        return HttpResponseForbidden("Permission required to edit clients")
+    client.archived_at = None if request.POST.get('restore') == '1' else timezone.now()
+    client.save(update_fields=['archived_at', 'updated_at'])
+    if request.htmx:
+        response = HttpResponse('')
+        response['HX-Redirect'] = reverse('client_detail', args=[client.pk])
+        return response
+    return redirect('client_detail', pk=client.pk)

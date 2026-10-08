@@ -206,6 +206,7 @@ class TestPaymentsAndSent:
             quantity=Decimal('1'),
             unit_price=Decimal('10'),
         )
+        mark_sent(invoice)
         client.force_login(user)
         response = client.post(reverse('invoice_payment_create', args=[invoice.pk]), {
             'date': _today().isoformat(),
@@ -284,6 +285,7 @@ class TestDelete:
 
         admin = AdminUserFactory()
         client.force_login(admin)
+        mark_sent(invoice)
         record_payment(invoice, date=_today(), amount=Decimal('5'))
         refused = client.post(reverse('invoice_delete', args=[invoice.pk]))
         assert refused.status_code == 400

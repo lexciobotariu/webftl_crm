@@ -18,6 +18,9 @@ class Client(models.Model):
         related_name='clients',
     )
     notes = models.TextField(blank=True)
+    # Set when the client is archived. An archived client keeps its projects,
+    # invoices and history; it only leaves the default list and the pickers.
+    archived_at = models.DateTimeField(null=True, blank=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -45,6 +48,15 @@ class Client(models.Model):
     @property
     def project_count(self):
         return self.projects.count()
+
+    @property
+    def is_archived(self):
+        return self.archived_at is not None
+
+
+def active_clients(queryset):
+    """Clients that are not archived: the ones offered when picking a client."""
+    return queryset.filter(archived_at__isnull=True)
 
 
 def visible_clients(user):

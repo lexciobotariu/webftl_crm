@@ -57,8 +57,18 @@
         <div class="relative">
             <iconify-icon icon="simple-icons:github" width="16" height="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"></iconify-icon>
             <input type="url" name="github_repo_url" value="{{ project.github_repo_url }}" placeholder="https://github.com/org/repo"
-                   class="w-full bg-elevated border border-border-subtle rounded-control pl-10 pr-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
+                   class="w-full bg-elevated border border-border-subtle rounded-control pl-10 pr-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none {% if errors.github_repo_url %}border-error{% endif %}">
         </div>
+        {% if errors.github_repo_url %}
+        <p class="text-error text-xs mt-1">{{ errors.github_repo_url }}</p>
+        {% endif %}
+        <input type="hidden" name="github_sync_field" value="1">
+        <label class="mt-3 flex items-center gap-2 text-sm text-zinc-300">
+            <input type="checkbox" name="github_sync_enabled" {% if project.github_sync_enabled %}checked{% endif %}
+                   class="rounded border-border-subtle bg-elevated">
+            Sync issues from this repository
+        </label>
+        <p class="text-zinc-500 text-xs mt-1">Issues opened, closed or reopened on GitHub update the tasks here. Needs a repository address.</p>
     </div>
 
     <div>

@@ -15,5 +15,6 @@ urlpatterns = [
     path('<int:pk>/edit/', views.client_edit, name='client_edit'),
     path('<int:pk>/edit/drawer/', views.client_edit_drawer, name='client_edit_drawer'),
     path('<int:pk>/projects/create/', views.client_create_project, name='client_create_project'),
+    path('<int:pk>/archive/', views.client_archive, name='client_archive'),
     path('<int:pk>/delete/', views.client_delete, name='client_delete'),
 ]
