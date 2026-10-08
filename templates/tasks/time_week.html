@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}My Week - WebFTL CRM{% endblock %}
+{% block title %}{% if period == 'month' %}My Month{% else %}My Week{% endif %} - WebFTL CRM{% endblock %}
 
 {% block full_content %}
 <div class="flex flex-col h-full">
     <div class="flex-shrink-0 flex items-center min-h-[45px] px-4 py-2 border-b border-border-subtle bg-panel/80">
         <div class="flex items-center gap-3">
             <i data-lucide="clock" class="w-4 h-4 text-zinc-500"></i>
-            <h1 class="text-sm font-medium text-zinc-100">My Week</h1>
+            <h1 class="text-sm font-medium text-zinc-100">{% if period == 'month' %}My Month{% else %}My Week{% endif %}</h1>
         </div>
     </div>
 
@@ -21,23 +21,68 @@
                             {% if project %}· {{ project.name }}{% endif %}
                         </span>
                     </div>
-                    <div class="flex items-center gap-1">
-                        <a href="?week={{ prev_week|date:'Y-m-d' }}{% if project %}&project={{ project.pk }}{% endif %}"
-                           class="p-1.5 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded-control"
-                           title="Previous week">
-                            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                    <div class="flex items-center gap-2 flex-wrap justify-end">
+                        <div class="flex items-center rounded-control border border-border-subtle text-xs" role="group" aria-label="Range">
+                            <a href="{{ week_url }}" class="px-2 py-1 {% if period == 'week' %}bg-elevated text-zinc-100{% else %}text-zinc-500 hover:text-zinc-200{% endif %}"{% if period == 'week' %} aria-current="true"{% endif %}>Week</a>
+                            <a href="{{ month_url }}" class="px-2 py-1 {% if period == 'month' %}bg-elevated text-zinc-100{% else %}text-zinc-500 hover:text-zinc-200{% endif %}"{% if period == 'month' %} aria-current="true"{% endif %}>Month</a>
+                        </div>
+                        <form method="get" class="flex items-center gap-1 text-xs text-zinc-500">
+                            {% for name, value in range_params.items %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+                            {% if project %}<input type="hidden" name="project" value="{{ project.pk }}">{% endif %}
+                            <label for="time-group-by">Group by</label>
+                            <select id="time-group-by" name="by" onchange="this.form.submit()"
+                                    class="bg-elevated border border-border-subtle rounded-control px-2 py-1 text-xs text-zinc-200 focus:outline-none">
+                                {% for value, label in group_choices %}
+                                <option value="{{ value }}"{% if value == group_by %} selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            <noscript><button type="submit" class="px-2 py-1">Apply</button></noscript>
+                        </form>
+                        <a href="{{ csv_url }}" class="flex items-center gap-1 px-2 py-1 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-elevated rounded-control"
+                           title="Download {% if group_by != 'none' %}these totals{% else %}these entries{% endif %} as CSV">
+                            <i data-lucide="download" class="w-3.5 h-3.5"></i>CSV
                         </a>
-                        <a href="{% url 'time_week' %}{% if project %}?project={{ project.pk }}{% endif %}"
-                           class="px-2 py-1 text-xs text-zinc-400 hover:text-zinc-200">This week</a>
-                        <a href="?week={{ next_week|date:'Y-m-d' }}{% if project %}&project={{ project.pk }}{% endif %}"
-                           class="p-1.5 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded-control"
-                           title="Next week">
-                            <i data-lucide="chevron-right" class="w-4 h-4"></i>
-                        </a>
+                        <div class="flex items-center gap-1">
+                            <a href="{{ prev_url }}" class="p-1.5 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded-control"
+                               title="Previous {{ period }}">
+                                <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                            </a>
+                            <a href="{{ current_url }}" class="px-2 py-1 text-xs text-zinc-400 hover:text-zinc-200">This {{ period }}</a>
+                            <a href="{{ next_url }}" class="p-1.5 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded-control"
+                               title="Next {{ period }}">
+                                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
-            {% if entries %}
+            {% if entries and group_by != 'none' %}
+            <div class="flex-1 min-h-0 overflow-y-auto">
+                <table class="w-full">
+                    <thead class="bg-panel border-b border-border-subtle">
+                        <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
+                            <th class="px-4 py-2 font-medium">{% for value, label in group_choices %}{% if value == group_by %}{{ label }}{% endif %}{% endfor %}</th>
+                            <th class="px-4 py-2 font-medium text-right">Billable</th>
+                            <th class="px-4 py-2 font-medium text-right">Non-billable</th>
+                            <th class="px-4 py-2 font-medium text-right">Total</th>
+                            <th class="px-4 py-2 font-medium text-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border-subtle">
+                        {% for row in groups %}
+                        <tr class="text-sm text-zinc-300" data-time-group>
+                            <td class="px-4 py-3 truncate">{{ row.label }}</td>
+                            <td class="px-4 py-3 text-right tabular-nums">{{ row.billable_label }}</td>
+                            <td class="px-4 py-3 text-right tabular-nums text-zinc-400">{{ row.non_billable_label }}</td>
+                            <td class="px-4 py-3 text-right tabular-nums">{{ row.total_label }}</td>
+                            <td class="px-4 py-3 text-right tabular-nums">{{ row.amount_label|default:"—" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% include "tasks/partials/time_totals.html" %}
+            {% elif entries %}
             {# Header and body are separate tables so the scrollbar starts below the header. #}
             <div class="flex-shrink-0 overflow-y-hidden scrollbar-gutter-stable bg-panel border-b border-border-subtle">
                 <table class="w-full table-fixed">
@@ -82,12 +127,10 @@
                     </tbody>
                 </table>
             </div>
-            <div class="flex-shrink-0 px-4 py-3 border-t border-border-subtle bg-panel/50 text-sm text-zinc-400">
-                Total {{ total_label }}
-            </div>
+            {% include "tasks/partials/time_totals.html" %}
             {% else %}
             <div class="flex-1 min-h-0 overflow-y-auto">
-                {% include "components/empty_state.html" with icon="clock" message="No time logged this week" %}
+                {% if period == 'month' %}{% include "components/empty_state.html" with icon="clock" message="No time logged this month" %}{% else %}{% include "components/empty_state.html" with icon="clock" message="No time logged this week" %}{% endif %}
             </div>
             {% endif %}
         </div>

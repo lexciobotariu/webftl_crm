@@ -159,7 +159,7 @@ class TestGroupingAndSorting:
         TaskFactory.create_batch(3, project=project, status=backlog)
         TaskFactory(project=project, status=project.statuses.get(name='Done'))
         client.force_login(user)
-        groups = client.get(_url(project, 'layout=list')).context['groups']
+        groups = client.get(_url(project, 'layout=list&empty=0')).context['groups']
         assert [(g['label'], g['count']) for g in groups] == [('Backlog', 3), ('Done', 1)]
 
     def test_group_by_priority_and_no_grouping(self, client):

@@ -160,10 +160,11 @@ class TestViewAll:
         assert client.get(
             reverse('task_full_page', args=[project.pk, task.pk])
         ).status_code == 200
+        # Seeing a task is enough to comment on it (0.20.0).
         assert client.post(
             reverse('comment_create', args=[task.pk]),
-            {'content': 'Should not land'},
-        ).status_code == 403
+            {'content': 'From a viewer'},
+        ).status_code == 200
         assert client.post(reverse('task_edit', args=[task.pk]), {
             'title': 'Changed',
             'description': '',
@@ -172,7 +173,7 @@ class TestViewAll:
         task.refresh_from_db()
         assert task.title == 'Far Away'
         assert task.priority == 'low'
-        assert not task.activities.filter(activity_type='comment').exists()
+        assert task.activities.filter(activity_type='comment', content='From a viewer').exists()
 
 
 @pytest.mark.django_db
@@ -214,7 +215,7 @@ class TestCreateFlag:
 
 @pytest.mark.django_db
 class TestEditFlags:
-    def test_edit_own_includes_comment_and_own_time_not_a_view_all_task(self, client):
+    def test_edit_own_logs_own_time_but_not_on_a_view_all_task(self, client):
         user = _user('TaskEditOwn', tasks_edit_own=True, tasks_view_all=True)
         mine = ProjectFactory()
         other = ProjectFactory()
@@ -240,17 +241,17 @@ class TestEditFlags:
         assert mine_task.time_entries.filter(user=user, note='my-hours').exists()
 
         assert client.get(reverse('task_detail', args=[other_task.pk])).status_code == 200
-        denied = client.post(
+        # Commenting needs only sight of the task (0.20.0); logging time needs edit.
+        assert client.post(
             reverse('comment_create', args=[other_task.pk]),
-            {'content': 'Should not land'},
-        )
-        assert denied.status_code == 403
+            {'content': 'From a viewer'},
+        ).status_code == 200
         assert client.post(reverse('time_log', args=[other_task.pk]), {
             'duration': '1h',
             'day': today,
             'note': 'not-mine',
         }).status_code == 403
-        assert not other_task.activities.filter(activity_type='comment').exists()
+        assert other_task.activities.filter(activity_type='comment', content='From a viewer').exists()
         assert not other_task.time_entries.filter(note='not-mine').exists()
 
     def test_edit_all_edits_a_task_they_are_not_on(self, client):

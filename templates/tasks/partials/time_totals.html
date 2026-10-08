@@ -1,0 +1,6 @@
+<div class="flex-shrink-0 px-4 py-3 border-t border-border-subtle bg-panel/50 text-sm text-zinc-400 flex flex-wrap items-center gap-x-4 gap-y-1">
+    <span>Total {{ totals.total_label }}</span>
+    <span>Billable {{ totals.billable_label }}</span>
+    <span>Non-billable {{ totals.non_billable_label }}</span>
+    {% if totals.amount_label %}<span class="text-zinc-200">Amount {{ totals.amount_label }}</span>{% endif %}
+</div>

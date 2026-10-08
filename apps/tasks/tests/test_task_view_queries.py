@@ -135,7 +135,7 @@ class TestOrderedFor:
         TaskFactory(project=project, status=done, priority='urgent', title='done urgent')
         TaskFactory(project=project, status=backlog, priority='low', title='backlog low')
         TaskFactory(project=project, status=backlog, priority='high', title='backlog high')
-        result = titles(Task.objects.ordered_for(spec_for(project)))
+        result = titles(Task.objects.ordered_for(spec_for(project, 'sort=priority')))
         assert result == ['backlog high', 'backlog low', 'done urgent']
 
     def test_assignee_groups_are_alphabetical_with_unassigned_last(self):

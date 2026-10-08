@@ -2,7 +2,10 @@
      id="column-{{ status.pk }}">
     <!-- Column header - fixed -->
     <div class="flex-shrink-0 flex items-center justify-between px-3 py-2.5 border-b border-border-subtle">
-        <h3 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-500">{{ status.name }}</h3>
+        <h3 class="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+            {% include "components/status_icon.html" with category=status.category %}
+            {{ status.name }}
+        </h3>
         <div class="flex items-center gap-2">
             {% if can_create_task %}
             <button hx-get="{% url 'task_create' project.pk %}?status={{ status.pk }}"

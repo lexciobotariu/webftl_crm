@@ -1,0 +1,10 @@
+{% comment %}Follow or stop following the task's comments. "following" is notifications.services.is_following for the viewer.{% endcomment %}
+<button type="button" id="task-subscription-{{ task.pk }}"
+        hx-post="{% url 'task_subscription' task.pk %}" hx-vals='{"subscribed": "{% if following %}0{% else %}1{% endif %}"}'
+        hx-target="this" hx-swap="outerHTML"
+        aria-pressed="{% if following %}true{% else %}false{% endif %}"
+        title="{% if following %}You get notified about new comments{% else %}You only hear about this task when someone mentions you{% endif %}"
+        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-control text-xs text-zinc-500 hover:text-zinc-200 hover:bg-elevated transition-colors">
+    <i data-lucide="{% if following %}bell-off{% else %}bell{% endif %}" class="w-3.5 h-3.5"></i>
+    {% if following %}Unsubscribe{% else %}Subscribe{% endif %}
+</button>

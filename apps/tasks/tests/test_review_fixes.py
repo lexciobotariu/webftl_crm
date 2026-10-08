@@ -32,7 +32,8 @@ def _user(name, **flags):
     return UserFactory(permission_preset=PermissionPreset.objects.create(name=name, **fields))
 
 
-# What an editor's drawer offers and a viewer's must not.
+# What an editor's drawer offers and a viewer's must not. The comment box is
+# open to viewers since 0.20.0 (test_inconsistencies.TestComments).
 EDIT_URLS = (
     'task_update_status',
     'task_update_assignee',
@@ -43,7 +44,6 @@ EDIT_URLS = (
     'task_edit_description',
     'subtask_create',
     'attachment_upload',
-    'comment_create',
 )
 
 

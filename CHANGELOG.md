@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.0] - 2026-10-08
+
+### Changes
+- The task list can be ordered **Manual**: the order the cards were dragged into on the board. It is the default when the list is grouped by status, so the list and the board show the same order. Other groupings still default to Priority. My Tasks does not offer it, since the order belongs to one project's columns
+- **Show empty groups** in the Display menu lists the groups that have no task, with a count of 0, so an empty status no longer disappears from the list. It is on by default when grouping by status and off for the other groupings. Changing "Group by" also moves the order and this switch to the new grouping's defaults, unless you had changed them yourself
+- The list search finds a task by its id as well as its title: "CUST-12", "cust-12", "12" or "#12"
+- Anyone who can see a task can now comment on it, not only people who may edit it. Changing or deleting a comment is still for its author or an admin
+- A task whose status changes from the drawer or the quick menu lands at the top of its new board column, the same place a new task goes. Dragging still puts it where it is dropped
+- Board column headers show the status icon, as the list's group headers do
+- New keys on a selected task: **I** assigns it to you, **D** sets the due date (Today, Tomorrow, Next week, In two weeks, or any date), **Shift+L** picks labels, **Ctrl/⌘+.** copies its id and **Ctrl/⌘+Shift+,** copies its link. "?" lists them
+- A quick edit (priority, assignee, labels, due date) now refreshes only the row or card it changed, so edits feel instant on long lists. The whole list still reloads when the task moves to another group or place, leaves the filter, or changes status
+- **Subscribe / Unsubscribe** next to a task's activity: unsubscribe to stop comment notifications on a task you were assigned, created or commented on, or subscribe to one you have no part in. Mentions still reach you
+- **Properties** in the Display menu choose which columns a list row shows: ID, Labels, Due date and Estimate (plus Project on My Tasks). The choice is kept in the URL and the saved view
+- Sub-tasks can be renamed (click the title) and dragged into another order by people who can edit the task
+- Tasks have a **Billable** switch (on by default) and projects an **Hourly rate** (Settings > General), in the client's currency. The time page splits billable from non-billable time and shows what the billable time is worth. Invoices are not affected
+- Tasks have an optional **Start date** in the drawer, and the Filter menu can show only tasks already started or only those not started yet
+- The time page can show a **Month** as well as a week, **group** the totals by project, client or person (person for those who see everyone's time), and **download a CSV** of the entries or of the grouped totals
+
+### Migrations
+- `tasks.0023_task_subscription` adds the table behind Subscribe / Unsubscribe. It only creates a table, nothing is rewritten
+- `projects.0017_project_hourly_rate` adds the empty hourly rate to projects
+- `tasks.0024_task_billable_start_date` adds Billable (every existing task becomes billable) and the empty start date to tasks
+
+### Documentation
+- `docs/ui-patterns.md` records the rules above, why rows show at most three labels (then "+N") while cards show them all, and how billing, start dates and the time page fit together
+
 ## [0.19.2] - 2026-10-08
 
 ### Fixes

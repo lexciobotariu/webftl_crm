@@ -1,5 +1,38 @@
-{% comment %}Options of the quick-edit menu for a status or an assignee. Rendered without a request, so keep it to plain markup. The current value is checked; choosing it again does nothing.{% endcomment %}
-{% if field == 'status' %}
+{% comment %}Options of the quick-edit menu for a status, an assignee, labels or a due date. Rendered without a request, so keep it to plain markup. A status or assignee that is already set is checked and choosing it again does nothing; labels toggle and keep the menu open.{% endcomment %}
+{% if field == 'labels' %}
+{% for label, checked in options %}
+<button type="button" role="menuitemcheckbox" tabindex="-1" data-field="labels" data-value="{{ label.pk }}"
+        aria-checked="{% if checked %}true{% else %}false{% endif %}"
+        class="w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm text-zinc-300 hover:bg-hover-strong focus:bg-hover-strong focus:outline-none transition-colors">
+    <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background: {{ label.color }}"></span>
+    <span class="flex-1 min-w-0 truncate">{{ label.name }}</span>
+    <span data-check {% if not checked %}hidden{% endif %} class="text-zinc-400">{% include "components/icons/tabler-check.svg" %}</span>
+</button>
+{% empty %}
+<div class="px-3 py-2 text-xs text-zinc-500">This project has no labels yet</div>
+{% endfor %}
+{% elif field == 'due' %}
+{% for label, day in options %}
+<button type="button" role="menuitemradio" tabindex="-1" data-field="due" data-value="{{ day|date:'Y-m-d' }}"
+        aria-checked="{% if day == task.due_date %}true{% else %}false{% endif %}"
+        class="w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm text-zinc-300 hover:bg-hover-strong focus:bg-hover-strong focus:outline-none transition-colors">
+    <span class="flex-1">{{ label }}</span>
+    <span class="text-xs text-zinc-500">{{ day|date:'D, M j' }}</span>
+</button>
+{% endfor %}
+{% if task.due_date %}
+<button type="button" role="menuitemradio" tabindex="-1" data-field="due" data-value="" aria-checked="false"
+        class="w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm text-zinc-400 hover:bg-hover-strong focus:bg-hover-strong focus:outline-none transition-colors">
+    <span class="flex-1">No due date</span>
+</button>
+{% endif %}
+<div class="border-t border-border-subtle mt-1 px-3 pt-2 pb-1.5">
+    <label class="block text-[10px] uppercase tracking-wider text-zinc-500 mb-1" for="quick-due-input">Pick a date</label>
+    {# Enter saves it; the arrow keys stay with the date field. #}
+    <input type="date" id="quick-due-input" data-quick-date value="{{ task.due_date|date:'Y-m-d' }}"
+           class="w-full bg-panel border border-border-subtle rounded-control px-2 py-1 text-sm text-zinc-200 focus:border-border-strong focus:outline-none">
+</div>
+{% elif field == 'status' %}
 {% for status in options %}
 <button type="button" role="menuitemradio" tabindex="-1" data-field="status" data-value="{{ status.pk }}"
         aria-checked="{% if status.pk == task.status_id %}true{% else %}false{% endif %}"

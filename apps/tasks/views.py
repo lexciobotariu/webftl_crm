@@ -1,5 +1,7 @@
 import json
+import re
 from datetime import timedelta
+from urllib.parse import urlencode
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -30,22 +32,25 @@ from .listview import (
     build_groups,
     filter_options,
     group_choices,
+    group_slots,
+    render_task_row,
     resolve_view,
 )
 from .models import MyTasksView, Subtask, Task, TaskActivity, TimeEntry
 from .templatetags.task_markdown import MAX_LENGTH as MARKDOWN_MAX_LENGTH
-from .viewspec import CATEGORIES, LIMIT_STEP, TaskViewOptions, sort_choices
+from .viewspec import CATEGORIES, LIMIT_STEP, SORTS, TaskViewOptions, column_choices, sort_choices
 
 TITLE_MAX_LENGTH = Task._meta.get_field('title').max_length
 
 
 def _time_context(user, task):
-    """The edit flag, and the logged total behind the Time property.
+    """The edit flag, whether the viewer follows the task, and the logged total behind the Time property.
 
     ``can_edit`` drives every control in the drawer and on the full page, so a
     person who may only view the task sees values, not menus that answer 403.
     ``can_log_time`` is the same answer under the name the time partials use.
     """
+    from apps.notifications.services import is_following
     from apps.tasks import services
 
     editable = can_edit_task(user, task)
@@ -58,6 +63,8 @@ def _time_context(user, task):
         'can_log_time': editable,
         'logged_label': format_seconds(logged_seconds, zero='0m'),
         'logged_minutes': logged_minutes,
+        # For the Subscribe / Unsubscribe button above the activity.
+        'following': is_following(user, task),
     }
     if estimate:
         over = logged_minutes - estimate
@@ -73,6 +80,14 @@ def _monday(day):
     return day - timedelta(days=day.weekday())
 
 
+def _safe_date(text):
+    """``parse_date`` that also returns ``None`` for a well-formed but impossible date."""
+    try:
+        return parse_date(text)
+    except ValueError:
+        return None
+
+
 def _format_total(entries):
     total_seconds = 0
     for entry in entries:
@@ -86,6 +101,10 @@ def _format_total(entries):
 MY_TASKS_OPTIONS = TaskViewOptions(
     layouts=('list',),
     groups=('project', 'category', 'priority', 'none'),
+    # Manual order is per project column, so it means nothing across projects.
+    sorts=tuple(value for value in SORTS if value != 'manual'),
+    columns=frozenset({'id', 'project', 'labels', 'due', 'estimate'}),
+    default_columns=frozenset({'id', 'project', 'labels', 'due'}),
     categories=frozenset(CATEGORIES),
     has_assignee_filter=False,
     default_group='project',
@@ -122,6 +141,12 @@ def my_tasks(request):
 
         quick_edit, quick_edit_projects = editable_scope(request.user)
         matching = assigned.matching(spec)
+        if 'row' in request.GET:
+            return render_task_row(request, request.GET['row'], matching, spec, {
+                'show_project': True,
+                'quick_edit': quick_edit,
+                'quick_edit_projects': quick_edit_projects,
+            })
         total_matching = matching.count()
         archived_count = archived_matching(assigned, spec).count()
         # What the default view leaves out is hidden too, so every page of this
@@ -135,7 +160,7 @@ def my_tasks(request):
         )
         context.update({
             'spec': spec,
-            'groups': build_groups(page, spec, assigned.group_counts(spec)),
+            'groups': build_groups(page, spec, assigned.group_counts(spec), group_slots(spec)),
             'total_matching': total_matching,
             'total_visible': total_visible,
             'hidden_count': total_visible - total_matching - archived_count,
@@ -148,7 +173,8 @@ def my_tasks(request):
             'quick_edit_projects': quick_edit_projects,
             'priority_choices': Task.PRIORITY_CHOICES,
             'empty_message': 'No open tasks assigned to you',
-            'sort_choices': sort_choices(),
+            'sort_choices': sort_choices(MY_TASKS_OPTIONS),
+            'column_choices': column_choices(spec),
             'group_choices': group_choices(MY_TASKS_OPTIONS),
             **filter_options(
                 [], spec, [], [], categories=MY_TASKS_OPTIONS.categories
@@ -418,16 +444,27 @@ def task_move(request):
     return HttpResponse(status=204)
 
 
+def due_date_presets(today):
+    """``(label, date)`` choices of the D menu: today, tomorrow, next Monday, in a week."""
+    next_monday = today + timedelta(days=7 - today.weekday())
+    return [
+        ('Today', today),
+        ('Tomorrow', today + timedelta(days=1)),
+        ('Next week', next_monday),
+        ('In two weeks', today + timedelta(days=14)),
+    ]
+
+
 @login_required
 @require_permission('access_tasks')
 def task_quick_menu(request, pk, field):
-    """The options of the quick-edit menu on a row or card, for status or assignee.
+    """The options of the quick-edit menu on a row or card: status, assignee, labels or due date.
 
     Priority has no endpoint: its five options are the same everywhere, so the page
     carries them once. The fragment is rendered without the request, so none of the
     context processors run for what is only a list of buttons.
     """
-    if field not in ('status', 'assignee'):
+    if field not in ('status', 'assignee', 'labels', 'due'):
         return HttpResponse('Unknown field', status=404)
     task = get_object_or_404(Task.objects.select_related('project', 'status'), pk=pk)
     if not can_view_task(request.user, task):
@@ -437,8 +474,15 @@ def task_quick_menu(request, pk, field):
     context = {'task': task, 'field': field}
     if field == 'status':
         context['options'] = task.project.statuses.all()
-    else:
+    elif field == 'assignee':
         context['options'] = get_assignable_users(task.project).order_by('name', 'email')
+    elif field == 'labels':
+        chosen = set(task.labels.values_list('pk', flat=True))
+        context['options'] = [
+            (label, label.pk in chosen) for label in task.project.labels.order_by('name')
+        ]
+    else:
+        context['options'] = due_date_presets(timezone.localdate())
     return HttpResponse(render_to_string('tasks/partials/quick_menu_items.html', context))
 
 
@@ -455,10 +499,11 @@ def task_update_status(request, pk):
         from apps.tasks import services
         if status.pk == task.status_id:
             # Picking the status it already has changes nothing; moving it would
-            # send the card to the end of its column.
+            # send the card to the top of its column.
             services.require_access(request.user, task.project)
             return render(request, 'tasks/partials/status_dropdown.html', {'task': task, 'can_edit': True})
-        services.move_task(task, status, request.user)
+        # Lands at the top of the new column, as a new task does.
+        services.move_task(task, status, request.user, after_id=None)
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
     except Task.DoesNotExist:
@@ -530,6 +575,36 @@ def subtask_delete(request, pk, subtask_pk):
 @login_required
 @require_permission('access_tasks')
 @require_POST
+def subtask_rename(request, pk, subtask_pk):
+    subtask = get_object_or_404(Subtask.objects.select_related('task__project'), pk=subtask_pk, task_id=pk)
+    form = SubtaskForm(request.POST)
+    if not form.is_valid():
+        return HttpResponse('A sub-task needs a title.', status=400)
+    try:
+        from apps.tasks import services
+        services.rename_subtask(subtask, form.cleaned_data['title'], request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
+    return render(request, 'tasks/partials/subtask_item.html', {'subtask': subtask, 'can_edit': True})
+
+
+@login_required
+@require_permission('access_tasks')
+@require_POST
+def subtask_reorder(request, pk):
+    """``ids``: the task's sub-task ids in their new order."""
+    task = get_object_or_404(Task.objects.select_related('project'), pk=pk)
+    try:
+        from apps.tasks import services
+        services.reorder_subtasks(task, request.POST.getlist('ids'), request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
+    return HttpResponse(status=204)
+
+
+@login_required
+@require_permission('access_tasks')
+@require_POST
 def comment_create(request, pk):
     task = get_object_or_404(Task, pk=pk)
     content = request.POST.get('content', '').strip()
@@ -592,6 +667,20 @@ def comment_delete(request, pk, comment_pk):
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
     return HttpResponse('')
+
+
+@login_required
+@require_permission('access_tasks')
+@require_POST
+def task_subscription(request, pk):
+    """Subscribe to or unsubscribe from a task's comments (``subscribed=1`` or ``0``)."""
+    from apps.notifications.services import set_following
+
+    task = get_object_or_404(Task.objects.select_related('project'), pk=pk)
+    if not can_view_task(request.user, task):
+        return HttpResponseForbidden("You don't have access to this task")
+    set_following(request.user, task, request.POST.get('subscribed') == '1')
+    return render(request, 'tasks/partials/subscription_button.html', {'task': task, 'following': request.POST.get('subscribed') == '1'})
 
 
 @login_required
@@ -730,6 +819,44 @@ def task_update_due_date(request, pk):
 @login_required
 @require_permission('access_tasks')
 @require_POST
+def task_update_start_date(request, pk):
+    task = get_object_or_404(Task, pk=pk)
+    raw = request.POST.get('start_date')
+    try:
+        start_date = parse_date(raw) if raw else None
+    except ValueError:
+        return HttpResponse('Invalid date', status=400)
+    if raw and start_date is None:
+        return HttpResponse('Invalid date format', status=400)
+    try:
+        from apps.tasks import services
+        services.update_task_field(task, 'start_date', start_date, request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
+    response = render(request, 'tasks/partials/start_date_picker.html', {'task': task, 'can_edit': True})
+    response['HX-Trigger'] = f'activityUpdated, taskUpdated-{pk}, taskChanged'
+    return response
+
+
+@login_required
+@require_permission('access_tasks')
+@require_POST
+def task_update_billable(request, pk):
+    """``billable=1`` or ``0``."""
+    task = get_object_or_404(Task, pk=pk)
+    try:
+        from apps.tasks import services
+        services.update_task_field(task, 'billable', request.POST.get('billable') == '1', request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
+    response = render(request, 'tasks/partials/billable_toggle.html', {'task': task, 'can_edit': True})
+    response['HX-Trigger'] = f'activityUpdated, taskUpdated-{pk}, taskChanged'
+    return response
+
+
+@login_required
+@require_permission('access_tasks')
+@require_POST
 def task_update_estimate(request, pk):
     task = get_object_or_404(Task, pk=pk)
     try:
@@ -835,19 +962,37 @@ def _require_task_viewer(user, task):
 @login_required
 @require_permission('access_tasks')
 def time_week(request):
-    """The current user's week, optionally filtered to one project."""
-    from apps.tasks import services
+    """The current user's week or month, optionally filtered to one project.
+
+    ``by`` groups the totals by project, client or person (person only for those who
+    see everyone's time); ``format=csv`` downloads the entries, or the totals when grouped.
+    """
+    from apps.tasks import services, timesheet
 
     services.close_expired_timers_for(request)
 
-    week_param = request.GET.get('week')
-    if week_param:
-        week_date = parse_date(week_param)
-        if week_date is None:
-            return HttpResponse('Invalid week', status=400)
-        week_date = _monday(week_date)
+    month_param = request.GET.get('month')
+    if month_param:
+        first_day = _safe_date(f'{month_param}-01') if re.fullmatch(r'\d{4}-\d{2}', month_param) else None
+        if first_day is None:
+            return HttpResponse('Invalid month', status=400)
+        last_day = (first_day + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+        period = 'month'
+        prev_start = (first_day - timedelta(days=1)).replace(day=1)
+        next_start = last_day + timedelta(days=1)
     else:
-        week_date = _monday(timezone.localdate())
+        week_param = request.GET.get('week')
+        if week_param:
+            first_day = _safe_date(week_param)
+            if first_day is None:
+                return HttpResponse('Invalid week', status=400)
+            first_day = _monday(first_day)
+        else:
+            first_day = _monday(timezone.localdate())
+        last_day = first_day + timedelta(days=6)
+        period = 'week'
+        prev_start = first_day - timedelta(days=7)
+        next_start = first_day + timedelta(days=7)
 
     project = None
     project_param = request.GET.get('project')
@@ -860,21 +1005,60 @@ def time_week(request):
         if not can_access_project(request.user, project):
             return HttpResponseForbidden("You don't have access to this project")
 
-    entries = list(services.entries_for_week(request.user, week_date, project=project))
-    for entry in entries:
-        entry.can_open_task = can_view_task(request.user, entry.task)
     sees_everyone = project is not None and (
         request.user.is_admin or request.user.has_app_permission('tasks_view_all')
     )
+    group_choices = [choice for choice in timesheet.GROUP_CHOICES
+                     if choice[0] != 'person' or sees_everyone]
+    group_by = request.GET.get('by', 'none')
+    if group_by not in dict(group_choices):
+        group_by = 'none'
+
+    entries = list(services.entries_between(request.user, first_day, last_day, project=project))
+    overall, groups = timesheet.summarize(entries, group_by)
+
+    if request.GET.get('format') == 'csv':
+        response = HttpResponse(content_type='text/csv; charset=utf-8')
+        name = f'time-{first_day:%Y-%m-%d}-to-{last_day:%Y-%m-%d}'
+        if group_by != 'none':
+            name += f'-by-{group_by}'
+            timesheet.write_summary_csv(response, group_by, groups, overall)
+        else:
+            timesheet.write_entries_csv(response, entries)
+        response['Content-Disposition'] = f'attachment; filename="{name}.csv"'
+        return response
+
+    for entry in entries:
+        entry.can_open_task = can_view_task(request.user, entry.task)
+    # Query string for links that change one parameter and keep the others.
+    keep = {'project': project.pk if project else None, 'by': None if group_by == 'none' else group_by}
+
+    def link(**params):
+        merged = {key: value for key, value in {**keep, **params}.items() if value}
+        return '?' + urlencode(merged) if merged else request.path
+
+    def start_param(day):
+        return {'month': f'{day:%Y-%m}'} if period == 'month' else {'week': f'{day:%Y-%m-%d}'}
+
     return render(request, 'tasks/time_week.html', {
         'entries': entries,
-        'week_start': week_date,
-        'week_end': week_date + timedelta(days=6),
-        'prev_week': week_date - timedelta(days=7),
-        'next_week': week_date + timedelta(days=7),
+        'period': period,
+        'week_start': first_day,
+        'week_end': last_day,
+        'prev_url': link(**start_param(prev_start)),
+        'next_url': link(**start_param(next_start)),
+        'current_url': link(month=f'{timezone.localdate():%Y-%m}') if period == 'month' else link(),
+        'week_url': link(week=f'{_monday(first_day):%Y-%m-%d}'),
+        'month_url': link(month=f'{first_day:%Y-%m}'),
+        'csv_url': link(**start_param(first_day), format='csv'),
+        'range_params': start_param(first_day),
         'project': project,
         'sees_everyone': sees_everyone,
-        'total_label': _format_total(entries),
+        'group_by': group_by,
+        'group_choices': group_choices,
+        'groups': groups,
+        'totals': overall,
+        'total_label': overall.total_label,
     })
 
 

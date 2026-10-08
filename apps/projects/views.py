@@ -1,5 +1,6 @@
 import json
 import re
+from decimal import Decimal, InvalidOperation
 
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
@@ -25,7 +26,9 @@ from apps.tasks.listview import (
     build_groups,
     filter_options,
     group_choices,
+    group_slots,
     project_assignees,
+    render_task_row,
     resolve_view,
 )
 from apps.tasks.models import (
@@ -36,7 +39,7 @@ from apps.tasks.models import (
     can_edit_tasks_on,
     visible_tasks,
 )
-from apps.tasks.viewspec import LIMIT_STEP, TaskViewOptions, sort_choices
+from apps.tasks.viewspec import LIMIT_STEP, TaskViewOptions, column_choices, sort_choices
 
 from .forms import LabelForm, ProjectForm, StatusForm
 from .keys import KEY_REGEX
@@ -205,6 +208,11 @@ def project_tasks(request, pk):
 
     visible = visible_tasks(request.user, project)
     matching = visible.matching(spec)
+    if 'row' in request.GET:
+        return render_task_row(request, request.GET['row'], matching, spec, {
+            'project': project,
+            'quick_edit': can_edit_tasks_on(request.user, project),
+        })
     total_matching = matching.count()
     archived = archived_matching(visible, spec)
     archived_count = archived.count()
@@ -227,7 +235,8 @@ def project_tasks(request, pk):
         # Asked once for the page; rows and cards only read it.
         'quick_edit': can_edit_tasks_on(request.user, project),
         'priority_choices': Task.PRIORITY_CHOICES,
-        'sort_choices': sort_choices(),
+        'sort_choices': sort_choices(options),
+        'column_choices': column_choices(spec),
         'group_choices': group_choices(options),
         **filter_options(statuses, spec, assignees, labels),
     }
@@ -239,7 +248,9 @@ def project_tasks(request, pk):
             .select_related('project', 'status', 'assignee')
             .prefetch_related('labels')[: spec.limit]
         )
-        context['groups'] = build_groups(page, spec, visible.group_counts(spec))
+        context['groups'] = build_groups(
+            page, spec, visible.group_counts(spec), group_slots(spec, statuses, assignees)
+        )
         if total_matching > spec.limit:
             more = spec.replace(limit=spec.limit + LIMIT_STEP).to_query_string()
             context['more_url'] = f'{page_url}?{more}'
@@ -404,6 +415,20 @@ def project_settings(request, pk):
     })
 
 
+def parse_hourly_rate(text):
+    """Return ``(rate, error)`` for a typed hourly rate; empty means no rate."""
+    text = text.strip().replace(',', '.')
+    if not text:
+        return None, None
+    try:
+        rate = Decimal(text)
+    except InvalidOperation:
+        return None, 'Enter a number such as 50 or 49.50.'
+    if not rate.is_finite() or rate < 0 or rate >= Decimal('100000000') or rate != rate.quantize(Decimal('0.01')):
+        return None, 'Enter a positive amount with at most 2 decimals.'
+    return rate, None
+
+
 @login_required
 @require_permission('access_projects')
 @require_POST
@@ -418,14 +443,24 @@ def project_settings_update(request, pk):
     github_repo_url = request.POST.get('github_repo_url', '').strip()
     # A form without the field keeps the key; an empty field is an error.
     key = request.POST.get('key', project.key).strip().upper()
+    # A form without the field keeps the rate; an empty field clears it.
+    rate_text = request.POST.get('hourly_rate')
+    hourly_rate, rate_error = project.hourly_rate, None
+    if rate_text is not None:
+        hourly_rate, rate_error = parse_hourly_rate(rate_text)
+        if rate_error:
+            hourly_rate = rate_text.strip()  # shown back in the form, never saved
 
     # The form re-renders from ``project``, so an error keeps what was typed.
     project.name = name
     project.description = description
     project.github_repo_url = github_repo_url
     project.key = key
+    project.hourly_rate = hourly_rate
 
     errors = {}
+    if rate_error:
+        errors['hourly_rate'] = rate_error
     if not name:
         errors['name'] = 'Name is required.'
     if not re.fullmatch(KEY_REGEX, key, flags=re.ASCII):
@@ -436,7 +471,9 @@ def project_settings_update(request, pk):
     if not errors:
         try:
             with transaction.atomic():
-                project.save(update_fields=['name', 'description', 'github_repo_url', 'key', 'updated_at'])
+                project.save(update_fields=[
+                    'name', 'description', 'github_repo_url', 'key', 'hourly_rate', 'updated_at',
+                ])
         except IntegrityError:
             # Another project took the key between the check and the save.
             errors['key'] = 'This key is already used by another project.'

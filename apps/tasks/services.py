@@ -274,12 +274,48 @@ def delete_subtask(subtask, user):
     subtask.delete()
 
 
+def rename_subtask(subtask, title, user):
+    """Change a sub-task's title. An edit, like ticking it."""
+    require_access(user, subtask.task.project)
+    subtask.title = title
+    subtask.save(update_fields=['title'])
+    return subtask
+
+
+def reorder_subtasks(task, ids, user):
+    """Put the task's sub-tasks in the order of ``ids``, as the drawer shows them after a drag.
+
+    Ids that are not this task's sub-tasks are ignored, and sub-tasks the list left
+    out keep their relative order after the ones it named, so a stale page cannot
+    lose a sub-task. ``order`` is renumbered 0..n-1.
+    """
+    require_access(user, task.project)
+    with transaction.atomic():
+        current = list(task.subtasks.select_for_update().order_by('order', 'pk'))
+        by_pk = {subtask.pk: subtask for subtask in current}
+        wanted = []
+        for raw in ids:
+            try:
+                subtask = by_pk.pop(int(raw))
+            except (KeyError, TypeError, ValueError):
+                continue
+            wanted.append(subtask)
+        wanted += [subtask for subtask in current if subtask.pk in by_pk]
+        changed = []
+        for order, subtask in enumerate(wanted):
+            if subtask.order != order:
+                subtask.order = order
+                changed.append(subtask)
+        task.subtasks.model.objects.bulk_update(changed, ['order'])
+    return wanted
+
+
 def add_comment(task, content, user, mentions=()):
     """
     Add a comment to a task.
 
     Comments are stored as TaskActivity with type 'comment'.
-    Editors can add comments, same as creating a task or starting a timer.
+    Anyone who can see the task may comment on it, editor or not.
 
     Args:
         task: Task to comment on
@@ -291,11 +327,12 @@ def add_comment(task, content, user, mentions=()):
         The created TaskActivity instance
 
     Raises:
-        TaskPermissionError: If user lacks editor access
+        TaskPermissionError: If user cannot see the task
     """
     from apps.notifications.services import notify_comment
 
-    require_access(user, task.project)
+    if not can_view_task(user, task):
+        raise TaskPermissionError("You don't have access to this task")
 
     comment = TaskActivity.objects.create(
         task=task,
@@ -310,14 +347,14 @@ def add_comment(task, content, user, mentions=()):
 
 
 def can_change_comment(user, comment):
-    """The author while they can still edit the task, or an admin.
+    """The author while they can still see the task, or an admin.
 
-    Same rule as :func:`require_entry_edit`: ``tasks_edit_all`` does not let
-    anyone change someone else's words.
+    Whoever may comment may change their own comment (:func:`add_comment`), and
+    ``tasks_edit_all`` does not let anyone change someone else's words.
     """
     if user.is_admin:
         return True
-    return comment.user_id == user.pk and can_edit_task(user, comment.task)
+    return comment.user_id == user.pk and can_view_task(user, comment.task)
 
 
 def require_comment_change(user, comment):
@@ -704,9 +741,21 @@ def entries_for_week(user, week_start, project=None):
     Everyone else still sees only their own.
     """
     start, end = _week_bounds(week_start)
+    return _entries_between(user, start, end, project)
+
+
+def entries_between(user, first_day, last_day, project=None):
+    """Entries that started from ``first_day`` to ``last_day``, both included,
+    with the same visibility as :func:`entries_for_week`."""
+    start = timezone.make_aware(datetime.combine(first_day, time.min))
+    end = timezone.make_aware(datetime.combine(last_day + timedelta(days=1), time.min))
+    return _entries_between(user, start, end, project)
+
+
+def _entries_between(user, start, end, project):
     entries = (
         TimeEntry.objects.filter(started_at__gte=start, started_at__lt=end)
-        .select_related('task', 'task__project', 'user')
+        .select_related('task', 'task__project', 'task__project__client__currency', 'user')
         .order_by('started_at', 'pk')
     )
     if project is not None:

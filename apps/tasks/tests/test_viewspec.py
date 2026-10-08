@@ -23,8 +23,9 @@ class TestDefaults:
         assert spec.labels == ()
         assert spec.q == ''
         assert spec.group == 'status'
-        assert spec.sort == 'priority'
+        assert spec.sort == 'manual'
         assert spec.dir == 'asc'
+        assert spec.show_empty is True
         assert spec.limit == DEFAULT_LIMIT
 
     def test_default_view_serialises_to_just_the_layout(self):
@@ -130,7 +131,7 @@ class TestRoundTrip:
         assert parse(spec.to_query_string()) == spec
 
     def test_canonical_form_is_stable_and_minimal(self):
-        spec = parse('hide_status=3&hide_status=1&priority=urgent&group=status&sort=priority')
+        spec = parse('hide_status=3&hide_status=1&priority=urgent&group=status&sort=manual')
         assert spec.to_params() == {
             'layout': 'list',
             'hide_status': ['1', '3'],

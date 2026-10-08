@@ -61,6 +61,22 @@
         </div>
     </div>
 
+    <div>
+        <label for="project-hourly-rate" class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Hourly rate</label>
+        <div class="flex items-center gap-2">
+            <input type="text" id="project-hourly-rate" name="hourly_rate" inputmode="decimal" autocomplete="off"
+                   value="{{ project.hourly_rate|default_if_none:'' }}" placeholder="0.00"
+                   aria-describedby="project-hourly-rate-help"
+                   class="w-full max-w-[10rem] bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 tabular-nums focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none {% if errors.hourly_rate %}border-error{% endif %}">
+            {% if project.client.currency %}<span class="text-sm text-zinc-500">{{ project.client.currency.code }}</span>{% endif %}
+        </div>
+        {% if errors.hourly_rate %}
+        <p id="project-hourly-rate-help" class="text-error text-xs mt-1">{{ errors.hourly_rate }}</p>
+        {% else %}
+        <p id="project-hourly-rate-help" class="text-zinc-500 text-xs mt-1">Used to value billable time on the time page. Leave empty for no amount.</p>
+        {% endif %}
+    </div>
+
     <div class="flex justify-end pt-2">
         <button type="submit" class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm hover:bg-accent-hover transition-colors flex items-center gap-2">
             <i data-lucide="save" class="w-4 h-4"></i>

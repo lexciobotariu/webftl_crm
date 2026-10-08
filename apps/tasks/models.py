@@ -1,3 +1,4 @@
+import re
 from datetime import timedelta
 
 from django.conf import settings
@@ -157,8 +158,14 @@ class TaskQuerySet(models.QuerySet):
                     )
                 )
             )
+        if spec.start:
+            today = timezone.localdate()
+            if spec.start == 'later':
+                qs = qs.filter(start_date__gt=today)
+            else:
+                qs = qs.filter(Q(start_date__isnull=True) | Q(start_date__lte=today))
         if spec.q:
-            qs = qs.filter(title__icontains=spec.q)
+            qs = qs.filter(_search_query(spec.q))
         return qs
 
     def ordered_for(self, spec):
@@ -179,7 +186,17 @@ class TaskQuerySet(models.QuerySet):
             ordering.append(_category_rank().asc())
 
         descending = spec.dir == 'desc'
-        if spec.sort == 'priority':
+        if spec.sort == 'manual':
+            # The board's column order: status first (a no-op when grouped by
+            # status), then the dragged position, newest first on a tie as the
+            # board shows it.
+            if spec.group != 'status':
+                ordering.extend(['status__order', 'status_id'])
+            if descending:
+                ordering.extend(['-order', 'created_at'])
+            else:
+                ordering.extend(['order', '-created_at'])
+        elif spec.sort == 'priority':
             key = _priority_rank()
             ordering.append(key.desc() if descending else key.asc())
         elif spec.sort == 'due':
@@ -224,6 +241,26 @@ class TaskQuerySet(models.QuerySet):
         return visible_tasks(user).filter(assignee=user)
 
 
+TASK_ID_RE = re.compile(r'^(?:(?P<key>[A-Za-z][A-Za-z0-9]*)-)?#?(?P<number>\d{1,9})$')
+
+
+def _search_query(text):
+    """Title contains ``text``, or ``text`` is a task id: "CUST-12", "12" or "#12".
+
+    A bare number matches that number in every project the view covers; with a
+    key it must be that project's key (any case).
+    """
+    query = Q(title__icontains=text)
+    match = TASK_ID_RE.match(text.strip())
+    if match:
+        number = int(match['number'])
+        id_query = Q(number=number)
+        if match['key']:
+            id_query &= Q(project__key__iexact=match['key'])
+        query |= id_query
+    return query
+
+
 class Task(models.Model):
     PRIORITY_CHOICES = [
         ('low', 'Low'),
@@ -246,8 +283,12 @@ class Task(models.Model):
         related_name='assigned_tasks'
     )
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, blank=True)
+    start_date = models.DateField(null=True, blank=True)
     due_date = models.DateField(null=True, blank=True)
     estimate_minutes = models.PositiveIntegerField(null=True, blank=True, help_text='Estimated time, in minutes')
+    # Time on a billable task counts toward what the client is charged (the time
+    # page totals it apart). Nothing is invoiced from it.
+    billable = models.BooleanField(default=True)
     labels = models.ManyToManyField(Label, blank=True, related_name='tasks')
     order = models.PositiveIntegerField(default=0)
 
@@ -430,6 +471,29 @@ def visible_tasks(user, project=None):
     return qs.none()
 
 
+class TaskSubscription(models.Model):
+    """Someone's own choice to follow a task or not, over what is inferred.
+
+    Without a row a person follows a task when they are its assignee, created it or
+    commented on it (``apps.notifications.services.follower_ids``). A row with
+    ``subscribed=False`` stops that; one with ``True`` follows a task they have no
+    part in. Mentions reach people either way.
+    """
+
+    task = models.ForeignKey('Task', on_delete=models.CASCADE, related_name='subscriptions')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='task_subscriptions')
+    subscribed = models.BooleanField()
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['task', 'user'], name='unique_task_subscription'),
+        ]
+
+    def __str__(self):
+        return f'{self.user} {"follows" if self.subscribed else "muted"} {self.task}'
+
+
 class Subtask(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='subtasks')
     title = models.CharField(max_length=255)
@@ -457,6 +521,8 @@ class TaskActivity(models.Model):
         ('title_change', 'Title Changed'),
         ('description_change', 'Description Changed'),
         ('estimate_change', 'Estimate Changed'),
+        ('start_date_change', 'Start Date Changed'),
+        ('billable_change', 'Billable Changed'),
     ]
 
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='activities')
