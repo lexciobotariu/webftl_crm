@@ -3,7 +3,7 @@
       hx-swap="innerHTML"
       class="flex items-center gap-2">
     {% csrf_token %}
-    <input type="text" name="title" value="{{ task.title }}"
+    <input type="text" name="title" value="{{ task.title }}" maxlength="{{ title_max_length }}"
            class="flex-1 text-lg font-semibold bg-panel border border-border-subtle rounded-control px-2 py-1 text-zinc-100 focus:border-border-strong focus:outline-none"
            autofocus>
     <button type="submit" class="text-zinc-200 hover:text-zinc-50 p-1">

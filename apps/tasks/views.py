@@ -20,6 +20,7 @@ from apps.projects.models import (
     get_assignable_users,
 )
 from apps.tasks.models import Label, can_create_task, can_edit_task, can_view_task, editable_scope
+from apps.tasks.services import can_add_subtask
 
 from .durations import format_minutes, format_seconds, parse_duration
 from .forms import DurationEntryForm, SubtaskForm, TaskForm
@@ -35,17 +36,26 @@ from .models import MyTasksView, Subtask, Task, TaskActivity, TimeEntry
 from .templatetags.task_markdown import MAX_LENGTH as MARKDOWN_MAX_LENGTH
 from .viewspec import CATEGORIES, LIMIT_STEP, TaskViewOptions, sort_choices
 
+TITLE_MAX_LENGTH = Task._meta.get_field('title').max_length
+
 
 def _time_context(user, task):
-    """Close expired timers, then the edit flag and the logged total behind the Time property."""
+    """The edit flag, and the logged total behind the Time property.
+
+    ``can_edit`` drives every control in the drawer and on the full page, so a
+    person who may only view the task sees values, not menus that answer 403.
+    ``can_log_time`` is the same answer under the name the time partials use.
+    """
     from apps.tasks import services
 
-    services.close_expired_timers()
+    editable = can_edit_task(user, task)
+    # A running timer counts at most 12 hours, closed or not; the page render closes it.
     logged_seconds = services.logged_seconds_on_task(task)
     logged_minutes = logged_seconds // 60
     estimate = task.estimate_minutes
     context = {
-        'can_log_time': can_edit_task(user, task),
+        'can_edit': editable,
+        'can_log_time': editable,
         'logged_label': format_seconds(logged_seconds, zero='0m'),
         'logged_minutes': logged_minutes,
     }
@@ -283,6 +293,7 @@ def render_task_drawer(request, task_id, embedded=False):
         'project_labels': project_labels,
         'priority_choices': priority_choices,
         'embedded': embedded,
+        'can_add_subtask': can_add_subtask(request.user, task),
         **_time_context(request.user, task),
     })
 
@@ -316,11 +327,8 @@ def task_edit(request, pk):
             form.save()
             _log_label_changes(task, labels_before, set(form.cleaned_data['labels']), request.user)
             if request.htmx:
-                return render(request, 'tasks/task_detail.html', {
-                    'task': task,
-                    'subtask_form': SubtaskForm(),
-                    **_time_context(request.user, task),
-                })
+                # The same drawer the task opens in, with everything its menus need.
+                return render_task_drawer(request, task.pk)
             return redirect('project_tasks', pk=task.project.pk)
     else:
         form = TaskForm(task.project, instance=task)
@@ -406,7 +414,7 @@ def task_move(request):
     except Task.DoesNotExist:
         return HttpResponse('Task no longer exists', status=404)
     # The board is driven by a raw fetch(), which ignores HX-Trigger; the caller
-    # dispatches the taskStatusChanged event itself.
+    # re-renders #task-view itself (refreshFragment in project_tasks.html).
     return HttpResponse(status=204)
 
 
@@ -449,14 +457,20 @@ def task_update_status(request, pk):
             # Picking the status it already has changes nothing; moving it would
             # send the card to the end of its column.
             services.require_access(request.user, task.project)
-            return render(request, 'tasks/partials/status_dropdown.html', {'task': task})
+            return render(request, 'tasks/partials/status_dropdown.html', {'task': task, 'can_edit': True})
         services.move_task(task, status, request.user)
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
     except Task.DoesNotExist:
         return HttpResponse('Task no longer exists', status=404)
-    response = render(request, 'tasks/partials/status_dropdown.html', {'task': task})
+    response = render(request, 'tasks/partials/status_dropdown.html', {'task': task, 'can_edit': True})
     response['HX-Trigger'] = 'taskStatusChanged, activityUpdated'
+    return response
+
+
+def _subtasks_changed(response):
+    # The card on the board and the row count sub-tasks; let the view refresh them.
+    response['HX-Trigger'] = 'taskChanged'
     return response
 
 
@@ -474,9 +488,12 @@ def subtask_create(request, pk):
         subtask = services.create_subtask(task, form.cleaned_data['title'], request.user)
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
-    html = render(request, 'tasks/partials/subtask_item.html', {'subtask': subtask}).content.decode()
+    # Someone who may only create tasks can add a sub-task but not tick it.
+    html = render(request, 'tasks/partials/subtask_item.html', {
+        'subtask': subtask, 'can_edit': can_edit_task(request.user, task),
+    }).content.decode()
     counter_html = render(request, 'tasks/partials/subtask_counter.html', {'task': task}).content.decode()
-    return HttpResponse(html + counter_html)
+    return _subtasks_changed(HttpResponse(html + counter_html))
 
 
 @login_required
@@ -490,9 +507,9 @@ def subtask_toggle(request, pk, subtask_pk):
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
     task = subtask.task
-    html = render(request, 'tasks/partials/subtask_item.html', {'subtask': subtask}).content.decode()
+    html = render(request, 'tasks/partials/subtask_item.html', {'subtask': subtask, 'can_edit': True}).content.decode()
     counter_html = render(request, 'tasks/partials/subtask_counter.html', {'task': task}).content.decode()
-    return HttpResponse(html + counter_html)
+    return _subtasks_changed(HttpResponse(html + counter_html))
 
 
 @login_required
@@ -507,7 +524,7 @@ def subtask_delete(request, pk, subtask_pk):
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
     counter_html = render(request, 'tasks/partials/subtask_counter.html', {'task': task}).content.decode()
-    return HttpResponse(counter_html)
+    return _subtasks_changed(HttpResponse(counter_html))
 
 
 @login_required
@@ -632,6 +649,7 @@ def task_full_page(request, project_pk, task_pk):
         'team_members': team_members,
         'project_labels': project_labels,
         'priority_choices': priority_choices,
+        'can_add_subtask': can_add_subtask(request.user, task),
         **_time_context(request.user, task),
     })
 
@@ -659,7 +677,7 @@ def task_update_assignee(request, pk):
         return HttpResponseForbidden(str(e))
     team_members = get_assignable_users(task.project)
     response = render(request, 'tasks/partials/assignee_dropdown.html', {
-        'task': task, 'team_members': team_members
+        'task': task, 'team_members': team_members, 'can_edit': True,
     })
     response['HX-Trigger'] = f'activityUpdated, taskUpdated-{pk}, taskChanged'
     return response
@@ -679,7 +697,7 @@ def task_update_priority(request, pk):
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
     response = render(request, 'tasks/partials/priority_dropdown.html', {
-        'task': task, 'priority_choices': Task.PRIORITY_CHOICES
+        'task': task, 'priority_choices': Task.PRIORITY_CHOICES, 'can_edit': True,
     })
     response['HX-Trigger'] = f'activityUpdated, taskUpdated-{pk}, taskChanged'
     return response
@@ -704,7 +722,7 @@ def task_update_due_date(request, pk):
         services.update_task_field(task, 'due_date', parsed_date, request.user)
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
-    response = render(request, 'tasks/partials/due_date_picker.html', {'task': task})
+    response = render(request, 'tasks/partials/due_date_picker.html', {'task': task, 'can_edit': True})
     response['HX-Trigger'] = f'activityUpdated, taskUpdated-{pk}, taskChanged'
     return response
 
@@ -724,12 +742,12 @@ def task_update_estimate(request, pk):
             # The popover stays open on what was typed, with the reason.
             services.require_access(request.user, task.project)
             return render(request, 'tasks/partials/estimate_input.html', {
-                'task': task, 'estimate_error': str(error), 'estimate_text': text,
+                'task': task, 'estimate_error': str(error), 'estimate_text': text, 'can_edit': True,
             })
         services.update_task_field(task, 'estimate_minutes', value, request.user)
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
-    response = render(request, 'tasks/partials/estimate_input.html', {'task': task})
+    response = render(request, 'tasks/partials/estimate_input.html', {'task': task, 'can_edit': True})
     response['HX-Trigger'] = f'activityUpdated, taskUpdated-{pk}, taskChanged'
     return response
 
@@ -747,7 +765,7 @@ def task_toggle_label(request, pk, label_pk):
         return HttpResponseForbidden(str(e))
     project_labels = task.project.labels.all()
     response = render(request, 'tasks/partials/labels_selector.html', {
-        'task': task, 'project_labels': project_labels
+        'task': task, 'project_labels': project_labels, 'can_edit': True,
     })
     response['HX-Trigger'] = f'activityUpdated, taskUpdated-{pk}, taskChanged'
     return response
@@ -761,7 +779,7 @@ def task_edit_description(request, pk):
         return HttpResponseForbidden("You can't edit this task")
     # Return display template if cancel=1
     if request.GET.get('cancel') == '1':
-        return render(request, 'tasks/partials/description_display.html', {'task': task})
+        return render(request, 'tasks/partials/description_display.html', {'task': task, 'can_edit': True})
     if request.method == 'POST':
         description = request.POST.get('description', '')
         if len(description) > MARKDOWN_MAX_LENGTH:
@@ -769,7 +787,7 @@ def task_edit_description(request, pk):
         task.description = description
         task._changed_by = request.user
         task.save()
-        response = render(request, 'tasks/partials/description_display.html', {'task': task})
+        response = render(request, 'tasks/partials/description_display.html', {'task': task, 'can_edit': True})
         response['HX-Trigger'] = 'activityUpdated'
         return response
     return render(request, 'tasks/partials/description_edit.html', {'task': task})
@@ -785,19 +803,22 @@ def task_edit_title(request, pk):
     # Return display template if cancel=1
     if request.GET.get('cancel') == '1':
         template = 'tasks/partials/title_display_full.html' if is_full else 'tasks/partials/title_display.html'
-        return render(request, template, {'task': task})
+        return render(request, template, {'task': task, 'can_edit': True, 'title_max_length': TITLE_MAX_LENGTH})
     if request.method == 'POST':
         title = request.POST.get('title', '').strip()
+        if len(title) > TITLE_MAX_LENGTH:
+            # The edit form stays open on what was typed; the toast says why.
+            return HttpResponse(f'A title can be {TITLE_MAX_LENGTH} characters at most.', status=400)
         if title:
             task.title = title
             task._changed_by = request.user
             task.save()
         template = 'tasks/partials/title_display_full.html' if is_full else 'tasks/partials/title_display.html'
-        response = render(request, template, {'task': task})
+        response = render(request, template, {'task': task, 'can_edit': True, 'title_max_length': TITLE_MAX_LENGTH})
         response['HX-Trigger'] = f'activityUpdated, taskUpdated-{pk}, taskChanged'
         return response
     template = 'tasks/partials/title_edit_full.html' if is_full else 'tasks/partials/title_edit.html'
-    return render(request, template, {'task': task})
+    return render(request, template, {'task': task, 'can_edit': True, 'title_max_length': TITLE_MAX_LENGTH})
 
 
 def _timer_changed(response):
@@ -817,7 +838,7 @@ def time_week(request):
     """The current user's week, optionally filtered to one project."""
     from apps.tasks import services
 
-    services.close_expired_timers()
+    services.close_expired_timers_for(request)
 
     week_param = request.GET.get('week')
     if week_param:
@@ -860,10 +881,8 @@ def time_week(request):
 @login_required
 @require_permission('access_tasks')
 def running_timer_indicator(request):
-    """The layout timer bar. ``running_timer`` comes from the context processor."""
-    from apps.tasks import services
-
-    services.close_expired_timers()
+    """The layout timer bar. ``running_timer`` comes from the context processor,
+    which closes expired timers first."""
     return render(request, 'components/running_timer.html')
 
 
@@ -904,7 +923,7 @@ def timer_start(request, pk):
 def timer_stop(request):
     from apps.tasks import services
 
-    services.close_expired_timers()
+    services.close_expired_timers_for(request)
     services.stop_timer(request.user)
     return _timer_changed(HttpResponse(status=204))
 

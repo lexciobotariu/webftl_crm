@@ -1,16 +1,17 @@
 <div class="relative" x-data="dropdown">
-    <button @click="toggle()"
+    <button {% if can_edit %}@click="toggle()"{% else %}disabled{% endif %}
             {% if task.assignee %}title="{{ task.assignee.name }}"{% endif %}
-            class="flex items-center gap-2 w-full min-w-0 px-2 py-1 rounded-control text-sm text-zinc-300 hover:bg-elevated transition-colors">
+            class="flex items-center gap-2 w-full min-w-0 px-2 py-1 rounded-control text-sm text-zinc-300 hover:bg-elevated transition-colors disabled:cursor-default disabled:hover:bg-transparent">
         {% if task.assignee %}
         <span class="w-5 h-5 flex-shrink-0 rounded-full bg-elevated flex items-center justify-center text-[10px] text-zinc-200">
             {{ task.assignee.name|slice:":1"|upper }}
         </span>
         <span class="truncate">{{ task.assignee.name }}</span>
         {% else %}
-        <span class="text-zinc-500">Add assignee</span>
+        <span class="text-zinc-500">{% if can_edit %}Add assignee{% else %}Unassigned{% endif %}</span>
         {% endif %}
     </button>
+    {% if can_edit %}
     <div x-show="open" x-cloak @click.away="close()"
          x-transition
          class="absolute left-0 top-full mt-1 w-56 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 py-1">
@@ -36,4 +37,5 @@
         </button>
         {% endfor %}
     </div>
+    {% endif %}
 </div>

@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.2] - 2026-10-08
+
+### Fixes
+- People who may only view a task now see it read-only in the drawer, on the full page and in the Inbox: the title, description, properties, sub-tasks and labels show their values, with no menus, no "Add sub-task", no "Attach" and no comment box that would only answer "forbidden". Empty values read "No due date", "No labels" and so on instead of "Add …"
+- The board offers dragging only to people who may edit the project's tasks
+- Anyone who may edit a task can add sub-tasks to it, not only people who may create tasks. People who may create tasks but not edit this one can still add a sub-task, but not tick or delete it
+- A title longer than 1,000 characters is refused with a message instead of a server error, and the title field stops at that length
+- Saving the edit form inside the drawer shows the full drawer again, with its assignee and label menus filled
+- Reordering cards within a board column no longer changes a task's "Updated" time, so "Order by: Updated" stays put after a tidy-up. Moving a card to another status still counts as an update
+- Adding, ticking or deleting a sub-task updates the "2/5" count on its board card straight away
+- Due dates in another year show the year in the list and on cards ("Jan 05, 2027"), and the activity line for a due date change always includes it
+- Expired timers are closed once per request instead of up to three times when a task opens
+- The "+" on a board column shows when it gets keyboard focus, and has a label for screen readers
+
 ## [0.19.1] - 2026-10-02
 
 ### Documentation

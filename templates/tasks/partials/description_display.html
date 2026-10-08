@@ -1,4 +1,5 @@
 {% load task_markdown %}
+{% if can_edit %}
 <div class="group relative">
     <div hx-get="{% url 'task_edit_description' task.pk %}"
          hx-target="#task-description-{{ task.pk }}"
@@ -21,3 +22,8 @@
         <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
     </button>
 </div>
+{% elif task.description %}
+<div class="markdown text-sm text-zinc-300">{{ task.description|render_markdown }}</div>
+{% else %}
+<div class="text-sm text-zinc-500 italic">No description.</div>
+{% endif %}

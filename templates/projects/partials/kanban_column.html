@@ -8,7 +8,8 @@
             <button hx-get="{% url 'task_create' project.pk %}?status={{ status.pk }}"
                     hx-target="#slide-over"
                     hx-swap="innerHTML"
-                    class="p-1 text-zinc-600 hover:text-zinc-300 hover:bg-elevated rounded transition-all opacity-0 group-hover/column:opacity-100"
+                    class="p-1 text-zinc-600 hover:text-zinc-300 hover:bg-elevated rounded transition-all opacity-0 group-hover/column:opacity-100 focus-visible:opacity-100"
+                    aria-label="Add task to {{ status.name }}"
                     title="Add task to {{ status.name }}">
                 <i data-lucide="plus" class="w-4 h-4"></i>
             </button>
@@ -22,9 +23,9 @@
     <div class="flex-1 overflow-y-auto p-2" data-keep-scroll="column-{{ status.pk }}">
         <div class="space-y-2 min-h-[3rem]"
              id="column-{{ status.pk }}-tasks"
-             x-sort:group="kanban"
+             {% if quick_edit %}x-sort:group="kanban"
              x-sort:config="{ animation: 150 }"
-             x-sort="$store.kanban.moveTask($item, {{ status.pk }}, $position)"
+             x-sort="$store.kanban.moveTask($item, {{ status.pk }}, $position)"{% endif %}
              data-status-id="{{ status.pk }}">
             {% for task in status.tasks.all %}
             {% include "projects/partials/task_card.html" %}
