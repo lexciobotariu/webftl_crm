@@ -684,10 +684,13 @@ def task_subscription(request, pk):
 
 
 @login_required
-@require_permission('access_tasks')
 @require_POST
 def markdown_preview(request):
-    """The Preview tab: the text rendered with the same filter as saved text."""
+    """The Preview tab: the text rendered with the same filter as saved text.
+
+    Open to anyone signed in: it only echoes back what they typed, and the
+    editor is also used for notes and project descriptions.
+    """
     text = request.POST.get('text', '')
     if len(text) > MARKDOWN_MAX_LENGTH:
         return HttpResponse('Too long to preview.', status=400)

@@ -415,3 +415,29 @@ class TestNoteWrites:
         assert Note.objects.filter(
             title='New Project Note', project=project, created_by=user
         ).exists()
+
+
+@pytest.mark.django_db
+class TestNoteMarkdown:
+    def test_the_drawer_renders_the_description_as_markdown(self, client):
+        admin = AdminUserFactory()
+        note = Note.objects.create(
+            client=ClientFactory(), title='Formatted', description='**Bold** <script>x</script>',
+            created_by=admin,
+        )
+        client.force_login(admin)
+        html = client.get(reverse('note_detail_drawer', args=[note.pk])).content.decode()
+        assert '<strong>Bold</strong>' in html
+        assert '<script>x</script>' not in html
+
+    def test_create_and_edit_use_the_markdown_editor(self, client):
+        admin = AdminUserFactory()
+        client_obj = ClientFactory()
+        note = Note.objects.create(client=client_obj, title='Editable', description='Kept text', created_by=admin)
+        client.force_login(admin)
+        preview = reverse('markdown_preview')
+        created = client.get(reverse('client_note_create_drawer', args=[client_obj.pk])).content.decode()
+        assert preview in created
+        edited = client.get(reverse('note_edit_drawer', args=[note.pk])).content.decode()
+        assert preview in edited
+        assert 'Kept text' in edited

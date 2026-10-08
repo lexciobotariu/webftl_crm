@@ -11,11 +11,26 @@ KEY_DERIVE_ATTEMPTS = 3
 
 
 class Project(models.Model):
+    ACTIVE = 'active'
+    ON_HOLD = 'on_hold'
+    FINISHED = 'finished'
+    CANCELLED = 'cancelled'
+    STATUS_CHOICES = [
+        (ACTIVE, 'Active'),
+        (ON_HOLD, 'On hold'),
+        (FINISHED, 'Finished'),
+        (CANCELLED, 'Cancelled'),
+    ]
+    # Open projects show on the projects page by default; closed ones behind a toggle.
+    OPEN_STATUSES = (ACTIVE, ON_HOLD)
+
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='projects')
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     github_repo_url = models.URLField(blank=True)
     github_sync_enabled = models.BooleanField(default=False)
+    # db_default too, so rows written without the field (raw SQL, older code) are Active.
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=ACTIVE, db_default=ACTIVE)
     # The prefix of every task id on this project ("CUST" in CUST-12). Derived
     # from the name when the project is created and never changed by a rename.
     key = models.CharField(
@@ -104,10 +119,29 @@ class Project(models.Model):
         return url if url.lower().startswith(('https://', 'http://')) else ''
 
     @property
+    def is_open(self):
+        return self.status in self.OPEN_STATUSES
+
+    @property
     def task_count(self):
         """Return total number of tasks across all statuses."""
         from apps.tasks.models import Task
         return Task.objects.filter(project=self).count()
+
+
+def project_delete_blocker(project):
+    """Why ``project`` cannot be deleted, or ''.
+
+    Logged time and invoice lines are what a client is billed on, so a project
+    holding either is marked finished or cancelled instead.
+    """
+    from apps.tasks.models import TimeEntry
+
+    if TimeEntry.objects.filter(task__project=project).exists():
+        return 'This project has logged time. Set its status to Finished or Cancelled instead.'
+    if project.invoice_lines.exists():
+        return 'This project is on an invoice. Set its status to Finished or Cancelled instead.'
+    return ''
 
 
 class Status(models.Model):

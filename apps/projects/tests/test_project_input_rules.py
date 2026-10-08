@@ -45,7 +45,7 @@ class TestClientVisibility:
         hidden = ClientFactory(name='Hidden Co')
         client.force_login(user)
 
-        page = client.get(reverse('project_create'))
+        page = client.get(reverse('project_create'), HTTP_HX_REQUEST='true')
         assert list(page.context['form'].fields['client'].queryset) == [own]
         assert 'Hidden Co' not in page.content.decode()
 

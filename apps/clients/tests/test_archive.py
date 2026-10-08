@@ -82,7 +82,7 @@ class TestArchive:
         archived = ClientFactory(name='Old Co', archived_at=timezone.now())
         client.force_login(user)
 
-        project_form = client.get(reverse('project_create')).context['form']
+        project_form = client.get(reverse('project_create'), HTTP_HX_REQUEST='true').context['form']
         assert archived not in project_form.fields['client'].queryset
         invoice_form = client.get(reverse('invoice_create')).context['form']
         assert archived not in invoice_form.fields['client'].queryset

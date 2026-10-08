@@ -1,10 +1,32 @@
-"""Side effects when project access is removed."""
+"""Project helpers: task counts, and side effects when project access is removed."""
 
+from django.db.models import Count, IntegerField, OuterRef, Subquery, Value
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from apps.notifications.models import Notification
-from apps.tasks.models import Task, TimeEntry
+from apps.tasks.models import Task, TimeEntry, visible_tasks
 from apps.tasks.services import _close_open_entry
+
+
+def with_task_counts(projects, user):
+    """Annotate ``num_tasks``: tasks ``user`` can see on each project, archived left out.
+
+    The same number the project's Tasks page starts from, so a list, the client
+    page and the overview never disagree with it.
+    """
+    counts = (
+        visible_tasks(user)
+        .not_archived()
+        .filter(project=OuterRef('pk'))
+        .order_by()
+        .values('project')
+        .annotate(n=Count('pk', distinct=True))
+        .values('n')
+    )
+    return projects.annotate(
+        num_tasks=Coalesce(Subquery(counts, output_field=IntegerField()), Value(0))
+    )
 
 
 def handle_access_removed(project_id, user_id):

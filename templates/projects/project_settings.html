@@ -161,12 +161,16 @@
                                 <div class="text-sm font-medium text-zinc-300">Delete this project</div>
                                 <div class="text-xs text-zinc-500 mt-0.5">Once deleted, this project and all its tasks cannot be recovered.</div>
                             </div>
+                            {% if delete_blocker %}
+                            <p class="text-xs text-zinc-400 max-w-xs text-right">{{ delete_blocker }}</p>
+                            {% else %}
                             <button hx-post="{% url 'project_delete' project.pk %}"
                                     hx-confirm="Are you sure you want to delete '{{ project.name }}'? This will permanently delete all tasks, statuses, and labels. This action cannot be undone."
                                     class="bg-error/10 text-error px-4 py-2 rounded-control text-sm hover:bg-error/20 border border-error/30 hover:border-error/50 transition-colors flex items-center gap-2">
                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                                 Delete Project
                             </button>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

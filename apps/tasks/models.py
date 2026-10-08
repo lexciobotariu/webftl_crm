@@ -557,9 +557,11 @@ class TimeEntry(models.Model):
     """
 
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='time_entries')
+    # Logged time is what clients are billed on: deleting a person must not erase
+    # it. Such a person is deactivated instead.
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name='time_entries',
     )
     started_at = models.DateTimeField()

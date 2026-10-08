@@ -54,9 +54,9 @@
                 </button>
                 {% endif %}
                 {% endif %}
-                {% if request.user.is_admin and not has_invoices %}
+                {% if request.user.is_admin and can_delete %}
                 <button hx-post="{% url 'client_delete' client.pk %}"
-                        hx-confirm="Delete {{ client.name }}? This also deletes its projects, tasks, logged time, notes and to-dos. This cannot be undone."
+                        hx-confirm="Delete {{ client.name }}? This also deletes its projects, tasks, notes and to-dos. This cannot be undone."
                         hx-target="body"
                         class="inline-flex items-center gap-1.5 bg-error/10 border border-error/20 text-error px-3 py-1.5 rounded-control text-xs hover:bg-error/20 transition-colors">
                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>

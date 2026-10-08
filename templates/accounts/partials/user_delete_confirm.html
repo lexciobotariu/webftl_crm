@@ -1,5 +1,12 @@
 <div class="mt-2 p-3 bg-error/5 border border-error/20 rounded-card">
-    {% if counts.has_data %}
+    {% if blocked_reason %}
+    <p class="text-xs text-error font-medium mb-1">{{ blocked_reason }}</p>
+    {% if counts.time_entries %}
+    <p class="text-xs text-zinc-400 mb-3">{{ counts.time_entries }} time entr{{ counts.time_entries|pluralize:"y,ies" }} logged. Deactivating keeps their history and blocks sign-in.</p>
+    {% else %}
+    <p class="text-xs text-zinc-400 mb-3">Deactivating keeps their history and blocks sign-in.</p>
+    {% endif %}
+    {% elif counts.has_data %}
     <p class="text-xs text-error font-medium mb-2">This will permanently delete:</p>
     <ul class="text-xs text-zinc-400 space-y-1 mb-2">
         {% if counts.todos %}
@@ -33,6 +40,7 @@
                 class="flex-1 px-3 py-1.5 text-xs text-zinc-400 bg-elevated rounded-control hover:bg-zinc-700 transition-colors">
             Cancel
         </button>
+        {% if not blocked_reason %}
         <button hx-post="{% url 'user_delete' user_obj.pk %}"
                 hx-target="#user-{{ user_obj.pk }}"
                 hx-swap="delete"
@@ -40,5 +48,6 @@
                 class="flex-1 px-3 py-1.5 text-xs text-white bg-error rounded-control hover:brightness-90 transition-colors">
             {% if counts.has_data %}Delete Permanently{% else %}Delete{% endif %}
         </button>
+        {% endif %}
     </div>
 </div>
