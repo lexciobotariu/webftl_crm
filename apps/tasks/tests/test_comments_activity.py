@@ -392,7 +392,11 @@ class TestReviewFixes:
         with CaptureQueriesContext(connection) as queries:
             client.get(url)
 
-        activity_reads = [q['sql'] for q in queries if 'FROM "tasks_taskactivity"' in q['sql']]
+        # The Subscribe button's check is an EXISTS (LIMIT 1), not a read of the activity.
+        activity_reads = [
+            q['sql'] for q in queries
+            if 'FROM "tasks_taskactivity"' in q['sql'] and 'LIMIT 1' not in q['sql']
+        ]
         assert len(activity_reads) == 1, activity_reads
 
 

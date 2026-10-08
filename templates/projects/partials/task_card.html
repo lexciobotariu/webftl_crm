@@ -1,7 +1,9 @@
+{% load task_dates task_rows %}
 {# The card does not refresh itself: the Tasks page re-fetches the whole view on taskChanged, which also lets a card leave when an edit takes it out of the current filter. #}
 <div class="group bg-card/90 rounded-card border border-border-subtle p-3 transition-all duration-150 hover:bg-elevated/90 hover:border-border-strong"
      id="task-{{ task.pk }}" data-task-row data-detail-url="{% url 'task_detail' task.pk %}"
-     x-sort:item="{{ task.pk }}">
+     data-identifier="{{ project.key }}-{{ task.number }}" data-keys="{% row_keys task spec %}" data-link="{% url 'task_full_page' project.pk task.pk %}"{% if quick_edit %}
+     x-sort:item="{{ task.pk }}"{% endif %}>
     <div class="flex items-stretch gap-2">
         <div class="flex-1 min-w-0 cursor-pointer"
              onclick="if (!event.target.closest('[data-quick]')) htmx.ajax('GET', '{% url 'task_detail' task.pk %}', {target: '#slide-over', swap: 'innerHTML'})">
@@ -34,7 +36,7 @@
                 {% if task.due_date %}
                 <span class="flex items-center gap-1 {% if task.is_overdue %}text-error{% endif %}">
                     <i data-lucide="calendar" class="w-3 h-3"></i>
-                    {{ task.due_date|date:"M d" }}
+                    {{ task.due_date|short_date }}
                 </span>
                 {% endif %}
                 {% with progress=task.subtask_progress %}
@@ -48,14 +50,18 @@
             </div>
             {% endif %}
         </div>
-        {# A task has at most one assignee, so the avatar lives in the card's side column: handle on top, avatar at the bottom, level with the due date. #}
+        {# A task has at most one assignee, so the avatar lives in the card's side column: handle on top, avatar at the bottom, level with the due date. Without edit rights there is no handle; the empty span keeps the avatar at the bottom. #}
         <div class="flex flex-col items-center justify-between gap-2 shrink-0">
+            {% if quick_edit %}
             <div x-sort:handle class="cursor-grab text-zinc-600 hover:text-zinc-400 pt-0.5"
                  title="Drag to move">
                 <i data-lucide="grip-vertical" class="w-3.5 h-3.5"></i>
             </div>
+            {% else %}
+            <span></span>
+            {% endif %}
             {% if quick_edit %}
-            <button type="button" data-quick="assignee" aria-haspopup="menu" aria-expanded="false"
+            <button type="button" data-quick="assignee" data-current="{{ task.assignee_id|default_if_none:'' }}" aria-haspopup="menu" aria-expanded="false"
                     aria-label="Assignee: {% if task.assignee %}{% firstof task.assignee.name task.assignee.email %}{% else %}unassigned{% endif %}"
                     class="-m-1 w-7 h-7 inline-flex items-center justify-center rounded-control hover:bg-hover-strong focus-visible:outline focus-visible:outline-1 focus-visible:outline-border-strong transition-colors">
                 {% include "components/avatar.html" with user=task.assignee size=20 %}

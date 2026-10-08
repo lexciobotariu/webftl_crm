@@ -145,9 +145,12 @@ def move_task(task, new_status, user, position=None, after_id=AFTER_UNSET):
         raise Task.DoesNotExist('Task was deleted during the move.')
     old_status_id = locked_task.status_id
 
-    locked_task.status = new_status
-    locked_task._changed_by = user
-    locked_task.save()
+    if old_status_id != new_status.pk:
+        locked_task.status = new_status
+        locked_task._changed_by = user
+        # Only what a status change changes: a reorder within a column is not an
+        # update to the task, so it leaves ``updated_at`` (and "Order by: Updated") alone.
+        locked_task.save(update_fields=['status', 'updated_at'])
 
     destination = list(
         Task.objects.filter(project_id=locked_task.project_id, status=new_status)
@@ -191,6 +194,15 @@ def move_task(task, new_status, user, position=None, after_id=AFTER_UNSET):
     task.order = locked_task.order
 
 
+def can_add_subtask(user, task):
+    """Whoever may edit the task, and whoever may create tasks on its project.
+
+    Ticking and deleting a sub-task are edits (:func:`require_access`); adding one
+    is also open to people who may create tasks, as creating a task is.
+    """
+    return can_edit_task(user, task) or can_create_task(user, task.project)
+
+
 @transaction.atomic
 def create_subtask(task, title, user):
     """
@@ -205,10 +217,10 @@ def create_subtask(task, title, user):
         The created Subtask instance
 
     Raises:
-        TaskPermissionError: If user lacks editor access
+        TaskPermissionError: If user may neither edit the task nor create tasks
     """
-    if not can_create_task(user, task.project):
-        raise TaskPermissionError('You cannot create tasks on this project')
+    if not can_add_subtask(user, task):
+        raise TaskPermissionError('You cannot add sub-tasks to this task')
 
     max_order = task.subtasks.aggregate(Max('order'))['order__max']
     next_order = 0 if max_order is None else max_order + 1
@@ -262,12 +274,48 @@ def delete_subtask(subtask, user):
     subtask.delete()
 
 
+def rename_subtask(subtask, title, user):
+    """Change a sub-task's title. An edit, like ticking it."""
+    require_access(user, subtask.task.project)
+    subtask.title = title
+    subtask.save(update_fields=['title'])
+    return subtask
+
+
+def reorder_subtasks(task, ids, user):
+    """Put the task's sub-tasks in the order of ``ids``, as the drawer shows them after a drag.
+
+    Ids that are not this task's sub-tasks are ignored, and sub-tasks the list left
+    out keep their relative order after the ones it named, so a stale page cannot
+    lose a sub-task. ``order`` is renumbered 0..n-1.
+    """
+    require_access(user, task.project)
+    with transaction.atomic():
+        current = list(task.subtasks.select_for_update().order_by('order', 'pk'))
+        by_pk = {subtask.pk: subtask for subtask in current}
+        wanted = []
+        for raw in ids:
+            try:
+                subtask = by_pk.pop(int(raw))
+            except (KeyError, TypeError, ValueError):
+                continue
+            wanted.append(subtask)
+        wanted += [subtask for subtask in current if subtask.pk in by_pk]
+        changed = []
+        for order, subtask in enumerate(wanted):
+            if subtask.order != order:
+                subtask.order = order
+                changed.append(subtask)
+        task.subtasks.model.objects.bulk_update(changed, ['order'])
+    return wanted
+
+
 def add_comment(task, content, user, mentions=()):
     """
     Add a comment to a task.
 
     Comments are stored as TaskActivity with type 'comment'.
-    Editors can add comments, same as creating a task or starting a timer.
+    Anyone who can see the task may comment on it, editor or not.
 
     Args:
         task: Task to comment on
@@ -279,11 +327,12 @@ def add_comment(task, content, user, mentions=()):
         The created TaskActivity instance
 
     Raises:
-        TaskPermissionError: If user lacks editor access
+        TaskPermissionError: If user cannot see the task
     """
     from apps.notifications.services import notify_comment
 
-    require_access(user, task.project)
+    if not can_view_task(user, task):
+        raise TaskPermissionError("You don't have access to this task")
 
     comment = TaskActivity.objects.create(
         task=task,
@@ -298,14 +347,14 @@ def add_comment(task, content, user, mentions=()):
 
 
 def can_change_comment(user, comment):
-    """The author while they can still edit the task, or an admin.
+    """The author while they can still see the task, or an admin.
 
-    Same rule as :func:`require_entry_edit`: ``tasks_edit_all`` does not let
-    anyone change someone else's words.
+    Whoever may comment may change their own comment (:func:`add_comment`), and
+    ``tasks_edit_all`` does not let anyone change someone else's words.
     """
     if user.is_admin:
         return True
-    return comment.user_id == user.pk and can_edit_task(user, comment.task)
+    return comment.user_id == user.pk and can_view_task(user, comment.task)
 
 
 def require_comment_change(user, comment):
@@ -462,16 +511,27 @@ def close_expired_timers(now=None):
     )
 
 
+def close_expired_timers_for(request):
+    """:func:`close_expired_timers`, at most once per request.
+
+    The context processor runs on every template a request renders, and some views
+    need the timers closed before they query; one UPDATE per request is enough.
+    """
+    if getattr(request, '_expired_timers_closed', False):
+        return
+    request._expired_timers_closed = True
+    close_expired_timers()
+
+
 def logged_seconds_on_task(task, now=None):
     """Seconds logged on ``task`` by everyone.
 
-    Closes timers past 12 hours first. A closed row counts
-    ``ended_at - started_at``. A timer that is still running counts
-    elapsed time so far, and never more than 12 hours.
+    A closed row counts ``ended_at - started_at``. A timer that is still
+    running counts elapsed time so far, and never more than 12 hours, so the
+    total is the same whether or not expired timers have been closed yet.
     """
     if now is None:
         now = timezone.now()
-    close_expired_timers(now=now)
     return sum(entry_seconds(entry, now) for entry in task.time_entries.all())
 
 
@@ -681,9 +741,21 @@ def entries_for_week(user, week_start, project=None):
     Everyone else still sees only their own.
     """
     start, end = _week_bounds(week_start)
+    return _entries_between(user, start, end, project)
+
+
+def entries_between(user, first_day, last_day, project=None):
+    """Entries that started from ``first_day`` to ``last_day``, both included,
+    with the same visibility as :func:`entries_for_week`."""
+    start = timezone.make_aware(datetime.combine(first_day, time.min))
+    end = timezone.make_aware(datetime.combine(last_day + timedelta(days=1), time.min))
+    return _entries_between(user, start, end, project)
+
+
+def _entries_between(user, start, end, project):
     entries = (
         TimeEntry.objects.filter(started_at__gte=start, started_at__lt=end)
-        .select_related('task', 'task__project', 'user')
+        .select_related('task', 'task__project', 'task__project__client__currency', 'user')
         .order_by('started_at', 'pk')
     )
     if project is not None:

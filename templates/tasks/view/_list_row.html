@@ -1,5 +1,7 @@
+{% load task_dates task_rows %}
 {% comment %}A row opens the drawer on click, except on a [data-quick] trigger, which opens the quick-edit menu instead. Triggers are buttons only for people who may edit the task; the page works out who that is once (quick_edit, quick_edit_projects).{% endcomment %}
-<div id="task-{{ task.pk }}" data-task-row
+<div id="task-{{ task.pk }}" data-task-row data-identifier="{{ task.identifier }}" data-keys="{% row_keys task spec %}"
+     data-link="{% url 'task_full_page' task.project_id task.pk %}"
      class="flex items-center gap-3 h-9 px-4 border-b border-border-subtle text-sm hover:bg-elevated/50 transition-colors cursor-pointer"
      hx-get="{% url 'task_detail' task.pk %}"
      hx-target="#slide-over"
@@ -14,7 +16,9 @@
     {% else %}
     {% include "components/priority_icon.html" with priority=task.priority %}
     {% endif %}
+    {% if 'id' in spec.columns %}
     <span class="w-20 shrink-0 font-mono text-xs text-zinc-500 whitespace-nowrap">{{ task.identifier }}</span>
+    {% endif %}
     {% if quick_edit or task.project_id in quick_edit_projects %}
     <button type="button" data-quick="status" aria-haspopup="menu" aria-expanded="false"
             aria-label="Status: {{ task.status.name }}"
@@ -25,11 +29,11 @@
     {% include "components/status_icon.html" with category=task.status.category %}
     {% endif %}
     <span class="flex-1 min-w-0 truncate text-zinc-100">{{ task.title }}</span>
-    {% if show_project and spec.group != 'project' %}
+    {% if show_project and 'project' in spec.columns and spec.group != 'project' %}
     <span class="hidden md:inline max-w-[10rem] shrink-0 truncate text-xs text-zinc-500">{{ task.project.name }}</span>
     {% endif %}
     {% with labels=task.labels.all %}
-    {% if labels %}
+    {% if labels and 'labels' in spec.columns %}
     <span class="hidden md:flex items-center gap-1 shrink-0">
         {% for label in labels|slice:":3" %}
         <span class="px-2 py-0.5 text-[10px] rounded-full border" style="background: {{ label.color }}20; color: {{ label.color }}; border-color: {{ label.color }}40;">{{ label.name }}</span>
@@ -40,9 +44,15 @@
     </span>
     {% endif %}
     {% endwith %}
-    <span class="w-14 shrink-0 text-right text-xs {% if task.is_overdue %}text-error{% else %}text-zinc-500{% endif %}">{% if task.due_date %}{{ task.due_date|date:"M d" }}{% endif %}</span>
+    {% if 'estimate' in spec.columns %}
+    <span class="w-12 shrink-0 text-right text-xs text-zinc-500 tabular-nums whitespace-nowrap" title="Estimate">{% if task.estimate_minutes %}{{ task.estimate_label }}{% endif %}</span>
+    {% endif %}
+    {% if 'due' in spec.columns %}
+    {# Wide enough for "Jan 05, 2027": a date in another year carries its year. #}
+    <span class="w-20 shrink-0 text-right text-xs whitespace-nowrap {% if task.is_overdue %}text-error{% else %}text-zinc-500{% endif %}">{{ task.due_date|short_date }}</span>
+    {% endif %}
     {% if quick_edit or task.project_id in quick_edit_projects %}
-    <button type="button" data-quick="assignee" aria-haspopup="menu" aria-expanded="false"
+    <button type="button" data-quick="assignee" data-current="{{ task.assignee_id|default_if_none:'' }}" aria-haspopup="menu" aria-expanded="false"
             aria-label="Assignee: {% if task.assignee %}{% firstof task.assignee.name task.assignee.email %}{% else %}unassigned{% endif %}"
             class="shrink-0 -mx-1 w-7 h-7 inline-flex items-center justify-center rounded-control hover:bg-hover-strong focus-visible:outline focus-visible:outline-1 focus-visible:outline-border-strong transition-colors">
         {% include "components/avatar.html" with user=task.assignee %}

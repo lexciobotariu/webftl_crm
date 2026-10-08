@@ -1,19 +1,25 @@
 // The Tasks page and My Tasks: the quick-edit menu on rows and cards, the keyboard
 // selection and shortcuts, and scroll that survives a refresh of #task-view. One menu
 // element (#task-quick-menu) serves every row; a delegated listener opens it from any
-// [data-quick] button. People who cannot edit get no menu, only the selection.
+// [data-quick] button, or from a key (S, P, A, D, Shift+L) on the selected row. People
+// who cannot edit get no menu, only the selection and the copy shortcuts.
 (function () {
     if (window.__taskViewLoaded) return;
     window.__taskViewLoaded = true;
 
     const menu = () => document.getElementById('task-quick-menu');
-    const LABELS = { priority: 'Set priority', status: 'Set status', assignee: 'Set assignee' };
+    const LABELS = {
+        priority: 'Set priority', status: 'Set status', assignee: 'Set assignee',
+        labels: 'Set labels', due: 'Set due date',
+    };
     let state = null; // the open menu: { trigger, kind, pk, rowId, token, top, left, viaKey }
     let token = 0;
     let refocus = null; // after a refresh replaces the trigger, put focus back on its twin
 
     function endpoint(name, pk, extra) {
-        return menu().dataset[name].replace('/0/', '/' + pk + '/').replace('FIELD', extra || '');
+        const url = menu().dataset[name].replace('/0/', '/' + pk + '/');
+        // The label toggle carries a second id: /tasks/<pk>/labels/<label>/toggle/.
+        return name === 'labelsUrl' ? url.replace('/labels/0/', '/labels/' + extra + '/') : url.replace('FIELD', extra || '');
     }
 
     function priorityItems(current) {
@@ -26,8 +32,9 @@
         return fragment;
     }
 
+    // The due date menu ends in a date field; the arrow keys reach it like an item.
     function items() {
-        return Array.from(menu().querySelectorAll('[role="menuitemradio"]'));
+        return Array.from(menu().querySelectorAll('[role="menuitemradio"], [role="menuitemcheckbox"], [data-quick-date]'));
     }
 
     function focusItem(item) {
@@ -65,7 +72,7 @@
         token += 1;
         m.hidden = true;
         m.replaceChildren();
-        trigger.setAttribute('aria-expanded', 'false');
+        if (trigger.dataset.quick) trigger.setAttribute('aria-expanded', 'false');
         if (!returnFocus) return;
         if (viaKey) {
             // Opened with S / P / A: the row is where the person was.
@@ -80,7 +87,9 @@
         setTimeout(() => { if (refocus && refocus.rowId === rowId) refocus = null; }, 4000);
     }
 
-    function openMenu(trigger, viaKey) {
+    // ``kind`` is given when the menu has no button of its own on the row (labels and
+    // due date, opened from a key): the row is then the trigger it is placed under.
+    function openMenu(trigger, viaKey, kind) {
         if (state && state.trigger === trigger) {
             closeMenu(true);
             return;
@@ -90,11 +99,11 @@
         if (window.closeSlideOver) window.closeSlideOver();
         const row = trigger.closest('[data-task-row]');
         if (!row) return;
-        const kind = trigger.dataset.quick;
+        kind = kind || trigger.dataset.quick;
         const mine = ++token;
         const at = trigger.getBoundingClientRect();
         state = { trigger, kind, pk: row.id.replace('task-', ''), rowId: row.id, token: mine, top: at.top, left: at.left, viaKey: !!viaKey };
-        trigger.setAttribute('aria-expanded', 'true');
+        if (trigger.dataset.quick) trigger.setAttribute('aria-expanded', 'true');
         const m = menu();
         m.setAttribute('aria-label', LABELS[kind]);
         m.hidden = false;
@@ -123,21 +132,85 @@
             });
     }
 
-    function choose(item) {
-        const { kind, pk } = state;
-        const value = item.dataset.value;
-        const unchanged = item.getAttribute('aria-checked') === 'true';
-        closeMenu(true);
-        if (unchanged) return;
-        const field = { priority: 'priority', status: 'status_id', assignee: 'assignee_id' }[kind];
-        // The menu is the source, so the HX-Trigger events reach body even though
-        // the button that was pressed is gone by the time the response arrives.
-        htmx.ajax('POST', endpoint(kind + 'Url', pk), {
+    // The menu is the source, so the HX-Trigger events reach body even though
+    // the button that was pressed is gone by the time the response arrives. The page
+    // leaves events from the menu to this file, which refreshes the one row after.
+    function post(url, values, pk, kind) {
+        return htmx.ajax('POST', url, {
             source: '#task-quick-menu',
             target: '#task-quick-menu',
             swap: 'none',
-            values: { [field]: value },
-        });
+            values: values || {},
+        }).then(() => afterEdit(pk, kind));
+    }
+
+    // A status change can change counts and badges anywhere on the page: the whole view.
+    // Anything else asks for the row alone and swaps it in when it stays where it was.
+    function afterEdit(pk, kind) {
+        if (kind === 'status') window.refreshTaskView();
+        else refreshRow(pk);
+    }
+
+    let rowRequests = 0;
+    const latestRow = {}; // pk -> the newest request for it; older answers are dropped
+    function refreshRow(pk) {
+        const old = document.getElementById('task-' + pk);
+        if (!old || !old.dataset.keys) {
+            window.refreshTaskView();
+            return;
+        }
+        const url = new URL(window.location.href);
+        url.searchParams.set('row', pk);
+        const mine = ++rowRequests;
+        latestRow[pk] = mine;
+        fetch(url, { credentials: 'same-origin' })
+            .then((response) => {
+                // 204: the edit took the task out of this view.
+                if (!response.ok || response.redirected || response.status === 204) throw new Error('row');
+                return response.text();
+            })
+            .then((html) => {
+                if (latestRow[pk] !== mine) return;
+                const current = document.getElementById('task-' + pk);
+                const holder = document.createElement('template');
+                holder.innerHTML = html.trim();
+                const fresh = holder.content.firstElementChild;
+                if (!current || !fresh || fresh.dataset.keys !== current.dataset.keys) throw new Error('moved');
+                const wasSelected = current.id === selectedId;
+                current.replaceWith(fresh);
+                htmx.process(fresh);
+                if (window.lucide) window.lucide.createIcons();
+                // A menu still open on this row (labels) now hangs under the new copy.
+                if (state && state.rowId === fresh.id && !state.trigger.dataset.quick) state.trigger = fresh;
+                if (wasSelected) select(fresh, { focus: isIdle(), preventScroll: true });
+                restoreFocus();
+            })
+            .catch(() => window.refreshTaskView());
+    }
+
+    function choose(item) {
+        const { kind, pk } = state;
+        const value = item.dataset.value;
+        if (kind === 'labels') {
+            // Labels are several at once: toggle this one and keep the menu open.
+            const on = item.getAttribute('aria-checked') !== 'true';
+            item.setAttribute('aria-checked', on ? 'true' : 'false');
+            item.querySelector('[data-check]').hidden = !on;
+            post(endpoint('labelsUrl', pk, value), {}, pk, kind);
+            return;
+        }
+        const unchanged = item.getAttribute('aria-checked') === 'true';
+        closeMenu(true);
+        if (unchanged) return;
+        const field = { priority: 'priority', status: 'status_id', assignee: 'assignee_id', due: 'due_date' }[kind];
+        post(endpoint(kind + 'Url', pk), { [field]: value }, pk, kind);
+    }
+
+    function saveDate(input) {
+        const { pk } = state;
+        const value = input.value;
+        closeMenu(true);
+        post(endpoint('dueUrl', pk), { due_date: value }, pk, 'due');
     }
 
     document.addEventListener('click', (event) => {
@@ -156,10 +229,20 @@
     document.addEventListener('DOMContentLoaded', () => {
         if (!menu()) return;
         menu().addEventListener('click', (event) => {
-            const item = event.target.closest('[role="menuitemradio"]');
+            const item = event.target.closest('[role="menuitemradio"], [role="menuitemcheckbox"]');
             if (item && state) choose(item);
         });
         menu().addEventListener('keydown', (event) => {
+            const date = event.target.closest('[data-quick-date]');
+            if (date) {
+                // The date field keeps its own arrow keys; Enter saves what it holds.
+                if (event.key === 'Enter' && state) {
+                    event.preventDefault();
+                    if (date.value) saveDate(date);
+                    return;
+                }
+                if (event.key === 'ArrowUp' || event.key === 'ArrowDown') return;
+            }
             const list = items();
             const at = list.indexOf(document.activeElement);
             let next = null;
@@ -313,6 +396,32 @@
         if (back) back.focus({ preventScroll: true });
     }
 
+    function copy(text, what) {
+        const done = () => window.showInfoToast('Copied ' + what);
+        const failed = () => window.showErrorToast('Could not copy. Your browser blocked the clipboard.');
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(done, failed);
+        } else {
+            failed();
+        }
+    }
+
+    // Ctrl/Cmd+. copies the selected task's id, Ctrl/Cmd+Shift+, its link. By code, not
+    // key: Shift+, is "<" on most layouts and something else on others.
+    document.addEventListener('keydown', (event) => {
+        if (!(event.ctrlKey || event.metaKey) || event.altKey || event.defaultPrevented) return;
+        if (state || drawerOpen() || helpOpen() || isField(event.target)) return;
+        const row = selectedRow();
+        if (!row) return;
+        if (event.code === 'Period' && !event.shiftKey && row.dataset.identifier) {
+            event.preventDefault();
+            copy(row.dataset.identifier, row.dataset.identifier);
+        } else if (event.code === 'Comma' && event.shiftKey && row.dataset.link) {
+            event.preventDefault();
+            copy(new URL(row.dataset.link, window.location.origin).href, 'the link to ' + row.dataset.identifier);
+        }
+    });
+
     document.addEventListener('keydown', (event) => {
         if (!event.key || event.defaultPrevented || event.isComposing || event.keyCode === 229) return;
         if (event.ctrlKey || event.metaKey || event.altKey) return;
@@ -324,6 +433,12 @@
             || (view() && view().contains(target));
         if (!inView) return;
 
+        // Shift+L is labels; plain L (and H) move between board columns.
+        if (event.shiftKey && event.key.toLowerCase() === 'l') {
+            const row = selectedRow();
+            if (row && row.querySelector('[data-quick]')) { event.preventDefault(); openMenu(row, true, 'labels'); }
+            return;
+        }
         const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
         const handled = () => event.preventDefault();
         if (key === 'j' || key === 'ArrowDown') { handled(); step('next'); }
@@ -349,6 +464,22 @@
             const kind = { s: 'status', p: 'priority', a: 'assignee' }[key];
             const trigger = row && row.querySelector('[data-quick="' + kind + '"]');
             if (trigger) { handled(); openMenu(trigger, true); }
+        } else if (key === 'd') {
+            // Only rows the person may edit carry [data-quick] buttons.
+            const row = selectedRow();
+            if (row && row.querySelector('[data-quick]')) { handled(); openMenu(row, true, 'due'); }
+        } else if (key === 'i') {
+            // Assign to me. The server checks that this person may hold tasks on the project.
+            const row = selectedRow();
+            const me = menu() && menu().dataset.me;
+            const assignee = row && row.querySelector('[data-quick="assignee"]');
+            if (assignee && me) {
+                handled();
+                if (assignee.dataset.current !== me) {
+                    const pk = row.id.replace('task-', '');
+                    post(endpoint('assigneeUrl', pk), { assignee_id: me }, pk, 'assignee');
+                }
+            }
         }
     });
 

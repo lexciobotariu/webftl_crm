@@ -4,7 +4,7 @@
       class="flex items-center gap-2">
     {% csrf_token %}
     <input type="hidden" name="full" value="1">
-    <input type="text" name="title" value="{{ task.title }}"
+    <input type="text" name="title" value="{{ task.title }}" maxlength="{{ title_max_length }}"
            class="flex-1 text-2xl font-semibold bg-panel border border-border-subtle rounded-control px-3 py-1.5 text-zinc-100 focus:border-border-strong focus:outline-none"
            autofocus>
     <button type="submit" class="text-zinc-200 hover:text-zinc-50 p-1.5">

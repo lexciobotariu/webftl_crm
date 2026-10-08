@@ -20,6 +20,8 @@ def track_task_changes(sender, instance, **kwargs):
             instance._old_assignee = old_task.assignee
             instance._old_priority = old_task.priority
             instance._old_due_date = old_task.due_date
+            instance._old_start_date = old_task.start_date
+            instance._old_billable = old_task.billable
             instance._old_title = old_task.title
             instance._old_description = old_task.description
             instance._old_estimate_minutes = old_task.estimate_minutes
@@ -84,8 +86,9 @@ def log_task_changes(sender, instance, created, **kwargs):
         )
 
     if hasattr(instance, '_old_due_date') and instance._old_due_date != instance.due_date:
-        old_date = instance._old_due_date.strftime('%b %d') if instance._old_due_date else 'None'
-        new_date = instance.due_date.strftime('%b %d') if instance.due_date else 'None'
+        # With the year: the row stays in the timeline long after the year turns.
+        old_date = instance._old_due_date.strftime('%b %d, %Y') if instance._old_due_date else 'None'
+        new_date = instance.due_date.strftime('%b %d, %Y') if instance.due_date else 'None'
         TaskActivity.objects.create(
             task=instance,
             user=user,
@@ -93,6 +96,28 @@ def log_task_changes(sender, instance, created, **kwargs):
             old_value=old_date,
             new_value=new_date,
             content=f'changed due date to {new_date}'
+        )
+
+    if hasattr(instance, '_old_start_date') and instance._old_start_date != instance.start_date:
+        old_date = instance._old_start_date.strftime('%b %d, %Y') if instance._old_start_date else 'None'
+        new_date = instance.start_date.strftime('%b %d, %Y') if instance.start_date else 'None'
+        TaskActivity.objects.create(
+            task=instance,
+            user=user,
+            activity_type='start_date_change',
+            old_value=old_date,
+            new_value=new_date,
+            content=f'changed start date to {new_date}' if instance.start_date else 'removed the start date'
+        )
+
+    if hasattr(instance, '_old_billable') and instance._old_billable != instance.billable:
+        TaskActivity.objects.create(
+            task=instance,
+            user=user,
+            activity_type='billable_change',
+            old_value='Billable' if instance._old_billable else 'Non-billable',
+            new_value='Billable' if instance.billable else 'Non-billable',
+            content='marked the task billable' if instance.billable else 'marked the task non-billable'
         )
 
     if hasattr(instance, '_old_title') and instance._old_title != instance.title:

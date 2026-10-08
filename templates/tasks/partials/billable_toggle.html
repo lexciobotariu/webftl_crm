@@ -1,0 +1,14 @@
+{% comment %}Billable or not. Time on a billable task counts toward the billable total on the time page.{% endcomment %}
+{% if can_edit %}
+<button type="button" role="switch" aria-checked="{% if task.billable %}true{% else %}false{% endif %}"
+        hx-post="{% url 'task_update_billable' task.pk %}" hx-vals='{"billable": "{% if task.billable %}0{% else %}1{% endif %}"}'
+        hx-target="#billable-value-{{ task.pk }}" hx-swap="innerHTML"
+        class="flex items-center gap-2 px-2 py-1 rounded-control text-sm text-zinc-300 hover:bg-elevated transition-colors">
+    <span class="relative inline-flex w-7 h-4 rounded-full transition-colors {% if task.billable %}bg-accent{% else %}bg-zinc-700{% endif %}">
+        <span class="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all {% if task.billable %}left-3.5{% else %}left-0.5{% endif %}"></span>
+    </span>
+    {% if task.billable %}Billable{% else %}Non-billable{% endif %}
+</button>
+{% else %}
+<span class="px-2 py-1 text-sm text-zinc-300">{% if task.billable %}Billable{% else %}Non-billable{% endif %}</span>
+{% endif %}

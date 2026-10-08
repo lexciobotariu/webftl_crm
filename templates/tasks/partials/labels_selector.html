@@ -1,6 +1,6 @@
 <div class="relative" x-data="dropdown">
-    <button @click="toggle()"
-            class="flex items-center gap-1 px-2 py-1 rounded-control text-sm hover:bg-elevated transition-colors">
+    <button {% if can_edit %}@click="toggle()"{% else %}disabled{% endif %}
+            class="flex items-center gap-1 px-2 py-1 rounded-control text-sm hover:bg-elevated transition-colors disabled:cursor-default disabled:hover:bg-transparent">
         {% if task.labels.exists %}
         {% for label in task.labels.all %}
         <span class="px-2 py-0.5 text-[10px] rounded-full border"
@@ -9,9 +9,10 @@
         </span>
         {% endfor %}
         {% else %}
-        <span class="text-zinc-500">Add labels</span>
+        <span class="text-zinc-500">{% if can_edit %}Add labels{% else %}No labels{% endif %}</span>
         {% endif %}
     </button>
+    {% if can_edit %}
     <div x-show="open" x-cloak @click.away="close()"
          x-transition
          class="absolute left-0 top-full mt-1 w-56 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 py-1 max-h-64 overflow-y-auto">
@@ -30,4 +31,5 @@
         <div class="px-3 py-2 text-sm text-zinc-500">No labels defined</div>
         {% endfor %}
     </div>
+    {% endif %}
 </div>
