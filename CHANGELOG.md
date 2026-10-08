@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.25.0] - 2026-10-08
+
+### Features
+- **Client Overview tab.** A client page now opens on an Overview with:
+  - What the client still owes, per currency, and how many drafts are not sent yet
+  - Overdue invoices, with their total and a list linking to each one
+  - Open projects with their deadlines (red when late) and task counts
+  - Hours logged this month and how many of them are billable. People who see only their own time get "Your hours this month"
+  - The contacts, the recently updated tasks and when the client last had activity
+  - Money needs the invoices module and hours and tasks need the tasks module; a section the person cannot see is left out
+- **Search on the client list.** Searching by name, or by a contact's name or email, filters the list as you type. It works with the archived toggle too, and the archived count follows the search
+
+### Changes
+- The profile (contacts, company details, billing, notes) moved to its own Profile tab at `/clients/<id>/profile/`
+
 ## [0.24.0] - 2026-10-08
 
 ### Features

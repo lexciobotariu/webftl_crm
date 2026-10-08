@@ -75,6 +75,11 @@
                 <div class="text-[10px] uppercase tracking-wider text-zinc-600 px-2 mb-2 truncate" title="{{ client.name }}">{{ client.name }}</div>
                 <nav class="space-y-1">
                     <a href="{% url 'client_detail' client.pk %}"
+                       class="w-full flex items-center gap-3 px-3 py-2 rounded-control text-sm transition-colors text-left {% if active_tab == 'overview' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
+                        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                        Overview
+                    </a>
+                    <a href="{% url 'client_detail_profile' client.pk %}"
                        class="w-full flex items-center gap-3 px-3 py-2 rounded-control text-sm transition-colors text-left {% if active_tab == 'profile' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
                         <i data-lucide="user" class="w-4 h-4"></i>
                         Profile
@@ -119,7 +124,11 @@
 
         <!-- Main content area -->
         <div class="flex-1 overflow-y-auto p-6">
-            {% if active_tab == 'profile' %}
+            {% if active_tab == 'overview' %}
+            <div class="space-y-6" id="overview-content">
+                {% include "clients/partials/overview_content.html" %}
+            </div>
+            {% elif active_tab == 'profile' %}
             <!-- Profile Section -->
             <div class="h-full">
                 <div class="space-y-6" id="profile-content">
@@ -164,7 +173,10 @@
     // Listen for client name update from drawer
     document.body.addEventListener('updateClientName', () => refreshFragment('#client-name'));
     // The edit drawer no longer swaps the profile panel itself — refresh it here.
-    document.body.addEventListener('profileChanged', () => refreshFragment('#profile-content'));
+    document.body.addEventListener('profileChanged', () => {
+        refreshFragment('#profile-content');
+        refreshFragment('#overview-content');
+    });
     // Keep the record-menu Notes count in sync with the notes list.
     document.body.addEventListener('notesChanged', () => refreshFragment('#notes-count'));
 </script>

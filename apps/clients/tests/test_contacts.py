@@ -47,7 +47,7 @@ class TestManageContacts:
         ana.refresh_from_db()
         assert ana.name == 'Ana Popescu' and ana.is_billing and not ana.is_primary
 
-        page = client.get(reverse('client_detail', args=[owner.pk])).content.decode()
+        page = client.get(reverse('client_detail_profile', args=[owner.pk])).content.decode()
         assert 'Ana Popescu' in page
         assert reverse('client_contact_delete', args=[owner.pk, ana.pk]) in page
 
@@ -98,7 +98,7 @@ class TestPermissions:
         contact = ClientContact.objects.create(client=owner, name='Read Only')
         client.force_login(_viewer())
 
-        page = client.get(reverse('client_detail', args=[owner.pk])).content.decode()
+        page = client.get(reverse('client_detail_profile', args=[owner.pk])).content.decode()
         assert 'Read Only' in page
         assert reverse('client_contact_create', args=[owner.pk]) not in page
 

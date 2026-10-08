@@ -211,7 +211,7 @@ class TestClientBillingFields:
             billing_email='',
             tax_id='',
         )
-        html = client.get(reverse('client_detail', args=[fallback.pk])).content.decode()
+        html = client.get(reverse('client_detail_profile', args=[fallback.pk])).content.decode()
         billing = html.split('>Billing</h2>', 1)[1].split('>Notes</h2>', 1)[0]
         assert 'Fallback Co' in billing
         assert 'fallback@client.com' in billing
@@ -224,7 +224,7 @@ class TestClientBillingFields:
             billing_email='invoice@client.com',
             tax_id='RO123456',
         )
-        html = client.get(reverse('client_detail', args=[overridden.pk])).content.decode()
+        html = client.get(reverse('client_detail_profile', args=[overridden.pk])).content.decode()
         billing = html.split('>Billing</h2>', 1)[1].split('>Notes</h2>', 1)[0]
         contact = html.split('>Company details</h2>', 1)[1].split('>Billing</h2>', 1)[0]
         assert 'Invoice Co' in billing
@@ -301,14 +301,16 @@ class TestClientDelete:
 
 @pytest.mark.django_db
 class TestClientDetailTabs:
-    def test_client_detail_default_tab_is_profile(self, client):
-        """GET /clients/<pk>/ should set active_tab to 'profile'"""
+    def test_client_detail_default_tab_is_overview(self, client):
+        """GET /clients/<pk>/ opens the Overview; the profile is /clients/<pk>/profile/"""
         preset = PermissionPreset.objects.get(name='Admin')
         user = UserFactory(permission_preset=preset)
         client_obj = ClientFactory()
         client.force_login(user)
         response = client.get(reverse('client_detail', args=[client_obj.pk]))
         assert response.status_code == 200
+        assert response.context['active_tab'] == 'overview'
+        response = client.get(reverse('client_detail_profile', args=[client_obj.pk]))
         assert response.context['active_tab'] == 'profile'
 
     def test_client_detail_projects_tab(self, client):
