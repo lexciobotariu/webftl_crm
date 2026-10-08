@@ -77,10 +77,15 @@ class InvoiceLineForm(forms.Form):
         max_digits=12,
     )
 
-    def __init__(self, *args, invoice, **kwargs):
+    def __init__(self, *args, invoice, current_project_id=None, **kwargs):
         self.invoice = invoice
         super().__init__(*args, **kwargs)
-        self.fields['project'].queryset = invoice.client.projects.order_by('name')
+        # Open projects only, plus the one this line already names: a project
+        # finished before its invoice is written keeps its line.
+        offered = Q(status__in=Project.OPEN_STATUSES)
+        if current_project_id:
+            offered |= Q(pk=current_project_id)
+        self.fields['project'].queryset = invoice.client.projects.filter(offered).order_by('name')
         self.fields['project'].empty_label = 'Free-text line'
 
     def clean(self):

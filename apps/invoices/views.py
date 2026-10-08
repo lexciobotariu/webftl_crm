@@ -218,8 +218,9 @@ def line_edit(request, pk, line_pk):
 
 
 def _line_form(request, invoice, *, line):
+    current_project_id = line.project_id if line is not None else None
     if request.method == 'POST':
-        form = InvoiceLineForm(request.POST, invoice=invoice)
+        form = InvoiceLineForm(request.POST, invoice=invoice, current_project_id=current_project_id)
         if form.is_valid():
             payload = {
                 'project': form.cleaned_data['project'],
@@ -243,6 +244,7 @@ def _line_form(request, invoice, *, line):
     else:
         form = InvoiceLineForm(
             invoice=invoice,
+            current_project_id=current_project_id,
             initial={
                 'project': line.project_id,
                 'description': line.description,
