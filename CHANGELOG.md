@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.26.0] - 2026-10-08
+
+### Features
+- **Time and money on the project Overview.** A new card shows:
+  - Hours logged, split into billable and not
+  - Hours logged on tasks that have an estimate against the total estimate, in red when over
+  - The billable amount: billable hours at the hourly rate, or the fixed price
+  - What has been invoiced for the project so far, from lines on sent invoices that are not cancelled, before tax
+  - Hours need the tasks module and follow the time page: people without "see all tasks" see only their own time, marked "your time only"
+  - Money needs the invoices module. The billable amount of an hourly project is shown only to people who see everyone's time
+
 ## [0.25.0] - 2026-10-08
 
 ### Features

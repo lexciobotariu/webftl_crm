@@ -222,6 +222,11 @@ def project_detail(request, pk):
     active_tab = tab_mapping.get(url_name, 'overview')
     editable = can_edit_project(request.user, project)
 
+    figures = None
+    if active_tab == 'overview':
+        from .figures import project_figures
+        figures = project_figures(request.user, project, tasks)
+
     access_rows = []
     addable_users = []
     if active_tab == 'team':
@@ -236,6 +241,7 @@ def project_detail(request, pk):
         'active_tasks': active_tasks,
         'overdue_tasks': overdue_tasks,
         'archived_tasks': archived_tasks,
+        'figures': figures,
         'recent_activities': recent_activities,
         'active_tab': active_tab,
         'can_edit_project': editable,
