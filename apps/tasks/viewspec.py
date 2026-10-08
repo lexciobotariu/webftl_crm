@@ -41,6 +41,17 @@ DEFAULT_DIR = {
     'title': 'asc',
 }
 ASSIGNEE_NONE = 'none'
+# What a list row can show besides its title, status, priority and assignee, in row
+# order. ``col=none`` in the URL means "none of them".
+COLUMN_CHOICES = (
+    ('id', 'ID'),
+    ('project', 'Project'),
+    ('labels', 'Labels'),
+    ('due', 'Due date'),
+    ('estimate', 'Estimate'),
+)
+COLUMNS = tuple(value for value, _label in COLUMN_CHOICES)
+COLUMNS_NONE = 'none'
 
 DEFAULT_LIMIT = 200
 LIMIT_STEP = 200
@@ -57,6 +68,15 @@ def sort_choices(options=None):
     """
     allowed = options.sorts if options is not None else SORTS
     return [(value, label, DEFAULT_DIR[value]) for value, label in SORT_CHOICES if value in allowed]
+
+
+def column_choices(spec):
+    """``(value, label, shown)`` for the Display menu's row properties, as the page allows."""
+    return [
+        (value, label, value in spec.columns)
+        for value, label in COLUMN_CHOICES
+        if value in spec.options.columns
+    ]
 
 
 def default_sort(group, options):
@@ -88,6 +108,8 @@ class TaskViewOptions:
     layouts: tuple = LAYOUTS
     groups: tuple = ('status', 'assignee', 'priority', 'none')
     sorts: tuple = SORTS
+    columns: frozenset = frozenset({'id', 'labels', 'due', 'estimate'})
+    default_columns: frozenset = frozenset({'id', 'labels', 'due'})
     categories: frozenset = frozenset()
     has_assignee_filter: bool = True
     default_group: str = 'status'
@@ -149,6 +171,8 @@ class TaskViewSpec:
     dir: str = 'asc'
     # Groups with no task are listed too (with zero), so a status can be seen empty.
     show_empty: bool = True
+    # Which optional row columns show (COLUMNS); see ``TaskViewOptions.default_columns``.
+    columns: frozenset = frozenset({'id', 'labels', 'due'})
     limit: int = DEFAULT_LIMIT
     categories: frozenset = frozenset()
     # Closed tasks past TASK_ARCHIVE_AFTER_DAYS are left out unless this is on.
@@ -202,6 +226,12 @@ class TaskViewSpec:
         sort = _choice(_getone(params, 'sort'), options.sorts, default_sort(group, options))
         empty = _getone(params, 'empty')
         show_empty = empty == '1' if empty in ('0', '1') else default_show_empty(group)
+        # The Display form always sends ``cols=1`` with its checkboxes, so there none
+        # checked means none; in a URL, no ``col`` means the page's default.
+        raw_columns = _getlist(params, 'col')
+        columns = frozenset(raw_columns) & options.columns
+        if not columns and COLUMNS_NONE not in raw_columns and _getone(params, 'cols') != '1':
+            columns = options.default_columns
         spec = cls(
             layout=_choice(_getone(params, 'layout'), options.layouts, options.layouts[0]),
             hidden_statuses=frozenset(hidden),
@@ -213,6 +243,7 @@ class TaskViewSpec:
             sort=sort,
             dir=_choice(_getone(params, 'dir'), DIRECTIONS, DEFAULT_DIR[sort]),
             show_empty=show_empty,
+            columns=columns,
             limit=_limit(_getone(params, 'limit')),
             categories=categories,
             archived=_getone(params, 'archived') == '1',
@@ -279,6 +310,8 @@ class TaskViewSpec:
             params['dir'] = self.dir
         if self.show_empty != default_show_empty(self.group):
             params['empty'] = '1' if self.show_empty else '0'
+        if self.columns != self.options.default_columns:
+            params['col'] = [value for value in COLUMNS if value in self.columns] or [COLUMNS_NONE]
         if self.limit != DEFAULT_LIMIT:
             params['limit'] = str(self.limit)
         return params

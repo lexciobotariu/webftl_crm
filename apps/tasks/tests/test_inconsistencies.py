@@ -7,7 +7,7 @@ from apps.accounts.factories import UserFactory
 from apps.accounts.permissions import PermissionPreset
 from apps.projects.factories import ProjectFactory
 from apps.tasks import services
-from apps.tasks.factories import TaskFactory
+from apps.tasks.factories import LabelFactory, SubtaskFactory, TaskFactory
 from apps.tasks.listview import build_groups, group_slots, project_assignees
 from apps.tasks.models import Task
 from apps.tasks.viewspec import SORTS, TaskViewOptions, TaskViewSpec, sort_choices
@@ -235,3 +235,197 @@ class TestBoard:
         header = html.split(f'id="column-{project.statuses.get(name="Done").pk}"', 1)[1].split('</h3>', 1)[0]
 
         assert 'text-accent' in header
+
+
+# --- Linear suggestions (0.20.0, second round) ---------------------------------
+
+
+@pytest.mark.django_db
+class TestQuickMenus:
+    def test_labels_and_due_menus_for_an_editor(self, client):
+        project = ProjectFactory()
+        task = TaskFactory(project=project, due_date=None)
+        bug = LabelFactory(project=project, name='Bug')
+        task.labels.add(bug)
+        LabelFactory(project=project, name='Docs')
+        client.force_login(_user('MenuEditors', tasks_view_all=True, tasks_edit_all=True))
+
+        labels = client.get(reverse('task_quick_menu', args=[task.pk, 'labels'])).content.decode()
+        assert 'menuitemcheckbox' in labels
+        assert labels.index('Bug') < labels.index('Docs')
+        assert labels.count('aria-checked="true"') == 1
+
+        due = client.get(reverse('task_quick_menu', args=[task.pk, 'due'])).content.decode()
+        assert 'Tomorrow' in due and 'data-quick-date' in due
+        assert 'No due date' not in due
+
+    def test_a_viewer_gets_no_menu(self, client):
+        task = TaskFactory()
+        client.force_login(_user('MenuViewers', tasks_view_all=True))
+        assert client.get(reverse('task_quick_menu', args=[task.pk, 'labels'])).status_code == 403
+
+    def test_next_week_is_the_coming_monday(self):
+        from datetime import date
+
+        from apps.tasks.views import due_date_presets
+
+        presets = dict(due_date_presets(date(2026, 10, 8)))  # a Thursday
+        assert presets['Tomorrow'] == date(2026, 10, 9)
+        assert presets['Next week'] == date(2026, 10, 12)
+
+    def test_the_page_carries_what_the_new_keys_need(self, client):
+        project = ProjectFactory()
+        task = TaskFactory(project=project)
+        user = _user('KeyEditors', tasks_view_all=True, tasks_edit_all=True)
+        client.force_login(user)
+
+        html = client.get(reverse('project_tasks', args=[project.pk]) + '?layout=list').content.decode()
+
+        assert f'data-me="{user.pk}"' in html
+        assert f'data-identifier="{task.identifier}"' in html
+        assert reverse('task_full_page', args=[project.pk, task.pk]) in html
+        assert 'Assign to me' in html
+
+
+@pytest.mark.django_db
+class TestRowRefresh:
+    def test_the_row_comes_alone_with_its_place(self, client):
+        project = ProjectFactory()
+        task = TaskFactory(project=project, title='Only me')
+        TaskFactory(project=project, title='Someone else')
+        client.force_login(_user('RowViewers', tasks_view_all=True))
+        base = reverse('project_tasks', args=[project.pk])
+
+        response = client.get(f'{base}?layout=list&row={task.pk}')
+
+        html = response.content.decode()
+        assert response.status_code == 200
+        assert 'Only me' in html and 'Someone else' not in html
+        assert f'data-keys="{task.status_id}|{task.status_id}:{task.order}"' in html
+
+    def test_a_row_that_left_the_filter_answers_204(self, client):
+        project = ProjectFactory()
+        task = TaskFactory(project=project, priority='low')
+        client.force_login(_user('RowFilterViewers', tasks_view_all=True))
+        base = reverse('project_tasks', args=[project.pk])
+
+        assert client.get(f'{base}?layout=list&priority=urgent&row={task.pk}').status_code == 204
+
+    def test_the_board_card_and_my_tasks_row(self, client):
+        project = ProjectFactory()
+        user = _user('RowAssignees', tasks_view_all=True, tasks_edit_all=True)
+        task = TaskFactory(project=project, assignee=user, title='Card me')
+        client.force_login(user)
+
+        card = client.get(reverse('project_tasks', args=[project.pk]) + f'?layout=board&row={task.pk}')
+        assert 'x-sort:item' in card.content.decode()
+        assert f'data-keys="{task.status_id}"' in card.content.decode()
+
+        row = client.get(reverse('my_tasks') + f'?layout=list&row={task.pk}')
+        assert 'Card me' in row.content.decode()
+
+
+class TestColumns:
+    OPTIONS = TaskViewOptions(status_ids=frozenset({1}))
+
+    def parse(self, query):
+        return TaskViewSpec.from_params(QueryDict(query), self.OPTIONS)
+
+    def test_defaults_and_the_url(self):
+        assert self.parse('').columns == {'id', 'labels', 'due'}
+        spec = self.parse('cols=1&col=id&col=estimate')
+        assert spec.columns == {'id', 'estimate'}
+        assert spec.to_params()['col'] == ['id', 'estimate']
+        assert self.parse('cols=1').to_params()['col'] == ['none']
+        assert self.parse('col=none').columns == frozenset()
+        assert 'col' not in self.parse('cols=1&col=id&col=labels&col=due').to_params()
+
+    @pytest.mark.django_db
+    def test_a_hidden_column_leaves_the_row(self, client):
+        project = ProjectFactory(key='COLS')
+        TaskFactory(project=project, estimate_minutes=90)
+        client.force_login(_user('ColumnViewers', tasks_view_all=True))
+        base = reverse('project_tasks', args=[project.pk])
+
+        default = client.get(f'{base}?layout=list').content.decode()
+        assert 'COLS-1</span>' in default
+        assert '1h 30m' not in default
+
+        chosen = client.get(f'{base}?layout=list&col=estimate').content.decode()
+        assert 'COLS-1</span>' not in chosen
+        assert '1h 30m' in chosen
+
+
+@pytest.mark.django_db
+class TestSubscriptions:
+    def test_unsubscribing_stops_comment_notifications_but_not_mentions(self, client):
+        from apps.notifications.models import Notification
+
+        task = TaskFactory()
+        assignee = _user('Assignees', tasks_view_all=True)
+        task.assignee = assignee
+        task.save()
+        client.force_login(assignee)
+
+        response = client.post(reverse('task_subscription', args=[task.pk]), {'subscribed': '0'})
+        assert response.status_code == 200
+        assert 'Subscribe' in response.content.decode()
+
+        author = _user('CommentAuthors', tasks_view_all=True)
+        services.add_comment(task, 'Ping', author)
+        assert not Notification.objects.filter(recipient=assignee).exists()
+
+        assignee.name = 'Ana Assignee'
+        assignee.save()
+        services.add_comment(task, 'Hey @Ana Assignee', author, mentions=[assignee.pk])
+        assert Notification.objects.filter(recipient=assignee, kind=Notification.MENTIONED).exists()
+
+    def test_subscribing_to_a_task_you_have_no_part_in(self, client):
+        from apps.notifications.models import Notification
+        from apps.notifications.services import is_following
+
+        task = TaskFactory()
+        watcher = _user('Watchers', tasks_view_all=True)
+        client.force_login(watcher)
+        assert 'Subscribe' in client.get(reverse('task_detail', args=[task.pk])).content.decode()
+
+        client.post(reverse('task_subscription', args=[task.pk]), {'subscribed': '1'})
+
+        assert is_following(watcher, task)
+        services.add_comment(task, 'News', _user('Talkers', tasks_view_all=True))
+        assert Notification.objects.filter(recipient=watcher, kind=Notification.COMMENTED).exists()
+
+    def test_someone_who_cannot_see_the_task_cannot_subscribe(self, client):
+        task = TaskFactory()
+        client.force_login(_user('NoSight'))
+        assert client.post(reverse('task_subscription', args=[task.pk]), {'subscribed': '1'}).status_code == 403
+
+
+@pytest.mark.django_db
+class TestSubtaskEditing:
+    def test_rename_and_reorder(self, client):
+        task = TaskFactory()
+        first, second, third = (SubtaskFactory(task=task, title=t, order=i) for i, t in enumerate('abc'))
+        client.force_login(_user('SubtaskRenamers', tasks_view_all=True, tasks_edit_all=True))
+
+        response = client.post(reverse('subtask_rename', args=[task.pk, first.pk]), {'title': 'Renamed'})
+        assert response.status_code == 200
+        first.refresh_from_db()
+        assert first.title == 'Renamed'
+        assert client.post(reverse('subtask_rename', args=[task.pk, first.pk]), {'title': ''}).status_code == 400
+
+        response = client.post(
+            reverse('subtask_reorder', args=[task.pk]), {'ids': [third.pk, first.pk, 'junk']},
+        )
+        assert response.status_code == 204
+        assert list(task.subtasks.values_list('pk', flat=True)) == [third.pk, first.pk, second.pk]
+
+    def test_a_viewer_can_neither_rename_nor_reorder(self, client):
+        task = TaskFactory()
+        subtask = SubtaskFactory(task=task, title='Keep')
+        client.force_login(_user('SubtaskViewers', tasks_view_all=True))
+
+        assert client.post(reverse('subtask_rename', args=[task.pk, subtask.pk]), {'title': 'No'}).status_code == 403
+        assert client.post(reverse('subtask_reorder', args=[task.pk]), {'ids': [subtask.pk]}).status_code == 403
+        html = client.get(reverse('task_detail', args=[task.pk])).content.decode()
+        assert reverse('subtask_reorder', args=[task.pk]) not in html

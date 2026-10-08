@@ -31,22 +31,24 @@ from .listview import (
     filter_options,
     group_choices,
     group_slots,
+    render_task_row,
     resolve_view,
 )
 from .models import MyTasksView, Subtask, Task, TaskActivity, TimeEntry
 from .templatetags.task_markdown import MAX_LENGTH as MARKDOWN_MAX_LENGTH
-from .viewspec import CATEGORIES, LIMIT_STEP, SORTS, TaskViewOptions, sort_choices
+from .viewspec import CATEGORIES, LIMIT_STEP, SORTS, TaskViewOptions, column_choices, sort_choices
 
 TITLE_MAX_LENGTH = Task._meta.get_field('title').max_length
 
 
 def _time_context(user, task):
-    """The edit flag, and the logged total behind the Time property.
+    """The edit flag, whether the viewer follows the task, and the logged total behind the Time property.
 
     ``can_edit`` drives every control in the drawer and on the full page, so a
     person who may only view the task sees values, not menus that answer 403.
     ``can_log_time`` is the same answer under the name the time partials use.
     """
+    from apps.notifications.services import is_following
     from apps.tasks import services
 
     editable = can_edit_task(user, task)
@@ -59,6 +61,8 @@ def _time_context(user, task):
         'can_log_time': editable,
         'logged_label': format_seconds(logged_seconds, zero='0m'),
         'logged_minutes': logged_minutes,
+        # For the Subscribe / Unsubscribe button above the activity.
+        'following': is_following(user, task),
     }
     if estimate:
         over = logged_minutes - estimate
@@ -89,6 +93,8 @@ MY_TASKS_OPTIONS = TaskViewOptions(
     groups=('project', 'category', 'priority', 'none'),
     # Manual order is per project column, so it means nothing across projects.
     sorts=tuple(value for value in SORTS if value != 'manual'),
+    columns=frozenset({'id', 'project', 'labels', 'due', 'estimate'}),
+    default_columns=frozenset({'id', 'project', 'labels', 'due'}),
     categories=frozenset(CATEGORIES),
     has_assignee_filter=False,
     default_group='project',
@@ -125,6 +131,12 @@ def my_tasks(request):
 
         quick_edit, quick_edit_projects = editable_scope(request.user)
         matching = assigned.matching(spec)
+        if 'row' in request.GET:
+            return render_task_row(request, request.GET['row'], matching, spec, {
+                'show_project': True,
+                'quick_edit': quick_edit,
+                'quick_edit_projects': quick_edit_projects,
+            })
         total_matching = matching.count()
         archived_count = archived_matching(assigned, spec).count()
         # What the default view leaves out is hidden too, so every page of this
@@ -152,6 +164,7 @@ def my_tasks(request):
             'priority_choices': Task.PRIORITY_CHOICES,
             'empty_message': 'No open tasks assigned to you',
             'sort_choices': sort_choices(MY_TASKS_OPTIONS),
+            'column_choices': column_choices(spec),
             'group_choices': group_choices(MY_TASKS_OPTIONS),
             **filter_options(
                 [], spec, [], [], categories=MY_TASKS_OPTIONS.categories
@@ -421,16 +434,27 @@ def task_move(request):
     return HttpResponse(status=204)
 
 
+def due_date_presets(today):
+    """``(label, date)`` choices of the D menu: today, tomorrow, next Monday, in a week."""
+    next_monday = today + timedelta(days=7 - today.weekday())
+    return [
+        ('Today', today),
+        ('Tomorrow', today + timedelta(days=1)),
+        ('Next week', next_monday),
+        ('In two weeks', today + timedelta(days=14)),
+    ]
+
+
 @login_required
 @require_permission('access_tasks')
 def task_quick_menu(request, pk, field):
-    """The options of the quick-edit menu on a row or card, for status or assignee.
+    """The options of the quick-edit menu on a row or card: status, assignee, labels or due date.
 
     Priority has no endpoint: its five options are the same everywhere, so the page
     carries them once. The fragment is rendered without the request, so none of the
     context processors run for what is only a list of buttons.
     """
-    if field not in ('status', 'assignee'):
+    if field not in ('status', 'assignee', 'labels', 'due'):
         return HttpResponse('Unknown field', status=404)
     task = get_object_or_404(Task.objects.select_related('project', 'status'), pk=pk)
     if not can_view_task(request.user, task):
@@ -440,8 +464,15 @@ def task_quick_menu(request, pk, field):
     context = {'task': task, 'field': field}
     if field == 'status':
         context['options'] = task.project.statuses.all()
-    else:
+    elif field == 'assignee':
         context['options'] = get_assignable_users(task.project).order_by('name', 'email')
+    elif field == 'labels':
+        chosen = set(task.labels.values_list('pk', flat=True))
+        context['options'] = [
+            (label, label.pk in chosen) for label in task.project.labels.order_by('name')
+        ]
+    else:
+        context['options'] = due_date_presets(timezone.localdate())
     return HttpResponse(render_to_string('tasks/partials/quick_menu_items.html', context))
 
 
@@ -534,6 +565,36 @@ def subtask_delete(request, pk, subtask_pk):
 @login_required
 @require_permission('access_tasks')
 @require_POST
+def subtask_rename(request, pk, subtask_pk):
+    subtask = get_object_or_404(Subtask.objects.select_related('task__project'), pk=subtask_pk, task_id=pk)
+    form = SubtaskForm(request.POST)
+    if not form.is_valid():
+        return HttpResponse('A sub-task needs a title.', status=400)
+    try:
+        from apps.tasks import services
+        services.rename_subtask(subtask, form.cleaned_data['title'], request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
+    return render(request, 'tasks/partials/subtask_item.html', {'subtask': subtask, 'can_edit': True})
+
+
+@login_required
+@require_permission('access_tasks')
+@require_POST
+def subtask_reorder(request, pk):
+    """``ids``: the task's sub-task ids in their new order."""
+    task = get_object_or_404(Task.objects.select_related('project'), pk=pk)
+    try:
+        from apps.tasks import services
+        services.reorder_subtasks(task, request.POST.getlist('ids'), request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
+    return HttpResponse(status=204)
+
+
+@login_required
+@require_permission('access_tasks')
+@require_POST
 def comment_create(request, pk):
     task = get_object_or_404(Task, pk=pk)
     content = request.POST.get('content', '').strip()
@@ -596,6 +657,20 @@ def comment_delete(request, pk, comment_pk):
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
     return HttpResponse('')
+
+
+@login_required
+@require_permission('access_tasks')
+@require_POST
+def task_subscription(request, pk):
+    """Subscribe to or unsubscribe from a task's comments (``subscribed=1`` or ``0``)."""
+    from apps.notifications.services import set_following
+
+    task = get_object_or_404(Task.objects.select_related('project'), pk=pk)
+    if not can_view_task(request.user, task):
+        return HttpResponseForbidden("You don't have access to this task")
+    set_following(request.user, task, request.POST.get('subscribed') == '1')
+    return render(request, 'tasks/partials/subscription_button.html', {'task': task, 'following': request.POST.get('subscribed') == '1'})
 
 
 @login_required

@@ -401,6 +401,11 @@ filters or pagination, so nothing is lost there.
 - **A time row has its own ids** (`time-entry-<pk>`), reads "Lex logged 1h 30m — note", and edits in
   place like a comment (the refresh guard `#activity-items-<pk> form` covers it). Delete answers an
   empty 200 so the row goes. A running timer reads "timer running" and can only be deleted.
+- **Subscribe / Unsubscribe** (`TaskSubscription`, `notifications.services.follower_ids`):
+  without a row, followers are the assignee, the creator and commenters; a row with
+  `subscribed=False` takes someone out, `True` puts them in. Mentions ignore it.
+- **Sub-tasks** rename in place (click the title, Enter saves, Escape cancels) and reorder
+  by drag (`x-sort` on the list, `subtask_reorder` takes the ids in their new order).
 - **Who may comment.** Anyone who can open the task, editor or not (`services.add_comment`).
   Changing or deleting a comment stays with its author (while they can still see the task)
   or an admin (`can_change_comment`).
@@ -444,6 +449,15 @@ paging are never saved).
   rows is loaded, empty groups after the last loaded one wait for "Show more".
 - **Search** matches the title, or a task id: `CUST-12` (key in any case), `12` or `#12`.
   A bare number matches that number in every project the page covers.
+- **Row properties** (`col=`, the Display menu's Properties) choose the optional row
+  columns: `id`, `project` (My Tasks), `labels`, `due`, `estimate`. The form always sends
+  `cols=1`, so none checked means none (`col=none` in the URL).
+- **One row, not the whole view, after a quick edit.** `task-view.js` posts the edit, then
+  GETs the page URL plus `row=<pk>` (`listview.render_task_row`): the row or card alone, or
+  204 when it left the view. Every row carries `data-keys` (`listview.row_keys`: its group
+  and sort key); the new row is swapped in only when they match, otherwise the whole view
+  is fetched. Status changes always fetch the whole view (counts and badges move). The page
+  ignores `taskChanged` from elements marked `data-row-refresh` (the quick menu).
 - **Labels** show at most 3 on a row, then `+N`; a card shows every label. A row is one
   line and must not wrap, a card has room to wrap. The drawer always shows them all.
 
@@ -491,11 +505,16 @@ selected (`.task-selected`, defined in `custom.css` from the theme tokens, plus 
   column that has cards, keeping the position.
 - **Act:** `Enter` opens the drawer, `/` focuses the search box (`Esc` leaves it), `C` clicks
   `#task-new` (project page only), `S` / `P` / `A` open the quick menu on the selected row
-  (a card has no status trigger, so `S` does nothing there), `?` lists them in `#task-shortcuts`.
-  A click on a row or card selects it too.
+  (a card has no status trigger, so `S` does nothing there), `D` opens the due date menu and
+  `Shift+L` the labels menu (both placed under the row, for editors only; plain `L` stays a
+  board move), `I` assigns the task to the viewer (`data-me` on the quick menu), `?` lists them
+  in `#task-shortcuts`. A click on a row or card selects it too.
+- **Copy:** `Ctrl/Cmd+.` copies the selected task's id, `Ctrl/Cmd+Shift+,` its full-page link
+  (`data-identifier`, `data-link` on rows and cards). Matched by `event.code`, so the layout
+  does not matter; `showInfoToast` confirms.
 - **When keys count.** Only with focus on `body` or inside `#task-view`; never in a field,
-  with Ctrl / Cmd / Alt held, during IME composition, or while the drawer, quick menu or help
-  is open. Shift does not matter. `Enter` on a focused button stays that button's click.
+  with Ctrl / Cmd / Alt held (except the copy keys), during IME composition, or while the
+  drawer, quick menu or help is open. Shift does not matter, except for `Shift+L`. `Enter` on a focused button stays that button's click.
 - **Refresh.** The selection is put back at `htmx:afterSettle`. If its row is gone (a filter
   now hides it) the row at the same position is selected. Focus only moves back when nothing
   else has it, so a refresh never pulls it out of the search box or the drawer. Closing the

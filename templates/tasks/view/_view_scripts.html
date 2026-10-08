@@ -15,19 +15,25 @@
     // shows; re-fetch it through the current URL so filters and "Show more" survive.
     // The request goes out in the refresher's name, so it is one round trip for the
     // view and whatever refresh_oob names, and never counts as a toolbar change.
+    window.refreshTaskView = () => htmx.ajax('GET', window.location.href, { source: '#task-view-refresh' });
     ['taskChanged', 'taskStatusChanged'].forEach((name) => {
-        document.body.addEventListener(name, () => {
-            htmx.ajax('GET', window.location.href, { source: '#task-view-refresh' });
+        document.body.addEventListener(name, (event) => {
+            // A quick edit refreshes its own row (static/js/task-view.js, refreshRow).
+            if (event.target.hasAttribute && event.target.hasAttribute('data-row-refresh')) return;
+            window.refreshTaskView();
         });
     });
 </script>
 
 {% if quick_edit or quick_edit_projects %}
 {% comment %}One menu for the whole page, outside #task-view so a refresh does not replace it. static/js/task-view.js opens it from any [data-quick] button and fills it: priority from the template below, status and assignee from the quick-menu endpoint. The /0/ in the URLs stands for the task id.{% endcomment %}
-<div id="task-quick-menu" role="menu" hidden tabindex="-1"
+<div id="task-quick-menu" role="menu" hidden tabindex="-1" data-row-refresh
      data-priority-url="{% url 'task_update_priority' 0 %}"
      data-status-url="{% url 'task_update_status' 0 %}"
      data-assignee-url="{% url 'task_update_assignee' 0 %}"
+     data-due-url="{% url 'task_update_due_date' 0 %}"
+     data-labels-url="{% url 'task_toggle_label' 0 0 %}"
+     data-me="{{ request.user.pk }}"
      data-quick-url="{% url 'task_quick_menu' 0 'FIELD' %}"
      style="max-height: min(20rem, calc(100vh - 16px))"
      class="fixed z-[55] w-56 overflow-y-auto bg-elevated border border-border-subtle rounded-card shadow-lg py-1"></div>
@@ -70,7 +76,12 @@
             {% include "tasks/view/_shortcut_row.html" with keys="S" what="Change status" %}
             {% include "tasks/view/_shortcut_row.html" with keys="P" what="Change priority" %}
             {% include "tasks/view/_shortcut_row.html" with keys="A" what="Change assignee" %}
+            {% include "tasks/view/_shortcut_row.html" with keys="I" what="Assign to me" %}
+            {% include "tasks/view/_shortcut_row.html" with keys="D" what="Set due date" %}
+            {% include "tasks/view/_shortcut_row.html" with keys="Shift L" what="Set labels" %}
             {% endif %}
+            {% include "tasks/view/_shortcut_row.html" with keys="Ctrl/⌘ ." what="Copy the id" %}
+            {% include "tasks/view/_shortcut_row.html" with keys="Ctrl/⌘ Shift ," what="Copy the link" %}
             {% include "tasks/view/_shortcut_row.html" with keys="?" what="This list" %}
         </dl>
     </div>

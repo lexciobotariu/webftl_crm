@@ -129,6 +129,20 @@
                            {% if spec.show_empty %}checked{% endif %}
                            class="rounded border-border-subtle bg-panel text-accent focus:ring-0">
                 </label>
+                <fieldset>
+                    <legend class="text-[10px] uppercase tracking-wider text-zinc-500 font-medium mb-1.5">Properties</legend>
+                    {# cols=1 says the boxes below are the whole choice, so none checked means none. #}
+                    <input type="hidden" name="cols" value="1">
+                    <div class="flex flex-wrap gap-1.5">
+                        {% for value, label, shown in column_choices %}
+                        <label class="cursor-pointer">
+                            <input type="checkbox" name="col" value="{{ value }}" class="peer sr-only"
+                                   @change="$el.form.requestSubmit()" {% if shown %}checked{% endif %}>
+                            <span class="inline-block px-2 py-0.5 rounded-control border text-xs transition-colors border-border-subtle text-zinc-500 peer-checked:bg-hover-strong peer-checked:text-zinc-200 peer-focus-visible:outline peer-focus-visible:outline-1 peer-focus-visible:outline-border-strong">{{ label }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </fieldset>
             </div>
         </div>
     </div>

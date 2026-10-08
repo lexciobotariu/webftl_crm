@@ -4,7 +4,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from apps.accounts.models import User
-from apps.tasks.models import TaskActivity, visible_tasks
+from apps.tasks.models import TaskActivity, TaskSubscription, visible_tasks
 
 from .models import Notification
 
@@ -134,26 +134,59 @@ def _mentioned(task, content, mention_ids):
     return [person for person in viewers if person.pk in ids and person.name in named]
 
 
+def follower_ids(task):
+    """Who hears about comments on ``task``, as user ids.
+
+    The assignee, the creator and earlier commenters (read in one query from the
+    activity log), then each person's own choice on top
+    (:class:`~apps.tasks.models.TaskSubscription`): unsubscribed people are out,
+    subscribed ones are in.
+    """
+    ids = set(
+        TaskActivity.objects.filter(task=task, activity_type__in=['created', 'comment'], user__isnull=False)
+        .values_list('user_id', flat=True)
+    )
+    if task.assignee_id:
+        ids.add(task.assignee_id)
+    for user_id, subscribed in TaskSubscription.objects.filter(task=task).values_list('user_id', 'subscribed'):
+        if subscribed:
+            ids.add(user_id)
+        else:
+            ids.discard(user_id)
+    return ids
+
+
+def is_following(user, task):
+    """Whether ``user`` is among :func:`follower_ids`, in at most two small queries."""
+    choice = TaskSubscription.objects.filter(task=task, user=user).values_list('subscribed', flat=True).first()
+    if choice is not None:
+        return choice
+    if task.assignee_id == user.pk:
+        return True
+    return TaskActivity.objects.filter(
+        task=task, user=user, activity_type__in=['created', 'comment']
+    ).exists()
+
+
+def set_following(user, task, subscribed):
+    TaskSubscription.objects.update_or_create(task=task, user=user, defaults={'subscribed': subscribed})
+
+
 def notify_comment(comment, mention_ids=()):
     """"Mentioned" for the people named, "commented" for everyone else who follows the task.
 
-    Followers are the assignee, the creator and earlier commenters, read in one
-    query from the activity log.
+    Followers are :func:`follower_ids`. A mention reaches the person named even if
+    they unsubscribed.
     """
     task, actor = comment.task, comment.user
     mentioned = _mentioned(task, comment.content, mention_ids)
     for person in mentioned:
         notify(person, actor, task, Notification.MENTIONED, comment)
 
-    follower_ids = set(
-        TaskActivity.objects.filter(task=task, activity_type__in=['created', 'comment'], user__isnull=False)
-        .values_list('user_id', flat=True)
-    )
-    if task.assignee_id:
-        follower_ids.add(task.assignee_id)
-    follower_ids -= {person.pk for person in mentioned}
-    follower_ids.discard(actor.pk if actor else None)
-    for person in User.objects.filter(pk__in=follower_ids, is_active=True):
+    followers = follower_ids(task)
+    followers -= {person.pk for person in mentioned}
+    followers.discard(actor.pk if actor else None)
+    for person in User.objects.filter(pk__in=followers, is_active=True):
         notify(person, actor, task, Notification.COMMENTED, comment)
 
 

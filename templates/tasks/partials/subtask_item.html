@@ -1,11 +1,30 @@
-<div class="flex items-center gap-2" id="subtask-{{ subtask.pk }}">
-    <input type="checkbox" {% if subtask.completed %}checked{% endif %}
-           {% if can_edit %}hx-post="{% url 'subtask_toggle' subtask.task.pk subtask.pk %}"
-           hx-target="#subtask-{{ subtask.pk }}" hx-swap="outerHTML"{% else %}disabled{% endif %}
-           class="rounded bg-panel border-border-subtle text-zinc-200 focus:ring-border-strong disabled:opacity-60">
-    <span class="flex-1 text-sm text-zinc-300 {% if subtask.completed %}line-through text-zinc-500{% endif %}">{{ subtask.title }}</span>
+{% comment %}One sub-task. Editors can tick it, rename it (click the title; Enter saves, Escape cancels), drag it by the grip (the list is the x-sort container in task_detail / task_full_page) and delete it.{% endcomment %}
+<div class="group/subtask flex items-center gap-2" id="subtask-{{ subtask.pk }}" data-subtask="{{ subtask.pk }}"
+     {% if can_edit %}x-sort:item="{{ subtask.pk }}" x-data="{ editing: false }"{% endif %}>
     {% if can_edit %}
-    <button hx-post="{% url 'subtask_delete' subtask.task.pk subtask.pk %}" hx-target="#subtask-{{ subtask.pk }}" hx-swap="delete"
+    <span x-sort:handle class="cursor-grab text-zinc-600 hover:text-zinc-400 opacity-0 group-hover/subtask:opacity-100 transition-opacity" title="Drag to reorder">
+        <i data-lucide="grip-vertical" class="w-3.5 h-3.5"></i>
+    </span>
+    {% endif %}
+    <input type="checkbox" {% if subtask.completed %}checked{% endif %}
+           {% if can_edit %}hx-post="{% url 'subtask_toggle' subtask.task_id subtask.pk %}"
+           hx-target="#subtask-{{ subtask.pk }}" hx-swap="outerHTML"{% else %}disabled{% endif %}
+           aria-label="Done: {{ subtask.title }}"
+           class="rounded bg-panel border-border-subtle text-zinc-200 focus:ring-border-strong disabled:opacity-60">
+    {% if can_edit %}
+    <button type="button" x-show="!editing" @click="editing = true; $nextTick(() => $refs.title.select())"
+            title="Rename"
+            class="flex-1 min-w-0 text-left text-sm truncate {% if subtask.completed %}line-through text-zinc-500{% else %}text-zinc-300{% endif %} hover:text-zinc-100">{{ subtask.title }}</button>
+    <form x-show="editing" x-cloak class="flex-1 min-w-0"
+          hx-post="{% url 'subtask_rename' subtask.task_id subtask.pk %}" hx-target="#subtask-{{ subtask.pk }}" hx-swap="outerHTML">
+        <input type="text" name="title" value="{{ subtask.title }}" x-ref="title" required maxlength="255"
+               @keydown.escape.prevent.stop="editing = false; $el.value = $el.defaultValue"
+               class="w-full bg-panel border border-border-subtle rounded-control px-2 py-0.5 text-sm text-zinc-100 focus:border-border-strong focus:outline-none">
+    </form>
+    <button hx-post="{% url 'subtask_delete' subtask.task_id subtask.pk %}" hx-target="#subtask-{{ subtask.pk }}" hx-swap="delete"
+            aria-label="Delete {{ subtask.title }}"
             class="text-zinc-500 hover:text-error">&times;</button>
+    {% else %}
+    <span class="flex-1 text-sm text-zinc-300 {% if subtask.completed %}line-through text-zinc-500{% endif %}">{{ subtask.title }}</span>
     {% endif %}
 </div>

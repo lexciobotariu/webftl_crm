@@ -24,9 +24,12 @@ urlpatterns = [
     path('<int:pk>/subtasks/', views.subtask_create, name='subtask_create'),
     path('<int:pk>/subtasks/<int:subtask_pk>/toggle/', views.subtask_toggle, name='subtask_toggle'),
     path('<int:pk>/subtasks/<int:subtask_pk>/delete/', views.subtask_delete, name='subtask_delete'),
+    path('<int:pk>/subtasks/<int:subtask_pk>/rename/', views.subtask_rename, name='subtask_rename'),
+    path('<int:pk>/subtasks/reorder/', views.subtask_reorder, name='subtask_reorder'),
     path('<int:pk>/comments/', views.comment_create, name='comment_create'),
     path('<int:pk>/comments/<int:comment_pk>/edit/', views.comment_edit, name='comment_edit'),
     path('<int:pk>/comments/<int:comment_pk>/delete/', views.comment_delete, name='comment_delete'),
+    path('<int:pk>/subscription/', views.task_subscription, name='task_subscription'),
     path('<int:pk>/activity/', views.task_activity_list, name='task_activity_list'),
     path('<int:pk>/attachments/', views.attachment_upload, name='attachment_upload'),
     # Full page task view

@@ -27,6 +27,7 @@ from apps.tasks.listview import (
     group_choices,
     group_slots,
     project_assignees,
+    render_task_row,
     resolve_view,
 )
 from apps.tasks.models import (
@@ -37,7 +38,7 @@ from apps.tasks.models import (
     can_edit_tasks_on,
     visible_tasks,
 )
-from apps.tasks.viewspec import LIMIT_STEP, TaskViewOptions, sort_choices
+from apps.tasks.viewspec import LIMIT_STEP, TaskViewOptions, column_choices, sort_choices
 
 from .forms import LabelForm, ProjectForm, StatusForm
 from .keys import KEY_REGEX
@@ -206,6 +207,11 @@ def project_tasks(request, pk):
 
     visible = visible_tasks(request.user, project)
     matching = visible.matching(spec)
+    if 'row' in request.GET:
+        return render_task_row(request, request.GET['row'], matching, spec, {
+            'project': project,
+            'quick_edit': can_edit_tasks_on(request.user, project),
+        })
     total_matching = matching.count()
     archived = archived_matching(visible, spec)
     archived_count = archived.count()
@@ -229,6 +235,7 @@ def project_tasks(request, pk):
         'quick_edit': can_edit_tasks_on(request.user, project),
         'priority_choices': Task.PRIORITY_CHOICES,
         'sort_choices': sort_choices(options),
+        'column_choices': column_choices(spec),
         'group_choices': group_choices(options),
         **filter_options(statuses, spec, assignees, labels),
     }

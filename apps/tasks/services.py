@@ -274,6 +274,42 @@ def delete_subtask(subtask, user):
     subtask.delete()
 
 
+def rename_subtask(subtask, title, user):
+    """Change a sub-task's title. An edit, like ticking it."""
+    require_access(user, subtask.task.project)
+    subtask.title = title
+    subtask.save(update_fields=['title'])
+    return subtask
+
+
+def reorder_subtasks(task, ids, user):
+    """Put the task's sub-tasks in the order of ``ids``, as the drawer shows them after a drag.
+
+    Ids that are not this task's sub-tasks are ignored, and sub-tasks the list left
+    out keep their relative order after the ones it named, so a stale page cannot
+    lose a sub-task. ``order`` is renumbered 0..n-1.
+    """
+    require_access(user, task.project)
+    with transaction.atomic():
+        current = list(task.subtasks.select_for_update().order_by('order', 'pk'))
+        by_pk = {subtask.pk: subtask for subtask in current}
+        wanted = []
+        for raw in ids:
+            try:
+                subtask = by_pk.pop(int(raw))
+            except (KeyError, TypeError, ValueError):
+                continue
+            wanted.append(subtask)
+        wanted += [subtask for subtask in current if subtask.pk in by_pk]
+        changed = []
+        for order, subtask in enumerate(wanted):
+            if subtask.order != order:
+                subtask.order = order
+                changed.append(subtask)
+        task.subtasks.model.objects.bulk_update(changed, ['order'])
+    return wanted
+
+
 def add_comment(task, content, user, mentions=()):
     """
     Add a comment to a task.

@@ -6,9 +6,10 @@ Kept apart from the spec (which only knows about URLs) and from the queryset
 from itertools import groupby
 
 from django.conf import settings
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.db.models.functions import Lower
-from django.shortcuts import redirect
+from django.http import HttpResponse
+from django.shortcuts import redirect, render
 from django_htmx.http import push_url, replace_url
 
 from apps.accounts.models import User
@@ -126,6 +127,55 @@ def _make_group(spec, key, obj, rows, count):
     else:
         group['create_query'] = None
     return group
+
+
+def row_keys(task, spec):
+    """``"<group>|<sort>"``: where a row sits in the list for ``spec``.
+
+    After a quick edit the page asks for the changed row alone (:func:`render_task_row`)
+    and swaps it in place only when this string is unchanged; a row that moved to
+    another group or another place in its group needs the whole view again. On the
+    board a card's place is its column.
+    """
+    if spec.layout == 'board':
+        return str(task.status_id)
+    group = '' if spec.group == 'none' else _group_object(spec, task)[0]
+    if spec.sort == 'manual':
+        sort = f'{task.status_id}:{task.order}'
+    elif spec.sort == 'due':
+        sort = task.due_date
+    elif spec.sort == 'title':
+        sort = task.title.lower()
+    elif spec.sort == 'created':
+        sort = task.created_at.isoformat()
+    elif spec.sort == 'updated':
+        sort = task.updated_at.isoformat()
+    else:
+        sort = task.priority
+    return f'{group}|{sort}'
+
+
+def render_task_row(request, pk, matching, spec, context):
+    """The one row (or card) ``pk`` as the page would draw it, or 204 when it left the view.
+
+    ``?row=<pk>`` on a task page: what the quick menu asks for after an edit, so an
+    edit that keeps the row where it was does not re-render the whole list.
+    """
+    try:
+        pk = int(pk)
+    except (TypeError, ValueError):
+        return HttpResponse(status=400)
+    tasks = matching.filter(pk=pk).select_related('project', 'status', 'assignee').prefetch_related('labels')
+    if spec.layout == 'board':
+        tasks = tasks.annotate(
+            subtask_total=Count('subtasks', distinct=True),
+            subtask_done=Count('subtasks', filter=Q(subtasks__completed=True), distinct=True),
+        )
+    task = tasks.first()
+    if task is None:
+        return HttpResponse(status=204)
+    template = 'projects/partials/task_card.html' if spec.layout == 'board' else 'tasks/view/_list_row.html'
+    return render(request, template, {**context, 'task': task, 'spec': spec})
 
 
 def group_slots(spec, statuses=(), assignees=()):

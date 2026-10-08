@@ -461,6 +461,29 @@ def visible_tasks(user, project=None):
     return qs.none()
 
 
+class TaskSubscription(models.Model):
+    """Someone's own choice to follow a task or not, over what is inferred.
+
+    Without a row a person follows a task when they are its assignee, created it or
+    commented on it (``apps.notifications.services.follower_ids``). A row with
+    ``subscribed=False`` stops that; one with ``True`` follows a task they have no
+    part in. Mentions reach people either way.
+    """
+
+    task = models.ForeignKey('Task', on_delete=models.CASCADE, related_name='subscriptions')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='task_subscriptions')
+    subscribed = models.BooleanField()
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['task', 'user'], name='unique_task_subscription'),
+        ]
+
+    def __str__(self):
+        return f'{self.user} {"follows" if self.subscribed else "muted"} {self.task}'
+
+
 class Subtask(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='subtasks')
     title = models.CharField(max_length=255)

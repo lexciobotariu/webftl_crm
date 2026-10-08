@@ -60,7 +60,8 @@
                     <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
                         Sub-tasks <span id="subtask-counter-{{ task.pk }}">{% if task.subtask_progress %}({{ task.subtask_progress }}){% endif %}</span>
                     </h3>
-                    <div id="subtask-list-{{ task.pk }}" class="space-y-1 mb-3">
+                    <div id="subtask-list-{{ task.pk }}" class="space-y-1 mb-3"{% if can_edit %}
+                 x-data x-sort="htmx.ajax('POST', '{% url 'subtask_reorder' task.pk %}', {source: $el, swap: 'none', values: {ids: [...$el.querySelectorAll('[data-subtask]')].map((el) => el.dataset.subtask)}})"{% endif %}>
                         {% for subtask in task.subtasks.all %}
                         {% include "tasks/partials/subtask_item.html" %}
                         {% empty %}

@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Anyone who can see a task can now comment on it, not only people who may edit it. Changing or deleting a comment is still for its author or an admin
 - A task whose status changes from the drawer or the quick menu lands at the top of its new board column, the same place a new task goes. Dragging still puts it where it is dropped
 - Board column headers show the status icon, as the list's group headers do
+- New keys on a selected task: **I** assigns it to you, **D** sets the due date (Today, Tomorrow, Next week, In two weeks, or any date), **Shift+L** picks labels, **Ctrl/⌘+.** copies its id and **Ctrl/⌘+Shift+,** copies its link. "?" lists them
+- A quick edit (priority, assignee, labels, due date) now refreshes only the row or card it changed, so edits feel instant on long lists. The whole list still reloads when the task moves to another group or place, leaves the filter, or changes status
+- **Subscribe / Unsubscribe** next to a task's activity: unsubscribe to stop comment notifications on a task you were assigned, created or commented on, or subscribe to one you have no part in. Mentions still reach you
+- **Properties** in the Display menu choose which columns a list row shows: ID, Labels, Due date and Estimate (plus Project on My Tasks). The choice is kept in the URL and the saved view
+- Sub-tasks can be renamed (click the title) and dragged into another order by people who can edit the task
+
+### Migrations
+- `tasks.0023_task_subscription` adds the table behind Subscribe / Unsubscribe. It only creates a table, nothing is rewritten
 
 ### Documentation
 - `docs/ui-patterns.md` records the rules above, and why rows show at most three labels (then "+N") while cards show them all
