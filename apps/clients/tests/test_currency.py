@@ -74,7 +74,7 @@ class TestClientCurrency:
         saved.refresh_from_db()
         assert saved.currency_id == usd.pk
 
-        profile = client.get(reverse('client_detail', args=[saved.pk])).content.decode()
+        profile = client.get(reverse('client_detail_profile', args=[saved.pk])).content.decode()
         billing = profile.split('>Billing</h2>', 1)[1].split('>Notes</h2>', 1)[0]
         assert 'USD $' in billing
 

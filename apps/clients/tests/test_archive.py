@@ -132,7 +132,7 @@ class TestProfile:
         admin = AdminUserFactory()
         target = ClientFactory(notes='Prefers calls on Fridays')
         client.force_login(admin)
-        page = client.get(reverse('client_detail', args=[target.pk])).content.decode()
+        page = client.get(reverse('client_detail_profile', args=[target.pk])).content.decode()
         assert 'Prefers calls on Fridays' in page
 
     def test_delete_confirm_shows_the_name_as_written(self, client):

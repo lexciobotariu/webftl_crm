@@ -3,7 +3,7 @@ import json
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Count, ProtectedError
+from django.db.models import Count, ProtectedError, Q
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -43,6 +43,11 @@ def client_list(request):
     """Active clients by default; ``?archived=1`` lists the archived ones instead."""
     visible = visible_clients(request.user)
     show_archived = request.GET.get('archived') == '1'
+    query = request.GET.get('q', '').strip()[:100]
+    if query:
+        # The client's name, or the name or email of one of its contacts, as in the search palette.
+        matching = Q(name__icontains=query) | Q(contacts__name__icontains=query) | Q(contacts__email__icontains=query)
+        visible = visible.filter(pk__in=visible.filter(matching).values('pk'))
     clients_qs = visible.filter(archived_at__isnull=not show_archived)
     clients_qs = clients_qs.annotate(num_projects=Count('projects', distinct=True)).order_by('name')
     paginator = Paginator(clients_qs, CLIENTS_PER_PAGE)
@@ -53,6 +58,7 @@ def client_list(request):
         'page_obj': page_obj,
         'total_count': paginator.count,
         'show_archived': show_archived,
+        'query': query,
         'archived_count': None if show_archived else visible.filter(archived_at__isnull=False).count(),
     })
 
@@ -103,12 +109,13 @@ def client_detail(request, pk):
     # Determine active tab from URL
     url_name = request.resolver_match.url_name
     tab_mapping = {
+        'client_detail_profile': 'profile',
         'client_detail_todos': 'todos',
         'client_detail_projects': 'projects',
         'client_detail_notes': 'notes',
         'client_detail_invoices': 'invoices',
     }
-    active_tab = tab_mapping.get(url_name, 'profile')
+    active_tab = tab_mapping.get(url_name, 'overview')
     if active_tab == 'invoices' and not request.user.has_app_permission('access_invoices'):
         return HttpResponseForbidden("You don't have access to this section")
 
@@ -126,8 +133,14 @@ def client_detail(request, pk):
         client_invoices = visible_invoices(request.user).filter(client=client)
         invoice_count = client_invoices.count()
 
+    overview = None
+    if active_tab == 'overview':
+        from .overview import client_overview
+        overview = client_overview(request.user, client)
+
     return render(request, 'clients/client_detail.html', {
         'client': client,
+        'overview': overview,
         'projects': projects,
         'project_count': projects.count(),
         'todo_count': todo_count,

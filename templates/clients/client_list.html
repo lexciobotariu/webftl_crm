@@ -9,6 +9,21 @@
             <i data-lucide="users" class="w-4 h-4 text-zinc-500"></i>
             <h1 class="text-sm font-medium text-zinc-100">Clients</h1>
         </div>
+        <form method="get" action="{% url 'client_list' %}" class="ml-auto" role="search">
+            {% if show_archived %}<input type="hidden" name="archived" value="1">{% endif %}
+            <div class="relative">
+                <i data-lucide="search" class="w-3.5 h-3.5 text-zinc-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                <input type="search" name="q" value="{{ query }}" placeholder="Search clients" aria-label="Search clients"
+                       hx-get="{% url 'client_list' %}"
+                       hx-include="closest form"
+                       hx-trigger="input changed delay:300ms, search"
+                       hx-target="#client-list-content"
+                       hx-select="#client-list-content"
+                       hx-swap="outerHTML"
+                       hx-push-url="true"
+                       class="w-56 bg-elevated border border-border-subtle rounded-control pl-8 pr-3 py-1.5 text-xs text-zinc-100 placeholder-zinc-500 focus:border-border-strong focus:outline-none">
+            </div>
+        </form>
     </div>
 
     <!-- Table content. Pagination lives inside the refreshed region so it cannot
@@ -21,9 +36,9 @@
                         <span id="client-count" class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ total_count }}</span>
                         <span class="text-xs text-zinc-500">{% if show_archived %}archived {% endif %}client{{ total_count|pluralize }}</span>
                         {% if show_archived %}
-                        <a href="{% url 'client_list' %}" class="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">Back to active clients</a>
+                        <a href="{% querystring archived=None page=None %}" class="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">Back to active clients</a>
                         {% elif archived_count %}
-                        <a href="{% url 'client_list' %}?archived=1" class="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">Show archived ({{ archived_count }})</a>
+                        <a href="{% querystring archived=1 page=None %}" class="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">Show archived ({{ archived_count }})</a>
                         {% endif %}
                     </div>
                     <div class="flex items-center gap-2">
@@ -67,7 +82,9 @@
             </div>
             {% else %}
             <div class="flex-1 min-h-0 overflow-y-auto">
-                {% if show_archived %}
+                {% if query %}
+                {% include "components/empty_state.html" with icon="search" message="No clients match your search" %}
+                {% elif show_archived %}
                 {% include "components/empty_state.html" with icon="archive" message="No archived clients" %}
                 {% elif perms_map.clients_create %}
                 {% url 'client_create_drawer' as client_create_url %}

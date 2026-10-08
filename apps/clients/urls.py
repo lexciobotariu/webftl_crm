@@ -7,6 +7,7 @@ urlpatterns = [
     path('create/', views.client_create, name='client_create'),
     path('create/drawer/', views.client_create_drawer, name='client_create_drawer'),
     path('<int:pk>/', views.client_detail, name='client_detail'),
+    path('<int:pk>/profile/', views.client_detail, name='client_detail_profile'),
     path('<int:pk>/projects/', views.client_detail, name='client_detail_projects'),
     path('<int:pk>/todos/', views.client_detail, name='client_detail_todos'),
     path('<int:pk>/notes/', views.client_detail, name='client_detail_notes'),
