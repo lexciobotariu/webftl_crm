@@ -9,15 +9,48 @@
             <i data-lucide="receipt" class="w-4 h-4 text-zinc-500"></i>
             <h1 class="text-sm font-medium text-zinc-100">Invoices</h1>
         </div>
+        <form method="get" action="{% url 'invoice_list' %}" class="ml-auto flex items-center gap-2" id="invoice-filters">
+            <select name="status" aria-label="Status" onchange="this.form.submit()" class="bg-elevated border border-border-subtle rounded-control px-2 py-1.5 text-xs text-zinc-200 focus:border-border-strong focus:outline-none">
+                {% for value, label in status_choices %}<option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+            <select name="client" aria-label="Client" onchange="this.form.submit()" class="bg-elevated border border-border-subtle rounded-control px-2 py-1.5 text-xs text-zinc-200 focus:border-border-strong focus:outline-none max-w-[12rem]">
+                <option value="">All clients</option>
+                {% for c in client_choices %}<option value="{{ c.pk }}" {% if filters.client_id == c.pk %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+            </select>
+            <select name="period" aria-label="Issue date" onchange="this.form.submit()" class="bg-elevated border border-border-subtle rounded-control px-2 py-1.5 text-xs text-zinc-200 focus:border-border-strong focus:outline-none">
+                {% for value, label in period_choices %}<option value="{{ value }}" {% if filters.period == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+            <noscript><button type="submit" class="text-xs text-zinc-300">Apply</button></noscript>
+            {% if filters.active %}<a href="{% url 'invoice_list' %}" class="text-xs text-zinc-500 hover:text-zinc-300">Clear</a>{% endif %}
+        </form>
     </div>
+
+    {% if has_invoices %}
+    <!-- Totals for everything that matches the filters, per currency -->
+    <div class="flex-shrink-0 grid grid-cols-3 gap-4 px-6 pt-6" id="invoice-totals">
+        <div class="border border-border-subtle rounded-card bg-panel/50 p-4">
+            <div class="text-xs uppercase tracking-wide text-zinc-500">Invoiced</div>
+            <div class="mt-1 text-lg font-medium text-zinc-100 tabular-nums">{% for amount in totals.invoiced %}<div>{{ amount }}</div>{% empty %}<span class="text-zinc-600">—</span>{% endfor %}</div>
+            <div class="text-xs text-zinc-500 mt-1">sent, with tax, not cancelled</div>
+        </div>
+        <div class="border border-border-subtle rounded-card bg-panel/50 p-4">
+            <div class="text-xs uppercase tracking-wide text-zinc-500">Outstanding</div>
+            <div class="mt-1 text-lg font-medium text-zinc-100 tabular-nums">{% for amount in totals.outstanding %}<div>{{ amount }}</div>{% empty %}<span class="text-zinc-600">Nothing owed</span>{% endfor %}</div>
+        </div>
+        <div class="border border-border-subtle rounded-card bg-panel/50 p-4">
+            <div class="text-xs uppercase tracking-wide text-zinc-500">Overdue</div>
+            <div class="mt-1 text-lg font-medium tabular-nums {% if totals.overdue %}text-error{% else %}text-zinc-100{% endif %}">{% for amount in totals.overdue %}<div>{{ amount }}</div>{% empty %}<span class="text-zinc-600">None</span>{% endfor %}</div>
+        </div>
+    </div>
+    {% endif %}
 
     <div class="flex-1 min-h-0 p-6">
         <div class="h-full flex flex-col border border-border-subtle rounded-card bg-panel/50 overflow-hidden">
         <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80">
             <div class="flex items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
-                    <span class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ invoices|length }}</span>
-                    <span class="text-xs text-zinc-500">invoice{{ invoices|length|pluralize }}</span>
+                    <span class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ total_count }}</span>
+                    <span class="text-xs text-zinc-500">invoice{{ total_count|pluralize }}{% if filters.active %} matching{% endif %}</span>
                 </div>
                 <div class="flex items-center gap-2">
                     {% if perms_map.invoices_create %}
@@ -76,8 +109,13 @@
         {% else %}
         <div class="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center py-16 text-zinc-500">
             <i data-lucide="receipt" class="w-12 h-12 mb-4 opacity-30"></i>
+            {% if has_invoices %}
+            <p class="text-sm mb-2">No invoices match these filters</p>
+            <a href="{% url 'invoice_list' %}" class="text-zinc-200 hover:text-zinc-50 text-sm">Clear the filters</a>
+            {% else %}
             <p class="text-sm mb-2">No invoices yet</p>
-            {% if perms_map.invoices_create %}
+            {% endif %}
+            {% if perms_map.invoices_create and not has_invoices %}
             <button hx-get="{% url 'invoice_create' %}"
                     hx-target="#slide-over"
                     hx-swap="innerHTML"
@@ -88,6 +126,7 @@
             {% endif %}
         </div>
         {% endif %}
+        {% include "components/pagination.html" %}
         </div>
     </div>
 </div>
