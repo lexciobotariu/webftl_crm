@@ -3,7 +3,7 @@
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
                 <i data-lucide="{% if kind == 'reminder' %}bell-ring{% else %}mail{% endif %}" class="w-4 h-4 text-zinc-500"></i>
-                <h2 class="text-sm font-medium text-zinc-100">{% if kind == 'reminder' %}Send reminder{% else %}Email invoice{% endif %} {{ invoice.number_label }}</h2>
+                <h2 class="text-sm font-medium text-zinc-100">{% if kind == 'reminder' %}Send reminder{% elif kind == 'estimate' %}Email estimate{% else %}Email invoice{% endif %} {{ invoice.number_label }}</h2>
             </div>
             <button onclick="closeSlideOver()"
                     class="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors">
@@ -12,7 +12,7 @@
         </div>
     </div>
 
-    <form hx-post="{% url 'invoice_email' invoice.pk kind %}"
+    <form hx-post="{% if action_url %}{{ action_url }}{% else %}{% url 'invoice_email' invoice.pk kind %}{% endif %}"
           hx-target="#slide-over"
           hx-swap="innerHTML"
           hx-disabled-elt="find button[type=submit]"
@@ -40,7 +40,7 @@
                 <i data-lucide="paperclip" class="w-3.5 h-3.5"></i>
                 {{ invoice.number_label }}.pdf is attached.
             </div>
-            {% if kind == 'invoice' and invoice.is_draft %}
+            {% if kind != 'reminder' and invoice.is_draft %}
             <p class="text-xs text-zinc-500">Sending marks this draft as sent. Lines, tax, dates and bill-to are then locked.</p>
             {% endif %}
             <p class="text-xs text-zinc-500">Replies go to the company email in Settings. The email is logged on the client's Messages tab.</p>

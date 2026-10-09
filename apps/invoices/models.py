@@ -396,3 +396,131 @@ def visible_invoices(user):
     if user.has_app_permission('invoices_view_all'):
         return invoices
     return invoices.filter(client__in=visible_clients(user))
+
+
+class Estimate(models.Model):
+    """A quote for a client: lines and a total the client can accept before any invoice exists.
+
+    It has its own number series (EST-0001). Bill-to, company and currency are
+    a snapshot from create time, as on an invoice. Lines can change only while
+    it is a draft. Once accepted it can be turned into a draft invoice, once.
+    """
+
+    client = models.ForeignKey(Client, on_delete=models.PROTECT, related_name='estimates')
+    number = models.PositiveIntegerField(unique=True)
+    issue_date = models.DateField()
+    valid_until = models.DateField()
+    tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
+    notes = models.TextField(blank=True)
+    bill_to_name = models.CharField(max_length=255)
+    bill_to_email = models.EmailField(blank=True)
+    bill_to_address = models.TextField(blank=True)
+    bill_to_tax_id = models.CharField(max_length=64, blank=True)
+    company_legal_name = models.CharField(max_length=255, blank=True, default='')
+    company_address = models.TextField(blank=True, default='')
+    company_email = models.EmailField(blank=True, default='')
+    company_phone = models.CharField(max_length=50, blank=True, default='')
+    company_tax_id = models.CharField(max_length=64, blank=True, default='')
+    currency_code = models.CharField(max_length=3, blank=True, default='')
+    currency_symbol = models.CharField(max_length=16, blank=True, default='')
+    symbol_before = models.BooleanField(default=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    declined_at = models.DateTimeField(null=True, blank=True)
+    invoice = models.OneToOneField(
+        Invoice, on_delete=models.SET_NULL, null=True, blank=True, related_name='estimate',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-number']
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(tax_rate__gte=0) & models.Q(tax_rate__lte=100),
+                name='estimate_tax_rate_between_0_and_100',
+            ),
+        ]
+
+    def __str__(self):
+        return self.number_label
+
+    @property
+    def number_label(self):
+        return f'EST-{self.number:04d}'
+
+    @property
+    def is_draft(self):
+        return self.sent_at is None
+
+    @property
+    def subtotal(self):
+        total = Decimal('0.00')
+        for line in self.lines.all():
+            total += line.amount
+        return total
+
+    @property
+    def tax_amount(self):
+        return money(self.subtotal * self.tax_rate / HUNDRED)
+
+    @property
+    def total(self):
+        return self.subtotal + self.tax_amount
+
+    @property
+    def status(self):
+        """draft, sent, accepted, declined, expired, or invoiced.
+
+        Expired is a sent estimate the client has not answered whose
+        ``valid_until`` is before today.
+        """
+        if self.invoice_id:
+            return 'invoiced'
+        if self.accepted_at:
+            return 'accepted'
+        if self.declined_at:
+            return 'declined'
+        if self.sent_at is None:
+            return 'draft'
+        if self.valid_until < timezone.localdate():
+            return 'expired'
+        return 'sent'
+
+    @property
+    def status_label(self):
+        return self.status.capitalize()
+
+
+class EstimateLine(models.Model):
+    """One line of an estimate: a project line or free text, as on an invoice."""
+
+    estimate = models.ForeignKey(Estimate, on_delete=models.CASCADE, related_name='lines')
+    project = models.ForeignKey(
+        'projects.Project', on_delete=models.SET_NULL, null=True, blank=True, related_name='estimate_lines',
+    )
+    description = models.CharField(max_length=255, blank=True)
+    quantity = models.DecimalField(max_digits=10, decimal_places=2)
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2)
+
+    class Meta:
+        ordering = ['pk']
+        constraints = [
+            models.CheckConstraint(condition=models.Q(quantity__gt=0), name='estimate_line_quantity_positive'),
+            models.CheckConstraint(condition=models.Q(unit_price__gte=0), name='estimate_line_unit_price_non_negative'),
+        ]
+
+    def __str__(self):
+        return self.description
+
+    @property
+    def amount(self):
+        return money(self.quantity * self.unit_price)
+
+
+def visible_estimates(user):
+    """Estimates this user may open: the same rule as ``visible_invoices``."""
+    estimates = Estimate.objects.select_related('client', 'invoice').prefetch_related('lines__project')
+    if user.has_app_permission('invoices_view_all'):
+        return estimates
+    return estimates.filter(client__in=visible_clients(user))

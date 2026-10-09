@@ -24,6 +24,7 @@ urlpatterns = [
     path('notes/', include('apps.notes.urls')),
     path('salaries/', include('apps.salaries.urls')),
     path('invoices/', include('apps.invoices.urls')),
+    path('estimates/', include('apps.invoices.estimate_urls')),
     path('search/', include('apps.search.urls')),
     path('inbox/', include('apps.notifications.urls')),
     path('settings/', include('apps.crm.urls')),

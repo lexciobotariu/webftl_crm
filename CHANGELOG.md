@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.30.0] - 2026-10-09
+
+### Features
+- **Estimates.** A new Estimates page (sidebar, under Invoices) with its own numbers, EST-0001 onwards. An estimate has a client, issue date, "valid until" date, tax rate, optional notes (scope, terms) and lines like an invoice: project lines or free text
+- **Statuses:** Draft, Sent, Accepted, Declined, Expired (sent, unanswered and past its valid-until date) and Invoiced. Lines and dates can change only while it is a draft. The list filters by status
+- **Accepted / Declined** buttons record the client's answer on a sent estimate; Clear answer undoes a mistake
+- **Convert to invoice** on an accepted estimate creates a draft invoice with the same client, tax rate and lines, due in 30 days. It can be done once; the estimate and the invoice link to each other
+- **Email estimate** sends it with the PDF attached, like invoices: replies go to the company email, emailing a draft marks it sent, and every email is logged on the client's Messages tab and on the estimate
+- PDF download and a print page
+
+### Migrations
+- `invoices.0006` adds estimates and their lines; `clients.0008` links logged emails to an estimate
+
 ## [0.29.0] - 2026-10-09
 
 ### Features
