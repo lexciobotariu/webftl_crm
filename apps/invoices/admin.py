@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Invoice, InvoiceLine, Payment
+from .models import Invoice, InvoiceLine, Payment, RecurringInvoice
 
 
 class InvoiceLineInline(admin.TabularInline):
@@ -32,3 +32,9 @@ class InvoiceLineAdmin(admin.ModelAdmin):
 class PaymentAdmin(admin.ModelAdmin):
     list_display = ['invoice', 'date', 'amount', 'note']
     raw_id_fields = ['invoice']
+
+
+@admin.register(RecurringInvoice)
+class RecurringInvoiceAdmin(admin.ModelAdmin):
+    list_display = ['template', 'frequency', 'next_date', 'end_date']
+    raw_id_fields = ['template', 'created_by']

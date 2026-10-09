@@ -1,5 +1,8 @@
+import calendar
+from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
@@ -111,6 +114,10 @@ class Invoice(models.Model):
     # A sent invoice that no longer stands. It keeps its number and lines, owes
     # nothing, and cannot be reopened.
     cancelled_at = models.DateTimeField(null=True, blank=True)
+    # The repeat that created this draft, if any.
+    from_recurring = models.ForeignKey(
+        'RecurringInvoice', on_delete=models.SET_NULL, null=True, blank=True, related_name='created_invoices',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -321,6 +328,58 @@ class Payment(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
         return super().save(*args, **kwargs)
+
+
+def add_months(day, months, anchor_day=None):
+    """``day`` moved by ``months``, on ``anchor_day`` or the month's last day when it is shorter."""
+    index = day.year * 12 + day.month - 1 + months
+    year, month = divmod(index, 12)
+    month += 1
+    last = calendar.monthrange(year, month)[1]
+    return date(year, month, min(anchor_day or day.day, last))
+
+
+class RecurringInvoice(models.Model):
+    """Repeat an invoice: on each date a new draft copies its client, tax rate and lines.
+
+    The template is an ordinary invoice. Each new draft takes the client's
+    current bill-to and currency, the template's lines as they are, and keeps
+    the template's number of days between issue and due date. Drafts are never
+    sent on their own. ``create_recurring_invoices`` (a daily job) makes them.
+    """
+
+    MONTHLY = 'monthly'
+    QUARTERLY = 'quarterly'
+    YEARLY = 'yearly'
+    FREQUENCY_CHOICES = [(MONTHLY, 'Monthly'), (QUARTERLY, 'Every 3 months'), (YEARLY, 'Yearly')]
+    MONTHS = {MONTHLY: 1, QUARTERLY: 3, YEARLY: 12}
+
+    template = models.OneToOneField(Invoice, on_delete=models.CASCADE, related_name='recurring')
+    frequency = models.CharField(max_length=10, choices=FREQUENCY_CHOICES, default=MONTHLY)
+    # The first draft's issue date; later ones fall on the same day of the month.
+    start_date = models.DateField()
+    next_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['next_date', 'pk']
+
+    def __str__(self):
+        return f'{self.template} {self.get_frequency_display().lower()}'
+
+    @property
+    def finished(self):
+        return self.end_date is not None and self.next_date > self.end_date
+
+    def date_after(self, day):
+        """The issue date that follows ``day`` in this schedule."""
+        months = (day.year - self.start_date.year) * 12 + day.month - self.start_date.month
+        return add_months(self.start_date, months + self.MONTHS[self.frequency])
 
 
 def visible_invoices(user):

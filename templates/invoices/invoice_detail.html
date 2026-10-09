@@ -32,6 +32,16 @@
                     <i data-lucide="printer" class="w-3.5 h-3.5"></i>
                     Print
                 </a>
+                {% if perms_map.invoices_create and not recurring %}
+                <button hx-get="{% url 'invoice_recurring' invoice.pk %}"
+                        hx-target="#slide-over"
+                        hx-swap="innerHTML"
+                        hx-on::after-request="openSlideOver(event)"
+                        class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
+                    <i data-lucide="repeat" class="w-3.5 h-3.5"></i>
+                    Repeat
+                </button>
+                {% endif %}
                 {% if perms_map.invoices_edit and can_remind %}
                 <button hx-get="{% url 'invoice_email' invoice.pk 'reminder' %}"
                         hx-target="#slide-over"
@@ -99,6 +109,37 @@
     </div>
 
     <div class="flex-1 overflow-y-auto p-6">
+        {% if recurring %}
+        <div class="flex items-center justify-between gap-4 mb-4 px-4 py-3 border border-border-subtle rounded-card bg-panel/50">
+            <div class="flex items-center gap-3 text-sm">
+                <i data-lucide="repeat" class="w-4 h-4 text-zinc-500"></i>
+                {% if recurring.finished %}
+                <span class="text-zinc-300">Repeated {{ recurring.get_frequency_display|lower }} until {{ recurring.end_date|date:"M j, Y" }}. No more drafts will be created.</span>
+                {% else %}
+                <span class="text-zinc-300">Repeats {{ recurring.get_frequency_display|lower }}. Next draft on <span class="text-zinc-100">{{ recurring.next_date|date:"M j, Y" }}</span>{% if recurring.end_date %}, last on or before {{ recurring.end_date|date:"M j, Y" }}{% endif %}.</span>
+                {% if invoice.client.archived_at %}<span class="text-xs text-amber-400">The client is archived, so no drafts are created.</span>{% endif %}
+                {% endif %}
+            </div>
+            {% if perms_map.invoices_create %}
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <button hx-get="{% url 'invoice_recurring' invoice.pk %}"
+                        hx-target="#slide-over"
+                        hx-swap="innerHTML"
+                        hx-on::after-request="openSlideOver(event)"
+                        class="text-xs text-zinc-400 hover:text-zinc-200">Change</button>
+                <button hx-post="{% url 'invoice_recurring_stop' invoice.pk %}"
+                        hx-confirm="Stop repeating {{ invoice.number_label }}? Drafts already created stay."
+                        class="text-xs text-zinc-400 hover:text-error">Stop</button>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% if invoice.from_recurring %}
+        <p class="mb-4 text-xs text-zinc-500 flex items-center gap-1.5">
+            <i data-lucide="repeat" class="w-3.5 h-3.5"></i>
+            Created from the repeat on <a href="{% url 'invoice_detail' invoice.from_recurring.template_id %}" class="text-zinc-300 hover:text-zinc-100">{{ invoice.from_recurring.template.number_label }}</a>.
+        </p>
+        {% endif %}
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
             {% if invoice.currency_code %}
             <div class="bg-panel/50 border border-border-subtle rounded-card p-4">

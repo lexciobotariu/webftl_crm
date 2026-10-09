@@ -8,7 +8,7 @@ from django.utils import timezone
 from apps.clients.models import Client, visible_clients
 from apps.projects.models import Project
 
-from .models import money
+from .models import RecurringInvoice, money
 
 INPUT_CLASSES = (
     'w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm '
@@ -151,3 +151,9 @@ class InvoiceEmailForm(forms.Form):
             except forms.ValidationError:
                 raise forms.ValidationError(f'"{address}" is not a valid email address.') from None
         return list(dict.fromkeys(addresses))
+
+
+class RecurringInvoiceForm(forms.Form):
+    frequency = forms.ChoiceField(choices=RecurringInvoice.FREQUENCY_CHOICES)
+    next_date = forms.DateField(widget=HtmlDateInput(), label='Next draft on')
+    end_date = forms.DateField(widget=HtmlDateInput(), required=False, label='Last draft on or before')

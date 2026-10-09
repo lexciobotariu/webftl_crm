@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.29.0] - 2026-10-09
+
+### Features
+- **Recurring invoices.** "Repeat" on an invoice turns it into a template: monthly, every 3 months or yearly, from a chosen date, optionally until an end date. On each date a new **draft** is created for the same client with the template's lines (copied as they are), tax rate and number of days to pay, and the client's current bill-to and currency. Drafts are never sent on their own: check them and use Email invoice
+- The template shows when it repeats next, with Change and Stop; each draft links back to its template
+- An archived client gets no new drafts. A missed day is caught up on the next run, and running twice never creates the same draft twice
+
+### Configuration
+- **Schedule `python manage.py create_recurring_invoices` once a day** (in Dokploy, the app's Schedules tab). Without it no drafts are created
+
+### Migrations
+- `invoices.0005` adds recurring invoices and links each draft to the one that created it
+
 ## [0.28.0] - 2026-10-09
 
 ### Features
