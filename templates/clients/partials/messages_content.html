@@ -1,0 +1,74 @@
+{% load task_markdown %}
+<div id="messages-content" class="space-y-6">
+    <!-- New note -->
+    <form hx-post="{% url 'client_message_create' client.pk %}"
+          hx-target="#messages-content"
+          hx-swap="outerHTML"
+          class="border border-border-subtle rounded-card bg-panel/50 p-4 space-y-3">
+        {% csrf_token %}
+        <div class="flex items-center gap-3">
+            <i data-lucide="message-square-plus" class="w-4 h-4 text-zinc-500"></i>
+            <h2 class="text-sm font-medium text-zinc-100">Add a note</h2>
+            <span class="text-xs text-zinc-500">Only the team sees notes; the client does not.</span>
+        </div>
+        {% if error %}<p class="text-xs text-error">{{ error }}</p>{% endif %}
+        {% include "tasks/partials/markdown_editor.html" with uid="client-message" name="body" value=draft rows=3 placeholder="What was said or agreed..." %}
+        <div class="flex items-center justify-between gap-3">
+            <select name="project" aria-label="Project"
+                    class="bg-elevated border border-border-subtle rounded-control px-2 py-1.5 text-xs text-zinc-200 focus:border-border-strong focus:outline-none max-w-xs">
+                <option value="">No project</option>
+                {% for project in message_projects %}<option value="{{ project.pk }}">{{ project.name }}</option>{% endfor %}
+            </select>
+            <button type="submit" class="bg-accent text-on-accent px-3 py-1.5 rounded-control text-xs font-medium hover:bg-accent-hover transition-colors">Add note</button>
+        </div>
+    </form>
+
+    <!-- The log, newest first -->
+    <div class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden">
+        <div class="px-4 py-2 border-b border-border-subtle bg-panel/80 flex items-center gap-3">
+            <i data-lucide="messages-square" class="w-4 h-4 text-zinc-500"></i>
+            <h2 class="text-sm font-medium text-zinc-100">Message log</h2>
+        </div>
+        {% if log %}
+        <ul class="divide-y divide-border-subtle">
+            {% for message in log %}
+            <li class="px-4 py-3" id="message-{{ message.pk }}">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex items-center gap-2 flex-wrap text-xs">
+                        {% if message.kind == 'email' %}
+                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded {% if message.failed %}bg-error/10 text-error border border-error/20{% else %}bg-blue-500/10 text-blue-300 border border-blue-500/20{% endif %}">
+                            <i data-lucide="mail" class="w-3 h-3"></i>{% if message.failed %}Email not sent{% else %}Email{% endif %}
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-zinc-500/10 text-zinc-300 border border-border-subtle">
+                            <i data-lucide="sticky-note" class="w-3 h-3"></i>Note
+                        </span>
+                        {% endif %}
+                        <span class="text-zinc-300">{% if message.author %}{% firstof message.author.name message.author.email %}{% else %}System{% endif %}</span>
+                        {% if message.project %}<a href="{% url 'project_detail' message.project.pk %}" class="text-zinc-500 hover:text-zinc-300">{{ message.project.name }}</a>{% endif %}
+                        <span class="text-zinc-600" title="{{ message.created_at|date:'M d, Y H:i' }}">{{ message.created_at|timesince }} ago</span>
+                    </div>
+                    {% if message.kind == 'note' %}{% if message.author_id == request.user.pk or request.user.is_admin %}
+                    <button hx-post="{% url 'client_message_delete' client.pk message.pk %}"
+                            hx-target="#messages-content"
+                            hx-swap="outerHTML"
+                            hx-confirm="Delete this note?"
+                            class="p-1 text-zinc-500 hover:text-error rounded transition-colors" title="Delete">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                    {% endif %}{% endif %}
+                </div>
+                {% if message.kind == 'email' %}
+                <div class="mt-1 text-sm text-zinc-100">{{ message.subject }}</div>
+                <div class="text-xs text-zinc-500">To {{ message.recipients }}</div>
+                {% if message.failed %}<div class="text-xs text-error mt-1">{{ message.error }}</div>{% endif %}
+                {% endif %}
+                <div class="markdown text-sm text-zinc-300 mt-1">{{ message.body|render_markdown }}</div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="px-4 py-4 text-sm text-zinc-500">Nothing logged yet. Notes you add and emails sent to this client show up here.</p>
+        {% endif %}
+    </div>
+</div>
