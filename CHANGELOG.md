@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.28.0] - 2026-10-09
+
+### Features
+- **Messages tab on each client.** One log per client with internal notes (Markdown, optionally tied to one of the client's projects) and every email sent to the client, logged automatically with its recipients and whether it went out. Notes are deleted only by their author or an admin; logged emails stay
+- **Email invoice.** The invoice page has an "Email invoice" button that opens a drawer with To (prefilled from the bill-to email), Subject and Message (prefilled with a short summary: number, total, what is still to pay, due date). The invoice goes as a PDF attachment and replies go to the company email from Settings. Emailing a draft marks it sent; if the email fails, it stays a draft
+- **Send reminder.** For a sent invoice that is still owed, a "Send reminder" button opens the same drawer with reminder wording ("was due on ... and is still open" once overdue)
+- **Emails card on the invoice** lists every email and reminder sent for it, failed ones in red with the reason
+- **PDF download** on the invoice page and the print page
+
+### Configuration
+- **Email goes through Resend** when `RESEND_API_KEY` is set; leave `EMAIL_BACKEND` unset. `DEFAULT_FROM_EMAIL` (for example `WebFTL <facturi@example.com>`) must be on a domain verified in Resend. Quotes around either value are optional
+- `docker-compose.dokploy.yml` passes `RESEND_API_KEY` to the container; the Docker image installs Pango, HarfBuzz and DejaVu fonts for the PDFs
+- New dependencies: `resend`, `weasyprint`
+
+### Migrations
+- `clients.0007` adds the client message log
+
 ## [0.27.0] - 2026-10-09
 
 ### Features

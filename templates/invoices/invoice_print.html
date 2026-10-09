@@ -17,13 +17,17 @@
         .no-print { margin-bottom: 1.5rem; }
         button, a.button { font: inherit; padding: 0.4rem 0.8rem; margin-right: 0.5rem; }
         @media print { .no-print { display: none; } body { margin: 0; } }
+        @page { size: A4; margin: 2cm; }
     </style>
 </head>
 <body>
+    {% if not for_pdf %}
     <div class="no-print">
         <button type="button" onclick="window.print()">Print</button>
+        <a href="{% url 'invoice_pdf' invoice.pk %}">Download PDF</a>
         <a href="{% url 'invoice_detail' invoice.pk %}">Back to invoice</a>
     </div>
+    {% endif %}
     <h1>{{ invoice.number_label }}</h1>
     <p class="muted">{{ invoice.status_label }}</p>
     <div class="meta">

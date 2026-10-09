@@ -8,6 +8,20 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
+def env_value(name, default=''):
+    """An environment variable with surrounding quotes removed.
+
+    ``.env`` loaders strip quotes, but ``docker --env-file`` and some hosting
+    panels keep them as part of the value, so ``"WebFTL <a@b.ro>"`` arrives with
+    its quotes. Either spelling gives the same result here.
+    """
+    value = os.getenv(name, default).strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in '"\'':
+        value = value[1:-1].strip()
+    return value
+
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
@@ -171,14 +185,18 @@ ACCOUNT_EMAIL_VERIFICATION = 'none'
 # The console backend prints mail instead of sending it. That is fine in
 # development, but silently swallowing password-reset mail in production is not,
 # so outside DEBUG an explicit EMAIL_BACKEND is required and its absence warns.
-_email_backend = os.getenv('EMAIL_BACKEND')
+# RESEND_API_KEY alone is enough: mail then goes out through Resend.
+RESEND_API_KEY = env_value('RESEND_API_KEY')
+_email_backend = env_value('EMAIL_BACKEND')
 if _email_backend:
     EMAIL_BACKEND = _email_backend
+elif RESEND_API_KEY:
+    EMAIL_BACKEND = 'apps.crm.mail.ResendEmailBackend'
 elif DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 else:
     warnings.warn(
-        'EMAIL_BACKEND is not set and DEBUG is False; falling back to the dummy '
+        'Neither RESEND_API_KEY nor EMAIL_BACKEND is set and DEBUG is False; falling back to the dummy '
         'backend. Password reset and notification mail will be discarded.',
         RuntimeWarning,
         stacklevel=2,
@@ -190,7 +208,7 @@ EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'webmaster@localhost')
+DEFAULT_FROM_EMAIL = env_value('DEFAULT_FROM_EMAIL', 'webmaster@localhost')
 
 # GitHub
 GITHUB_WEBHOOK_SECRET = os.getenv('GITHUB_WEBHOOK_SECRET', '')

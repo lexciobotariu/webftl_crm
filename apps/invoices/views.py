@@ -9,9 +9,11 @@ from django.views.decorators.http import require_POST
 from apps.accounts.decorators import require_permission
 from apps.clients.models import visible_clients
 
-from .forms import InvoiceForm, InvoiceLineForm, PaymentForm
+from . import emails
+from .forms import InvoiceEmailForm, InvoiceForm, InvoiceLineForm, PaymentForm
 from .listing import PERIOD_CHOICES, STATUS_CHOICES, InvoiceFilters, filter_invoices
 from .models import InvoiceHasPayments, InvoiceLocked, visible_invoices
+from .pdf import invoice_pdf, invoice_pdf_filename
 from .services import (
     add_line,
     cancel_invoice,
@@ -112,6 +114,9 @@ def invoice_detail(request, pk):
     invoice = _invoice_or_404(request.user, pk)
     return render(request, 'invoices/invoice_detail.html', {
         'invoice': invoice,
+        'can_email': emails.can_email(invoice, emails.INVOICE),
+        'can_remind': emails.can_email(invoice, emails.REMINDER),
+        'sent_emails': invoice.emails.select_related('author'),
     })
 
 
@@ -209,6 +214,61 @@ def invoice_print(request, pk):
     invoice = _invoice_or_404(request.user, pk)
     return render(request, 'invoices/invoice_print.html', {
         'invoice': invoice,
+    })
+
+
+@login_required
+@require_permission('access_invoices')
+def invoice_pdf_download(request, pk):
+    invoice = _invoice_or_404(request.user, pk)
+    response = HttpResponse(invoice_pdf(invoice), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{invoice_pdf_filename(invoice)}"'
+    return response
+
+
+@login_required
+@require_permission('access_invoices')
+@require_permission('invoices_edit')
+def invoice_email(request, pk, kind):
+    """Email the invoice (``kind='invoice'``) or a reminder about it, with the PDF attached."""
+    invoice = _invoice_or_404(request.user, pk)
+    if kind not in emails.KINDS:
+        return HttpResponse('Unknown email.', status=404)
+    if not emails.can_email(invoice, kind):
+        message = 'Only an invoice that is still owed gets a reminder.' if kind == emails.REMINDER else (
+            'This invoice has been cancelled.'
+        )
+        return HttpResponse(message, status=400)
+
+    sent = None
+    if request.method == 'POST':
+        form = InvoiceEmailForm(request.POST)
+        if form.is_valid():
+            try:
+                sent = emails.send_invoice_email(
+                    invoice,
+                    kind=kind,
+                    to=form.cleaned_data['to'],
+                    subject=form.cleaned_data['subject'],
+                    message=form.cleaned_data['message'],
+                    author=request.user,
+                )
+            except ValidationError as exc:
+                form.add_error(None, _validation_message(exc))
+            else:
+                if not sent.failed:
+                    return _redirect_to('invoice_detail', invoice.pk)
+                form.add_error(None, f'The email was not sent: {sent.error}')
+    else:
+        form = InvoiceEmailForm(initial={
+            'to': emails.default_recipient(invoice),
+            'subject': emails.default_subject(invoice, kind),
+            'message': emails.default_message(invoice, kind),
+        })
+    return render(request, 'invoices/partials/email_drawer.html', {
+        'form': form,
+        'invoice': invoice,
+        'kind': kind,
     })
 
 

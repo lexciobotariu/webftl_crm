@@ -105,6 +105,10 @@ class ClientMessage(models.Model):
     project = models.ForeignKey(
         'projects.Project', on_delete=models.SET_NULL, null=True, blank=True, related_name='client_messages',
     )
+    # Emails about an invoice point at it, so the invoice page lists them too.
+    invoice = models.ForeignKey(
+        'invoices.Invoice', on_delete=models.SET_NULL, null=True, blank=True, related_name='emails',
+    )
     kind = models.CharField(max_length=10, choices=KIND_CHOICES, default=NOTE, db_default=NOTE)
     subject = models.CharField(max_length=255, blank=True)
     body = models.TextField()
@@ -129,12 +133,22 @@ class ClientMessage(models.Model):
 
 
 def messages_visible_to(user, client):
-    """The client's log entries this user may read: those with no project, or on a project they can open."""
+    """The client's log entries this user may read.
+
+    Entries with no project, or on a project they can open. Invoice emails carry
+    amounts, so they also need the invoices module and sight of that invoice.
+    """
+    from apps.invoices.models import visible_invoices
     from apps.projects.models import visible_projects
 
-    return client.messages.filter(
+    entries = client.messages.filter(
         models.Q(project__isnull=True) | models.Q(project__in=visible_projects(user))
-    ).select_related('author', 'project')
+    )
+    if user.has_app_permission('access_invoices'):
+        entries = entries.filter(models.Q(invoice__isnull=True) | models.Q(invoice__in=visible_invoices(user)))
+    else:
+        entries = entries.filter(invoice__isnull=True)
+    return entries.select_related('author', 'project', 'invoice')
 
 
 def active_clients(queryset):

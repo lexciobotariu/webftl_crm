@@ -59,7 +59,7 @@
                     {% endif %}{% endif %}
                 </div>
                 {% if message.kind == 'email' %}
-                <div class="mt-1 text-sm text-zinc-100">{{ message.subject }}</div>
+                <div class="mt-1 text-sm text-zinc-100">{{ message.subject }}{% if message.invoice %} <a href="{% url 'invoice_detail' message.invoice.pk %}" class="text-xs text-zinc-500 hover:text-zinc-300">{{ message.invoice.number_label }}</a>{% endif %}</div>
                 <div class="text-xs text-zinc-500">To {{ message.recipients }}</div>
                 {% if message.failed %}<div class="text-xs text-error mt-1">{{ message.error }}</div>{% endif %}
                 {% endif %}

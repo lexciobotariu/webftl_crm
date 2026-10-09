@@ -1,0 +1,67 @@
+<div class="flex flex-col h-full">
+    <div class="flex-shrink-0 px-4 py-3 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <i data-lucide="{% if kind == 'reminder' %}bell-ring{% else %}mail{% endif %}" class="w-4 h-4 text-zinc-500"></i>
+                <h2 class="text-sm font-medium text-zinc-100">{% if kind == 'reminder' %}Send reminder{% else %}Email invoice{% endif %} {{ invoice.number_label }}</h2>
+            </div>
+            <button onclick="closeSlideOver()"
+                    class="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </div>
+
+    <form hx-post="{% url 'invoice_email' invoice.pk kind %}"
+          hx-target="#slide-over"
+          hx-swap="innerHTML"
+          hx-disabled-elt="find button[type=submit]"
+          class="flex-1 overflow-y-auto p-4">
+        {% csrf_token %}
+        {% include "components/form_error_banner.html" %}
+
+        <div class="space-y-4">
+            {% for field in form %}
+            <div>
+                <label for="{{ field.id_for_label }}" class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">{{ field.label }}</label>
+                {% if field.name == 'message' %}
+                <textarea name="message" id="{{ field.id_for_label }}" rows="14" required
+                          class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">{{ field.value|default_if_none:'' }}</textarea>
+                {% else %}
+                <input type="text" name="{{ field.name }}" id="{{ field.id_for_label }}" required
+                       value="{{ field.value|default_if_none:'' }}"
+                       class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
+                {% if field.name == 'to' %}<p class="mt-1 text-xs text-zinc-500">Separate several addresses with commas.</p>{% endif %}
+                {% endif %}
+                {% if field.errors %}<p class="mt-1 text-xs text-error">{{ field.errors.0 }}</p>{% endif %}
+            </div>
+            {% endfor %}
+            <div class="flex items-center gap-2 text-xs text-zinc-400">
+                <i data-lucide="paperclip" class="w-3.5 h-3.5"></i>
+                {{ invoice.number_label }}.pdf is attached.
+            </div>
+            {% if kind == 'invoice' and invoice.is_draft %}
+            <p class="text-xs text-zinc-500">Sending marks this draft as sent. Lines, tax, dates and bill-to are then locked.</p>
+            {% endif %}
+            <p class="text-xs text-zinc-500">Replies go to the company email in Settings. The email is logged on the client's Messages tab.</p>
+        </div>
+
+        <div class="flex gap-3 mt-6 pt-4 border-t border-border-subtle">
+            <button type="submit"
+                    class="inline-flex items-center gap-1.5 bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50">
+                <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                Send
+            </button>
+            <button type="button" onclick="closeSlideOver()"
+                    class="bg-elevated border border-border-subtle px-4 py-2 rounded-control text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
+                Cancel
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+}
+</script>

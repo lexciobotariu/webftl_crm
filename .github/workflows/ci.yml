@@ -45,6 +45,10 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-dev.txt
 
+      # WeasyPrint draws invoice PDFs with Pango and HarfBuzz.
+      - name: Install PDF libraries
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0
+
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
 
