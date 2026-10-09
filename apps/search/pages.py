@@ -37,6 +37,7 @@ PAGES = (
     Page('My Week', 'time_week', 'access_tasks'),
     Page('Salaries', 'salary_list', 'access_salaries'),
     Page('Invoices', 'invoice_list', 'access_invoices'),
+    Page('Estimates', 'estimate_list', 'access_invoices'),
     Page('Team', 'team_list', 'access_team'),
     Page('Settings', 'settings', 'admin'),
     Page('Changelog', 'changelog'),
