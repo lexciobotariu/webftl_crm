@@ -1,0 +1,13 @@
+{% if estimate.status == 'accepted' %}
+<span class="px-2 py-0.5 text-[10px] rounded bg-success/10 text-success border border-success/20">Accepted</span>
+{% elif estimate.status == 'invoiced' %}
+<span class="px-2 py-0.5 text-[10px] rounded bg-violet-500/10 text-violet-300 border border-violet-500/20">Invoiced</span>
+{% elif estimate.status == 'declined' %}
+<span class="px-2 py-0.5 text-[10px] rounded bg-error/10 text-error border border-error/20">Declined</span>
+{% elif estimate.status == 'expired' %}
+<span class="px-2 py-0.5 text-[10px] rounded bg-zinc-500/10 text-zinc-500 border border-border-subtle">Expired</span>
+{% elif estimate.status == 'sent' %}
+<span class="px-2 py-0.5 text-[10px] rounded bg-sky-500/10 text-sky-300 border border-sky-500/20">Sent</span>
+{% else %}
+<span class="px-2 py-0.5 text-[10px] rounded bg-zinc-500/10 text-zinc-400 border border-border-subtle">Draft</span>
+{% endif %}

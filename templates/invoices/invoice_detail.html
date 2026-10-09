@@ -134,6 +134,12 @@
             {% endif %}
         </div>
         {% endif %}
+        {% if invoice.estimate %}
+        <p class="mb-4 text-xs text-zinc-500 flex items-center gap-1.5">
+            <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+            Created from estimate <a href="{% url 'estimate_detail' invoice.estimate.pk %}" class="text-zinc-300 hover:text-zinc-100">{{ invoice.estimate.number_label }}</a>.
+        </p>
+        {% endif %}
         {% if invoice.from_recurring %}
         <p class="mb-4 text-xs text-zinc-500 flex items-center gap-1.5">
             <i data-lucide="repeat" class="w-3.5 h-3.5"></i>

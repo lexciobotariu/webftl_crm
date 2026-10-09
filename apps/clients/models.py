@@ -109,6 +109,9 @@ class ClientMessage(models.Model):
     invoice = models.ForeignKey(
         'invoices.Invoice', on_delete=models.SET_NULL, null=True, blank=True, related_name='emails',
     )
+    estimate = models.ForeignKey(
+        'invoices.Estimate', on_delete=models.SET_NULL, null=True, blank=True, related_name='emails',
+    )
     kind = models.CharField(max_length=10, choices=KIND_CHOICES, default=NOTE, db_default=NOTE)
     subject = models.CharField(max_length=255, blank=True)
     body = models.TextField()
@@ -135,20 +138,24 @@ class ClientMessage(models.Model):
 def messages_visible_to(user, client):
     """The client's log entries this user may read.
 
-    Entries with no project, or on a project they can open. Invoice emails carry
-    amounts, so they also need the invoices module and sight of that invoice.
+    Entries with no project, or on a project they can open. Invoice and estimate
+    emails carry amounts, so they also need the invoices module and sight of
+    that invoice or estimate.
     """
-    from apps.invoices.models import visible_invoices
+    from apps.invoices.models import visible_estimates, visible_invoices
     from apps.projects.models import visible_projects
 
     entries = client.messages.filter(
         models.Q(project__isnull=True) | models.Q(project__in=visible_projects(user))
     )
     if user.has_app_permission('access_invoices'):
-        entries = entries.filter(models.Q(invoice__isnull=True) | models.Q(invoice__in=visible_invoices(user)))
+        entries = entries.filter(
+            models.Q(invoice__isnull=True) | models.Q(invoice__in=visible_invoices(user)),
+            models.Q(estimate__isnull=True) | models.Q(estimate__in=visible_estimates(user)),
+        )
     else:
-        entries = entries.filter(invoice__isnull=True)
-    return entries.select_related('author', 'project', 'invoice')
+        entries = entries.filter(invoice__isnull=True, estimate__isnull=True)
+    return entries.select_related('author', 'project', 'invoice', 'estimate')
 
 
 def active_clients(queryset):

@@ -12,7 +12,7 @@
         </div>
     </div>
 
-    <form hx-post="{% if line %}{% url 'invoice_line_edit' invoice.pk line.pk %}{% else %}{% url 'invoice_line_create' invoice.pk %}{% endif %}"
+    <form hx-post="{% if action_url %}{{ action_url }}{% elif line %}{% url 'invoice_line_edit' invoice.pk line.pk %}{% else %}{% url 'invoice_line_create' invoice.pk %}{% endif %}"
           hx-target="#slide-over"
           hx-swap="innerHTML"
           class="flex-1 overflow-y-auto p-4">

@@ -126,6 +126,16 @@
             <i data-lucide="receipt" class="w-4 h-4"></i>
             Invoices
         </a>
+        <a href="{% url 'estimate_list' %}"
+           class="flex items-center gap-2.5 px-3 py-2 rounded-control text-[13px] font-medium transition-colors duration-150
+                  {% if request.resolver_match.url_name == 'estimate_list' or request.resolver_match.url_name == 'estimate_detail' %}
+                  bg-elevated text-zinc-100 border border-border-subtle
+                  {% else %}
+                  text-zinc-400 hover:text-zinc-200 hover:bg-hover
+                  {% endif %}">
+            <i data-lucide="file-text" class="w-4 h-4"></i>
+            Estimates
+        </a>
         {% endif %}
         {% if perms_map.access_team %}
         <a href="{% url 'team_list' %}"

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Invoice, InvoiceLine, Payment, RecurringInvoice
+from .models import Estimate, EstimateLine, Invoice, InvoiceLine, Payment, RecurringInvoice
 
 
 class InvoiceLineInline(admin.TabularInline):
@@ -38,3 +38,16 @@ class PaymentAdmin(admin.ModelAdmin):
 class RecurringInvoiceAdmin(admin.ModelAdmin):
     list_display = ['template', 'frequency', 'next_date', 'end_date']
     raw_id_fields = ['template', 'created_by']
+
+
+class EstimateLineInline(admin.TabularInline):
+    model = EstimateLine
+    extra = 0
+
+
+@admin.register(Estimate)
+class EstimateAdmin(admin.ModelAdmin):
+    list_display = ['number', 'client', 'issue_date', 'valid_until', 'sent_at', 'accepted_at', 'declined_at']
+    search_fields = ['number', 'client__name', 'bill_to_name']
+    raw_id_fields = ['client', 'invoice']
+    inlines = [EstimateLineInline]

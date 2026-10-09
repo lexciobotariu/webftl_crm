@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Estimates - WebFTL CRM{% endblock %}
+
+{% block full_content %}
+<div class="flex flex-col h-full">
+    <div class="flex-shrink-0 flex items-center min-h-[45px] px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center gap-3">
+            <i data-lucide="file-text" class="w-4 h-4 text-zinc-500"></i>
+            <h1 class="text-sm font-medium text-zinc-100">Estimates</h1>
+        </div>
+        <form method="get" action="{% url 'estimate_list' %}" class="ml-auto flex items-center gap-2">
+            <select name="status" aria-label="Status" onchange="this.form.submit()" class="bg-elevated border border-border-subtle rounded-control px-2 py-1.5 text-xs text-zinc-200 focus:border-border-strong focus:outline-none">
+                {% for value, label in status_choices %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+            <noscript><button type="submit" class="text-xs text-zinc-300">Apply</button></noscript>
+            {% if status %}<a href="{% url 'estimate_list' %}" class="text-xs text-zinc-500 hover:text-zinc-300">Clear</a>{% endif %}
+        </form>
+    </div>
+
+    <div class="flex-1 min-h-0 p-6">
+        <div class="h-full flex flex-col border border-border-subtle rounded-card bg-panel/50 overflow-hidden">
+        <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80">
+            <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <span class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ total_count }}</span>
+                    <span class="text-xs text-zinc-500">estimate{{ total_count|pluralize }}{% if status %} matching{% endif %}</span>
+                </div>
+                {% if perms_map.invoices_create %}
+                <button hx-get="{% url 'estimate_create' %}"
+                        hx-target="#slide-over"
+                        hx-swap="innerHTML"
+                        hx-on::after-request="openSlideOver(event)"
+                        class="inline-flex items-center gap-1.5 bg-accent text-on-accent px-3 py-1.5 rounded-control text-xs font-medium hover:bg-accent-hover transition-colors">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                    New Estimate
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        {% if estimates %}
+        <div class="flex-1 min-h-0 overflow-y-auto">
+            <table class="w-full table-fixed">
+                <thead class="bg-panel border-b border-border-subtle sticky top-0">
+                    <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
+                        <th class="px-4 py-2 font-medium w-[14%]">Number</th>
+                        <th class="px-4 py-2 font-medium w-[30%]">Client</th>
+                        <th class="px-4 py-2 font-medium w-[14%]">Issued</th>
+                        <th class="px-4 py-2 font-medium w-[14%]">Valid until</th>
+                        <th class="px-4 py-2 font-medium text-right w-[14%]">Total</th>
+                        <th class="px-4 py-2 font-medium w-[14%]">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-border-subtle">
+                    {% for estimate in estimates %}
+                    <tr class="hover:bg-elevated/50 transition-colors">
+                        <td class="px-4 py-3">
+                            <a href="{% url 'estimate_detail' estimate.pk %}" class="text-sm font-medium text-zinc-100 hover:text-zinc-50 transition-colors">{{ estimate.number_label }}</a>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-zinc-300 truncate">{{ estimate.client.name }}</td>
+                        <td class="px-4 py-3 text-sm text-zinc-400">{{ estimate.issue_date|date:"M j, Y" }}</td>
+                        <td class="px-4 py-3 text-sm text-zinc-400">{{ estimate.valid_until|date:"M j, Y" }}</td>
+                        <td class="px-4 py-3 text-sm text-zinc-200 text-right">{% include "invoices/partials/money.html" with invoice=estimate amount=estimate.total %}</td>
+                        <td class="px-4 py-3">{% include "invoices/partials/estimate_status_badge.html" %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="flex-1 min-h-0 flex flex-col items-center justify-center py-16 text-zinc-500">
+            <i data-lucide="file-text" class="w-12 h-12 mb-4 opacity-30"></i>
+            {% if has_estimates %}
+            <p class="text-sm mb-2">No estimates match this status</p>
+            <a href="{% url 'estimate_list' %}" class="text-zinc-200 hover:text-zinc-50 text-sm">Show all</a>
+            {% else %}
+            <p class="text-sm mb-2">No estimates yet</p>
+            {% if perms_map.invoices_create %}
+            <button hx-get="{% url 'estimate_create' %}"
+                    hx-target="#slide-over"
+                    hx-swap="innerHTML"
+                    hx-on::after-request="openSlideOver(event)"
+                    class="text-zinc-200 hover:text-zinc-50 text-sm">Create the first estimate</button>
+            {% endif %}
+            {% endif %}
+        </div>
+        {% endif %}
+        {% include "components/pagination.html" %}
+        </div>
+    </div>
+</div>
+{% endblock %}

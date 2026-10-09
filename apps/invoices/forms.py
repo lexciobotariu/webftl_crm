@@ -157,3 +157,16 @@ class RecurringInvoiceForm(forms.Form):
     frequency = forms.ChoiceField(choices=RecurringInvoice.FREQUENCY_CHOICES)
     next_date = forms.DateField(widget=HtmlDateInput(), label='Next draft on')
     end_date = forms.DateField(widget=HtmlDateInput(), required=False, label='Last draft on or before')
+
+
+class EstimateForm(InvoiceForm):
+    """Client, dates, tax and notes of an estimate. ``valid_until`` takes the place of the due date."""
+
+    valid_until = forms.DateField(input_formats=['%Y-%m-%d'], widget=HtmlDateInput())
+    notes = forms.CharField(widget=forms.Textarea, required=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        del self.fields['due_date']
+        if not self.is_bound and 'valid_until' not in self.initial:
+            self.initial.setdefault('valid_until', timezone.localdate() + timedelta(days=30))
