@@ -38,6 +38,19 @@ def format_money(amount, symbol='', symbol_before=True):
     return f'{figure} {symbol}'
 
 
+def totals_by_currency(pairs):
+    """Format the sum of ``(invoice, amount)`` pairs per currency.
+
+    Amounts in different currencies are never added together; each currency
+    gets its own formatted total, in a stable order.
+    """
+    totals = {}
+    for invoice, amount in pairs:
+        key = (invoice.currency_code, invoice.currency_symbol, invoice.symbol_before)
+        totals[key] = totals.get(key, Decimal('0.00')) + amount
+    return [format_money(amount, symbol, before) for (_code, symbol, before), amount in sorted(totals.items())]
+
+
 _LOCKED_AFTER_SEND = (
     'client_id',
     'issue_date',

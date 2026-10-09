@@ -1,5 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -9,6 +10,7 @@ from apps.accounts.decorators import require_permission
 from apps.clients.models import visible_clients
 
 from .forms import InvoiceForm, InvoiceLineForm, PaymentForm
+from .listing import PERIOD_CHOICES, STATUS_CHOICES, InvoiceFilters, filter_invoices
 from .models import InvoiceHasPayments, InvoiceLocked, visible_invoices
 from .services import (
     add_line,
@@ -20,6 +22,8 @@ from .services import (
     update_invoice,
     update_line,
 )
+
+INVOICES_PER_PAGE = 25
 
 
 def _invoice_or_404(user, pk):
@@ -48,9 +52,23 @@ def _validation_message(exc):
 @login_required
 @require_permission('access_invoices')
 def invoice_list(request):
-    invoices = visible_invoices(request.user)
+    """Invoices filtered by ``status``, ``client`` and ``period``, paged, with totals per currency."""
+    visible = visible_invoices(request.user)
+    filters = InvoiceFilters.from_query(request.GET)
+    rows, totals = filter_invoices(visible, filters)
+    page_obj = Paginator(rows, INVOICES_PER_PAGE).get_page(request.GET.get('page', 1))
     return render(request, 'invoices/invoice_list.html', {
-        'invoices': invoices,
+        'invoices': page_obj,
+        'page_obj': page_obj,
+        'total_count': len(rows),
+        'has_invoices': bool(rows) or visible.exists(),
+        'filters': filters,
+        'totals': totals,
+        'status_choices': STATUS_CHOICES,
+        'period_choices': PERIOD_CHOICES,
+        'client_choices': visible_clients(request.user).filter(
+            pk__in=visible.values('client_id')
+        ).order_by('name'),
     })
 
 

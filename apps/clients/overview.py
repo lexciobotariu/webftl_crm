@@ -46,17 +46,6 @@ def _hours(seconds):
     return (Decimal(seconds) / Decimal(3600)).quantize(Decimal('0.1'))
 
 
-def _by_currency(invoices):
-    """Each currency's total, formatted; amounts in different currencies are never added."""
-    from apps.invoices.models import format_money
-
-    totals = {}
-    for invoice, amount in invoices:
-        key = (invoice.currency_code, invoice.currency_symbol, invoice.symbol_before)
-        totals[key] = totals.get(key, Decimal('0.00')) + amount
-    return [format_money(amount, symbol, before) for (_code, symbol, before), amount in sorted(totals.items())]
-
-
 def client_overview(user, client, today=None):
     today = today or timezone.localdate()
     overview = Overview()
@@ -70,7 +59,7 @@ def client_overview(user, client, today=None):
     overview.closed_project_count = projects.exclude(status__in=Project.OPEN_STATUSES).count()
 
     if user.has_app_permission('access_invoices'):
-        from apps.invoices.models import visible_invoices
+        from apps.invoices.models import totals_by_currency, visible_invoices
 
         overview.show_money = True
         invoices = visible_invoices(user).filter(client=client, cancelled_at__isnull=True)
@@ -85,8 +74,8 @@ def client_overview(user, client, today=None):
                 owed.append((invoice, balance))
                 if invoice.due_date < today:
                     overdue.append((invoice, balance))
-        overview.outstanding = _by_currency(owed)
-        overview.overdue_total = _by_currency(overdue)
+        overview.outstanding = totals_by_currency(owed)
+        overview.overdue_total = totals_by_currency(overdue)
         overview.overdue_invoices = sorted((invoice for invoice, _ in overdue), key=lambda i: i.due_date)
 
     if user.has_app_permission('access_tasks'):
