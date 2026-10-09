@@ -66,6 +66,7 @@ def _create_one(recurring):
         issue_date=issue_date,
         due_date=issue_date + timedelta(days=payment_days),
         tax_rate=template.tax_rate,
+        project=template.project,
     )
     invoice.from_recurring = recurring
     invoice.save(update_fields=['from_recurring', 'updated_at'])

@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.31.0] - 2026-10-09
+
+### Features
+- **Inline invoice editor.** A draft invoice is edited on its own page, like Perfex: client, project, dates and tax at the top, and the lines as a table where description, quantity and price are typed in place. Every change is saved as it is made and the totals update straight away. A new line is typed in the last row and added with Enter or +; × removes a line. The Edit and Add line drawers are gone. Sent invoices stay read-only
+- **Estimates use the same editor**, with Valid until and Notes in the header
+- **Optional project on an invoice or estimate.** Pick a project of the client, or leave it empty. Changing the client clears it. It is printed under Bill to on the PDF and named in the email
+- Lines no longer have a project select: a line is free text. Older project lines keep their project
+- **Project filter** on the invoice list, and an **Invoices** card on the project Overview with its latest invoices, View all and New invoice (client and project filled in)
+- Converting an estimate and recurring drafts keep the project
+
+### Migrations
+- `invoices.0007` adds the project to invoices and estimates; an existing document whose lines all belong to one project gets that project
+
 ## [0.30.0] - 2026-10-09
 
 ### Features

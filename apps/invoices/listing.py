@@ -56,6 +56,7 @@ def period_range(period, today=None):
 class InvoiceFilters:
     status: str = ''
     client_id: int | None = None
+    project_id: int | None = None
     period: str = ''
 
     @classmethod
@@ -64,15 +65,17 @@ class InvoiceFilters:
         status = params.get('status', '')
         period = params.get('period', '')
         raw_client = params.get('client', '')
+        raw_project = params.get('project', '')
         return cls(
             status=status if status in dict(STATUS_CHOICES) else '',
             client_id=int(raw_client) if raw_client.isdigit() else None,
+            project_id=int(raw_project) if raw_project.isdigit() else None,
             period=period if period in dict(PERIOD_CHOICES) else '',
         )
 
     @property
     def active(self):
-        return bool(self.status or self.client_id or self.period)
+        return bool(self.status or self.client_id or self.project_id or self.period)
 
 
 def matches_status(invoice, status):
@@ -94,6 +97,8 @@ def filter_invoices(invoices, filters, today=None):
     """The matching invoices, newest number first, and their totals."""
     if filters.client_id:
         invoices = invoices.filter(client_id=filters.client_id)
+    if filters.project_id:
+        invoices = invoices.filter(project_id=filters.project_id)
     span = period_range(filters.period, today)
     if span:
         invoices = invoices.filter(issue_date__range=span)

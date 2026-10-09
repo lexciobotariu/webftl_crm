@@ -63,14 +63,6 @@
                 </button>
                 {% endif %}
                 {% if invoice.is_draft and perms_map.invoices_edit %}
-                <button hx-get="{% url 'invoice_edit' invoice.pk %}"
-                        hx-target="#slide-over"
-                        hx-swap="innerHTML"
-                        hx-on::after-request="openSlideOver(event)"
-                        class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
-                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                    Edit
-                </button>
                 <button hx-post="{% url 'invoice_mark_sent' invoice.pk %}"
                         hx-confirm="Mark {{ invoice.number_label }} sent without emailing it? Lines, tax, dates, and bill-to stay as they are."
                         class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
@@ -146,7 +138,7 @@
             Created from the repeat on <a href="{% url 'invoice_detail' invoice.from_recurring.template_id %}" class="text-zinc-300 hover:text-zinc-100">{{ invoice.from_recurring.template.number_label }}</a>.
         </p>
         {% endif %}
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        <div class="grid grid-cols-1 {% if editor %}lg:grid-cols-2{% else %}lg:grid-cols-3{% endif %} gap-4 mb-6">
             {% if invoice.currency_code %}
             <div class="bg-panel/50 border border-border-subtle rounded-card p-4">
                 <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Company</div>
@@ -182,11 +174,18 @@
                 {% endif %}
                 <p class="text-xs text-zinc-600 mt-3">Copied when the invoice was created.</p>
             </div>
+            {% if not editor %}
             <div class="bg-panel/50 border border-border-subtle rounded-card p-4 space-y-2">
                 <div class="flex items-center justify-between text-sm">
                     <span class="text-zinc-500">Client</span>
                     <a href="{% url 'client_detail' invoice.client_id %}" class="text-zinc-200 hover:text-zinc-50">{{ invoice.client.name }}</a>
                 </div>
+                {% if invoice.project %}
+                <div class="flex items-center justify-between text-sm">
+                    <span class="text-zinc-500">Project</span>
+                    <a href="{% url 'project_detail' invoice.project_id %}" class="text-zinc-200 hover:text-zinc-50">{{ invoice.project.name }}</a>
+                </div>
+                {% endif %}
                 <div class="flex items-center justify-between text-sm">
                     <span class="text-zinc-500">Issued</span>
                     <span class="text-zinc-200">{{ invoice.issue_date|date:"M j, Y" }}</span>
@@ -200,21 +199,16 @@
                     <span class="text-zinc-200">{{ invoice.tax_rate|floatformat:2 }}%</span>
                 </div>
             </div>
+            {% endif %}
         </div>
 
+        {% if editor %}
+        {% include "invoices/partials/editor_header.html" %}
+        {% include "invoices/partials/editor_lines.html" %}
+        {% else %}
         <div class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden mb-6">
             <div class="px-4 py-2 border-b border-border-subtle bg-panel/80 flex items-center justify-between">
                 <h2 class="text-sm font-medium text-zinc-100">Lines</h2>
-                {% if invoice.is_draft and perms_map.invoices_edit %}
-                <button hx-get="{% url 'invoice_line_create' invoice.pk %}"
-                        hx-target="#slide-over"
-                        hx-swap="innerHTML"
-                        hx-on::after-request="openSlideOver(event)"
-                        class="inline-flex items-center gap-1.5 bg-accent text-on-accent px-3 py-1.5 rounded-control text-xs font-medium hover:bg-accent-hover transition-colors">
-                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                    Add line
-                </button>
-                {% endif %}
             </div>
             {% if invoice.lines.all %}
             <table class="w-full">
@@ -224,9 +218,6 @@
                         <th class="px-4 py-2 font-medium text-right">Qty</th>
                         <th class="px-4 py-2 font-medium text-right">Price</th>
                         <th class="px-4 py-2 font-medium text-right">Amount</th>
-                        {% if invoice.is_draft and perms_map.invoices_edit %}
-                        <th class="px-4 py-2 font-medium w-16"></th>
-                        {% endif %}
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border-subtle">
@@ -241,24 +232,6 @@
                         <td class="px-4 py-3 text-sm text-zinc-400 text-right">{{ line.quantity|floatformat:2 }}</td>
                         <td class="px-4 py-3 text-sm text-zinc-400 text-right">{% include "invoices/partials/money.html" with amount=line.unit_price %}</td>
                         <td class="px-4 py-3 text-sm text-zinc-200 text-right">{% include "invoices/partials/money.html" with amount=line.amount %}</td>
-                        {% if invoice.is_draft and perms_map.invoices_edit %}
-                        <td class="px-4 py-3 text-right">
-                            <button hx-get="{% url 'invoice_line_edit' invoice.pk line.pk %}"
-                                    hx-target="#slide-over"
-                                    hx-swap="innerHTML"
-                                    hx-on::after-request="openSlideOver(event)"
-                                    class="p-1.5 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded transition-colors"
-                                    title="Edit line">
-                                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                            </button>
-                            <button hx-post="{% url 'invoice_line_delete' invoice.pk line.pk %}"
-                                    hx-confirm="Remove this line?"
-                                    class="p-1.5 text-zinc-500 hover:text-error hover:bg-elevated rounded transition-colors"
-                                    title="Remove line">
-                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                            </button>
-                        </td>
-                        {% endif %}
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -289,6 +262,8 @@
                 </div>
             </div>
         </div>
+
+        {% endif %}
 
         <div class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden">
             <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">

@@ -47,13 +47,20 @@ def currency_snapshot(client):
     }
 
 
+def check_project(client, project):
+    """A document's project must belong to its client."""
+    if project is not None and project.client_id != client.pk:
+        raise ValidationError({'project': 'Choose a project that belongs to this client.'})
+
+
 def _next_number():
     last = Invoice.objects.select_for_update().order_by('-number').first()
     return (last.number if last else 0) + 1
 
 
-def create_invoice(*, client, issue_date, due_date, tax_rate):
+def create_invoice(*, client, issue_date, due_date, tax_rate, project=None):
     """Allocate the next number and store bill-to, company, and currency."""
+    check_project(client, project)
     snapshot = {
         **currency_snapshot(client),
         **company_snapshot(),
@@ -65,6 +72,7 @@ def create_invoice(*, client, issue_date, due_date, tax_rate):
             with transaction.atomic():
                 return Invoice.objects.create(
                     client=client,
+                    project=project,
                     number=_next_number(),
                     issue_date=issue_date,
                     due_date=due_date,
@@ -76,8 +84,9 @@ def create_invoice(*, client, issue_date, due_date, tax_rate):
     raise IntegrityError('Could not allocate an invoice number.')
 
 
-def update_invoice(invoice, *, client, issue_date, due_date, tax_rate):
+def update_invoice(invoice, *, client, issue_date, due_date, tax_rate, project=None):
     """Update a draft. Changing the client refreshes bill-to and currency."""
+    check_project(client, project)
     with transaction.atomic():
         locked = Invoice.objects.select_for_update().get(pk=invoice.pk)
         if client.pk != locked.client_id:
@@ -93,6 +102,7 @@ def update_invoice(invoice, *, client, issue_date, due_date, tax_rate):
                 setattr(locked, key, value)
             for key, value in currency_snapshot(client).items():
                 setattr(locked, key, value)
+        locked.project = project
         locked.issue_date = issue_date
         locked.due_date = due_date
         locked.tax_rate = money(tax_rate)

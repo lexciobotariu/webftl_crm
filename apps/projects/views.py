@@ -223,9 +223,13 @@ def project_detail(request, pk):
     editable = can_edit_project(request.user, project)
 
     figures = None
+    project_invoices = None
     if active_tab == 'overview':
         from .figures import project_figures
         figures = project_figures(request.user, project, tasks)
+        if request.user.has_app_permission('access_invoices'):
+            from apps.invoices.models import visible_invoices
+            project_invoices = visible_invoices(request.user).filter(project=project).order_by('-issue_date', '-number')
 
     access_rows = []
     addable_users = []
@@ -242,6 +246,7 @@ def project_detail(request, pk):
         'overdue_tasks': overdue_tasks,
         'archived_tasks': archived_tasks,
         'figures': figures,
+        'project_invoices': project_invoices,
         'recent_activities': recent_activities,
         'active_tab': active_tab,
         'can_edit_project': editable,

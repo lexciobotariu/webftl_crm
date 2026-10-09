@@ -119,32 +119,28 @@ class TestCreate:
         assert response.status_code == 403
         assert Invoice.objects.count() == 0
 
-    def test_free_text_line_saves_and_a_foreign_project_is_rejected(self, client):
+    def test_project_is_optional_and_a_foreign_project_is_rejected(self, client):
         user = _user(invoices_create=True, invoices_edit=True)
         visible, project = _visible_client(user)
         other = ProjectFactory(name='Someone else')
         client.force_login(user)
-        created = client.post(reverse('invoice_create'), {
+        payload = {
             'client': visible.pk,
             'issue_date': _today().isoformat(),
             'due_date': (_today() + timedelta(days=14)).isoformat(),
             'tax_rate': '0',
-        })
+        }
+
+        foreign = client.post(reverse('invoice_create'), {**payload, 'project': other.pk})
+        assert foreign.status_code == 200
+        assert Invoice.objects.count() == 0
+
+        created = client.post(reverse('invoice_create'), {**payload, 'project': project.pk})
         invoice = Invoice.objects.get()
         assert created['HX-Redirect'] == reverse('invoice_detail', args=[invoice.pk])
-
-        foreign = client.post(reverse('invoice_line_create', args=[invoice.pk]), {
-            'project': other.pk,
-            'description': 'Should not save',
-            'quantity': '1',
-            'unit_price': '10',
-        })
-        assert foreign.status_code == 200
-        assert invoice.lines.count() == 0
-        assert 'valid choice' in foreign.content.decode().lower()
+        assert invoice.project == project
 
         saved = client.post(reverse('invoice_line_create', args=[invoice.pk]), {
-            'project': '',
             'description': 'Discovery workshop',
             'quantity': '2',
             'unit_price': '50',
@@ -154,16 +150,6 @@ class TestCreate:
         assert line.project_id is None
         assert line.description == 'Discovery workshop'
         assert line.amount == Decimal('100.00')
-
-        project_line = client.post(reverse('invoice_line_create', args=[invoice.pk]), {
-            'project': project.pk,
-            'description': 'typed over',
-            'quantity': '1',
-            'unit_price': '25',
-        })
-        assert project_line.status_code == 200
-        stored = invoice.lines.get(project=project)
-        assert stored.description == project.name
 
     def test_bill_to_is_the_snapshot_from_create_time(self, client):
         user = _user(invoices_create=True)

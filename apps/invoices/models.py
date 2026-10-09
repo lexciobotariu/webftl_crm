@@ -56,6 +56,7 @@ def totals_by_currency(pairs):
 
 _LOCKED_AFTER_SEND = (
     'client_id',
+    'project_id',
     'issue_date',
     'due_date',
     'tax_rate',
@@ -94,6 +95,11 @@ class Invoice(models.Model):
     """
 
     client = models.ForeignKey(Client, on_delete=models.PROTECT, related_name='invoices')
+    # Optional: the project this invoice is for. It narrows "Add tasks" and is
+    # printed on the invoice; lines may still be free text.
+    project = models.ForeignKey(
+        'projects.Project', on_delete=models.SET_NULL, null=True, blank=True, related_name='invoices',
+    )
     number = models.PositiveIntegerField(unique=True)
     issue_date = models.DateField()
     due_date = models.DateField()
@@ -227,8 +233,8 @@ class Invoice(models.Model):
 class InvoiceLine(models.Model):
     """A project line or a free-text line.
 
-    A project line copies the project name into ``description`` when it is
-    saved. A free-text line has no project.
+    A project line takes the project name as its description when none is
+    typed. A free-text line has no project.
     """
 
     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='lines')
@@ -274,8 +280,10 @@ class InvoiceLine(models.Model):
         if self.project_id:
             if self.invoice_id and self.project.client_id != self.invoice.client_id:
                 errors['project'] = 'Choose a project that belongs to this client.'
-            else:
+            elif not (self.description or '').strip():
                 self.description = self.project.name
+            else:
+                self.description = self.description.strip()
         elif not (self.description or '').strip():
             errors['description'] = 'Enter a description for a free-text line.'
         else:
@@ -389,7 +397,7 @@ def visible_invoices(user):
     is in ``visible_clients``. ``role=admin`` bypasses the flag through
     ``User.has_app_permission``. An invoice outside this set is a 404.
     """
-    invoices = Invoice.objects.select_related('client').prefetch_related(
+    invoices = Invoice.objects.select_related('client', 'project').prefetch_related(
         'lines__project',
         'payments',
     )
@@ -407,6 +415,9 @@ class Estimate(models.Model):
     """
 
     client = models.ForeignKey(Client, on_delete=models.PROTECT, related_name='estimates')
+    project = models.ForeignKey(
+        'projects.Project', on_delete=models.SET_NULL, null=True, blank=True, related_name='estimates',
+    )
     number = models.PositiveIntegerField(unique=True)
     issue_date = models.DateField()
     valid_until = models.DateField()
@@ -520,7 +531,7 @@ class EstimateLine(models.Model):
 
 def visible_estimates(user):
     """Estimates this user may open: the same rule as ``visible_invoices``."""
-    estimates = Estimate.objects.select_related('client', 'invoice').prefetch_related('lines__project')
+    estimates = Estimate.objects.select_related('client', 'project', 'invoice').prefetch_related('lines__project')
     if user.has_app_permission('invoices_view_all'):
         return estimates
     return estimates.filter(client__in=visible_clients(user))

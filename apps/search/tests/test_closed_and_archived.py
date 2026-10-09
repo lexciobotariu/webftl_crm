@@ -1,15 +1,11 @@
 """Finished and cancelled projects and archived clients stay out of pickers and search."""
-from datetime import date
-from decimal import Decimal
 
 import pytest
 from django.utils import timezone
 
 from apps.accounts.factories import AdminUserFactory
 from apps.clients.factories import ClientFactory
-from apps.crm.models import Currency
-from apps.invoices.forms import InvoiceLineForm
-from apps.invoices.services import add_line, create_invoice
+from apps.invoices.forms import InvoiceForm
 from apps.projects.factories import ProjectFactory
 from apps.projects.models import Project
 from apps.search.services import search
@@ -32,32 +28,25 @@ class TestPalette:
 
 
 @pytest.mark.django_db
-class TestInvoiceLinePicker:
-    def _invoice(self, owner):
-        owner.currency, _ = Currency.objects.get_or_create(code='EUR', defaults={'name': 'Euro', 'symbol': '€'})
-        owner.save(update_fields=['currency'])
-        return create_invoice(client=owner, issue_date=date(2026, 10, 1), due_date=date(2026, 10, 31),
-                              tax_rate=Decimal('0'))
+class TestInvoiceProjectPicker:
+    """The project picker on an invoice offers open projects, plus the one it already has."""
 
-    def test_only_open_projects_are_offered_plus_the_one_on_the_line(self):
+    def test_only_open_projects_are_offered_plus_the_current_one(self):
         owner = ClientFactory()
         open_project = ProjectFactory(client=owner, name='Open')
         on_hold = ProjectFactory(client=owner, name='Paused', status=Project.ON_HOLD)
         finished = ProjectFactory(client=owner, name='Done', status=Project.FINISHED)
-        invoice = self._invoice(owner)
+        admin = AdminUserFactory()
 
-        offered = set(InvoiceLineForm(invoice=invoice).fields['project'].queryset)
+        offered = set(InvoiceForm(user=admin).fields['project'].queryset.filter(client=owner))
         assert offered == {open_project, on_hold}
-
-        line = add_line(invoice, project=finished, description='', quantity=Decimal('1'), unit_price=Decimal('5'))
-        editing = InvoiceLineForm(invoice=invoice, current_project_id=line.project_id)
+        editing = InvoiceForm(user=admin, current_project_id=finished.pk)
         assert finished in set(editing.fields['project'].queryset)
 
-    def test_a_finished_project_is_refused_on_a_new_line(self):
+    def test_a_finished_project_is_refused_on_a_new_invoice(self):
         owner = ClientFactory()
         finished = ProjectFactory(client=owner, status=Project.FINISHED)
-        invoice = self._invoice(owner)
-
-        form = InvoiceLineForm({'project': finished.pk, 'quantity': '1', 'unit_price': '5'}, invoice=invoice)
+        form = InvoiceForm({'client': owner.pk, 'project': finished.pk, 'issue_date': '2026-10-01',
+                            'due_date': '2026-10-31', 'tax_rate': '0'}, user=AdminUserFactory())
         assert not form.is_valid()
         assert 'project' in form.errors

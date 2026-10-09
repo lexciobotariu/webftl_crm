@@ -47,6 +47,7 @@
             {% if invoice.bill_to_email %}<div>{{ invoice.bill_to_email }}</div>{% endif %}
             {% if invoice.bill_to_address %}<div style="white-space: pre-line;">{{ invoice.bill_to_address }}</div>{% endif %}
             {% if invoice.bill_to_tax_id %}<div>Tax ID {{ invoice.bill_to_tax_id }}</div>{% endif %}
+            {% if invoice.project %}<div style="margin-top: 0.5rem;"><span class="muted">Project</span> {{ invoice.project.name }}</div>{% endif %}
         </div>
         <div>
             <div>Issued {{ invoice.issue_date|date:"M j, Y" }}</div>
