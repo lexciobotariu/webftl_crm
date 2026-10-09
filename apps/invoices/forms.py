@@ -126,3 +126,28 @@ class PaymentForm(forms.Form):
         if amount > self.invoice.balance:
             raise forms.ValidationError('Amount cannot exceed the balance.')
         return amount
+
+
+MAX_RECIPIENTS = 10
+
+
+class InvoiceEmailForm(forms.Form):
+    to = forms.CharField(max_length=500)
+    subject = forms.CharField(max_length=255)
+    message = forms.CharField(widget=forms.Textarea)
+
+    def clean_to(self):
+        """One or more addresses, separated by commas or semicolons."""
+        from django.core.validators import validate_email
+
+        addresses = [part.strip() for part in self.cleaned_data['to'].replace(';', ',').split(',') if part.strip()]
+        if not addresses:
+            raise forms.ValidationError('Enter at least one email address.')
+        if len(addresses) > MAX_RECIPIENTS:
+            raise forms.ValidationError(f'Send to at most {MAX_RECIPIENTS} addresses.')
+        for address in addresses:
+            try:
+                validate_email(address)
+            except forms.ValidationError:
+                raise forms.ValidationError(f'"{address}" is not a valid email address.') from None
+        return list(dict.fromkeys(addresses))

@@ -12,3 +12,5 @@ linkify-it-py==2.2.0
 nh3==0.3.7
 cryptography>=42.0.0
 gunicorn>=22.0.0
+resend==2.49.1
+weasyprint==66.0

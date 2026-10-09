@@ -15,7 +15,7 @@ from apps.projects.models import visible_projects
 from apps.projects.services import with_task_counts
 
 from .forms import ClientContactForm, ClientDrawerForm, ClientForm
-from .models import Client, ClientContact, visible_clients
+from .models import Client, ClientContact, ClientMessage, messages_visible_to, visible_clients
 
 CLIENTS_PER_PAGE = 20
 
@@ -114,6 +114,7 @@ def client_detail(request, pk):
         'client_detail_projects': 'projects',
         'client_detail_notes': 'notes',
         'client_detail_invoices': 'invoices',
+        'client_detail_messages': 'messages',
     }
     active_tab = tab_mapping.get(url_name, 'overview')
     if active_tab == 'invoices' and not request.user.has_app_permission('access_invoices'):
@@ -138,9 +139,12 @@ def client_detail(request, pk):
         from .overview import client_overview
         overview = client_overview(request.user, client)
 
+    log = messages_visible_to(request.user, client)
     return render(request, 'clients/client_detail.html', {
         'client': client,
         'overview': overview,
+        'message_count': log.count(),
+        **(_message_context(request.user, client, log) if active_tab == 'messages' else {}),
         'projects': projects,
         'project_count': projects.count(),
         'todo_count': todo_count,
@@ -416,3 +420,53 @@ def client_contact_delete(request, pk, contact_pk):
         return refused
     get_object_or_404(ClientContact, pk=contact_pk, client=client).delete()
     return _contacts_changed()
+
+
+def _message_context(user, client, log=None):
+    return {
+        'client': client,
+        'log': log if log is not None else messages_visible_to(user, client),
+        'message_projects': _visible_projects(user, client).order_by('name'),
+    }
+
+
+def _messages_panel(request, client, **extra):
+    response = render(request, 'clients/partials/messages_content.html', {
+        **_message_context(request.user, client), **extra,
+    })
+    response['HX-Trigger'] = 'messagesChanged'
+    return response
+
+
+@login_required
+@require_permission('access_clients')
+@require_POST
+def client_message_create(request, pk):
+    """Add a note to the client's log. Anyone who can open the client may write one."""
+    client = _visible_client_or_404(request.user, pk)
+    body = request.POST.get('body', '').strip()
+    project = None
+    raw_project = request.POST.get('project', '')
+    if raw_project:
+        project = _visible_projects(request.user, client).filter(pk=raw_project).first() if raw_project.isdigit() else None
+        if project is None:
+            return _messages_panel(request, client, error='Choose one of this client\'s projects.', draft=body)
+    if not body:
+        return _messages_panel(request, client, error='Write something first.', draft=body)
+    ClientMessage.objects.create(client=client, project=project, body=body, author=request.user)
+    return _messages_panel(request, client)
+
+
+@login_required
+@require_permission('access_clients')
+@require_POST
+def client_message_delete(request, pk, message_pk):
+    """Only a note's author, or an admin, deletes it. Logged emails stay."""
+    client = _visible_client_or_404(request.user, pk)
+    message = get_object_or_404(messages_visible_to(request.user, client), pk=message_pk)
+    if message.kind != ClientMessage.NOTE:
+        return HttpResponse('A sent email stays in the log.', status=400)
+    if message.author_id != request.user.pk and not request.user.is_admin:
+        return HttpResponseForbidden('Only the author can delete this note.')
+    message.delete()
+    return _messages_panel(request, client)

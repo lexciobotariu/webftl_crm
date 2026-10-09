@@ -21,12 +21,37 @@
                 </div>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
+                <a href="{% url 'invoice_pdf' invoice.pk %}"
+                   class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
+                    <i data-lucide="file-down" class="w-3.5 h-3.5"></i>
+                    PDF
+                </a>
                 <a href="{% url 'invoice_print' invoice.pk %}"
                    target="_blank"
                    class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
                     <i data-lucide="printer" class="w-3.5 h-3.5"></i>
                     Print
                 </a>
+                {% if perms_map.invoices_edit and can_remind %}
+                <button hx-get="{% url 'invoice_email' invoice.pk 'reminder' %}"
+                        hx-target="#slide-over"
+                        hx-swap="innerHTML"
+                        hx-on::after-request="openSlideOver(event)"
+                        class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
+                    <i data-lucide="bell-ring" class="w-3.5 h-3.5"></i>
+                    Send reminder
+                </button>
+                {% endif %}
+                {% if perms_map.invoices_edit and can_email %}
+                <button hx-get="{% url 'invoice_email' invoice.pk 'invoice' %}"
+                        hx-target="#slide-over"
+                        hx-swap="innerHTML"
+                        hx-on::after-request="openSlideOver(event)"
+                        class="inline-flex items-center gap-1.5 {% if invoice.is_draft %}bg-accent text-on-accent font-medium hover:bg-accent-hover{% else %}bg-elevated border border-border-subtle text-zinc-300 hover:bg-hover{% endif %} px-3 py-1.5 rounded-control text-xs transition-colors">
+                    <i data-lucide="mail" class="w-3.5 h-3.5"></i>
+                    Email invoice
+                </button>
+                {% endif %}
                 {% if invoice.is_draft and perms_map.invoices_edit %}
                 <button hx-get="{% url 'invoice_edit' invoice.pk %}"
                         hx-target="#slide-over"
@@ -37,8 +62,8 @@
                     Edit
                 </button>
                 <button hx-post="{% url 'invoice_mark_sent' invoice.pk %}"
-                        hx-confirm="Mark {{ invoice.number_label }} sent? Lines, tax, dates, and bill-to stay as they are."
-                        class="inline-flex items-center gap-1.5 bg-accent text-on-accent px-3 py-1.5 rounded-control text-xs font-medium hover:bg-accent-hover transition-colors">
+                        hx-confirm="Mark {{ invoice.number_label }} sent without emailing it? Lines, tax, dates, and bill-to stay as they are."
+                        class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
                     <i data-lucide="send" class="w-3.5 h-3.5"></i>
                     Mark sent
                 </button>
@@ -254,6 +279,28 @@
             </table>
             {% else %}
             <p class="px-4 py-6 text-sm text-zinc-500">No payments yet.</p>
+            {% endif %}
+        </div>
+
+        <div class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden mt-6">
+            <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
+                <h2 class="text-sm font-medium text-zinc-100">Emails</h2>
+            </div>
+            {% if sent_emails %}
+            <ul class="divide-y divide-border-subtle">
+                {% for email in sent_emails %}
+                <li class="px-4 py-3 flex items-start justify-between gap-4 text-sm">
+                    <div class="min-w-0">
+                        <div class="text-zinc-200">{{ email.subject }}</div>
+                        <div class="text-xs text-zinc-500">To {{ email.recipients }}{% if email.author %} · by {% firstof email.author.name email.author.email %}{% endif %}</div>
+                        {% if email.failed %}<div class="text-xs text-error mt-1">Not sent: {{ email.error }}</div>{% endif %}
+                    </div>
+                    <span class="text-xs {% if email.failed %}text-error{% else %}text-zinc-500{% endif %} flex-shrink-0">{{ email.created_at|date:"M j, Y H:i" }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="px-4 py-6 text-sm text-zinc-500">Not emailed yet.</p>
             {% endif %}
         </div>
     </div>

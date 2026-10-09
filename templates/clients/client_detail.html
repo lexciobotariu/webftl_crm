@@ -108,6 +108,14 @@
                         </span>
                         <span id="notes-count" class="text-xs text-zinc-500 bg-panel px-1.5 py-0.5 rounded">{{ notes_count }}</span>
                     </a>
+                    <a href="{% url 'client_detail_messages' client.pk %}"
+                       class="w-full flex items-center justify-between px-3 py-2 rounded-control text-sm transition-colors text-left {% if active_tab == 'messages' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
+                        <span class="flex items-center gap-3">
+                            <i data-lucide="messages-square" class="w-4 h-4"></i>
+                            Messages
+                        </span>
+                        <span id="message-count" class="text-xs text-zinc-500 bg-panel px-1.5 py-0.5 rounded">{{ message_count }}</span>
+                    </a>
                     {% if perms_map.access_invoices %}
                     <a href="{% url 'client_detail_invoices' client.pk %}"
                        class="w-full flex items-center justify-between px-3 py-2 rounded-control text-sm transition-colors text-left {% if active_tab == 'invoices' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
@@ -155,6 +163,8 @@
                     {% include "clients/partials/invoices_content.html" %}
                 </div>
             </div>
+            {% elif active_tab == 'messages' %}
+            {% include "clients/partials/messages_content.html" %}
             {% elif active_tab == 'notes' %}
             <div hx-get="{% url 'client_notes_list' client.pk %}"
                  hx-trigger="load, notesChanged from:body"
@@ -179,5 +189,6 @@
     });
     // Keep the record-menu Notes count in sync with the notes list.
     document.body.addEventListener('notesChanged', () => refreshFragment('#notes-count'));
+    document.body.addEventListener('messagesChanged', () => refreshFragment('#message-count'));
 </script>
 {% endblock %}

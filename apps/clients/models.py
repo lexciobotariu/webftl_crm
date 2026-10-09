@@ -90,6 +90,67 @@ class ClientContact(models.Model):
         return self.name
 
 
+class ClientMessage(models.Model):
+    """One entry in a client's message log: a note the team wrote, or an email sent to the client.
+
+    Notes are internal; the client never sees them. Emails are logged when they
+    are sent, with whom they went to and whether sending worked.
+    """
+
+    NOTE = 'note'
+    EMAIL = 'email'
+    KIND_CHOICES = [(NOTE, 'Note'), (EMAIL, 'Email')]
+
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='messages')
+    project = models.ForeignKey(
+        'projects.Project', on_delete=models.SET_NULL, null=True, blank=True, related_name='client_messages',
+    )
+    # Emails about an invoice point at it, so the invoice page lists them too.
+    invoice = models.ForeignKey(
+        'invoices.Invoice', on_delete=models.SET_NULL, null=True, blank=True, related_name='emails',
+    )
+    kind = models.CharField(max_length=10, choices=KIND_CHOICES, default=NOTE, db_default=NOTE)
+    subject = models.CharField(max_length=255, blank=True)
+    body = models.TextField()
+    # Emails only: who it went to, and the error when sending failed.
+    recipients = models.CharField(max_length=500, blank=True)
+    error = models.TextField(blank=True)
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='client_messages',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at', '-pk']
+
+    def __str__(self):
+        return self.subject or self.body[:50]
+
+    @property
+    def failed(self):
+        return bool(self.error)
+
+
+def messages_visible_to(user, client):
+    """The client's log entries this user may read.
+
+    Entries with no project, or on a project they can open. Invoice emails carry
+    amounts, so they also need the invoices module and sight of that invoice.
+    """
+    from apps.invoices.models import visible_invoices
+    from apps.projects.models import visible_projects
+
+    entries = client.messages.filter(
+        models.Q(project__isnull=True) | models.Q(project__in=visible_projects(user))
+    )
+    if user.has_app_permission('access_invoices'):
+        entries = entries.filter(models.Q(invoice__isnull=True) | models.Q(invoice__in=visible_invoices(user)))
+    else:
+        entries = entries.filter(invoice__isnull=True)
+    return entries.select_related('author', 'project', 'invoice')
+
+
 def active_clients(queryset):
     """Clients that are not archived: the ones offered when picking a client."""
     return queryset.filter(archived_at__isnull=True)
