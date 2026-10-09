@@ -10,10 +10,11 @@ from apps.accounts.decorators import require_permission
 from apps.clients.models import visible_clients
 
 from . import emails
-from .forms import InvoiceEmailForm, InvoiceForm, InvoiceLineForm, PaymentForm
+from .forms import InvoiceEmailForm, InvoiceForm, InvoiceLineForm, PaymentForm, RecurringInvoiceForm
 from .listing import PERIOD_CHOICES, STATUS_CHOICES, InvoiceFilters, filter_invoices
-from .models import InvoiceHasPayments, InvoiceLocked, visible_invoices
+from .models import InvoiceHasPayments, InvoiceLocked, RecurringInvoice, visible_invoices
 from .pdf import invoice_pdf, invoice_pdf_filename
+from .recurring import save_recurring, suggested_next_date
 from .services import (
     add_line,
     cancel_invoice,
@@ -117,6 +118,7 @@ def invoice_detail(request, pk):
         'can_email': emails.can_email(invoice, emails.INVOICE),
         'can_remind': emails.can_email(invoice, emails.REMINDER),
         'sent_emails': invoice.emails.select_related('author'),
+        'recurring': RecurringInvoice.objects.filter(template=invoice).first(),
     })
 
 
@@ -270,6 +272,51 @@ def invoice_email(request, pk, kind):
         'invoice': invoice,
         'kind': kind,
     })
+
+
+@login_required
+@require_permission('access_invoices')
+@require_permission('invoices_create')
+def invoice_recurring(request, pk):
+    """Start repeating this invoice as new drafts, or change when it repeats."""
+    invoice = _invoice_or_404(request.user, pk)
+    recurring = RecurringInvoice.objects.filter(template=invoice).first()
+    if request.method == 'POST':
+        form = RecurringInvoiceForm(request.POST)
+        if form.is_valid():
+            try:
+                save_recurring(invoice, user=request.user, **form.cleaned_data)
+            except ValidationError as exc:
+                for field, messages in exc.message_dict.items():
+                    form.add_error(field, messages[0])
+            else:
+                return _redirect_to('invoice_detail', invoice.pk)
+    elif recurring:
+        form = RecurringInvoiceForm(initial={
+            'frequency': recurring.frequency,
+            'next_date': recurring.next_date,
+            'end_date': recurring.end_date,
+        })
+    else:
+        form = RecurringInvoiceForm(initial={
+            'frequency': RecurringInvoice.MONTHLY,
+            'next_date': suggested_next_date(invoice),
+        })
+    return render(request, 'invoices/partials/recurring_drawer.html', {
+        'form': form,
+        'invoice': invoice,
+        'recurring': recurring,
+    })
+
+
+@login_required
+@require_permission('access_invoices')
+@require_permission('invoices_create')
+@require_POST
+def invoice_recurring_stop(request, pk):
+    invoice = _invoice_or_404(request.user, pk)
+    RecurringInvoice.objects.filter(template=invoice).delete()
+    return _redirect_to('invoice_detail', invoice.pk)
 
 
 @login_required

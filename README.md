@@ -133,6 +133,19 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
+## Scheduled jobs
+
+Recurring invoices become drafts only when this command runs, so schedule it
+once a day (in Dokploy: the app's Schedules tab, or any cron that can run a
+command in the web container):
+
+```bash
+python manage.py create_recurring_invoices
+```
+
+Running it more than once a day is harmless, and a missed day is caught up on
+the next run.
+
 ## Frontend dependencies
 
 There is no build step. Two small scripts of our own live in `static/js/`; with

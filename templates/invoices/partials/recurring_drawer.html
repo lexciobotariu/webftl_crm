@@ -1,0 +1,68 @@
+<div class="flex flex-col h-full">
+    <div class="flex-shrink-0 px-4 py-3 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <i data-lucide="repeat" class="w-4 h-4 text-zinc-500"></i>
+                <h2 class="text-sm font-medium text-zinc-100">Repeat {{ invoice.number_label }}</h2>
+            </div>
+            <button onclick="closeSlideOver()"
+                    class="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </div>
+
+    <form hx-post="{% url 'invoice_recurring' invoice.pk %}"
+          hx-target="#slide-over"
+          hx-swap="innerHTML"
+          class="flex-1 overflow-y-auto p-4">
+        {% csrf_token %}
+        {% include "components/form_error_banner.html" %}
+
+        <p class="text-sm text-zinc-400 mb-4">
+            On each date a new draft is created for {{ invoice.client.name }} with this invoice's lines and tax rate.
+            Drafts are not sent on their own; check them and use Email invoice.
+        </p>
+
+        <div class="space-y-4">
+            <div>
+                <label for="id_frequency" class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Repeat</label>
+                <select name="frequency" id="id_frequency"
+                        class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:outline-none">
+                    {% for value, label in form.fields.frequency.choices %}
+                    <option value="{{ value }}" {% if form.frequency.value == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="{{ form.next_date.id_for_label }}" class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Next draft on</label>
+                {{ form.next_date }}
+                {% if form.next_date.errors %}<p class="mt-1 text-xs text-error">{{ form.next_date.errors.0 }}</p>{% endif %}
+                <p class="mt-1 text-xs text-zinc-500">Later drafts fall on the same day of the month. Each draft gets as many days to pay as this invoice has.</p>
+            </div>
+            <div>
+                <label for="{{ form.end_date.id_for_label }}" class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Stop after</label>
+                {{ form.end_date }}
+                {% if form.end_date.errors %}<p class="mt-1 text-xs text-error">{{ form.end_date.errors.0 }}</p>{% endif %}
+                <p class="mt-1 text-xs text-zinc-500">Optional. Leave empty to repeat until you stop it.</p>
+            </div>
+        </div>
+
+        <div class="flex gap-3 mt-6 pt-4 border-t border-border-subtle">
+            <button type="submit"
+                    class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">
+                {% if recurring %}Save{% else %}Start repeating{% endif %}
+            </button>
+            <button type="button" onclick="closeSlideOver()"
+                    class="bg-elevated border border-border-subtle px-4 py-2 rounded-control text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
+                Cancel
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+}
+</script>
