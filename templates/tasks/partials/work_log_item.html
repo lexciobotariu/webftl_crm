@@ -9,12 +9,13 @@
             {% if entry.ended_at %}
             <span class="text-zinc-400">logged <span class="text-zinc-200">{{ entry.duration_label }}</span>{% if entry.note %} — {{ entry.note }}{% endif %}</span>
             <span class="text-zinc-500 text-xs">{{ entry.started_at|date:"M j" }} · {{ entry.created_at|timesince }} ago</span>
+            {% if entry.invoice_line_id %}<span class="px-1.5 py-0.5 text-[10px] rounded bg-success/10 text-success border border-success/20" title="Billed on this invoice">{{ entry.invoice_line.invoice.number_label }}</span>{% endif %}
             {% else %}
             <span class="inline-flex h-2 w-2 rounded-full bg-success animate-soft-pulse"></span>
             <span class="text-zinc-400">timer running</span>
             <span class="text-zinc-500 text-xs">since {{ entry.started_at|timesince }} ago</span>
             {% endif %}
-            {% if entry.can_change %}
+            {% if entry.can_change and not entry.invoice_line.invoice.sent_at %}
             <span class="ml-auto flex items-center gap-0.5">
                 {% if entry.ended_at %}
                 <button type="button" aria-label="Edit time"

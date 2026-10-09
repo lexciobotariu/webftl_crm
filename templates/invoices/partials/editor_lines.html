@@ -2,26 +2,51 @@
 <div id="doc-lines" class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden mb-6">
     <div class="px-4 py-2 border-b border-border-subtle bg-panel/80 flex items-center justify-between">
         <h2 class="text-sm font-medium text-zinc-100">Lines</h2>
+        {% if kind == 'invoice' %}
+        <button type="button" hx-get="{% url 'invoice_add_tasks' doc.pk %}" hx-target="#slide-over" hx-swap="innerHTML" hx-on::after-request="openSlideOver(event)"
+                class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
+            <i data-lucide="list-checks" class="w-3.5 h-3.5"></i>
+            Add tasks
+        </button>
+        {% endif %}
     </div>
     <table class="w-full table-fixed">
         <thead class="bg-panel border-b border-border-subtle">
             <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
+                <th class="px-4 py-2 font-medium w-1/4">Item</th>
                 <th class="px-4 py-2 font-medium">Description</th>
-                <th class="px-2 py-2 font-medium text-right w-28">Qty</th>
-                <th class="px-2 py-2 font-medium text-right w-36">Price</th>
-                <th class="px-4 py-2 font-medium text-right w-36">Amount</th>
+                <th class="px-2 py-2 font-medium text-right w-24">Qty</th>
+                <th class="px-2 py-2 font-medium text-right w-32">Price</th>
+                <th class="px-4 py-2 font-medium text-right w-32">Amount</th>
                 <th class="w-12"></th>
             </tr>
         </thead>
         <tbody class="divide-y divide-border-subtle">
+            <tr id="new-line" class="bg-elevated/20" hx-post="{{ create_url }}" hx-trigger="keydown[key=='Enter' && target.tagName!='TEXTAREA']" hx-include="this" hx-target="#doc-lines" hx-swap="outerHTML">
+                <td class="px-2 py-1.5">
+                    <input id="new-line-description" type="text" name="description" maxlength="255" placeholder="New item, then press Enter" value="{{ new_form.description.value|default_if_none:'' }}" aria-label="New line item" class="{{ cell }} border-border-subtle">
+                    {% if new_form.errors %}<p class="px-2 text-xs text-error">{% for errors in new_form.errors.values %}{{ errors.0 }} {% endfor %}</p>{% endif %}
+                </td>
+                <td class="px-2 py-1.5"><textarea name="details" rows="1" placeholder="Description (optional)" aria-label="New line description text" class="{{ cell }} border-border-subtle resize-y">{{ new_form.details.value|default_if_none:'' }}</textarea></td>
+                <td class="px-2 py-1.5"><input type="number" name="quantity" step="0.01" min="0.01" value="{{ new_form.quantity.value|default:'1' }}" aria-label="New line quantity" class="{{ cell }} border-border-subtle text-right tabular-nums"></td>
+                <td class="px-2 py-1.5"><input type="number" name="unit_price" step="0.01" min="0" value="{{ new_form.unit_price.value|default_if_none:'' }}" placeholder="0.00" aria-label="New line unit price" class="{{ cell }} border-border-subtle text-right tabular-nums"></td>
+                <td class="px-4 py-1.5"></td>
+                <td class="px-2 py-1.5 text-right">
+                    <button type="button" hx-post="{{ create_url }}" hx-include="#new-line" hx-target="#doc-lines" hx-swap="outerHTML"
+                            class="p-1.5 text-zinc-300 bg-accent/10 hover:bg-accent/20 rounded transition-colors" title="Add line" aria-label="Add line">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                    </button>
+                </td>
+            </tr>
             {% for row in rows %}{% with line=row.line %}
             <tr id="line-{{ line.pk }}" hx-post="{{ row.update_url }}" hx-trigger="change" hx-include="this" hx-swap="none">
                 <td class="px-2 py-1.5">
-                    <input type="text" name="description" maxlength="255" value="{{ line.description }}" aria-label="Description" class="{{ cell }}"
+                    <input type="text" name="description" maxlength="255" value="{{ line.description }}" aria-label="Item" class="{{ cell }}"
                            {% if line.project_id %}placeholder="{{ line.project.name }}"{% endif %}>
-                    {% if line.project_id %}<span class="block px-2 text-xs text-zinc-500">{{ line.project.name }}</span>{% endif %}
+                    {% if line.project_id %}<span class="block px-2 text-xs text-zinc-500">{{ line.project.name }}{% if line.task_id %} · {{ line.task.identifier }}{% endif %}</span>{% endif %}
                     <p id="line-error-{{ line.pk }}" class="px-2 text-xs text-error"></p>
                 </td>
+                <td class="px-2 py-1.5"><textarea name="details" rows="1" aria-label="Description" placeholder="Description (optional)" class="{{ cell }} resize-y">{{ line.details }}</textarea></td>
                 <td class="px-2 py-1.5"><input type="number" name="quantity" step="0.01" min="0.01" value="{{ line.quantity|stringformat:'s' }}" aria-label="Quantity" class="{{ cell }} text-right tabular-nums"></td>
                 <td class="px-2 py-1.5"><input type="number" name="unit_price" step="0.01" min="0" value="{{ line.unit_price|stringformat:'s' }}" aria-label="Unit price" class="{{ cell }} text-right tabular-nums"></td>
                 <td id="line-amount-{{ line.pk }}" class="px-4 py-1.5 text-sm text-zinc-200 text-right tabular-nums">{% include "invoices/partials/money.html" with amount=line.amount %}</td>
@@ -33,21 +58,6 @@
                 </td>
             </tr>
             {% endwith %}{% endfor %}
-            <tr id="new-line" class="bg-elevated/20" hx-post="{{ create_url }}" hx-trigger="keydown[key=='Enter']" hx-include="this" hx-target="#doc-lines" hx-swap="outerHTML">
-                <td class="px-2 py-1.5">
-                    <input id="new-line-description" type="text" name="description" maxlength="255" placeholder="New line: describe the work, then press Enter" value="{{ new_form.description.value|default_if_none:'' }}" aria-label="New line description" class="{{ cell }} border-border-subtle">
-                    {% if new_form.errors %}<p class="px-2 text-xs text-error">{% for errors in new_form.errors.values %}{{ errors.0 }} {% endfor %}</p>{% endif %}
-                </td>
-                <td class="px-2 py-1.5"><input type="number" name="quantity" step="0.01" min="0.01" value="{{ new_form.quantity.value|default:'1' }}" aria-label="New line quantity" class="{{ cell }} border-border-subtle text-right tabular-nums"></td>
-                <td class="px-2 py-1.5"><input type="number" name="unit_price" step="0.01" min="0" value="{{ new_form.unit_price.value|default_if_none:'' }}" placeholder="0.00" aria-label="New line unit price" class="{{ cell }} border-border-subtle text-right tabular-nums"></td>
-                <td class="px-4 py-1.5"></td>
-                <td class="px-2 py-1.5 text-right">
-                    <button type="button" hx-post="{{ create_url }}" hx-include="#new-line" hx-target="#doc-lines" hx-swap="outerHTML"
-                            class="p-1.5 text-zinc-300 bg-accent/10 hover:bg-accent/20 rounded transition-colors" title="Add line" aria-label="Add line">
-                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                    </button>
-                </td>
-            </tr>
         </tbody>
     </table>
     {% include "invoices/partials/editor_totals.html" with oob_totals=False %}

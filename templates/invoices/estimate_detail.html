@@ -132,7 +132,7 @@
                 <tbody class="divide-y divide-border-subtle">
                     {% for line in estimate.lines.all %}
                     <tr>
-                        <td class="px-4 py-3 text-sm text-zinc-200">{{ line.description }}{% if line.project_id %}<span class="block text-xs text-zinc-500">Project</span>{% endif %}</td>
+                        <td class="px-4 py-3 text-sm text-zinc-200">{{ line.description }}{% if line.details %}<span class="block text-xs text-zinc-400 whitespace-pre-line mt-0.5">{{ line.details }}</span>{% endif %}{% if line.project_id %}<span class="block text-xs text-zinc-500">Project</span>{% endif %}</td>
                         <td class="px-4 py-3 text-sm text-zinc-400 text-right">{{ line.quantity|floatformat:2 }}</td>
                         <td class="px-4 py-3 text-sm text-zinc-400 text-right">{% include "invoices/partials/money.html" with amount=line.unit_price %}</td>
                         <td class="px-4 py-3 text-sm text-zinc-200 text-right">{% include "invoices/partials/money.html" with amount=line.amount %}</td>

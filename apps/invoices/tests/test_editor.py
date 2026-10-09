@@ -254,3 +254,35 @@ class TestProjectPage:
         assert invoice.number_label in page
         assert 'INV-0002' not in page
         assert f'?project={project.pk}' in page
+
+
+@pytest.mark.django_db
+class TestLineDetailsAndLayout:
+    def test_new_line_row_comes_first_and_tax_sits_with_the_totals(self, client):
+        client.force_login(AdminUserFactory())
+        invoice = _invoice()
+        add_line(invoice, project=None, description='Design', quantity=Decimal('1'), unit_price=Decimal('10'))
+        page = client.get(reverse('invoice_detail', args=[invoice.pk])).content.decode()
+        assert page.index('id="new-line"') < page.index('value="Design"')
+        header = page[page.index('id="doc-header"'):page.index('</form>', page.index('id="doc-header"'))]
+        assert 'tax_rate' not in header
+        totals = page[page.index('id="doc-totals"'):]
+        assert 'id="doc-tax"' in totals
+
+    def test_a_line_keeps_its_description_text(self, client):
+        client.force_login(AdminUserFactory())
+        invoice = _invoice()
+        client.post(reverse('invoice_line_create', args=[invoice.pk]), {
+            'description': 'Website', 'details': 'Home, About\nand Contact pages', 'quantity': '1', 'unit_price': '500',
+        })
+        line = invoice.lines.get()
+        assert line.details == 'Home, About\nand Contact pages'
+        client.post(reverse('invoice_line_edit', args=[invoice.pk, line.pk]), {
+            'description': 'Website', 'details': 'Home page', 'quantity': '1', 'unit_price': '500',
+        })
+        line.refresh_from_db()
+        assert line.details == 'Home page'
+
+        mark_sent(invoice)
+        printed = client.get(reverse('invoice_print', args=[invoice.pk])).content.decode()
+        assert 'Home page' in printed

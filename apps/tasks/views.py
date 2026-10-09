@@ -1169,7 +1169,7 @@ def time_entry_edit(request, entry_pk):
     from apps.tasks import services
 
     entry = get_object_or_404(
-        TimeEntry.objects.select_related('task__project', 'user'),
+        TimeEntry.objects.select_related('task__project', 'user', 'invoice_line__invoice'),
         pk=entry_pk,
     )
     denied = _require_task_viewer(request.user, entry.task)
@@ -1219,7 +1219,7 @@ def time_entry_edit(request, entry_pk):
 @require_POST
 def time_entry_delete(request, entry_pk):
     entry = get_object_or_404(
-        TimeEntry.objects.select_related('task__project'),
+        TimeEntry.objects.select_related('task__project', 'invoice_line__invoice'),
         pk=entry_pk,
     )
     try:
@@ -1227,5 +1227,8 @@ def time_entry_delete(request, entry_pk):
         services.delete_entry(entry, request.user)
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
+    except ValueError:
+        # Billed on a sent invoice: the row stays, and says where it was billed.
+        return _work_log_row(request, entry)
     # An empty 200, not a 204: the row is the swap target and has to go.
     return _timer_changed(HttpResponse(''))

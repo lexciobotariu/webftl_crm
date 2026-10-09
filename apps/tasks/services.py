@@ -700,6 +700,15 @@ def log_duration(task, user, minutes, day, note=''):
     )
 
 
+def require_entry_unbilled(entry):
+    """Time on a sent invoice stays as it was billed."""
+    line = entry.invoice_line
+    if line is not None and line.invoice.sent_at is not None:
+        raise TimeEntryValidationError(
+            f'This time is billed on {line.invoice.number_label}, which has been sent.'
+        )
+
+
 def update_entry(entry, user, *, minutes, day, note=''):
     """Change a closed entry to ``minutes`` on ``day``.
 
@@ -718,6 +727,7 @@ def update_entry(entry, user, *, minutes, day, note=''):
         entry.note = note or ''
         entry.save(update_fields=['note'])
         return entry
+    require_entry_unbilled(entry)
     _validate_duration_and_day(minutes, day)
     if not same_day:
         entry.started_at = _start_of_day(day)
@@ -730,6 +740,7 @@ def update_entry(entry, user, *, minutes, day, note=''):
 def delete_entry(entry, user):
     """Delete an entry. Same permission rule as :func:`update_entry`."""
     require_entry_edit(user, entry)
+    require_entry_unbilled(entry)
     entry.delete()
 
 
@@ -773,7 +784,7 @@ def entries_on_task(user, task):
     """
     if not can_view_task(user, task):
         return task.time_entries.none()
-    entries = task.time_entries.select_related('user').order_by('-started_at', '-pk')
+    entries = task.time_entries.select_related('user', 'invoice_line__invoice').order_by('-started_at', '-pk')
     if user.is_admin or user.has_app_permission('tasks_view_all'):
         return entries
     return entries.filter(user=user)

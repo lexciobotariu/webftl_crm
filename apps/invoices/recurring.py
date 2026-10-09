@@ -75,6 +75,7 @@ def _create_one(recurring):
             invoice,
             project=line.project,
             description=line.description,
+            details=line.details,
             quantity=line.quantity,
             unit_price=line.unit_price,
         )

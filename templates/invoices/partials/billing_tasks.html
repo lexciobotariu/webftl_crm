@@ -1,0 +1,42 @@
+{% load invoice_format %}{% comment %}Tasks with unbilled time as checkboxes, all ticked, plus the per task / per project choice. Needs rows, per, per_choices, client.{% endcomment %}
+{% if rows %}
+<div class="mb-4">
+    <div class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Lines</div>
+    <div class="flex flex-col gap-1.5">
+        {% for value, label in per_choices %}
+        <label class="flex items-center gap-2 text-sm text-zinc-300">
+            <input type="radio" name="per" value="{{ value }}" {% if per == value %}checked{% endif %} class="accent-accent">
+            {{ label }}
+        </label>
+        {% endfor %}
+    </div>
+</div>
+<div x-data="{ all: true }" class="border border-border-subtle rounded-card overflow-hidden">
+    <table class="w-full">
+        <thead class="bg-panel border-b border-border-subtle">
+            <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
+                <th class="px-3 py-2 w-8"><input type="checkbox" checked aria-label="All tasks" x-model="all" @change="$root.querySelectorAll('input[name=task]').forEach(box => box.checked = all)" class="accent-accent"></th>
+                <th class="px-2 py-2 font-medium">Task</th>
+                <th class="px-2 py-2 font-medium text-right">Hours</th>
+                <th class="px-3 py-2 font-medium text-right">Amount</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-border-subtle">
+            {% for row in rows %}
+            {% ifchanged row.project.pk %}
+            <tr class="bg-panel/60"><td colspan="4" class="px-3 py-1.5 text-xs text-zinc-400">{{ row.project.name }}{% if row.rate is None %} · <span class="text-amber-400">no hourly rate, price left at 0</span>{% else %} · {% client_money client row.rate %} / h{% endif %}</td></tr>
+            {% endifchanged %}
+            <tr>
+                <td class="px-3 py-2"><input type="checkbox" name="task" value="{{ row.task.pk }}" checked aria-label="Bill {{ row.task.title }}" class="accent-accent"></td>
+                <td class="px-2 py-2 text-sm text-zinc-200"><span class="text-zinc-500 text-xs">{{ row.task.identifier }}</span> {{ row.task.title|truncatechars:80 }}</td>
+                <td class="px-2 py-2 text-sm text-zinc-300 text-right tabular-nums">{{ row.hours }}</td>
+                <td class="px-3 py-2 text-sm text-zinc-200 text-right tabular-nums">{% client_money client row.amount %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<p class="mt-2 text-xs text-zinc-500">Only billable time not on another invoice is listed. Billed time shows the invoice number on its task, and is freed again if you remove the line.</p>
+{% else %}
+<p class="text-sm text-zinc-400">No unbilled time on billable tasks{% if project %} of {{ project.name }}{% endif %}.</p>
+{% endif %}
