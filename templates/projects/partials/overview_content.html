@@ -138,6 +138,53 @@
     </div>
 </div>
 
+{% if figures.show_time or figures.show_money %}
+<!-- Time and money -->
+<div class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden" id="project-figures">
+    <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center gap-3">
+            <i data-lucide="clock" class="w-4 h-4 text-zinc-500"></i>
+            <h2 class="text-sm font-medium text-zinc-100">Time and money</h2>
+            {% if figures.show_time and not figures.everyones_time %}<span class="text-xs text-zinc-500">your time only</span>{% endif %}
+        </div>
+    </div>
+    <dl class="grid grid-cols-2 lg:grid-cols-4 gap-4 p-4 text-sm">
+        {% if figures.show_time %}
+        <div>
+            <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Logged</dt>
+            <dd class="text-lg font-medium text-zinc-100 tabular-nums">{{ figures.total_hours }} h</dd>
+            <dd class="text-xs text-zinc-500">{{ figures.billable_hours }} h billable · {{ figures.non_billable_hours }} h not</dd>
+        </div>
+        <div>
+            <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Estimate</dt>
+            {% if figures.estimate_minutes %}
+            <dd class="text-lg font-medium tabular-nums {% if figures.over_estimate %}text-error{% else %}text-zinc-100{% endif %}">{{ figures.estimated_task_hours }} / {{ figures.estimate_hours }} h</dd>
+            <dd class="text-xs text-zinc-500">logged on estimated tasks{% if figures.over_estimate %}, over the estimate{% endif %}</dd>
+            {% else %}
+            <dd class="text-zinc-600">No task has an estimate</dd>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% if figures.show_money %}
+        <div>
+            <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Billable amount</dt>
+            {% if figures.billable_amount %}
+            <dd class="text-lg font-medium text-zinc-100 tabular-nums">{{ figures.billable_amount }}</dd>
+            {% else %}
+            <dd class="text-zinc-600">—</dd>
+            {% endif %}
+            {% if figures.billable_amount_note %}<dd class="text-xs text-zinc-500">{{ figures.billable_amount_note }}</dd>{% endif %}
+        </div>
+        <div>
+            <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Invoiced</dt>
+            <dd class="text-lg font-medium text-zinc-100 tabular-nums">{{ figures.invoiced }}</dd>
+            <dd class="text-xs text-zinc-500">{{ figures.invoiced_count }} sent invoice{{ figures.invoiced_count|pluralize }}, before tax</dd>
+        </div>
+        {% endif %}
+    </dl>
+</div>
+{% endif %}
+
 <!-- Recent Activity -->
 <div class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden">
     <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
