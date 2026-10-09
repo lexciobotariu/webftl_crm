@@ -225,6 +225,7 @@
                     <tr>
                         <td class="px-4 py-3 text-sm text-zinc-200">
                             {{ line.description }}
+                            {% if line.details %}<span class="block text-xs text-zinc-400 whitespace-pre-line mt-0.5">{{ line.details }}</span>{% endif %}
                             {% if line.project_id %}
                             <span class="block text-xs text-zinc-500">Project</span>
                             {% endif %}

@@ -32,6 +32,7 @@ class LineForm(forms.Form):
     """One line as typed in the table. A project line may leave the description empty."""
 
     description = forms.CharField(max_length=255, required=False)
+    details = forms.CharField(required=False)
     quantity = forms.DecimalField(min_value=Decimal('0.01'), decimal_places=2, max_digits=10)
     unit_price = forms.DecimalField(min_value=Decimal('0'), decimal_places=2, max_digits=12)
 
@@ -63,7 +64,7 @@ def editor_context(document, kind, **extra):
             'update_url': _url(kind, 'line_edit', document.pk, line.pk),
             'delete_url': _url(kind, 'line_delete', document.pk, line.pk),
         }
-        for line in document.lines.select_related('project')
+        for line in document.lines.select_related('project', *(('task__project',) if kind == INVOICE else ()))
     ]
     return {
         'doc': document,

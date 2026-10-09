@@ -179,6 +179,7 @@
             <dt class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Invoiced</dt>
             <dd class="text-lg font-medium text-zinc-100 tabular-nums">{{ figures.invoiced }}</dd>
             <dd class="text-xs text-zinc-500">{{ figures.invoiced_count }} sent invoice{{ figures.invoiced_count|pluralize }}, before tax</dd>
+            {% if figures.unbilled_hours %}<dd class="text-xs text-amber-400">{{ figures.unbilled_hours }} h billable not invoiced yet</dd>{% endif %}
         </div>
         {% endif %}
     </dl>
@@ -199,6 +200,14 @@
             <div class="flex items-center gap-3">
                 {% if count > 5 %}<a href="{% url 'invoice_list' %}?project={{ project.pk }}" class="text-xs text-zinc-400 hover:text-zinc-200">View all</a>{% endif %}
                 {% if perms_map.invoices_create and project.client_id %}
+                <button hx-get="{% url 'invoice_project' project.pk %}"
+                        hx-target="#slide-over"
+                        hx-swap="innerHTML"
+                        hx-on::after-request="openSlideOver(event)"
+                        class="inline-flex items-center gap-1.5 bg-accent text-on-accent px-3 py-1.5 rounded-control text-xs font-medium hover:bg-accent-hover transition-colors">
+                    <i data-lucide="receipt" class="w-3.5 h-3.5"></i>
+                    Invoice project
+                </button>
                 <button hx-get="{% url 'invoice_create' %}?project={{ project.pk }}"
                         hx-target="#slide-over"
                         hx-swap="innerHTML"

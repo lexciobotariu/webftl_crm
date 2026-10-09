@@ -1,8 +1,8 @@
 {% with field="w-full bg-elevated border border-border-subtle rounded-control px-2.5 py-1.5 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none" label="block text-[10px] uppercase tracking-wider text-zinc-500 mb-1" %}
-<form id="doc-header" hx-post="{{ header_url }}" hx-trigger="change" hx-target="this" hx-swap="outerHTML"
+<form id="doc-header" hx-post="{{ header_url }}" hx-trigger="change" hx-include="#doc-tax" hx-target="this" hx-swap="outerHTML"
       class="bg-panel/50 border border-border-subtle rounded-card p-4 mb-6">
     {% if form.non_field_errors %}<p class="mb-3 text-xs text-error">{{ form.non_field_errors.0 }}</p>{% endif %}
-    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div>
             <label class="{{ label }}" for="doc-client">Client</label>
             <select id="doc-client" name="client" class="{{ field }}">
@@ -40,13 +40,8 @@
             {% if form.due_date.errors %}<p class="mt-1 text-xs text-error">{{ form.due_date.errors.0 }}</p>{% endif %}
         </div>
         {% endif %}
-        <div>
-            <label class="{{ label }}" for="doc-tax">Tax %</label>
-            <input id="doc-tax" type="number" name="tax_rate" step="0.01" min="0" max="100" required value="{{ form.tax_rate.value|default_if_none:'' }}" class="{{ field }} text-right">
-            {% if form.tax_rate.errors %}<p class="mt-1 text-xs text-error">{{ form.tax_rate.errors.0 }}</p>{% endif %}
-        </div>
         {% if kind == 'estimate' %}
-        <div class="col-span-2 lg:col-span-5">
+        <div class="col-span-2 lg:col-span-4">
             <label class="{{ label }}" for="doc-notes">Notes</label>
             <textarea id="doc-notes" name="notes" rows="2" placeholder="Scope, timeline, terms (optional). Printed on the estimate." class="{{ field }}">{{ form.notes.value|default_if_none:'' }}</textarea>
         </div>

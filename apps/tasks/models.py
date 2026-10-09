@@ -567,6 +567,15 @@ class TimeEntry(models.Model):
     started_at = models.DateTimeField()
     ended_at = models.DateTimeField(null=True, blank=True)
     note = models.TextField(blank=True)
+    # The invoice line this time was billed on. Removing the line (or deleting
+    # its draft) frees the time to be billed again.
+    invoice_line = models.ForeignKey(
+        'invoices.InvoiceLine',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='time_entries',
+    )
     # When the entry was logged, which is where it sits in the activity timeline;
     # ``started_at`` is the day the work was done on.
     created_at = models.DateTimeField(default=timezone.now)

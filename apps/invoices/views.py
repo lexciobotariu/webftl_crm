@@ -10,7 +10,7 @@ from apps.accounts.decorators import require_permission
 from apps.clients.models import visible_clients
 from apps.projects.models import Project
 
-from . import editor, emails
+from . import billing, editor, emails
 from .forms import InvoiceEmailForm, InvoiceForm, PaymentForm, RecurringInvoiceForm
 from .listing import PERIOD_CHOICES, STATUS_CHOICES, InvoiceFilters, filter_invoices
 from .models import InvoiceHasPayments, InvoiceLocked, RecurringInvoice, visible_invoices
@@ -409,3 +409,69 @@ def payment_delete(request, pk, payment_pk):
     payment = get_object_or_404(invoice.payments, pk=payment_pk)
     delete_payment(payment)
     return _redirect_to('invoice_detail', invoice.pk)
+
+
+@login_required
+@require_permission('access_invoices')
+@require_permission('invoices_edit')
+def invoice_add_tasks(request, pk):
+    """Bill tasks' unbilled time onto a draft: the client's tasks, or only the invoice project's."""
+    invoice = _invoice_or_404(request.user, pk)
+    refused = _sent_refusal(invoice)
+    if refused:
+        return refused
+    error = ''
+    per = billing.PER_TASK
+    if request.method == 'POST':
+        per = request.POST.get('per', billing.PER_TASK)
+        task_ids = [value for value in request.POST.getlist('task') if value.isdigit()]
+        try:
+            billing.bill_tasks(invoice, task_ids, per)
+        except InvoiceLocked:
+            return HttpResponseForbidden('This invoice has been sent.')
+        except ValidationError as exc:
+            error = _validation_message(exc)
+        else:
+            response = HttpResponse('')
+            response['HX-Refresh'] = 'true'
+            return response
+    return render(request, 'invoices/partials/add_tasks_drawer.html', {
+        'invoice': invoice,
+        'rows': billing.tasks_to_bill(invoice.client, invoice.project),
+        'per': per,
+        'per_choices': billing.PER_CHOICES,
+        'error': error,
+        'fixed_project': invoice.project if invoice.project and invoice.project.billing_type == Project.FIXED else None,
+    })
+
+
+@login_required
+@require_permission('access_invoices')
+@require_permission('invoices_create')
+def invoice_project(request, project_pk):
+    """A new draft from a project: chosen tasks' unbilled time, or what is left of a fixed price."""
+    project = get_object_or_404(
+        Project.objects.select_related('client__currency').filter(client__in=visible_clients(request.user)),
+        pk=project_pk,
+    )
+    fixed = project.billing_type == Project.FIXED
+    error = ''
+    per = billing.PER_TASK
+    if request.method == 'POST':
+        per = request.POST.get('per', billing.PER_TASK)
+        task_ids = [value for value in request.POST.getlist('task') if value.isdigit()]
+        try:
+            invoice = billing.invoice_project(project, task_ids=task_ids, per=per)
+        except ValidationError as exc:
+            error = _validation_message(exc)
+        else:
+            return _redirect_to('invoice_detail', invoice.pk)
+    return render(request, 'invoices/partials/project_invoice_drawer.html', {
+        'project': project,
+        'fixed': fixed,
+        'left': billing.fixed_price_left(project) if fixed else None,
+        'rows': [] if fixed else billing.tasks_to_bill(project.client, project),
+        'per': per,
+        'per_choices': billing.PER_CHOICES,
+        'error': error,
+    })

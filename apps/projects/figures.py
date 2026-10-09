@@ -5,7 +5,8 @@ Hours need the tasks module and follow the time page: everyone's time for
 needs the invoices module, and the billable amount of an hourly project is
 only shown to someone who sees everyone's time, since it is worked out from it.
 Amounts are in the client's currency; invoiced amounts are line totals before
-tax on sent, not cancelled invoices.
+tax on sent, not cancelled invoices. Billable time not on any invoice yet is
+shown to those who see everyone's time.
 """
 from dataclasses import dataclass
 from decimal import Decimal
@@ -32,6 +33,11 @@ class ProjectFigures:
     billable_amount_note: str = ''
     invoiced: str = ''
     invoiced_count: int = 0
+    unbilled_seconds: int = 0
+
+    @property
+    def unbilled_hours(self):
+        return _hours(self.unbilled_seconds) if self.unbilled_seconds else None
 
     @property
     def billable_hours(self):
@@ -115,4 +121,8 @@ def project_figures(user, project, tasks):
             invoices.add(line.invoice_id)
         figures.invoiced = _money(project, total)
         figures.invoiced_count = len(invoices)
+        if figures.everyones_time and project.billing_type == project.HOURLY:
+            from apps.invoices.billing import unbilled_seconds
+
+            figures.unbilled_seconds = unbilled_seconds(project)
     return figures

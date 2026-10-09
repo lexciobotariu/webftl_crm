@@ -110,13 +110,14 @@ def update_invoice(invoice, *, client, issue_date, due_date, tax_rate, project=N
         return locked
 
 
-def add_line(invoice, *, project, description, quantity, unit_price):
+def add_line(invoice, *, project, description, quantity, unit_price, details=''):
     with transaction.atomic():
         locked = Invoice.objects.select_for_update().get(pk=invoice.pk)
         line = InvoiceLine(
             invoice=locked,
             project=project,
             description=(description or '').strip(),
+            details=(details or '').strip(),
             quantity=quantity,
             unit_price=unit_price,
         )
@@ -124,12 +125,13 @@ def add_line(invoice, *, project, description, quantity, unit_price):
         return line
 
 
-def update_line(line, *, project, description, quantity, unit_price):
+def update_line(line, *, project, description, quantity, unit_price, details=''):
     with transaction.atomic():
         locked = Invoice.objects.select_for_update().get(pk=line.invoice_id)
         current = locked.lines.select_for_update().get(pk=line.pk)
         current.project = project
         current.description = (description or '').strip()
+        current.details = (details or '').strip()
         current.quantity = quantity
         current.unit_price = unit_price
         current.save()
@@ -174,6 +176,8 @@ def record_payment(invoice, *, date, amount, note=''):
 def cancel_invoice(invoice):
     """Cancel a sent invoice. It keeps its number and lines and owes nothing.
 
+    Time billed on it is freed, so it can go on a new invoice.
+
     A draft is deleted rather than cancelled. An invoice with payments is
     refused: remove the payments first, so money is never silently written off.
     Cancelling cannot be undone.
@@ -188,6 +192,9 @@ def cancel_invoice(invoice):
             raise ValidationError('Remove the payments before cancelling this invoice.')
         locked.cancelled_at = timezone.now()
         locked.save(update_fields=['cancelled_at', 'updated_at'])
+        from .billing import release_time
+
+        release_time(locked)
         return locked
 
 

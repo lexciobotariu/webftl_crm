@@ -94,24 +94,26 @@ def _line_description(estimate, project, description):
     return description
 
 
-def add_estimate_line(estimate, *, project, description, quantity, unit_price):
+def add_estimate_line(estimate, *, project, description, quantity, unit_price, details=''):
     with transaction.atomic():
         locked = _locked_draft(estimate)
         return EstimateLine.objects.create(
             estimate=locked,
             project=project,
             description=_line_description(locked, project, description),
+            details=(details or '').strip(),
             quantity=quantity,
             unit_price=unit_price,
         )
 
 
-def update_estimate_line(line, *, project, description, quantity, unit_price):
+def update_estimate_line(line, *, project, description, quantity, unit_price, details=''):
     with transaction.atomic():
         locked = _locked_draft(line.estimate)
         current = locked.lines.select_for_update().get(pk=line.pk)
         current.project = project
         current.description = _line_description(locked, project, description)
+        current.details = (details or '').strip()
         current.quantity = quantity
         current.unit_price = unit_price
         current.save()
@@ -173,6 +175,7 @@ def convert_to_invoice(estimate, today=None):
                 invoice,
                 project=line.project,
                 description=line.description,
+                details=line.details,
                 quantity=line.quantity,
                 unit_price=line.unit_price,
             )

@@ -1,4 +1,6 @@
-{% comment %}Billable or not. Time on a billable task counts toward the billable total on the time page.{% endcomment %}
+{% comment %}Billable or not. Time on a billable task counts toward the billable total on the time page. The invoices its time is billed on follow.{% endcomment %}
+{% load invoice_format %}{% task_invoices task as billed_on %}
+<div class="flex items-center gap-2 flex-wrap">
 {% if can_edit %}
 <button type="button" role="switch" aria-checked="{% if task.billable %}true{% else %}false{% endif %}"
         hx-post="{% url 'task_update_billable' task.pk %}" hx-vals='{"billable": "{% if task.billable %}0{% else %}1{% endif %}"}'
@@ -12,3 +14,7 @@
 {% else %}
 <span class="px-2 py-1 text-sm text-zinc-300">{% if task.billable %}Billable{% else %}Non-billable{% endif %}</span>
 {% endif %}
+{% for invoice in billed_on %}
+{% if perms_map.access_invoices %}<a href="{% url 'invoice_detail' invoice.pk %}" class="px-1.5 py-0.5 text-[10px] rounded bg-success/10 text-success border border-success/20 hover:bg-success/20">Invoiced {{ invoice.number_label }}</a>{% else %}<span class="px-1.5 py-0.5 text-[10px] rounded bg-success/10 text-success border border-success/20">Invoiced {{ invoice.number_label }}</span>{% endif %}
+{% endfor %}
+</div>

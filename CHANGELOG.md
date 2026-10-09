@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.32.0] - 2026-10-09
+
+### Features
+- **Add tasks** on a draft invoice lists the tasks with billable time not yet invoiced (only the invoice project's tasks when it has one, otherwise all of the client's hourly projects), all ticked. Choose **one line per task** (task title, hours, the project's hourly rate) or **one line per project** (hours added up). A project without an hourly rate gets a price of 0 to fill in
+- Billed time is linked to its line, so it is never billed twice. Removing the line, deleting the draft or cancelling the invoice frees it again
+- Tasks show **Invoiced INV-x** next to Billable, and each Work log entry shows the invoice it is on. Time on a sent invoice can no longer be changed or deleted
+- **Invoice project** on the project Overview creates a draft for the project's client, with the project set and due in 30 days. Hourly projects: pick tasks as above. Fixed price: one line for what is left of the price (the fixed price less what is already on its invoices, drafts included)
+- A new draft from a project starts with the tax rate of the client's latest invoice
+- The project's Time and money card shows billable hours not invoiced yet
+
+### Changed
+- **Invoice and estimate editor:** the new line row is now at the top of the lines. Each line has an **Item** and an optional **Description** (longer text, printed under the item on the PDF). **Tax %** moved from the header to the totals, next to Subtotal and Tax
+
+### Migrations
+- `invoices.0008` adds the task to invoice lines; `tasks.0026` links time entries to the invoice line that bills them; `invoices.0009` adds the description text to invoice and estimate lines
+
 ## [0.31.0] - 2026-10-09
 
 ### Features

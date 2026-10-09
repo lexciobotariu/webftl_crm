@@ -245,7 +245,17 @@ class InvoiceLine(models.Model):
         blank=True,
         related_name='invoice_lines',
     )
+    # A line billing one task's time. Its time entries point back at the line.
+    task = models.ForeignKey(
+        'tasks.Task',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='invoice_lines',
+    )
     description = models.CharField(max_length=255, blank=True)
+    # Longer text under the item, printed on the document.
+    details = models.TextField(blank=True)
     quantity = models.DecimalField(max_digits=10, decimal_places=2)
     unit_price = models.DecimalField(max_digits=12, decimal_places=2)
 
@@ -511,6 +521,7 @@ class EstimateLine(models.Model):
         'projects.Project', on_delete=models.SET_NULL, null=True, blank=True, related_name='estimate_lines',
     )
     description = models.CharField(max_length=255, blank=True)
+    details = models.TextField(blank=True)
     quantity = models.DecimalField(max_digits=10, decimal_places=2)
     unit_price = models.DecimalField(max_digits=12, decimal_places=2)
 
