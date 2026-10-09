@@ -8,22 +8,21 @@ from django.views.decorators.http import require_POST
 
 from apps.accounts.decorators import require_permission
 from apps.clients.models import visible_clients
+from apps.projects.models import Project
 
-from . import emails
-from .forms import InvoiceEmailForm, InvoiceForm, InvoiceLineForm, PaymentForm, RecurringInvoiceForm
+from . import editor, emails
+from .forms import InvoiceEmailForm, InvoiceForm, PaymentForm, RecurringInvoiceForm
 from .listing import PERIOD_CHOICES, STATUS_CHOICES, InvoiceFilters, filter_invoices
 from .models import InvoiceHasPayments, InvoiceLocked, RecurringInvoice, visible_invoices
 from .pdf import invoice_pdf, invoice_pdf_filename
 from .recurring import save_recurring, suggested_next_date
 from .services import (
-    add_line,
     cancel_invoice,
     create_invoice,
     delete_payment,
     mark_sent,
     record_payment,
     update_invoice,
-    update_line,
 )
 
 INVOICES_PER_PAGE = 25
@@ -72,6 +71,8 @@ def invoice_list(request):
         'client_choices': visible_clients(request.user).filter(
             pk__in=visible.values('client_id')
         ).order_by('name'),
+        'project_choices': Project.objects.filter(pk__in=visible.values('project_id')).select_related('client')
+        .order_by('client__name', 'name'),
     })
 
 
@@ -85,6 +86,11 @@ def invoice_create(request):
         match = visible_clients(request.user).filter(pk=raw_client).first()
         if match is not None:
             initial['client'] = match.pk
+    raw_project = request.GET.get('project', '')
+    if request.method != 'POST' and raw_project.isdigit():
+        project = Project.objects.filter(pk=raw_project, client__in=visible_clients(request.user)).first()
+        if project is not None:
+            initial.update(client=project.client_id, project=project.pk)
 
     if request.method == 'POST':
         form = InvoiceForm(request.POST, user=request.user)
@@ -92,6 +98,7 @@ def invoice_create(request):
             try:
                 invoice = create_invoice(
                     client=form.cleaned_data['client'],
+                    project=form.cleaned_data['project'],
                     issue_date=form.cleaned_data['issue_date'],
                     due_date=form.cleaned_data['due_date'],
                     tax_rate=form.cleaned_data['tax_rate'],
@@ -113,7 +120,13 @@ def invoice_create(request):
 @require_permission('access_invoices')
 def invoice_detail(request, pk):
     invoice = _invoice_or_404(request.user, pk)
+    context = {}
+    if invoice.is_draft and request.user.has_app_permission('invoices_edit'):
+        context = editor.editor_context(
+            invoice, editor.INVOICE, editor=True, form=editor.header_form(request.user, invoice, editor.INVOICE),
+        )
     return render(request, 'invoices/invoice_detail.html', {
+        **context,
         'invoice': invoice,
         'can_email': emails.can_email(invoice, emails.INVOICE),
         'can_remind': emails.can_email(invoice, emails.REMINDER),
@@ -132,12 +145,14 @@ def invoice_edit(request, pk):
         return refused
 
     if request.method == 'POST':
-        form = InvoiceForm(request.POST, user=request.user, current_client_id=invoice.client_id)
+        form = InvoiceForm(request.POST, user=request.user, current_client_id=invoice.client_id,
+                           current_project_id=invoice.project_id)
         if form.is_valid():
             try:
                 update_invoice(
                     invoice,
                     client=form.cleaned_data['client'],
+                    project=form.cleaned_data['project'],
                     issue_date=form.cleaned_data['issue_date'],
                     due_date=form.cleaned_data['due_date'],
                     tax_rate=form.cleaned_data['tax_rate'],
@@ -152,8 +167,10 @@ def invoice_edit(request, pk):
         form = InvoiceForm(
             user=request.user,
             current_client_id=invoice.client_id,
+            current_project_id=invoice.project_id,
             initial={
                 'client': invoice.client_id,
+                'project': invoice.project_id,
                 'issue_date': invoice.issue_date,
                 'due_date': invoice.due_date,
                 'tax_rate': invoice.tax_rate,
@@ -322,66 +339,25 @@ def invoice_recurring_stop(request, pk):
 @login_required
 @require_permission('access_invoices')
 @require_permission('invoices_edit')
-def line_create(request, pk):
-    invoice = _invoice_or_404(request.user, pk)
-    refused = _sent_refusal(invoice)
-    if refused:
-        return refused
-    return _line_form(request, invoice, line=None)
+@require_POST
+def invoice_header(request, pk):
+    return editor.header(request, editor.INVOICE, pk)
 
 
 @login_required
 @require_permission('access_invoices')
 @require_permission('invoices_edit')
+@require_POST
+def line_create(request, pk):
+    return editor.line_create(request, editor.INVOICE, pk)
+
+
+@login_required
+@require_permission('access_invoices')
+@require_permission('invoices_edit')
+@require_POST
 def line_edit(request, pk, line_pk):
-    invoice = _invoice_or_404(request.user, pk)
-    refused = _sent_refusal(invoice)
-    if refused:
-        return refused
-    line = get_object_or_404(invoice.lines, pk=line_pk)
-    return _line_form(request, invoice, line=line)
-
-
-def _line_form(request, invoice, *, line):
-    current_project_id = line.project_id if line is not None else None
-    if request.method == 'POST':
-        form = InvoiceLineForm(request.POST, invoice=invoice, current_project_id=current_project_id)
-        if form.is_valid():
-            payload = {
-                'project': form.cleaned_data['project'],
-                'description': form.cleaned_data['description'],
-                'quantity': form.cleaned_data['quantity'],
-                'unit_price': form.cleaned_data['unit_price'],
-            }
-            try:
-                if line is None:
-                    add_line(invoice, **payload)
-                else:
-                    update_line(line, **payload)
-            except InvoiceLocked:
-                return HttpResponseForbidden('This invoice has been sent.')
-            except ValidationError as exc:
-                form.add_error(None, _validation_message(exc))
-            else:
-                return _redirect_to('invoice_detail', invoice.pk)
-    elif line is None:
-        form = InvoiceLineForm(invoice=invoice)
-    else:
-        form = InvoiceLineForm(
-            invoice=invoice,
-            current_project_id=current_project_id,
-            initial={
-                'project': line.project_id,
-                'description': line.description,
-                'quantity': line.quantity,
-                'unit_price': line.unit_price,
-            },
-        )
-    return render(request, 'invoices/partials/line_drawer.html', {
-        'form': form,
-        'invoice': invoice,
-        'line': line,
-    })
+    return editor.line_edit(request, editor.INVOICE, pk, line_pk)
 
 
 @login_required
@@ -389,16 +365,7 @@ def _line_form(request, invoice, *, line):
 @require_permission('invoices_edit')
 @require_POST
 def line_delete(request, pk, line_pk):
-    invoice = _invoice_or_404(request.user, pk)
-    refused = _sent_refusal(invoice)
-    if refused:
-        return refused
-    line = get_object_or_404(invoice.lines, pk=line_pk)
-    try:
-        line.delete()
-    except InvoiceLocked:
-        return HttpResponseForbidden('This invoice has been sent.')
-    return _redirect_to('invoice_detail', invoice.pk)
+    return editor.line_delete(request, editor.INVOICE, pk, line_pk)
 
 
 @login_required

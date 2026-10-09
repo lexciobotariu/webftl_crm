@@ -19,10 +19,10 @@
         {% csrf_token %}
         {% include "components/form_error_banner.html" %}
 
-        <div class="space-y-4">
+        <div class="space-y-4" x-data="{ client: '{{ form.client.value|default_if_none:'' }}' }">
             <div>
                 <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Client</label>
-                <select name="client" required
+                <select name="client" required x-model="client" @change="$refs.project.value = ''"
                         class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
                     <option value="">Select a client</option>
                     {% for choice in form.client.field.queryset %}
@@ -33,6 +33,20 @@
                 </select>
                 {% if form.client.errors %}
                 <p class="mt-1 text-xs text-error">{{ form.client.errors.0 }}</p>
+                {% endif %}
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Project <span class="normal-case text-zinc-600">(optional)</span></label>
+                <select name="project" x-ref="project"
+                        class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
+                    <option value="">No project</option>
+                    {% for choice in form.project.field.queryset %}
+                    <option value="{{ choice.pk }}" x-bind:hidden="client !== '{{ choice.client_id }}'" {% if form.project.value|stringformat:"s" == choice.pk|stringformat:"s" %}selected{% endif %}>{{ choice.name }}</option>
+                    {% endfor %}
+                </select>
+                <p class="mt-1 text-xs text-zinc-600">Narrows "Add tasks" to this project and is printed on the document.</p>
+                {% if form.project.errors %}
+                <p class="mt-1 text-xs text-error">{{ form.project.errors.0 }}</p>
                 {% endif %}
             </div>
             <div>

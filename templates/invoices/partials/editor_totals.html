@@ -1,0 +1,14 @@
+<div id="doc-totals" {% if oob_totals %}hx-swap-oob="true"{% endif %} class="border-t border-border-subtle px-4 py-3 space-y-1">
+    <div class="flex justify-end gap-8 text-sm">
+        <span class="text-zinc-500">Subtotal</span>
+        <span class="text-zinc-200 w-28 text-right tabular-nums">{% include "invoices/partials/money.html" with amount=doc.subtotal %}</span>
+    </div>
+    <div class="flex justify-end gap-8 text-sm">
+        <span class="text-zinc-500">Tax {{ doc.tax_rate|floatformat:2 }}%</span>
+        <span class="text-zinc-200 w-28 text-right tabular-nums">{% include "invoices/partials/money.html" with amount=doc.tax_amount %}</span>
+    </div>
+    <div class="flex justify-end gap-8 text-sm font-medium">
+        <span class="text-zinc-300">Total</span>
+        <span class="text-zinc-100 w-28 text-right tabular-nums">{% include "invoices/partials/money.html" with amount=doc.total %}</span>
+    </div>
+</div>

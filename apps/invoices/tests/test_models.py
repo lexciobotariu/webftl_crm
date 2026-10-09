@@ -54,7 +54,7 @@ class TestTotals:
         add_line(
             invoice,
             project=project,
-            description='ignored',
+            description='Design work',
             quantity=Decimal('2'),
             unit_price=Decimal('100.00'),
         )
@@ -68,7 +68,7 @@ class TestTotals:
         invoice.refresh_from_db()
 
         project_line = invoice.lines.get(project=project)
-        assert project_line.description == 'Website rebuild'
+        assert project_line.description == 'Design work'
         assert invoice.lines.get(project=None).description == 'Hosting'
         assert invoice.subtotal == Decimal('250.50')
         assert invoice.tax_amount == Decimal('25.05')

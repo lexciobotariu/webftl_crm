@@ -17,6 +17,12 @@
                 <option value="">All clients</option>
                 {% for c in client_choices %}<option value="{{ c.pk }}" {% if filters.client_id == c.pk %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
             </select>
+            {% if project_choices %}
+            <select name="project" aria-label="Project" onchange="this.form.submit()" class="bg-elevated border border-border-subtle rounded-control px-2 py-1.5 text-xs text-zinc-200 focus:border-border-strong focus:outline-none max-w-[12rem]">
+                <option value="">All projects</option>
+                {% for p in project_choices %}<option value="{{ p.pk }}" {% if filters.project_id == p.pk %}selected{% endif %}>{{ p.name }} · {{ p.client.name }}</option>{% endfor %}
+            </select>
+            {% endif %}
             <select name="period" aria-label="Issue date" onchange="this.form.submit()" class="bg-elevated border border-border-subtle rounded-control px-2 py-1.5 text-xs text-zinc-200 focus:border-border-strong focus:outline-none">
                 {% for value, label in period_choices %}<option value="{{ value }}" {% if filters.period == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
             </select>

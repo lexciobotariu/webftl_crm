@@ -6,6 +6,7 @@ urlpatterns = [
     path('', views.estimate_list, name='estimate_list'),
     path('create/', views.estimate_create, name='estimate_create'),
     path('<int:pk>/', views.estimate_detail, name='estimate_detail'),
+    path('<int:pk>/header/', views.estimate_header, name='estimate_header'),
     path('<int:pk>/edit/', views.estimate_edit, name='estimate_edit'),
     path('<int:pk>/delete/', views.estimate_delete, name='estimate_delete'),
     path('<int:pk>/send/', views.estimate_mark_sent, name='estimate_mark_sent'),

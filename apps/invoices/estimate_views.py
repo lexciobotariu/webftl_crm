@@ -15,19 +15,16 @@ from django.views.decorators.http import require_POST
 from apps.accounts.decorators import require_permission
 from apps.clients.models import visible_clients
 
-from . import emails
+from . import editor, emails
 from .estimates import (
     EstimateLocked,
-    add_estimate_line,
     convert_to_invoice,
     create_estimate,
-    delete_estimate_line,
     mark_estimate_sent,
     record_answer,
     update_estimate,
-    update_estimate_line,
 )
-from .forms import EstimateForm, InvoiceEmailForm, InvoiceLineForm
+from .forms import EstimateForm, InvoiceEmailForm
 from .pdf import estimate_pdf, invoice_pdf_filename
 from .views import _redirect_to, _validation_message
 
@@ -94,6 +91,13 @@ def estimate_create(request):
         match = visible_clients(request.user).filter(pk=raw_client).first()
         if match is not None:
             initial['client'] = match.pk
+    raw_project = request.GET.get('project', '')
+    if request.method != 'POST' and raw_project.isdigit():
+        from apps.projects.models import Project
+
+        project = Project.objects.filter(pk=raw_project, client__in=visible_clients(request.user)).first()
+        if project is not None:
+            initial.update(client=project.client_id, project=project.pk)
 
     if request.method == 'POST':
         form = EstimateForm(request.POST, user=request.user)
@@ -101,6 +105,7 @@ def estimate_create(request):
             try:
                 estimate = create_estimate(
                     client=form.cleaned_data['client'],
+                    project=form.cleaned_data['project'],
                     issue_date=form.cleaned_data['issue_date'],
                     valid_until=form.cleaned_data['valid_until'],
                     tax_rate=form.cleaned_data['tax_rate'],
@@ -119,7 +124,14 @@ def estimate_create(request):
 @require_permission('access_invoices')
 def estimate_detail(request, pk):
     estimate = _estimate_or_404(request.user, pk)
+    context = {}
+    if estimate.is_draft and request.user.has_app_permission('invoices_edit'):
+        context = editor.editor_context(
+            estimate, editor.ESTIMATE, editor=True,
+            form=editor.header_form(request.user, estimate, editor.ESTIMATE),
+        )
     return render(request, 'invoices/estimate_detail.html', {
+        **context,
         'estimate': estimate,
         'invoice': estimate,  # the money partial reads the currency from ``invoice``
         'can_email': emails.can_email(estimate, emails.ESTIMATE),
@@ -136,11 +148,12 @@ def estimate_edit(request, pk):
     if refused:
         return refused
     if request.method == 'POST':
-        form = EstimateForm(request.POST, user=request.user, current_client_id=estimate.client_id)
+        form = EstimateForm(request.POST, user=request.user, current_client_id=estimate.client_id,
+                            current_project_id=estimate.project_id)
         if form.is_valid():
             try:
                 update_estimate(estimate, **{key: form.cleaned_data[key] for key in (
-                    'client', 'issue_date', 'valid_until', 'tax_rate', 'notes')})
+                    'client', 'project', 'issue_date', 'valid_until', 'tax_rate', 'notes')})
             except EstimateLocked:
                 return HttpResponseForbidden('This estimate has been sent.')
             except ValidationError as exc:
@@ -148,8 +161,10 @@ def estimate_edit(request, pk):
             else:
                 return _redirect_to('estimate_detail', estimate.pk)
     else:
-        form = EstimateForm(user=request.user, current_client_id=estimate.client_id, initial={
+        form = EstimateForm(user=request.user, current_client_id=estimate.client_id,
+                            current_project_id=estimate.project_id, initial={
             'client': estimate.client_id,
+            'project': estimate.project_id,
             'issue_date': estimate.issue_date,
             'valid_until': estimate.valid_until,
             'tax_rate': estimate.tax_rate,
@@ -172,59 +187,28 @@ def estimate_delete(request, pk):
     return _redirect_to('estimate_list')
 
 
-def _line_form(request, estimate, *, line):
-    action_url = (
-        reverse('estimate_line_edit', args=[estimate.pk, line.pk]) if line
-        else reverse('estimate_line_create', args=[estimate.pk])
-    )
-    current_project_id = line.project_id if line else None
-    if request.method == 'POST':
-        form = InvoiceLineForm(request.POST, invoice=estimate, current_project_id=current_project_id)
-        if form.is_valid():
-            payload = {key: form.cleaned_data[key] for key in ('project', 'description', 'quantity', 'unit_price')}
-            try:
-                if line is None:
-                    add_estimate_line(estimate, **payload)
-                else:
-                    update_estimate_line(line, **payload)
-            except EstimateLocked:
-                return HttpResponseForbidden('This estimate has been sent.')
-            except ValidationError as exc:
-                _form_errors(form, exc)
-            else:
-                return _redirect_to('estimate_detail', estimate.pk)
-    elif line:
-        form = InvoiceLineForm(invoice=estimate, current_project_id=current_project_id, initial={
-            'project': line.project_id,
-            'description': '' if line.project_id else line.description,
-            'quantity': line.quantity,
-            'unit_price': line.unit_price,
-        })
-    else:
-        form = InvoiceLineForm(invoice=estimate, initial={'quantity': 1})
-    return render(request, 'invoices/partials/line_drawer.html', {
-        'form': form,
-        'invoice': estimate,
-        'line': line,
-        'action_url': action_url,
-    })
+@login_required
+@require_permission('access_invoices')
+@require_permission('invoices_edit')
+@require_POST
+def estimate_header(request, pk):
+    return editor.header(request, editor.ESTIMATE, pk)
 
 
 @login_required
 @require_permission('access_invoices')
 @require_permission('invoices_edit')
+@require_POST
 def estimate_line_create(request, pk):
-    estimate = _estimate_or_404(request.user, pk)
-    return _draft_refusal(estimate) or _line_form(request, estimate, line=None)
+    return editor.line_create(request, editor.ESTIMATE, pk)
 
 
 @login_required
 @require_permission('access_invoices')
 @require_permission('invoices_edit')
+@require_POST
 def estimate_line_edit(request, pk, line_pk):
-    estimate = _estimate_or_404(request.user, pk)
-    line = get_object_or_404(estimate.lines, pk=line_pk)
-    return _draft_refusal(estimate) or _line_form(request, estimate, line=line)
+    return editor.line_edit(request, editor.ESTIMATE, pk, line_pk)
 
 
 @login_required
@@ -232,13 +216,7 @@ def estimate_line_edit(request, pk, line_pk):
 @require_permission('invoices_edit')
 @require_POST
 def estimate_line_delete(request, pk, line_pk):
-    estimate = _estimate_or_404(request.user, pk)
-    line = get_object_or_404(estimate.lines, pk=line_pk)
-    try:
-        delete_estimate_line(line)
-    except EstimateLocked:
-        return HttpResponseForbidden('This estimate has been sent.')
-    return _redirect_to('estimate_detail', estimate.pk)
+    return editor.line_delete(request, editor.ESTIMATE, pk, line_pk)
 
 
 @login_required

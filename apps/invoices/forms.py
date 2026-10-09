@@ -45,7 +45,9 @@ class InvoiceForm(forms.Form):
         initial=Decimal('0.00'),
     )
 
-    def __init__(self, *args, user, current_client_id=None, **kwargs):
+    project = forms.ModelChoiceField(queryset=Project.objects.none(), required=False)
+
+    def __init__(self, *args, user, current_client_id=None, current_project_id=None, **kwargs):
         super().__init__(*args, **kwargs)
         # Archived clients are not offered, except the one a draft already has.
         clients = visible_clients(user).filter(
@@ -53,6 +55,11 @@ class InvoiceForm(forms.Form):
         )
         self.fields['client'].queryset = clients.order_by('name')
         self.fields['client'].empty_label = 'Select a client'
+        # Open projects of those clients, plus the one the document already has.
+        self.fields['project'].queryset = Project.objects.filter(client__in=clients).filter(
+            Q(status__in=Project.OPEN_STATUSES) | Q(pk=current_project_id)
+        ).order_by('name')
+        self.fields['project'].empty_label = 'No project'
         if not self.is_bound and 'issue_date' not in self.initial:
             today = timezone.localdate()
             self.initial.setdefault('issue_date', today)
@@ -62,44 +69,11 @@ class InvoiceForm(forms.Form):
     def clean_tax_rate(self):
         return money(self.cleaned_data['tax_rate'])
 
-
-class InvoiceLineForm(forms.Form):
-    project = forms.ModelChoiceField(queryset=Project.objects.none(), required=False)
-    description = forms.CharField(max_length=255, required=False)
-    quantity = forms.DecimalField(
-        min_value=Decimal('0.01'),
-        decimal_places=2,
-        max_digits=10,
-    )
-    unit_price = forms.DecimalField(
-        min_value=Decimal('0'),
-        decimal_places=2,
-        max_digits=12,
-    )
-
-    def __init__(self, *args, invoice, current_project_id=None, **kwargs):
-        self.invoice = invoice
-        super().__init__(*args, **kwargs)
-        # Open projects only, plus the one this line already names: a project
-        # finished before its invoice is written keeps its line.
-        offered = Q(status__in=Project.OPEN_STATUSES)
-        if current_project_id:
-            offered |= Q(pk=current_project_id)
-        self.fields['project'].queryset = invoice.client.projects.filter(offered).order_by('name')
-        self.fields['project'].empty_label = 'Free-text line'
-
     def clean(self):
         cleaned = super().clean()
-        project = cleaned.get('project')
-        description = (cleaned.get('description') or '').strip()
-        if project and project.client_id != self.invoice.client_id:
+        client, project = cleaned.get('client'), cleaned.get('project')
+        if client and project and project.client_id != client.pk:
             self.add_error('project', 'Choose a project that belongs to this client.')
-        elif project:
-            cleaned['description'] = project.name
-        elif not description:
-            self.add_error('description', 'Enter a description for a free-text line.')
-        else:
-            cleaned['description'] = description
         return cleaned
 
 

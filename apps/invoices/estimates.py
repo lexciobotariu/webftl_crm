@@ -9,6 +9,7 @@ from .models import Estimate, EstimateLine, money
 from .services import (
     add_line,
     bill_to_snapshot,
+    check_project,
     company_snapshot,
     create_invoice,
     currency_snapshot,
@@ -32,14 +33,16 @@ def _check_dates(issue_date, valid_until):
         raise ValidationError({'valid_until': 'Valid until cannot be before the issue date.'})
 
 
-def create_estimate(*, client, issue_date, valid_until, tax_rate, notes=''):
+def create_estimate(*, client, issue_date, valid_until, tax_rate, notes='', project=None):
     _check_dates(issue_date, valid_until)
+    check_project(client, project)
     snapshot = {**currency_snapshot(client), **company_snapshot(), **bill_to_snapshot(client)}
     for _ in range(5):
         try:
             with transaction.atomic():
                 return Estimate.objects.create(
                     client=client,
+                    project=project,
                     number=_next_number(),
                     issue_date=issue_date,
                     valid_until=valid_until,
@@ -59,9 +62,10 @@ def _locked_draft(estimate):
     return locked
 
 
-def update_estimate(estimate, *, client, issue_date, valid_until, tax_rate, notes=''):
+def update_estimate(estimate, *, client, issue_date, valid_until, tax_rate, notes='', project=None):
     """Change a draft. A new client refreshes bill-to and currency."""
     _check_dates(issue_date, valid_until)
+    check_project(client, project)
     with transaction.atomic():
         locked = _locked_draft(estimate)
         if client.pk != locked.client_id:
@@ -70,6 +74,7 @@ def update_estimate(estimate, *, client, issue_date, valid_until, tax_rate, note
             locked.client = client
             for key, value in {**bill_to_snapshot(client), **currency_snapshot(client)}.items():
                 setattr(locked, key, value)
+        locked.project = project
         locked.issue_date = issue_date
         locked.valid_until = valid_until
         locked.tax_rate = money(tax_rate)
@@ -79,11 +84,11 @@ def update_estimate(estimate, *, client, issue_date, valid_until, tax_rate, note
 
 
 def _line_description(estimate, project, description):
+    description = (description or '').strip()
     if project is not None:
         if project.client_id != estimate.client_id:
             raise ValidationError({'project': 'Choose a project that belongs to this client.'})
-        return project.name
-    description = (description or '').strip()
+        return description or project.name
     if not description:
         raise ValidationError({'description': 'Enter a description for a free-text line.'})
     return description
@@ -161,6 +166,7 @@ def convert_to_invoice(estimate, today=None):
             issue_date=today,
             due_date=today + timedelta(days=INVOICE_PAYMENT_DAYS),
             tax_rate=locked.tax_rate,
+            project=locked.project,
         )
         for line in locked.lines.all():
             add_line(

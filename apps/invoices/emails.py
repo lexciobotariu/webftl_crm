@@ -68,6 +68,7 @@ def default_message(invoice, kind):
             f'Please find attached estimate {invoice.number_label}.',
             '',
             f'Estimate: {invoice.number_label}',
+            *([f'Project: {invoice.project.name}'] if invoice.project_id else []),
             f'Total: {_money(invoice, invoice.total)}',
             f'Valid until: {valid}',
             '',
@@ -90,6 +91,7 @@ def default_message(invoice, kind):
             opening,
             '',
             f'Invoice: {invoice.number_label}',
+            *([f'Project: {invoice.project.name}'] if invoice.project_id else []),
             f'Total: {_money(invoice, invoice.total)}',
         ]
         if invoice.amount_paid > 0:

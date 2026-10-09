@@ -1,0 +1,58 @@
+{% with field="w-full bg-elevated border border-border-subtle rounded-control px-2.5 py-1.5 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none" label="block text-[10px] uppercase tracking-wider text-zinc-500 mb-1" %}
+<form id="doc-header" hx-post="{{ header_url }}" hx-trigger="change" hx-target="this" hx-swap="outerHTML"
+      class="bg-panel/50 border border-border-subtle rounded-card p-4 mb-6">
+    {% if form.non_field_errors %}<p class="mb-3 text-xs text-error">{{ form.non_field_errors.0 }}</p>{% endif %}
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <div>
+            <label class="{{ label }}" for="doc-client">Client</label>
+            <select id="doc-client" name="client" class="{{ field }}">
+                {% for choice in form.client.field.queryset %}
+                <option value="{{ choice.pk }}" {% if form.client.value|stringformat:"s" == choice.pk|stringformat:"s" %}selected{% endif %}>{{ choice.name }}</option>
+                {% endfor %}
+            </select>
+            {% if form.client.errors %}<p class="mt-1 text-xs text-error">{{ form.client.errors.0 }}</p>{% endif %}
+        </div>
+        <div>
+            <label class="{{ label }}" for="doc-project">Project</label>
+            <select id="doc-project" name="project" class="{{ field }}">
+                <option value="">No project</option>
+                {% for choice in form.project.field.queryset %}{% if choice.client_id == doc.client_id %}
+                <option value="{{ choice.pk }}" {% if form.project.value|stringformat:"s" == choice.pk|stringformat:"s" %}selected{% endif %}>{{ choice.name }}</option>
+                {% endif %}{% endfor %}
+            </select>
+            {% if form.project.errors %}<p class="mt-1 text-xs text-error">{{ form.project.errors.0 }}</p>{% endif %}
+        </div>
+        <div>
+            <label class="{{ label }}" for="doc-issue">Issued</label>
+            <input id="doc-issue" type="date" name="issue_date" value="{{ form.issue_date.value|date:'Y-m-d'|default:form.issue_date.value }}" required class="{{ field }}">
+            {% if form.issue_date.errors %}<p class="mt-1 text-xs text-error">{{ form.issue_date.errors.0 }}</p>{% endif %}
+        </div>
+        {% if kind == 'estimate' %}
+        <div>
+            <label class="{{ label }}" for="doc-valid">Valid until</label>
+            <input id="doc-valid" type="date" name="valid_until" value="{{ form.valid_until.value|date:'Y-m-d'|default:form.valid_until.value }}" required class="{{ field }}">
+            {% if form.valid_until.errors %}<p class="mt-1 text-xs text-error">{{ form.valid_until.errors.0 }}</p>{% endif %}
+        </div>
+        {% else %}
+        <div>
+            <label class="{{ label }}" for="doc-due">Due</label>
+            <input id="doc-due" type="date" name="due_date" value="{{ form.due_date.value|date:'Y-m-d'|default:form.due_date.value }}" required class="{{ field }}">
+            {% if form.due_date.errors %}<p class="mt-1 text-xs text-error">{{ form.due_date.errors.0 }}</p>{% endif %}
+        </div>
+        {% endif %}
+        <div>
+            <label class="{{ label }}" for="doc-tax">Tax %</label>
+            <input id="doc-tax" type="number" name="tax_rate" step="0.01" min="0" max="100" required value="{{ form.tax_rate.value|default_if_none:'' }}" class="{{ field }} text-right">
+            {% if form.tax_rate.errors %}<p class="mt-1 text-xs text-error">{{ form.tax_rate.errors.0 }}</p>{% endif %}
+        </div>
+        {% if kind == 'estimate' %}
+        <div class="col-span-2 lg:col-span-5">
+            <label class="{{ label }}" for="doc-notes">Notes</label>
+            <textarea id="doc-notes" name="notes" rows="2" placeholder="Scope, timeline, terms (optional). Printed on the estimate." class="{{ field }}">{{ form.notes.value|default_if_none:'' }}</textarea>
+        </div>
+        {% endif %}
+    </div>
+    <p class="mt-3 text-xs text-zinc-600">{% if kind == 'estimate' %}Prepared for {{ doc.bill_to_name }}{% if doc.bill_to_email %} · {{ doc.bill_to_email }}{% endif %}. {% endif %}Changes are saved as you make them.</p>
+</form>
+{% if oob_totals %}{% include "invoices/partials/editor_totals.html" %}{% endif %}
+{% endwith %}
