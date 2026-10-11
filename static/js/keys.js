@@ -202,6 +202,85 @@
         if (event.persisted && isPaletteOpen()) closePalette();
     });
 
+    // --- Keyboard shortcuts list ---------------------------------------------------
+    // "?" outside a text field, the sidebar's "Shortcuts" button or the Inbox "?" open
+    // #shortcuts (components/shortcuts_dialog.html). The sections for the page you are
+    // on move to the top and say "This page".
+    const shortcuts = () => document.getElementById('shortcuts');
+    let shortcutsReturn = null;
+    window.isShortcutsOpen = () => !!shortcuts() && !shortcuts().hidden;
+
+    function scopesHere() {
+        const here = [];
+        const drawer = document.getElementById('slide-over');
+        if (drawer && !drawer.classList.contains('hidden')) here.push('writing');
+        if (document.getElementById('inbox')) here.push('inbox');
+        if (document.getElementById('task-view')) here.push('tasks');
+        if (document.getElementById('doc-lines') && !here.includes('writing')) here.push('writing');
+        return here;
+    }
+
+    window.showShortcuts = function () {
+        const dialog = shortcuts();
+        if (!dialog || window.isShortcutsOpen()) return;
+        const here = scopesHere();
+        const container = dialog.querySelector('[data-shortcuts-sections]');
+        const sections = Array.from(container.querySelectorAll('[data-shortcuts-scope]'));
+        // The page's own sections first, in the order above, then the rest as written.
+        const rank = (el) => {
+            const at = here.indexOf(el.dataset.shortcutsScope);
+            return at === -1 ? here.length + sections.indexOf(el) : at;
+        };
+        sections.slice().sort((a, b) => rank(a) - rank(b)).forEach((el) => container.appendChild(el));
+        sections.forEach((el) => {
+            const tag = el.querySelector('[data-shortcuts-here]');
+            if (tag) tag.hidden = !here.includes(el.dataset.shortcutsScope);
+        });
+        container.scrollTop = 0;
+        shortcutsReturn = document.activeElement;
+        dialog.hidden = false;
+        // The list takes focus so the arrow keys scroll it.
+        container.focus();
+    };
+
+    function hideShortcuts() {
+        shortcuts().hidden = true;
+        const back = shortcutsReturn && shortcutsReturn.isConnected ? shortcutsReturn : null;
+        shortcutsReturn = null;
+        if (back && back !== document.body) back.focus({ preventScroll: true });
+    }
+
+    layers.help = function () {
+        if (!window.isShortcutsOpen()) return false;
+        hideShortcuts();
+        return true;
+    };
+
+    const typingIn = (el) => !!el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
+    document.addEventListener('keydown', function (event) {
+        if (event.key !== '?' || event.defaultPrevented || event.isComposing || event.repeat) return;
+        if (event.ctrlKey || event.metaKey || event.altKey || typingIn(event.target)) return;
+        if (!shortcuts() || isPaletteOpen()) return;
+        event.preventDefault();
+        if (window.isShortcutsOpen()) hideShortcuts();
+        else window.showShortcuts();
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const dialog = shortcuts();
+        if (!dialog) return;
+        dialog.addEventListener('click', (event) => {
+            if (event.target === dialog || event.target.closest('[data-shortcuts-close]')) hideShortcuts();
+        });
+        // Tab moves between the list and Close and stays inside the dialog.
+        dialog.addEventListener('keydown', (event) => {
+            if (event.key !== 'Tab') return;
+            event.preventDefault();
+            const close = dialog.querySelector('[data-shortcuts-close]');
+            (document.activeElement === close ? dialog.querySelector('[data-shortcuts-sections]') : close).focus();
+        });
+    });
+
     document.addEventListener('keydown', function (event) {
         if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing) return;
         for (const name of ORDER) {

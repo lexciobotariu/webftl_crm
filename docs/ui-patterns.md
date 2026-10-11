@@ -524,8 +524,15 @@ selected (`.task-selected`, defined in `custom.css` from the theme tokens, plus 
   `#task-new` (project page only), `S` / `P` / `A` open the quick menu on the selected row
   (a card has no status trigger, so `S` does nothing there), `D` opens the due date menu and
   `Shift+L` the labels menu (both placed under the row, for editors only; plain `L` stays a
-  board move), `I` assigns the task to the viewer (`data-me` on the quick menu), `?` lists them
-  in `#task-shortcuts`. A click on a row or card selects it too.
+  board move), `I` assigns the task to the viewer (`data-me` on the quick menu). A click on a row
+  or card selects it too.
+- **The shortcut list.** One dialog for the whole app, `#shortcuts`
+  (`components/shortcuts_dialog.html`, driven by `static/js/keys.js`). `?` opens it on any
+  signed-in page outside a text field, and so do the sidebar's "Shortcuts" button and the Inbox
+  "?" button. Its sections carry `data-shortcuts-scope`; the ones for the page you are on (task
+  view, Inbox, an open drawer or the invoice editor) move to the top with a "This page" tag. A new
+  shortcut goes in this list in the same change, and a button that has a key says so in its
+  `title` ("New task (C)") with `aria-keyshortcuts`.
 - **Copy:** `Ctrl/Cmd+.` copies the selected task's id, `Ctrl/Cmd+Shift+,` its full-page link
   (`data-identifier`, `data-link` on rows and cards). Matched by `event.code`, so the layout
   does not matter; `showInfoToast` confirms.

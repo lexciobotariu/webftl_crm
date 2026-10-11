@@ -165,11 +165,12 @@
             </div>
             <div id="palette-list" role="listbox" aria-label="Results" class="max-h-[60vh] overflow-y-auto">
                 <div id="palette-results" aria-live="polite">
-                    <p class="px-4 py-6 text-sm text-zinc-500">Type at least 2 characters to search tasks, projects, clients and pages.</p>
+                    <p class="px-4 py-6 text-sm text-zinc-500">Type at least 2 characters to search tasks, projects, clients and pages. Press <kbd class="px-1 py-0.5 rounded-badge bg-elevated border border-border-subtle text-xs font-mono text-zinc-300">?</kbd> outside a text field for every keyboard shortcut.</p>
                 </div>
             </div>
         </div>
     </div>
+    {% include "components/shortcuts_dialog.html" %}
     {% endif %}
 
     <!-- Global HTMX loading indicator -->
@@ -270,7 +271,7 @@
         // throw away what was being typed there.
         document.addEventListener('click', (event) => {
             const panel = document.getElementById('slide-over');
-            if (event.target.closest('#palette, #task-shortcuts')) return;
+            if (event.target.closest('#palette, #shortcuts')) return;
             if (!panel.classList.contains('hidden') && !panel.contains(event.target)) {
                 window.closeSlideOver();
             }

@@ -1,0 +1,73 @@
+{% comment %}Every keyboard shortcut in one place. "?" opens it on any page (outside a text field), as do the sidebar's "Shortcuts" button and the Inbox "?" button; static/js/keys.js shows it, puts the sections for the page you are on first (data-shortcuts-scope matched against the page) and keeps focus inside. Keep it in step with the handlers: static/js/task-view.js, inbox.js, keys.js and the editor templates.{% endcomment %}
+<div id="shortcuts" hidden class="fixed inset-0 z-[70] bg-black/50">
+    <div role="dialog" aria-modal="true" aria-labelledby="shortcuts-title" tabindex="-1"
+         class="mx-auto mt-[8vh] w-[calc(100%-2rem)] max-w-3xl max-h-[84vh] flex flex-col focus:outline-none bg-panel border border-border-subtle rounded-card shadow-lg">
+        <div class="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-border-subtle">
+            <h2 id="shortcuts-title" class="text-sm font-medium text-zinc-100">Keyboard shortcuts</h2>
+            <button type="button" data-shortcuts-close aria-label="Close"
+                    class="p-1 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded transition-colors">
+                {% include "components/icons/tabler-x.svg" %}
+            </button>
+        </div>
+        <div data-shortcuts-sections tabindex="0" aria-label="Shortcuts" class="focus:outline-none focus-visible:ring-1 focus-visible:ring-border-strong flex-1 min-h-0 overflow-y-auto px-4 py-3 md:columns-2 md:gap-8">
+            <section class="break-inside-avoid mb-5" data-shortcuts-scope="tasks" aria-labelledby="shortcuts-tasks">
+                <h3 id="shortcuts-tasks" class="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Task list and board <span data-shortcuts-here hidden class="normal-case tracking-normal text-[10px] px-1.5 py-0.5 rounded-badge bg-elevated text-zinc-300">This page</span></h3>
+                <p class="text-xs text-zinc-500 mb-2">On a project's Tasks page and on My Tasks.</p>
+                <dl class="space-y-1.5 text-sm">
+                    {% include "components/shortcut_row.html" with keys="J / K, ↓ / ↑" what="Move the selection" %}
+                    {% include "components/shortcut_row.html" with keys="H / L, ← / →" what="Between board columns" %}
+                    {% include "components/shortcut_row.html" with keys="Enter" what="Open the task" %}
+                    {% include "components/shortcut_row.html" with keys="/" what="Search the list" %}
+                    {% include "components/shortcut_row.html" with keys="C" what="New task (project page)" %}
+                    {% include "components/shortcut_row.html" with keys="Esc" what="Close, then clear the selection" %}
+                </dl>
+                <h4 class="text-xs text-zinc-400 mt-3 mb-2">On the selected task</h4>
+                <dl class="space-y-1.5 text-sm">
+                    {% include "components/shortcut_row.html" with keys="S" what="Change status" %}
+                    {% include "components/shortcut_row.html" with keys="P" what="Change priority" %}
+                    {% include "components/shortcut_row.html" with keys="A" what="Change assignee" %}
+                    {% include "components/shortcut_row.html" with keys="I" what="Assign to me" %}
+                    {% include "components/shortcut_row.html" with keys="D" what="Set due date" %}
+                    {% include "components/shortcut_row.html" with keys="Shift L" what="Set labels" %}
+                    {% include "components/shortcut_row.html" with keys="Ctrl/⌘ ." what="Copy the id" %}
+                    {% include "components/shortcut_row.html" with keys="Ctrl/⌘ Shift ," what="Copy the link" %}
+                </dl>
+                <p class="text-xs text-zinc-500 mt-2">The editing keys work for people who can edit the task.</p>
+            </section>
+
+            <section class="break-inside-avoid mb-5" data-shortcuts-scope="inbox" aria-labelledby="shortcuts-inbox">
+                <h3 id="shortcuts-inbox" class="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Inbox <span data-shortcuts-here hidden class="normal-case tracking-normal text-[10px] px-1.5 py-0.5 rounded-badge bg-elevated text-zinc-300">This page</span></h3>
+                <dl class="space-y-1.5 text-sm">
+                    {% include "components/shortcut_row.html" with keys="J / K, ↓ / ↑" what="Next or previous, opened" %}
+                    {% include "components/shortcut_row.html" with keys="Enter" what="Open the selected one" %}
+                    {% include "components/shortcut_row.html" with keys="E" what="Mark read or unread" %}
+                    {% include "components/shortcut_row.html" with keys="Backspace / Delete" what="Delete and open the next" %}
+                    {% include "components/shortcut_row.html" with keys="Esc" what="Close the notification" %}
+                </dl>
+            </section>
+
+            <section class="break-inside-avoid mb-5" data-shortcuts-scope="writing" aria-labelledby="shortcuts-writing">
+                <h3 id="shortcuts-writing" class="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Writing and editing <span data-shortcuts-here hidden class="normal-case tracking-normal text-[10px] px-1.5 py-0.5 rounded-badge bg-elevated text-zinc-300">This page</span></h3>
+                <p class="text-xs text-zinc-500 mb-2">In the task drawer, New task, comments and descriptions.</p>
+                <dl class="space-y-1.5 text-sm">
+                    {% include "components/shortcut_row.html" with keys="Ctrl/⌘ Enter" what="Save, post or create" %}
+                    {% include "components/shortcut_row.html" with keys="Enter" what="Save a title or sub-task" %}
+                    {% include "components/shortcut_row.html" with keys="Esc" what="Cancel the edit, or close the drawer" %}
+                    {% include "components/shortcut_row.html" with keys="@" what="Mention someone in a comment" %}
+                    {% include "components/shortcut_row.html" with keys="← / →" what="Write or Preview, on the tabs" %}
+                    {% include "components/shortcut_row.html" with keys="Enter" what="Add an invoice line" %}
+                </dl>
+            </section>
+
+            <section class="break-inside-avoid mb-5" data-shortcuts-scope="everywhere" aria-labelledby="shortcuts-everywhere">
+                <h3 id="shortcuts-everywhere" class="text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Everywhere</h3>
+                <dl class="space-y-1.5 text-sm">
+                    {% include "components/shortcut_row.html" with keys="Ctrl/⌘ K" what="Search and jump" %}
+                    {% include "components/shortcut_row.html" with keys="Ctrl/⌘ Enter" what="Open a search result in a new tab" %}
+                    {% include "components/shortcut_row.html" with keys="?" what="This list" %}
+                    {% include "components/shortcut_row.html" with keys="Esc" what="Close what is open" %}
+                </dl>
+            </section>
+        </div>
+    </div>
+</div>

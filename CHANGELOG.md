@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **New task:** the description has **Write / Preview** tabs and says "Markdown supported", like the other description fields
 - **Time on a task:** Start/Stop and **Log time** are now side by side in the task header. The Time property keeps the logged time, the bar and the estimate, without its own buttons
 
+- **Keyboard shortcuts:** press **?** on any page (outside a text field) for one list of every shortcut, grouped by where it works, with the ones for the page you are on first. It also opens from **Shortcuts** at the bottom of the sidebar, and the search box mentions it. Buttons with a key show it in their tooltip, for example "New task (C)" and "Search (/)"
+
 ### Fixed
 - Ctrl/Cmd+Enter in a description field submitted the form twice where the form has its own shortcut too
 

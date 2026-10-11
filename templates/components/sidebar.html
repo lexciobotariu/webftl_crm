@@ -167,8 +167,13 @@
     {% endif %}
 
     <!-- Version -->
-    <div class="px-4 py-2 border-t border-border-subtle">
+    <div class="px-4 py-2 border-t border-border-subtle flex items-center justify-between">
         <a href="{% url 'changelog' %}" class="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors" title="View changelog">v{{ app_version }}</a>
+        <button type="button" onclick="window.showShortcuts && window.showShortcuts()" title="Keyboard shortcuts"
+                class="flex items-center gap-1.5 text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors">
+            Shortcuts
+            <kbd class="px-1 rounded-badge border border-border-subtle font-mono text-[10px] text-zinc-500">?</kbd>
+        </button>
     </div>
 
     <!-- User section -->

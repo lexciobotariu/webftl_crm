@@ -158,7 +158,7 @@
         </div>
     </div>
 
-    <input type="search" id="task-search" name="q" value="{{ spec.q }}" placeholder="Search tasks"
+    <input type="search" id="task-search" name="q" value="{{ spec.q }}" placeholder="Search tasks" title="Search (/)" aria-keyshortcuts="/"
            autocomplete="off"
            hx-get="{{ page_url }}" hx-trigger="input changed delay:300ms, search"
            hx-include="#task-toolbar"
