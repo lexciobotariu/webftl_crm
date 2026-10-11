@@ -1,10 +1,10 @@
-{% comment %}Status picker for the create drawer, after priority_dropdown_create.html. It posts status_id, so the drawer can change the status it was opened with. It stays out of task_form_fields.html, which the full-page form shares and which has no status of its own.{% endcomment %}
+{% comment %}Status picker for the create forms, styled like priority_dropdown_create.html. It posts status_id, so the form can change the status it was opened with. task_form_fields.html shows it as the first property when the view passes selected_status.{% endcomment %}
 <div class="relative" x-data="{ open: false, selected: '{{ selected_status.pk }}' }">
     <input type="hidden" name="status_id" :value="selected">
     <button type="button" @click="open = !open" aria-haspopup="menu" :aria-expanded="open"
-            class="inline-flex items-center gap-1.5 px-2 py-1 rounded-control text-xs text-zinc-300 bg-elevated border border-border-subtle hover:bg-hover-strong transition-colors">
+            class="flex items-center gap-2 px-2 py-1.5 rounded-control text-sm text-zinc-300 hover:bg-elevated transition-colors w-full">
         {% for status in statuses %}
-        <span x-show="selected === '{{ status.pk }}'" class="inline-flex items-center gap-1.5"{% if status.pk != selected_status.pk %} x-cloak{% endif %}>
+        <span x-show="selected === '{{ status.pk }}'" class="inline-flex items-center gap-2"{% if status.pk != selected_status.pk %} x-cloak{% endif %}>
             {% include "components/status_icon.html" with category=status.category %}
             {{ status.name }}
         </span>

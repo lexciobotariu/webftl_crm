@@ -368,19 +368,22 @@ filters or pagination, so nothing is lost there.
 
 - **One "Time" property** (`tasks/partials/time_property.html`) reads `logged / estimate` with a thin
   bar (`role="progressbar"`); going over is written out ("Over by 15m"), not only coloured, and there is
-  no bar without an estimate. Start/Stop, "Log time" and the estimate popover live in it.
+  no bar without an estimate. The estimate popover lives in it. **Start/Stop and "Log time" live in the
+  task header** (drawer and full page), next to each other, never in the property: one place for the timer.
 - **Durations are text.** The estimate and the log form take `1h 30m`, `45m`, `1.5h`, `1:30`
   (`apps/tasks/durations.py`); a bare number is hours in the estimate and refused when logging. Time is
   logged as **duration + date**, never start and end, and shown as date + duration.
 - **`timerChanged`** (an `HX-Trigger`, sent by start, stop, log, edit and delete) is the one event for
   time. Listeners: the running-timer bar, the activity list (see below), and `#time-logged-<pk>` — the single listener
-  of the Time property. Its answer (`task_time_property`) replaces itself and brings the bar, the
-  Start/Stop button and the task header's Start/Stop button along with `hx-swap-oob`, so nothing
+  of the Time property. Its answer (`task_time_property`) replaces itself and brings the bar and the
+  task header's Start/Stop button along with `hx-swap-oob`, so nothing
   listens twice. Changing the estimate sends `taskUpdated-<pk>`, which the same element hears.
 - **Popovers are never part of a refresh.** Each one is its own `x-data="dropdown"` with
   `@click.away`, so Escape closes it and not the drawer (see Escape above), and a half-typed log
-  survives `timerChanged`. Anchor a popover to the property row (`left-0 right-0` / `left-2 right-2`
-  on a `relative` parent), not to its button: the sidebar is `overflow-hidden` and clips anything wider.
+  survives `timerChanged`; that is why "Log time" (`time_log_popover.html`) sits next to the header's
+  Start/Stop span, not inside it. Anchor a property popover to the property row (`left-0 right-0` /
+  `left-2 right-2` on a `relative` parent), not to its button: the sidebar is `overflow-hidden` and
+  clips anything wider. The header's Log time opens to the left (`right-0 w-72`).
 - **Logging answers with an empty body**; anything else is the reason, swapped into the popover's
   error line. The popover does not close the drawer.
 
@@ -537,15 +540,17 @@ selected (`.task-selected`, defined in `custom.css` from the theme tokens, plus 
 ### Creating a task
 
 The create drawer (`task_create_slideover.html`) is one form that is the whole panel: a
-compact header (project, "New task", the **status picker**), a scrolling body, and a footer
+compact header (project and "New task"), a scrolling body, and a footer
 with "Create more", Cancel and Create.
 
 - **Fast entry.** The title takes focus when the drawer opens (and again after "Create more");
   `Enter` in the title submits natively and `Ctrl` / `Cmd` + `Enter` submits from any field;
   `hx-sync="this:drop"` ignores a second submit while one is in flight.
-- **Status picker.** `partials/status_dropdown_create.html`, after `priority_dropdown_create.html`,
-  posts `status_id`. It lives in the slide-over template, not in `task_form_fields.html`, which
-  the full-page form shares and which has no status.
+- **Status picker.** `partials/status_dropdown_create.html` is the first row of Properties
+  ("State"), as in the task drawer, and posts `status_id`. `task_form_fields.html` shows it when the
+  view passes `selected_status`, which both the drawer and the full-page form do.
+- **Description** uses `partials/markdown_editor.html`: Write / Preview tabs and a "Markdown
+  supported" hint, as everywhere else a description is written.
 - **Create more.** The checkbox is remembered in `localStorage` (`taskCreateMore`). On success the
   view returns a fresh form with the same status, assignee and priority (so a run started from a
   group "+" stays in that group), a "Created <title>" line, and fires only

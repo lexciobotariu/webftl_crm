@@ -1,4 +1,4 @@
-{# Start/Stop in the task header. Only for people who can log time. #}
+{# Start/Stop in the task header, redrawn out of band by task_time_property. Only for people who can log time. Log time sits next to it (time_log_popover.html), outside this span so a refresh never closes it. #}
 {% if can_log_time %}
 <span id="time-header-{{ task.pk }}"{% if oob %} hx-swap-oob="true"{% endif %} class="contents">
     {% if running_timer and running_timer.task_id == task.pk %}
@@ -13,6 +13,7 @@
     {% else %}
     <button type="button"
             id="time-header-start-{{ task.pk }}"
+            {% if running_timer %}title="Starting here stops the timer on {{ running_timer.task.title }}"{% endif %}
             hx-post="{% url 'timer_start' task.pk %}"
             hx-swap="none"
             class="inline-flex items-center gap-1.5 px-2.5 py-1 mr-1 text-xs text-zinc-400 bg-elevated border border-border-subtle rounded-full hover:text-zinc-200 hover:border-zinc-600 transition-colors">

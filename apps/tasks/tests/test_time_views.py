@@ -61,8 +61,8 @@ class TestTimerViews:
         full = client.get(reverse('task_full_page', args=[task.project.pk, task.pk]))
         assert detail.status_code == 200
         assert full.status_code == 200
-        assert f'time-start-{task.pk}' not in detail.content.decode()
-        assert f'time-start-{task.pk}' not in full.content.decode()
+        assert f'time-header-start-{task.pk}' not in detail.content.decode()
+        assert f'time-header-start-{task.pk}' not in full.content.decode()
         assert 'Log time' not in detail.content.decode()
 
     def test_editor_can_start_and_a_second_start_closes_the_first(self, client):
@@ -84,13 +84,17 @@ class TestTimerViews:
         assert stopped.status_code == 204
         assert not TimeEntry.objects.filter(user=user, ended_at__isnull=True).exists()
 
-    def test_editor_sees_start_on_the_task_drawer_and_full_page(self, client):
+    def test_editor_sees_start_and_log_time_in_the_header_only(self, client):
         user, task = _member()
         client.force_login(user)
         detail = client.get(reverse('task_detail', args=[task.pk])).content.decode()
         full = client.get(reverse('task_full_page', args=[task.project.pk, task.pk])).content.decode()
-        assert f'id="time-start-{task.pk}"' in detail
-        assert f'id="time-start-{task.pk}"' in full
+        for page in (detail, full):
+            assert f'id="time-header-start-{task.pk}"' in page
+            assert page.count('Log time') == 1
+            header, properties = page.split('Properties', 1)
+            assert 'Log time' in header and f'time-header-start-{task.pk}' in header
+            assert '/timer/start/' not in properties
 
     def test_logging_by_duration_and_day(self, client):
         user, task = _member()
@@ -405,7 +409,6 @@ class TestTimeProperty:
         live = client.get(reverse('task_time_property', args=[task.pk])).content.decode()
 
         for page in (detail, full, live):
-            assert f'id="time-start-{task.pk}"' not in page
             assert f'id="time-header-{task.pk}"' not in page
             assert 'Log time' not in page
             assert '1h' in page
@@ -431,12 +434,12 @@ class TestTimeProperty:
         user, task = _member()
         client.force_login(user)
         idle = client.get(reverse('task_time_property', args=[task.pk])).content.decode()
-        assert f'id="time-start-{task.pk}"' in idle and f'id="time-header-start-{task.pk}"' in idle
+        assert f'id="time-header-start-{task.pk}"' in idle
 
         TimeEntryFactory(user=user, task=task, running=True)
         running = client.get(reverse('task_time_property', args=[task.pk])).content.decode()
-        assert f'id="time-stop-{task.pk}"' in running and f'id="time-header-stop-{task.pk}"' in running
-        assert f'id="time-start-{task.pk}"' not in running
+        assert f'id="time-header-stop-{task.pk}"' in running
+        assert f'id="time-header-start-{task.pk}"' not in running
 
     def test_it_says_where_the_running_timer_stops(self, client):
         user, task = _member()
