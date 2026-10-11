@@ -1,12 +1,15 @@
-<div x-data="dropdown">
+{# Log time in the task header, next to Start/Stop. Only for people who can log time. #}
+{% if can_log_time %}
+<div x-data="dropdown" class="relative">
     <button type="button" @click="toggle(); $nextTick(() => $refs.duration && $refs.duration.focus())"
-            class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-zinc-400 bg-elevated border border-border-subtle rounded-full hover:text-zinc-200 hover:border-zinc-600 transition-colors">
+            aria-haspopup="dialog" :aria-expanded="open"
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 mr-1 text-xs text-zinc-400 bg-elevated border border-border-subtle rounded-full hover:text-zinc-200 hover:border-zinc-600 transition-colors">
         <i data-lucide="plus" class="w-3 h-3"></i>
         Log time
     </button>
     <div x-show="open" x-cloak @click.away="close()"
          x-transition
-         class="absolute left-2 right-2 top-full mt-1 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 p-3">
+         class="absolute right-0 top-full mt-1 w-72 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 p-3">
         <form hx-post="{% url 'time_log' task.pk %}"
               hx-target="#time-log-error-{{ task.pk }}"
               hx-swap="innerHTML"
@@ -33,3 +36,4 @@
         </form>
     </div>
 </div>
+{% endif %}

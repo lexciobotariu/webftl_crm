@@ -939,7 +939,7 @@ class TestPane:
 
         assert 'id="inbox"' in html and 'id="inbox-list"' in html and 'id="inbox-pane"' in html
         assert 'id="task-view"' not in html and 'data-task-row' not in html
-        assert 'id="task-shortcuts"' in html and 'Delete and open the next' in html
+        assert html.count('id="shortcuts"') == 1 and 'Delete and open the next' in html
 
 
 @pytest.mark.django_db

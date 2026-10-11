@@ -10,7 +10,7 @@
 <!-- Description -->
 <div class="space-y-1">
     <label class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500">{{ form.description.label }}</label>
-    {{ form.description }}
+    {% include "tasks/partials/markdown_editor.html" with uid="task-form-description" name=form.description.html_name value=form.description.value rows=4 placeholder="Add a description..." %}
     {% if form.description.errors %}
     <p class="text-error text-sm mt-1">{{ form.description.errors.0 }}</p>
     {% endif %}
@@ -21,6 +21,19 @@
     <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Properties</h3>
 
     <div class="space-y-1">
+        {% if selected_status %}
+        <!-- State: the status the task is created in (status_id). -->
+        <div class="flex items-center py-2 px-2 hover:bg-hover rounded-card">
+            <div class="flex items-center gap-2 w-28 text-zinc-500 text-sm">
+                <i data-lucide="circle" class="w-4 h-4"></i>
+                <span>State</span>
+            </div>
+            <div class="flex-1">
+                {% include "tasks/partials/status_dropdown_create.html" %}
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Priority -->
         <div class="flex items-center py-2 px-2 hover:bg-hover rounded-card">
             <div class="flex items-center gap-2 w-28 text-zinc-500 text-sm">

@@ -373,27 +373,14 @@
 
     const isField = (el) => !!el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
     const drawerOpen = () => !document.getElementById('slide-over').classList.contains('hidden');
-    const help = () => document.getElementById('task-shortcuts');
-    const helpOpen = () => !!help() && !help().hidden;
+    // The shortcut list is app-wide (static/js/keys.js); "?" and its Escape live there.
+    const helpOpen = () => !!window.isShortcutsOpen && window.isShortcutsOpen();
 
     function openSelected() {
         const row = selectedRow();
         if (!row) return;
         const url = row.dataset.detailUrl || row.getAttribute('hx-get');
         if (url) htmx.ajax('GET', url, { target: '#slide-over', swap: 'innerHTML' });
-    }
-
-    let helpReturn = null;
-    function showHelp() {
-        helpReturn = document.activeElement;
-        help().hidden = false;
-        help().querySelector('[role="dialog"]').focus();
-    }
-    function hideHelp() {
-        help().hidden = true;
-        const back = helpReturn && helpReturn.isConnected ? helpReturn : selectedRow();
-        helpReturn = null;
-        if (back) back.focus({ preventScroll: true });
     }
 
     function copy(text, what) {
@@ -457,8 +444,6 @@
         } else if (key === 'c') {
             const create = document.getElementById('task-new');
             if (create) { handled(); create.click(); }
-        } else if (key === '?') {
-            if (help()) { handled(); showHelp(); }
         } else if (key === 's' || key === 'p' || key === 'a') {
             const row = selectedRow();
             const kind = { s: 'status', p: 'priority', a: 'assignee' }[key];
@@ -493,24 +478,6 @@
         if (row) row.focus({ preventScroll: true });
     }, true);
 
-    document.addEventListener('DOMContentLoaded', () => {
-        if (!help()) return;
-        help().addEventListener('click', (event) => {
-            if (event.target === help() || event.target.closest('[data-shortcuts-close]')) hideHelp();
-        });
-        // Close is the only control, so Tab lands on it and stays inside the dialog.
-        help().addEventListener('keydown', (event) => {
-            if (event.key !== 'Tab') return;
-            event.preventDefault();
-            help().querySelector('[data-shortcuts-close]').focus();
-        });
-    });
-
-    window.registerEscLayer('help', () => {
-        if (!helpOpen()) return false;
-        hideHelp();
-        return true;
-    });
     window.registerEscLayer('selection', () => {
         if (!selectedId) return false;
         const row = selectedRow();

@@ -11,9 +11,6 @@
         <div class="flex items-center gap-2 min-w-0">
             <span class="text-xs text-zinc-500 bg-elevated px-2 py-0.5 rounded border border-border-subtle font-mono shrink-0">{{ project.key }}</span>
             <h2 class="text-sm font-medium text-zinc-100 truncate">New task</h2>
-            {% if selected_status %}
-            {% include "tasks/partials/status_dropdown_create.html" %}
-            {% endif %}
         </div>
         <button type="button" onclick="closeSlideOver()" aria-label="Close"
                 class="text-zinc-500 hover:text-zinc-300 transition-colors p-1.5 hover:bg-elevated rounded-control">

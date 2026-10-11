@@ -20,7 +20,7 @@
                         class="inline-flex items-center justify-center w-7 h-7 rounded-control text-zinc-500 hover:text-zinc-200 hover:bg-hover transition-colors">
                     <i data-lucide="check-check" class="w-4 h-4"></i>
                 </button>
-                <button type="button" data-inbox-action="help" title="Keyboard shortcuts" aria-label="Keyboard shortcuts"
+                <button type="button" data-inbox-action="help" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts"
                         class="inline-flex items-center justify-center w-7 h-7 rounded-control text-xs text-zinc-500 hover:text-zinc-200 hover:bg-hover transition-colors">?</button>
             </div>
         </div>
@@ -52,20 +52,4 @@
 {# The source of every "open" request; hx-sync aborts the previous one still in flight. #}
 <div id="inbox-opener" hidden hx-sync="this:replace"></div>
 <template id="inbox-pane-empty">{% include "notifications/partials/pane_empty.html" %}</template>
-
-<div id="task-shortcuts" hidden class="fixed inset-0 z-[70] bg-black/50">
-    <div role="dialog" aria-modal="true" aria-labelledby="inbox-shortcuts-title" tabindex="-1"
-         class="mx-auto mt-24 w-[calc(100%-2rem)] max-w-sm focus:outline-none bg-panel border border-border-subtle rounded-card shadow-lg p-4">
-        <div class="flex items-center justify-between mb-3">
-            <h2 id="inbox-shortcuts-title" class="text-sm font-medium text-zinc-100">Keyboard shortcuts</h2>
-            <button type="button" data-shortcuts-close aria-label="Close"
-                    class="p-1 text-zinc-500 hover:text-zinc-200 hover:bg-elevated rounded transition-colors">
-                {% include "components/icons/tabler-x.svg" %}
-            </button>
-        </div>
-        <dl class="space-y-1.5 text-sm">
-            {% include "notifications/partials/_shortcuts.html" %}
-        </dl>
-    </div>
-</div>
 {% endblock %}

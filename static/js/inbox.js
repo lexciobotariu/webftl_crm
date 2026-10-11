@@ -32,7 +32,8 @@
     const root = () => document.getElementById('inbox');
     const list = () => document.getElementById('inbox-list');
     const pane = () => document.getElementById('inbox-pane');
-    const help = () => document.getElementById('task-shortcuts');
+    // The shortcut list is app-wide (static/js/keys.js), which also handles "?".
+    const helpOpen = () => !!window.isShortcutsOpen && window.isShortcutsOpen();
     const rows = () => Array.from(list() ? list().querySelectorAll('[data-notification]') : []);
     const show = () => (root() && root().dataset.show) || 'all';
     let selectedId = null;
@@ -199,19 +200,6 @@
         setTimeout(() => item.classList.remove('inbox-flash'), 1600);
     }
 
-    function showHelp() {
-        if (!help()) return;
-        help().hidden = false;
-        help().querySelector('[role="dialog"]').focus();
-    }
-
-    function hideHelp() {
-        if (!help() || help().hidden) return false;
-        help().hidden = true;
-        list().focus({ preventScroll: true });
-        return true;
-    }
-
     const typing = (target) => !!(target.closest && target.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"]'));
     const blocked = () => {
         const palette = document.getElementById('palette');
@@ -222,7 +210,7 @@
     document.addEventListener('keydown', (event) => {
         if (!root() || event.defaultPrevented || event.isComposing || event.keyCode === 229) return;
         if (event.ctrlKey || event.metaKey || event.altKey || typing(event.target) || blocked()) return;
-        if (help() && !help().hidden) return;
+        if (helpOpen()) return;
         const inList = event.target === document.body || (list() && list().contains(event.target));
         const key = event.key;
         let handled = true;
@@ -234,7 +222,6 @@
         // Only from the list: Backspace on a button in the pane must not delete anything.
         // Not on auto-repeat: a held key would delete one notification after another.
         else if ((key === 'Backspace' || key === 'Delete') && selectedId && inList) { if (!event.repeat) deleteSelected(); }
-        else if (key === '?') showHelp();
         else handled = false;
         if (handled) event.preventDefault();
     });
@@ -244,7 +231,7 @@
         const action = event.target.closest('[data-inbox-action]');
         if (action) {
             const name = action.dataset.inboxAction;
-            if (name === 'help') showHelp();
+            if (name === 'help') window.showShortcuts();
             else if (name === 'close') clearPane();
             else if (name === 'prev') move(-1);
             else if (name === 'next') move(1);
@@ -258,7 +245,6 @@
             event.preventDefault();
             open(row);
         }
-        if (help() && (event.target === help() || event.target.closest('[data-shortcuts-close]'))) hideHelp();
     });
 
     // A slower answer for a notification that is no longer selected is not shown.
@@ -321,7 +307,6 @@
             markSelected(true);
             highlightActivity();
         }
-        window.registerEscLayer('help', hideHelp);
         // Not while typing: Esc in a comment being written leaves the draft alone.
         window.registerEscLayer('selection', (event) => {
             if (!selectedId || (event && typing(event.target))) return false;

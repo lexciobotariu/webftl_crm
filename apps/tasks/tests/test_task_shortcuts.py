@@ -40,12 +40,13 @@ class TestShortcutsMarkup:
         content = _page(client, user, project)
 
         assert TASK_VIEW_SCRIPT.search(content)
-        assert content.count('id="task-shortcuts"') == 1
+        assert content.count('id="shortcuts"') == 1
         for what in ('Change status', 'Change priority', 'Change assignee', 'New task', 'Search'):
             assert what in content
         assert 'id="task-new"' in content
+        assert 'title="New task (C)"' in content and 'title="Search (/)"' in content
 
-    def test_a_viewer_gets_navigation_but_no_edit_shortcuts(self, client):
+    def test_a_viewer_gets_the_list_but_no_edit_controls(self, client):
         viewer = _viewer()
         project = ProjectFactory()
         ProjectAccessFactory(project=project, user=viewer)
@@ -54,10 +55,10 @@ class TestShortcutsMarkup:
         content = _page(client, viewer, project)
 
         assert TASK_VIEW_SCRIPT.search(content)
-        assert 'id="task-shortcuts"' in content
+        # The list is the same for everyone and says the editing keys need edit rights.
+        assert 'id="shortcuts"' in content
         assert 'Move the selection' in content
-        for what in ('Change status', 'Change priority', 'Change assignee', 'New task'):
-            assert what not in content
+        assert 'work for people who can edit the task' in content
         assert 'id="task-new"' not in content
         assert 'id="task-quick-menu"' not in content
 
@@ -70,9 +71,9 @@ class TestShortcutsMarkup:
 
         content = client.get(reverse('my_tasks') + '?group=none').content.decode()
 
-        assert 'id="task-shortcuts"' in content
+        assert 'id="shortcuts"' in content
         assert 'Change status' in content
-        assert 'New task' not in content
+        assert 'id="task-new"' not in content
 
     def test_cards_and_rows_carry_what_the_keys_need(self, client):
         user = UserFactory()
@@ -87,3 +88,20 @@ class TestShortcutsMarkup:
         assert f'data-task-row data-detail-url="{detail}"' in board
         assert f'hx-get="{detail}"' in rows
         assert 'id="kanban-board-content"' in board
+
+
+@pytest.mark.django_db
+class TestShortcutsEverywhere:
+    def test_every_signed_in_page_has_the_one_list_and_the_sidebar_button(self, client):
+        user = UserFactory()
+        client.force_login(user)
+        for name in ('dashboard', 'inbox'):
+            html = client.get(reverse(name)).content.decode()
+            assert html.count('id="shortcuts"') == 1, name
+            assert 'window.showShortcuts()' in html, name
+            for scope in ('tasks', 'inbox', 'writing', 'everywhere'):
+                assert f'data-shortcuts-scope="{scope}"' in html, name
+
+    def test_the_login_page_has_none(self, client):
+        html = client.get(reverse('account_login')).content.decode()
+        assert 'id="shortcuts"' not in html
