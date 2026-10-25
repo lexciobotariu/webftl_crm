@@ -3,11 +3,14 @@ from pathlib import Path
 
 def version(request):
     """Make app version available to all templates."""
+    from django.conf import settings
+
     version_file = Path(__file__).resolve().parent.parent / 'VERSION'
     try:
-        return {'app_version': version_file.read_text().strip()}
+        app_version = version_file.read_text().strip()
     except FileNotFoundError:
-        return {'app_version': 'dev'}
+        app_version = 'dev'
+    return {'app_version': app_version, 'require_admin_2fa': settings.REQUIRE_ADMIN_2FA}
 
 
 def theme(request):

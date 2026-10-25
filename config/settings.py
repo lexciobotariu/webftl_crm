@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     # Third party
     'allauth',
     'allauth.account',
+    'allauth.mfa',
     'django_htmx',
     # Local apps
     'apps.accounts',
@@ -96,6 +97,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
     'django_htmx.middleware.HtmxMiddleware',
+    'apps.accounts.middleware.RequireAdminTwoFactorMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -181,6 +183,15 @@ ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_EMAIL_VERIFICATION = 'none'
+
+# Two-factor sign-in: an authenticator app, with recovery codes as the fallback.
+# Optional for everyone, required for admins (apps/accounts/middleware.py).
+MFA_ADAPTER = 'apps.accounts.adapters.AgencyMFAAdapter'
+MFA_SUPPORTED_TYPES = ['totp', 'recovery_codes']
+MFA_TOTP_ISSUER = 'WebFTL CRM'
+# Set REQUIRE_ADMIN_2FA=False in the environment only to get back in after
+# losing both the phone and the recovery codes; see README "Two-factor sign-in".
+REQUIRE_ADMIN_2FA = env_value('REQUIRE_ADMIN_2FA', 'True') != 'False'
 
 # Email
 # The console backend prints mail instead of sending it. That is fine in

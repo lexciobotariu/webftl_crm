@@ -159,6 +159,22 @@ and then redirects to a signed link valid for five minutes. The keys need
 permission to put, get, head and delete objects in the bucket. Files saved on
 the disk before the bucket was connected are still served from the disk.
 
+## Two-factor sign-in
+
+Anyone can turn on an authenticator app under **Security** in the sidebar
+(allauth MFA: TOTP plus 10 recovery codes). Admins must: until they have it,
+every page sends them to the setup page.
+
+Someone who lost both the phone and the recovery codes:
+
+```bash
+python manage.py reset_two_factor person@example.com
+```
+
+They then sign in with the password and set it up again. If no admin can get
+in to run that, set `REQUIRE_ADMIN_2FA=False` in the environment, redeploy,
+sign in, set it up again, and remove the variable.
+
 ## Frontend dependencies
 
 There is no build step. Two small scripts of our own live in `static/js/`; with

@@ -1,0 +1,35 @@
+{% extends "account/security_base.html" %}
+
+{% block security_content %}
+{% if user.is_admin and require_admin_2fa %}
+<p class="text-sm text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-control px-3 py-2">Admins need two-factor sign-in before using the app. It takes a minute.</p>
+{% endif %}
+<section class="border border-border-subtle rounded-card overflow-hidden">
+    <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <h1 class="text-sm font-medium text-zinc-100">Turn on two-factor sign-in</h1>
+    </div>
+    <div class="p-4 space-y-4">
+        <ol class="text-sm text-zinc-300 space-y-1 list-decimal list-inside">
+            <li>Open an authenticator app on your phone (Google Authenticator, Microsoft Authenticator, 1Password, Authy).</li>
+            <li>Scan this code, or type the key below.</li>
+            <li>Enter the 6-digit code the app shows.</li>
+        </ol>
+        <div class="flex flex-col sm:flex-row gap-4 items-start">
+            <img src="{{ totp_svg_data_uri }}" alt="QR code for your authenticator app" class="w-44 h-44 bg-white rounded-control p-2">
+            <div class="min-w-0">
+                <div class="text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-1">Key</div>
+                <code class="block text-sm text-zinc-200 font-mono break-all select-all">{{ form.secret }}</code>
+            </div>
+        </div>
+        <form method="post" action="{% url 'mfa_activate_totp' %}" class="space-y-4">
+            {% csrf_token %}
+            {% if form.non_field_errors %}<p class="text-error text-sm">{{ form.non_field_errors.0 }}</p>{% endif %}
+            <div>
+                <label for="{{ form.code.id_for_label }}" class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Code from the app</label>
+                {% include "account/_code_input.html" with field=form.code %}
+            </div>
+            <button type="submit" class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">Turn on</button>
+        </form>
+    </div>
+</section>
+{% endblock %}

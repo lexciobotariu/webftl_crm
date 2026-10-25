@@ -1,0 +1,18 @@
+{% extends "account/security_base.html" %}
+
+{% block security_content %}
+<section class="border border-border-subtle rounded-card p-4 space-y-4">
+    <h1 class="text-sm font-medium text-zinc-100">Confirm it is you</h1>
+    <p class="text-sm text-zinc-400">Enter a code from your authenticator app to continue.</p>
+    <form method="post" action="{% url 'mfa_reauthenticate' %}" class="space-y-4">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<p class="text-error text-sm">{{ form.non_field_errors.0 }}</p>{% endif %}
+        {% include "account/_code_input.html" with field=form.code inputmode="text" %}
+        {{ redirect_field }}
+        <button type="submit" class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">Confirm</button>
+    </form>
+    {% for alt in reauthentication_alternatives %}
+    <a href="{{ alt.url }}" class="block text-sm text-zinc-500 hover:text-zinc-300">{{ alt.description }}</a>
+    {% endfor %}
+</section>
+{% endblock %}

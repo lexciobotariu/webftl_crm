@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% comment %}Layout for the two-factor and re-authentication pages (allauth views, our templates).{% endcomment %}
+
+{% block title %}Security - WebFTL CRM{% endblock %}
+
+{% block full_content %}
+<div class="flex flex-col h-full">
+    <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center gap-3">
+            <i data-lucide="shield-check" class="w-4 h-4 text-zinc-500"></i>
+            <a href="{% url 'mfa_index' %}" class="text-sm font-medium text-zinc-100 hover:text-zinc-300">Security</a>
+        </div>
+    </div>
+    <div class="flex-1 overflow-y-auto p-6">
+        <div class="max-w-xl space-y-6">
+            {% if messages %}
+            {% for message in messages %}
+            <p class="text-sm text-zinc-300 border border-border-subtle rounded-control px-3 py-2 bg-panel">{{ message }}</p>
+            {% endfor %}
+            {% endif %}
+            {% block security_content %}{% endblock %}
+        </div>
+    </div>
+</div>
+{% endblock %}

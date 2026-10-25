@@ -1,0 +1,51 @@
+{% extends "account/security_base.html" %}
+
+{% block security_content %}
+<section class="border border-border-subtle rounded-card overflow-hidden">
+    <div class="px-4 py-2 border-b border-border-subtle bg-panel/80 flex items-center justify-between">
+        <h1 class="text-sm font-medium text-zinc-100">Two-factor sign-in</h1>
+        {% if authenticators.totp %}
+        <span class="px-2 py-0.5 text-[10px] rounded bg-success/10 text-success border border-success/20">On</span>
+        {% else %}
+        <span class="px-2 py-0.5 text-[10px] rounded bg-elevated text-zinc-400 border border-border-subtle">Off</span>
+        {% endif %}
+    </div>
+    <div class="p-4 space-y-3">
+        {% if authenticators.totp %}
+        <p class="text-sm text-zinc-300">Signing in asks for a code from your authenticator app after the password.</p>
+        {% if user.is_admin and require_admin_2fa %}
+        <p class="text-xs text-zinc-500">Admins must keep it on.</p>
+        {% else %}
+        <a href="{% url 'mfa_deactivate_totp' %}" class="inline-block text-sm text-zinc-500 hover:text-error">Turn off</a>
+        {% endif %}
+        {% else %}
+        <p class="text-sm text-zinc-300">Add a code from an authenticator app (Google Authenticator, Microsoft Authenticator, 1Password, Authy) to every sign-in, so a stolen password is not enough.</p>
+        <a href="{% url 'mfa_activate_totp' %}" class="inline-block bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">Turn on</a>
+        {% endif %}
+    </div>
+</section>
+
+{% if authenticators.totp %}
+<section class="border border-border-subtle rounded-card overflow-hidden">
+    <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <h2 class="text-sm font-medium text-zinc-100">Recovery codes</h2>
+    </div>
+    <div class="p-4 space-y-3">
+        {% with unused=authenticators.recovery_codes.get_unused_codes|length total=authenticators.recovery_codes.generate_codes|length %}
+        {% if authenticators.recovery_codes %}
+        <p class="text-sm text-zinc-300">{{ unused }} of {{ total }} left. Each one signs you in once if you lose your phone. Keep them somewhere safe, outside this app.</p>
+        {% else %}
+        <p class="text-sm text-zinc-300">No recovery codes yet.</p>
+        {% endif %}
+        <div class="flex flex-wrap gap-2">
+            {% if unused %}
+            <a href="{% url 'mfa_view_recovery_codes' %}" class="bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-sm text-zinc-200 hover:bg-hover">Show</a>
+            <a href="{% url 'mfa_download_recovery_codes' %}" class="bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-sm text-zinc-200 hover:bg-hover">Download</a>
+            {% endif %}
+            <a href="{% url 'mfa_generate_recovery_codes' %}" class="bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-sm text-zinc-200 hover:bg-hover">New codes</a>
+        </div>
+        {% endwith %}
+    </div>
+</section>
+{% endif %}
+{% endblock %}
