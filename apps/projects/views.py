@@ -651,13 +651,13 @@ def label_create(request, pk):
     if not can_edit_project(request.user, project):
         return HttpResponseForbidden("You can't edit this project")
 
-    form = LabelForm(request.POST)
-    if form.is_valid():
-        label = form.save(commit=False)
-        label.project = project
-        label.save()
-        return render(request, 'projects/partials/label_item.html', {'label': label, 'project': project})
-    return HttpResponse(status=400)
+    from apps.tasks.services import TaskValidationError, create_label
+
+    try:
+        label = create_label(project, request.user, request.POST.get('name'), request.POST.get('color'))
+    except TaskValidationError as error:
+        return HttpResponse(str(error), status=400)
+    return render(request, 'projects/partials/label_item.html', {'label': label, 'project': project})
 
 
 @login_required
