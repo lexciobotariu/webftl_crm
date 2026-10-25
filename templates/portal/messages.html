@@ -1,0 +1,29 @@
+{% extends "portal/base.html" %}
+
+{% block title %}Emails{% endblock %}
+
+{% block content %}
+<h1 class="text-lg font-semibold text-zinc-100">Emails we sent you</h1>
+{% if sent %}
+<ul class="space-y-3">
+    {% for email in sent %}
+    <li class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden">
+        <details>
+            <summary class="px-4 py-3 cursor-pointer flex items-center justify-between gap-4 text-sm">
+                <span class="text-zinc-100 min-w-0 truncate">{{ email.subject|default:"(no subject)" }}</span>
+                <span class="text-xs text-zinc-500 flex-shrink-0">{{ email.created_at|date:"M j, Y" }}</span>
+            </summary>
+            <div class="px-4 pb-4 text-sm text-zinc-300 whitespace-pre-line border-t border-border-subtle pt-3">{{ email.body }}</div>
+            {% if email.invoice and email.invoice.sent_at and not email.invoice.cancelled_at %}
+            <div class="px-4 pb-3"><a href="{% url 'portal_invoice_pdf' email.invoice.pk %}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-100"><i data-lucide="file-down" class="w-3.5 h-3.5"></i>{{ email.invoice.number_label }}.pdf</a></div>
+            {% elif email.estimate and email.estimate.sent_at %}
+            <div class="px-4 pb-3"><a href="{% url 'portal_estimate' email.estimate.pk %}" class="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-100"><i data-lucide="file-text" class="w-3.5 h-3.5"></i>Estimate {{ email.estimate.number_label }}</a></div>
+            {% endif %}
+        </details>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="text-sm text-zinc-500">No emails yet.</p>
+{% endif %}
+{% endblock %}

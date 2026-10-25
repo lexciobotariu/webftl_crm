@@ -1,0 +1,71 @@
+{% extends "portal/base.html" %}
+
+{% block title %}Estimate {{ estimate.number_label }}{% endblock %}
+
+{% block content %}
+{% with invoice=estimate %}
+<div class="flex items-start justify-between gap-4 flex-wrap">
+    <div>
+        <a href="{% url 'portal_home' %}" class="text-xs text-zinc-500 hover:text-zinc-300">&larr; Overview</a>
+        <h1 class="text-lg font-semibold text-zinc-100 mt-1 flex items-center gap-2">Estimate {{ estimate.number_label }} {% include "portal/partials/estimate_status.html" %}</h1>
+        <p class="text-sm text-zinc-500">{% if estimate.project %}{{ estimate.project.name }} · {% endif %}Issued {{ estimate.issue_date|date:"M j, Y" }} · Valid until {{ estimate.valid_until|date:"M j, Y" }}</p>
+    </div>
+    <a href="{% url 'portal_estimate_pdf' estimate.pk %}" target="_blank" rel="noopener"
+       class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-elevated border border-border-subtle rounded-control text-sm text-zinc-300 hover:text-zinc-100">
+        <i data-lucide="file-down" class="w-4 h-4"></i>PDF
+    </a>
+</div>
+
+{% if error %}<p role="alert" class="bg-error/10 border border-error/20 rounded-card p-3 text-sm text-error">{{ error }}</p>{% endif %}
+
+<section aria-label="Lines" class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden">
+    <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="text-left text-xs text-zinc-500 uppercase tracking-wider border-b border-border-subtle">
+            <tr>
+                <th class="px-4 py-2 font-medium">Description</th>
+                <th class="px-4 py-2 font-medium text-right">Qty</th>
+                <th class="px-4 py-2 font-medium text-right">Price</th>
+                <th class="px-4 py-2 font-medium text-right">Amount</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-border-subtle">
+            {% for line in estimate.lines.all %}
+            <tr>
+                <td class="px-4 py-3 text-zinc-200">{{ line.description }}{% if line.details %}<span class="block text-xs text-zinc-400 whitespace-pre-line mt-0.5">{{ line.details }}</span>{% endif %}</td>
+                <td class="px-4 py-3 text-right text-zinc-400 tabular-nums">{{ line.quantity|floatformat:2 }}</td>
+                <td class="px-4 py-3 text-right text-zinc-400 tabular-nums">{% include "invoices/partials/money.html" with amount=line.unit_price %}</td>
+                <td class="px-4 py-3 text-right text-zinc-200 tabular-nums">{% include "invoices/partials/money.html" with amount=line.amount %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    <div class="border-t border-border-subtle px-4 py-3 space-y-1 text-sm">
+        <div class="flex justify-end gap-8"><span class="text-zinc-500">Subtotal</span><span class="text-zinc-200 w-28 text-right tabular-nums">{% include "invoices/partials/money.html" with amount=estimate.subtotal %}</span></div>
+        <div class="flex justify-end gap-8"><span class="text-zinc-500">Tax ({{ estimate.tax_rate|floatformat:"-2" }}%)</span><span class="text-zinc-200 w-28 text-right tabular-nums">{% include "invoices/partials/money.html" with amount=estimate.tax_amount %}</span></div>
+        <div class="flex justify-end gap-8 font-medium"><span class="text-zinc-300">Total</span><span class="text-zinc-100 w-28 text-right tabular-nums">{% include "invoices/partials/money.html" with amount=estimate.total %}</span></div>
+    </div>
+</section>
+
+{% if estimate.notes %}
+<section aria-label="Notes" class="border border-border-subtle rounded-card bg-panel/50 p-4 text-sm text-zinc-300 whitespace-pre-line">{{ estimate.notes }}</section>
+{% endif %}
+
+{% if estimate.status == 'sent' %}
+<form method="post" class="flex items-center gap-3 flex-wrap">
+    {% csrf_token %}
+    <button type="submit" name="answer" value="accepted" class="px-4 py-2 bg-accent hover:bg-accent-hover text-on-accent rounded-control text-sm font-medium">Accept estimate</button>
+    <button type="submit" name="answer" value="declined" onclick="return confirm('Decline estimate {{ estimate.number_label }}?')"
+            class="px-4 py-2 bg-elevated border border-border-subtle rounded-control text-sm text-zinc-300 hover:text-error">Decline</button>
+    <span class="text-xs text-zinc-500">We are notified right away.</span>
+</form>
+{% elif estimate.accepted_at %}
+<p class="text-sm text-success">You accepted this estimate on {{ estimate.accepted_at|date:"M j, Y" }}.</p>
+{% elif estimate.declined_at %}
+<p class="text-sm text-zinc-400">You declined this estimate on {{ estimate.declined_at|date:"M j, Y" }}.</p>
+{% elif estimate.status == 'expired' %}
+<p class="text-sm text-zinc-400">This estimate has expired. Contact us if you would still like to go ahead.</p>
+{% endif %}
+{% endwith %}
+{% endblock %}

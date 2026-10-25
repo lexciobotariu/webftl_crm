@@ -1,0 +1,22 @@
+{% extends "portal/base.html" %}
+
+{% block title %}Sign in{% endblock %}
+
+{% block auth_content %}
+<div class="text-center space-y-4">
+    <div class="text-[11px] uppercase tracking-[0.2em] text-zinc-500">{{ company_name }}</div>
+    {% if link %}
+    <h1 class="text-xl font-semibold text-zinc-100">Sign in as {{ link.contact.name }}</h1>
+    <p class="text-sm text-zinc-500">{{ link.contact.client.name }}</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="w-full py-2.5 px-4 bg-accent hover:bg-accent-hover text-on-accent font-medium rounded-control text-sm">Continue to the portal</button>
+    </form>
+    <p class="text-xs text-zinc-500">You stay signed in on this browser for 30 days.</p>
+    {% else %}
+    <h1 class="text-xl font-semibold text-zinc-100">This link no longer works</h1>
+    <p class="text-sm text-zinc-400">Sign-in links work once, for 15 minutes. Ask for a new one.</p>
+    <a href="{% url 'portal_login' %}" class="inline-block w-full py-2.5 px-4 bg-accent hover:bg-accent-hover text-on-accent font-medium rounded-control text-sm">Get a new link</a>
+    {% endif %}
+</div>
+{% endblock %}

@@ -72,6 +72,10 @@ class ClientContact(models.Model):
     phone = models.CharField(max_length=50, blank=True)
     is_primary = models.BooleanField(default=False, db_default=False)
     is_billing = models.BooleanField(default=False, db_default=False)
+    # The client portal (apps.portal): only ticked contacts with an email can sign in.
+    portal_access = models.BooleanField(default=False, db_default=False)
+    portal_invited_at = models.DateTimeField(null=True, blank=True)
+    portal_last_login_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.36.0] - 2026-10-25
+
+### Features
+- **Client portal** at `/portal/`. A client contact signs in without a password: they type their email and get a link that works once, for 15 minutes; after that they stay signed in for 30 days in that browser. They see their projects (not cancelled ones), the invoices and estimates that were sent to them with the PDFs and what is still to pay, and the emails you sent them. Internal notes, drafts and cancelled invoices never show
+- **Accept or decline an estimate** from the portal. The answer is recorded on the estimate, logged as a note in the client's Messages and emailed to the company email from Settings
+- **Portal access** per contact: tick it in the contact drawer (an email is required), then **Send portal invite** on the client's profile. The contact list shows who has access, when they were invited and when they last signed in. Unticking access, changing the contact's email or archiving the client ends their portal session at once
+
 ## [0.35.0] - 2026-10-25
 
 ### Features

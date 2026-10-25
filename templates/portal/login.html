@@ -1,0 +1,31 @@
+{% extends "portal/base.html" %}
+
+{% block title %}Sign in{% endblock %}
+
+{% block auth_content %}
+<div class="text-center mb-6">
+    <div class="text-[11px] uppercase tracking-[0.2em] text-zinc-500">{{ company_name }}</div>
+    <h1 class="text-xl font-semibold text-zinc-100 mt-2">Client portal</h1>
+</div>
+{% if sent %}
+<div role="status" class="text-sm text-zinc-300 space-y-3 text-center">
+    <i data-lucide="mail-check" class="w-8 h-8 mx-auto text-accent"></i>
+    <p>If <strong class="text-zinc-100">{{ form.cleaned_data.email }}</strong> has access to the portal, we have sent it a link to sign in.</p>
+    <p class="text-zinc-500">The link works once, for {{ minutes }} minutes. Check your spam folder if it does not arrive.</p>
+    <a href="{% url 'portal_login' %}" class="inline-block text-zinc-400 hover:text-zinc-100">Use another email</a>
+</div>
+{% else %}
+<form method="post" class="space-y-4">
+    {% csrf_token %}
+    <div>
+        <label for="id_email" class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Your email</label>
+        <input type="email" name="email" id="id_email" value="{{ form.email.value|default_if_none:'' }}" required autofocus autocomplete="email"
+               class="w-full px-3.5 py-2.5 bg-elevated border border-border-subtle rounded-control text-zinc-100 placeholder-zinc-600 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none text-sm"
+               placeholder="you@company.com">
+        {% if form.email.errors %}<p role="alert" class="text-xs text-error mt-1">{{ form.email.errors.0 }}</p>{% endif %}
+    </div>
+    <button type="submit" class="w-full py-2.5 px-4 bg-accent hover:bg-accent-hover text-on-accent font-medium rounded-control text-sm">Email me a sign-in link</button>
+    <p class="text-xs text-zinc-500 text-center">No password needed.</p>
+</form>
+{% endif %}
+{% endblock %}

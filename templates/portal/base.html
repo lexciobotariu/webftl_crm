@@ -1,0 +1,49 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="{{ theme }} h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>{% block title %}Client portal{% endblock %} - {{ company_name }}</title>
+    {% include "components/head_theme.html" %}
+    <script src="https://unpkg.com/lucide@1.38.0/dist/umd/lucide.min.js"
+            integrity="sha384-yi0Nt4uuEMu/6z2xkzY7OkOlSzF+Spi8SreFE+kyQGlSDSV56UXyFUP0SPMo/xvL"
+            crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+</head>
+<body class="min-h-full bg-bg text-zinc-100 antialiased">
+    {% if portal_contact %}
+    <header class="border-b border-border-subtle bg-panel">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+            <div class="min-w-0">
+                <div class="text-sm font-semibold text-zinc-100 truncate">{{ company_name }}</div>
+                <div class="text-xs text-zinc-500 truncate">{{ portal_contact.client.name }} · {{ portal_contact.name }}</div>
+            </div>
+            <nav class="flex items-center gap-1 text-sm" aria-label="Portal">
+                {% url 'portal_home' as home_url %}{% url 'portal_messages' as messages_url %}
+                <a href="{{ home_url }}" class="px-3 py-1.5 rounded-control {% if request.path == home_url %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-100{% endif %}">Overview</a>
+                <a href="{{ messages_url }}" class="px-3 py-1.5 rounded-control {% if request.path == messages_url %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-100{% endif %}">Emails</a>
+                <form method="post" action="{% url 'portal_logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="px-3 py-1.5 rounded-control text-zinc-400 hover:text-zinc-100">Sign out</button>
+                </form>
+            </nav>
+        </div>
+    </header>
+    <main class="max-w-4xl mx-auto px-4 py-6 space-y-6">
+        {% block content %}{% endblock %}
+    </main>
+    {% if company_email %}
+    <footer class="max-w-4xl mx-auto px-4 pb-8 text-xs text-zinc-500">Questions? Write to <a href="mailto:{{ company_email }}" class="text-zinc-300 hover:text-zinc-100">{{ company_email }}</a>.</footer>
+    {% endif %}
+    {% else %}
+    <main class="min-h-screen flex items-center justify-center px-4">
+        <div class="w-full max-w-sm bg-panel border border-border-subtle rounded-panel px-6 py-8">
+            {% block auth_content %}{% endblock %}
+        </div>
+    </main>
+    {% endif %}
+    <script>lucide.createIcons();</script>
+</body>
+</html>
