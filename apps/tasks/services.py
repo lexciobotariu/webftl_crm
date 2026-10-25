@@ -12,6 +12,7 @@ Key patterns:
 - Permission errors raise PermissionDenied (caught by views as 403)
 """
 import os
+import re
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 
@@ -24,13 +25,16 @@ from django.utils.text import get_valid_filename
 from .durations import MAX_DAY_MINUTES
 from .models import (
     Attachment,
+    Label,
     Subtask,
+    Task,
     TaskActivity,
     TimeEntry,
     can_create_task,
     can_edit_task,
     can_edit_tasks_on,
     can_view_task,
+    visible_tasks,
 )
 
 # File upload security settings
@@ -56,6 +60,10 @@ class TaskPermissionError(PermissionDenied):
 
 class TimeEntryValidationError(ValueError):
     """A logged time range breaks the manual-entry rules."""
+
+
+class TaskValidationError(ValueError):
+    """A value given for a task or label is not one it can take."""
 
 
 def require_access(user, project):
@@ -92,6 +100,110 @@ def update_task_field(task, field, value, user):
     return task
 
 
+TITLE_MAX_LENGTH = Task._meta.get_field('title').max_length
+
+
+def _clean_task_values(project, values):
+    """Check the fields ``create_task`` and ``update_task`` take. Raises TaskValidationError."""
+    from apps.projects.models import get_assignable_users
+
+    from .templatetags.task_markdown import MAX_LENGTH as DESCRIPTION_MAX_LENGTH
+
+    if 'title' in values:
+        values['title'] = (values['title'] or '').strip()
+        if not values['title']:
+            raise TaskValidationError('A task needs a title.')
+        if len(values['title']) > TITLE_MAX_LENGTH:
+            raise TaskValidationError(f'The title is longer than {TITLE_MAX_LENGTH} characters.')
+    if 'description' in values:
+        values['description'] = values['description'] or ''
+        if len(values['description']) > DESCRIPTION_MAX_LENGTH:
+            raise TaskValidationError(f'The description is longer than {DESCRIPTION_MAX_LENGTH} characters.')
+    if 'priority' in values:
+        values['priority'] = values['priority'] or ''
+        if values['priority'] and values['priority'] not in dict(Task.PRIORITY_CHOICES):
+            raise TaskValidationError('Priority is low, medium, high, urgent or empty.')
+    if values.get('assignee') is not None:
+        if not get_assignable_users(project).filter(pk=values['assignee'].pk).exists():
+            raise TaskValidationError(f'{values["assignee"].name} cannot be assigned tasks on this project.')
+    if values.get('status') is not None and values['status'].project_id != project.pk:
+        raise TaskValidationError('That status belongs to another project.')
+    if 'estimate_minutes' in values and values['estimate_minutes'] is not None:
+        if values['estimate_minutes'] < 0:
+            raise TaskValidationError('The estimate cannot be negative.')
+    start, due = values.get('start_date'), values.get('due_date')
+    if start and due and due < start:
+        raise TaskValidationError('The due date is before the start date.')
+    return values
+
+
+def _require_labels_on(project, labels):
+    labels = list(labels)
+    if any(label.project_id != project.pk for label in labels):
+        raise TaskValidationError('A label belongs to another project.')
+    return labels
+
+
+@transaction.atomic
+def create_task(project, user, *, title, status=None, description='', assignee=None,
+                priority='', start_date=None, due_date=None, estimate_minutes=None,
+                billable=True, labels=()):
+    """Create a task on ``project``.
+
+    Admin, or ``tasks_create`` plus a ProjectAccess row (``can_create_task``).
+    Without a status the task goes in the first column shown on the board, as
+    the drawer does. Labels must be the project's own.
+    """
+    if not can_create_task(user, project):
+        raise TaskPermissionError("You can't create tasks on this project")
+    values = _clean_task_values(project, {
+        'title': title, 'description': description, 'assignee': assignee,
+        'priority': priority, 'status': status, 'start_date': start_date,
+        'due_date': due_date, 'estimate_minutes': estimate_minutes,
+    })
+    labels = _require_labels_on(project, labels)
+    if values['status'] is None:
+        values['status'] = (
+            project.statuses.filter(visible_on_board=True).first() or project.statuses.first()
+        )
+    task = Task(project=project, billable=billable, **values)
+    task._changed_by = user
+    task.save()
+    if labels:
+        task.labels.set(labels)
+    return task
+
+
+UPDATABLE_FIELDS = {
+    'title', 'description', 'assignee', 'priority', 'start_date', 'due_date',
+    'estimate_minutes', 'billable',
+}
+
+
+def update_task(task, user, **values):
+    """Change several fields of ``task`` at once, with one activity row per field.
+
+    The fields are those in ``UPDATABLE_FIELDS``; status has its own path
+    (``move_task``) and labels theirs (``add_label`` / ``remove_label``).
+    """
+    require_access(user, task.project)
+    unknown = set(values) - UPDATABLE_FIELDS
+    if unknown:
+        raise TaskValidationError(f'Cannot change {", ".join(sorted(unknown))} here.')
+    checked = dict(values)
+    # A start or due date alone is still checked against the one already set.
+    if 'due_date' in checked and 'start_date' not in checked:
+        checked['start_date'] = task.start_date
+    if 'start_date' in checked and 'due_date' not in checked:
+        checked['due_date'] = task.due_date
+    checked = _clean_task_values(task.project, checked)
+    for field in values:
+        setattr(task, field, checked[field])
+    task._changed_by = user
+    task.save()
+    return task
+
+
 # Default for move_task's ``after_id``: no anchor given, so ``position`` decides.
 AFTER_UNSET = object()
 
@@ -120,8 +232,6 @@ def move_task(task, new_status, user, position=None, after_id=AFTER_UNSET):
         TaskPermissionError: If user lacks editor access
     """
     require_access(user, task.project)
-
-    from apps.tasks.models import Task
 
     # Lock the moved task and both column sets in one pk-ordered query. The
     # subquery reads status_id at lock time so a concurrent move cannot leave
@@ -486,14 +596,61 @@ def toggle_label(task, label, user):
     Raises:
         TaskPermissionError: If user lacks editor access
     """
-    require_access(user, task.project)
-
     if task.labels.filter(pk=label.pk).exists():
-        task.labels.remove(label)
-        log_label_change(task, label, user, added=False)
+        remove_label(task, label, user)
     else:
-        task.labels.add(label)
-        log_label_change(task, label, user, added=True)
+        add_label(task, label, user)
+
+
+def add_label(task, label, user):
+    """Put ``label`` on ``task``. Nothing happens if it is already there.
+
+    Returns whether the label was added. Unlike ``toggle_label``, asking twice
+    leaves the label on, which is what a request repeated over the network wants.
+    """
+    require_access(user, task.project)
+    _require_labels_on(task.project, [label])
+    if task.labels.filter(pk=label.pk).exists():
+        return False
+    task.labels.add(label)
+    log_label_change(task, label, user, added=True)
+    return True
+
+
+def remove_label(task, label, user):
+    """Take ``label`` off ``task``. Returns whether it was on."""
+    require_access(user, task.project)
+    if not task.labels.filter(pk=label.pk).exists():
+        return False
+    task.labels.remove(label)
+    log_label_change(task, label, user, added=False)
+    return True
+
+
+LABEL_COLOR = re.compile(r'^#[0-9a-fA-F]{6}$')
+LABEL_NAME_MAX_LENGTH = Label._meta.get_field('name').max_length
+
+
+def create_label(project, user, name, color='#6366f1'):
+    """A new label on ``project``. Same right as in project settings (``can_edit_project``).
+
+    A name the project already has, in any letter case, is refused.
+    """
+    from apps.projects.models import can_edit_project
+
+    if not can_edit_project(user, project):
+        raise TaskPermissionError("You can't edit this project")
+    name = (name or '').strip()
+    if not name:
+        raise TaskValidationError('A label needs a name.')
+    if len(name) > LABEL_NAME_MAX_LENGTH:
+        raise TaskValidationError(f'A label name is at most {LABEL_NAME_MAX_LENGTH} characters.')
+    color = color or '#6366f1'
+    if not LABEL_COLOR.match(color):
+        raise TaskValidationError('The color is a hex value such as #6366f1.')
+    if project.labels.filter(name__iexact=name).exists():
+        raise TaskValidationError(f'This project already has a label called {name}.')
+    return Label.objects.create(project=project, name=name, color=color)
 
 
 def close_expired_timers(now=None):
@@ -794,3 +951,68 @@ def entries_on_task(user, task):
     if user.is_admin or user.has_app_permission('tasks_view_all'):
         return entries
     return entries.filter(user=user)
+
+
+TASK_IDENTIFIER = re.compile(r'^\s*([A-Za-z][A-Za-z0-9]{1,5})-(\d+)\s*$')
+
+
+def find_task(user, identifier):
+    """The task called ``identifier`` (``CUST-12``, any letter case) that ``user`` may see.
+
+    Raises ``Task.DoesNotExist`` both when there is no such task and when the
+    person may not see it, so the answer does not tell one from the other.
+    """
+    match = TASK_IDENTIFIER.match(identifier or '')
+    if not match:
+        raise Task.DoesNotExist(f'{identifier!r} is not a task id such as CUST-12.')
+    key, number = match.group(1).upper(), int(match.group(2))
+    return (
+        visible_tasks(user)
+        .select_related('project', 'status', 'assignee')
+        .get(project__key=key, number=number)
+    )
+
+
+def _first_status(project, category):
+    return project.statuses.filter(category=category).order_by('order', 'pk').first()
+
+
+@transaction.atomic
+def start_work(task, user):
+    """Begin working on ``task``: take it, move it to work in progress, start the timer.
+
+    The task is assigned to ``user`` when nobody has it. It moves to the
+    project's first "started" column unless it is already in one (a project
+    without such a column keeps its status). Then a timer starts, closing any
+    other timer this person had running. Returns the new time entry.
+    """
+    from apps.projects.models import Status
+
+    require_access(user, task.project)
+    if task.assignee_id is None:
+        update_task(task, user, assignee=user)
+    if task.status.category != Status.STARTED:
+        started = _first_status(task.project, Status.STARTED)
+        if started is not None:
+            move_task(task, started, user)
+    return start_timer(task, user)
+
+
+@transaction.atomic
+def finish_work(task, user):
+    """Done with ``task``: stop the timer running on it and move it to the first "completed" column.
+
+    A timer running on another task is left alone. Returns the closed time
+    entry, or None when no timer was running on this task.
+    """
+    from apps.projects.models import Status
+
+    require_access(user, task.project)
+    entry = None
+    if TimeEntry.objects.filter(task=task, user=user, ended_at__isnull=True).exists():
+        entry = stop_timer(user)
+    if task.status.category != Status.COMPLETED:
+        completed = _first_status(task.project, Status.COMPLETED)
+        if completed is not None:
+            move_task(task, completed, user)
+    return entry

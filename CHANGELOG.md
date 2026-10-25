@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.36.1] - 2026-10-25
+
+### Fixed
+- **Labels:** adding a label whose name the project already has (in any letter case) now says so instead of failing with a server error
+
+### Changed
+- Creating a task, changing several of its fields at once, adding or removing a label, creating a label, finding a task by its id (`CUST-12`) and "start / finish work" are now one service each in `apps/tasks/services.py`, with the same permission checks as the screens. The new-task drawer and the project label form use them. Groundwork for controlling tasks from Claude (MCP); nothing changes on screen
+
 ## [0.36.0] - 2026-10-25
 
 ### Features

@@ -256,12 +256,16 @@ def task_create(request, project_pk):
     if request.method == 'POST':
         form = TaskForm(project, request.POST)
         if form.is_valid():
-            task = form.save(commit=False)
-            task.project = project
-            task.status = status
-            task._changed_by = request.user
-            task.save()
-            form.save_m2m()
+            from apps.tasks import services
+
+            data = form.cleaned_data
+            task = services.create_task(
+                project, request.user,
+                title=data['title'], status=status, description=data['description'],
+                assignee=data['assignee'], priority=data['priority'],
+                due_date=data['due_date'], estimate_minutes=data['estimate'],
+                labels=data['labels'],
+            )
             if request.htmx:
                 if request.POST.get('create_more'):
                     # Keep the drawer open on a fresh form in the same place: same status,
