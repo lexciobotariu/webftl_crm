@@ -32,6 +32,8 @@ urlpatterns = [
     path('<int:pk>/subscription/', views.task_subscription, name='task_subscription'),
     path('<int:pk>/activity/', views.task_activity_list, name='task_activity_list'),
     path('<int:pk>/attachments/', views.attachment_upload, name='attachment_upload'),
+    path('attachments/<int:pk>/', views.attachment_download, name='attachment_download'),
+    path('attachments/<int:pk>/delete/', views.attachment_delete, name='attachment_delete'),
     # Full page task view
     path('project/<int:project_pk>/<int:task_pk>/', views.task_full_page, name='task_full_page'),
     # Property update endpoints

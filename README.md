@@ -146,6 +146,19 @@ python manage.py create_recurring_invoices
 Running it more than once a day is harmless, and a missed day is caught up on
 the next run.
 
+## File storage
+
+Uploaded files (task attachments) go to the server disk until an admin connects
+an S3-compatible bucket under **Settings > File storage** (Amazon S3, Cloudflare
+R2, Backblaze B2, Hetzner, DigitalOcean Spaces, MinIO). The container has no
+volume for `media/`, so in production files on the disk are lost on every
+deploy; connect a bucket before relying on attachments.
+
+The bucket stays private. Downloads go through the app, which checks access
+and then redirects to a signed link valid for five minutes. The keys need
+permission to put, get, head and delete objects in the bucket. Files saved on
+the disk before the bucket was connected are still served from the disk.
+
 ## Frontend dependencies
 
 There is no build step. Two small scripts of our own live in `static/js/`; with

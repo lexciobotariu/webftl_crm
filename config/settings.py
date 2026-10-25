@@ -150,8 +150,9 @@ _staticfiles_backend = (
     else 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 )
 STORAGES = {
+    # The server disk, or the S3-compatible bucket an admin sets in Settings.
     'default': {
-        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        'BACKEND': 'apps.crm.storage.ConfiguredStorage',
     },
     'staticfiles': {
         'BACKEND': _staticfiles_backend,

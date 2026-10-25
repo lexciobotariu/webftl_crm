@@ -508,3 +508,75 @@ class TestTaskMoveAfterId:
         })
         assert response.status_code == 204
         assert self._column(status) == ['B', 'C', 'A']
+
+
+@pytest.mark.django_db
+@pytest.mark.security
+class TestAttachmentDownloadAndDelete:
+    @pytest.fixture(autouse=True)
+    def media_root(self, settings, tmp_path):
+        settings.MEDIA_ROOT = tmp_path
+
+    def _upload(self, client, name='notes.txt', body=b'file content'):
+        editor = UserFactory()
+        task = TaskFactory()
+        ProjectAccessFactory(project=task.project, user=editor)
+        client.force_login(editor)
+        response = client.post(
+            reverse('attachment_upload', args=[task.pk]),
+            {'file': SimpleUploadedFile(name, body)},
+        )
+        assert reverse('attachment_download', args=[task.attachments.get().pk]) in (
+            response.content.decode()
+        )
+        return editor, task, task.attachments.get()
+
+    def test_download_checks_who_may_see_the_task(self, client):
+        _editor, _task, attachment = self._upload(client)
+        response = client.get(reverse('attachment_download', args=[attachment.pk]))
+        assert response.status_code == 200
+        assert b''.join(response.streaming_content) == b'file content'
+        assert response['Content-Disposition'].startswith('inline')
+
+        client.force_login(UserFactory())
+        response = client.get(reverse('attachment_download', args=[attachment.pk]))
+        assert response.status_code == 403
+
+    def test_files_that_could_run_in_the_browser_download_instead(self, client):
+        _editor, _task, attachment = self._upload(client, name='site.zip', body=b'PK')
+        response = client.get(reverse('attachment_download', args=[attachment.pk]))
+        assert response['Content-Disposition'].startswith('attachment')
+
+    def test_a_missing_file_is_a_404(self, client):
+        _editor, _task, attachment = self._upload(client)
+        attachment.file.storage.delete(attachment.file.name)
+        response = client.get(reverse('attachment_download', args=[attachment.pk]))
+        assert response.status_code == 404
+
+    def test_editor_removes_an_attachment_and_its_file(
+        self, client, django_capture_on_commit_callbacks
+    ):
+        _editor, task, attachment = self._upload(client)
+        storage, name = attachment.file.storage, attachment.file.name
+        assert storage.exists(name)
+        with django_capture_on_commit_callbacks(execute=True):
+            response = client.post(reverse('attachment_delete', args=[attachment.pk]))
+        assert response.status_code == 200
+        assert not task.attachments.exists()
+        assert not storage.exists(name)
+
+    def test_someone_who_cannot_edit_cannot_remove(self, client):
+        _editor, task, attachment = self._upload(client)
+        client.force_login(UserFactory())
+        response = client.post(reverse('attachment_delete', args=[attachment.pk]))
+        assert response.status_code == 403
+        assert task.attachments.exists()
+
+    def test_deleting_the_task_removes_its_files(
+        self, client, django_capture_on_commit_callbacks
+    ):
+        _editor, task, attachment = self._upload(client)
+        storage, name = attachment.file.storage, attachment.file.name
+        with django_capture_on_commit_callbacks(execute=True):
+            task.delete()
+        assert not storage.exists(name)

@@ -64,6 +64,54 @@
                 </form>
             </section>
 
+            <section id="storage" class="border border-border-subtle rounded-card overflow-hidden">
+                <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
+                    <h2 class="text-sm font-medium text-zinc-100">File storage</h2>
+                </div>
+                <form method="post" action="{% url 'settings' %}#storage" class="p-4 space-y-4"
+                      x-data="{ backend: '{{ storage_form.storage_backend.value|default:'disk' }}' }">
+                    {% csrf_token %}
+                    <p class="text-sm text-zinc-400">Task attachments and other uploaded files are kept here. A bucket stays private: people download through the app, which checks they may see the file first.</p>
+                    {% if files_on_disk_in_production %}
+                    <p class="text-sm text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-control px-3 py-2">Files are on the server disk. Unless a volume is mounted, they are lost on every deploy. Connect a bucket to keep them.</p>
+                    {% endif %}
+                    {% if storage_form.non_field_errors %}
+                    <p class="text-error text-sm">{{ storage_form.non_field_errors.0 }}</p>
+                    {% endif %}
+                    <fieldset>
+                        <legend class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">{{ storage_form.storage_backend.label }}</legend>
+                        <div class="space-y-2">
+                            {% for choice in storage_form.storage_backend %}
+                            <label class="flex items-center gap-2 text-sm text-zinc-100 cursor-pointer">
+                                <input type="radio" name="{{ choice.data.name }}" value="{{ choice.data.value }}" class="{{ choice.data.attrs.class }}" x-model="backend" {% if choice.data.selected %}checked{% endif %}>
+                                <span>{{ choice.choice_label }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </fieldset>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" x-show="backend === 's3'"{% if storage_form.storage_backend.value != 's3' %} x-cloak{% endif %}>
+                        {% for field in storage_form %}{% if field.name != 'storage_backend' %}
+                        <div{% if field.name == 's3_endpoint_url' %} class="sm:col-span-2"{% endif %}>
+                            <label class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}
+                            <p class="text-xs text-zinc-500 mt-1">{{ field.help_text }}</p>
+                            {% endif %}
+                            {% if field.errors %}
+                            <p class="text-error text-sm mt-1">{{ field.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                        {% endif %}{% endfor %}
+                    </div>
+                    <div class="pt-2">
+                        <button type="submit" class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">
+                            Save storage
+                        </button>
+                        <span class="text-xs text-zinc-500 ml-2" x-show="backend === 's3'">Saving writes, reads and deletes a small test file first.</span>
+                    </div>
+                </form>
+            </section>
+
             <section class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden">
                 <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
                     <h2 class="text-sm font-medium text-zinc-100">Currencies</h2>

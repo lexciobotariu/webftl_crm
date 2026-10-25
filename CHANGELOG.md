@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.33.0] - 2026-10-25
+
+### Features
+- **Settings > File storage:** keep uploaded files in an S3-compatible bucket (Amazon S3, Cloudflare R2, Backblaze B2, Hetzner, DigitalOcean, MinIO). Enter the endpoint, region, bucket, keys and an optional folder. Saving first writes, reads back and deletes a small test file, and nothing is saved if that fails. The secret key is stored encrypted and never shown again
+- While files are still on the server disk in production, Settings warns that they are lost on every deploy
+- **Task attachments** now open through the app, which checks that you may see the task. From a bucket you get a short-lived private link; the bucket itself stays private
+- Whoever can edit a task can remove an attachment (× on hover). Deleting an attachment or its task also deletes the stored file
+
+### Fixed
+- Attachment links no longer 404 in production, and files can no longer be fetched by anyone who has the link
+- Files saved on the server disk before a bucket was connected still open
+- "No attachments yet" disappears after the first upload
+- PDFs, images and text open in the browser; other files (Word, Excel, zip, CSV) download
+
 ## [0.32.1] - 2026-10-11
 
 ### Changed

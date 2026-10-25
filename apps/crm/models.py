@@ -1,6 +1,8 @@
 from django.core.exceptions import ValidationError
 from django.db import models
 
+from apps.accounts.fields import EncryptedCharField
+
 
 class Company(models.Model):
     """The single company these invoices are sent from.
@@ -22,6 +24,23 @@ class Company(models.Model):
     tax_id = models.CharField(max_length=64, blank=True)
     theme = models.CharField(max_length=5, choices=THEME_CHOICES, default=THEME_DARK)
 
+    # Where uploaded files go. See apps/crm/storage.py.
+    STORAGE_DISK = 'disk'
+    STORAGE_S3 = 's3'
+    STORAGE_CHOICES = [
+        (STORAGE_DISK, 'Server disk'),
+        (STORAGE_S3, 'S3-compatible bucket'),
+    ]
+    storage_backend = models.CharField(
+        max_length=4, choices=STORAGE_CHOICES, default=STORAGE_DISK
+    )
+    s3_endpoint_url = models.URLField(blank=True)
+    s3_region = models.CharField(max_length=64, blank=True)
+    s3_bucket = models.CharField(max_length=255, blank=True)
+    s3_access_key = models.CharField(max_length=255, blank=True)
+    s3_secret_key = EncryptedCharField(max_length=512, blank=True)
+    s3_prefix = models.CharField(max_length=255, blank=True)
+
     class Meta:
         verbose_name_plural = 'company'
 
@@ -31,6 +50,10 @@ class Company(models.Model):
     def save(self, *args, **kwargs):
         self.pk = 1
         return super().save(*args, **kwargs)
+
+    @property
+    def uses_s3(self):
+        return self.storage_backend == self.STORAGE_S3 and bool(self.s3_bucket)
 
     @classmethod
     def load(cls):

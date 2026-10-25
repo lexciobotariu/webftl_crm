@@ -436,6 +436,12 @@ def upload_attachment(task, file, user):
     )
 
 
+def delete_attachment(attachment, user):
+    """Remove an attachment. Whoever may edit the task may remove its files."""
+    require_access(user, attachment.task.project)
+    attachment.delete()
+
+
 def delete_task(task, user):
     """
     Delete a task. ``role=admin`` only. Edit flags do not grant this.
