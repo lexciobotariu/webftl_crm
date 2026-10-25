@@ -3,7 +3,7 @@
 {% block title %}{{ task.title }} - {{ task.project.name }}{% endblock %}
 
 {% block full_content %}
-<div class="flex flex-col h-full bg-panel" id="task-{{ task.pk }}">
+<div class="flex flex-col h-full bg-panel" id="task-{{ task.pk }}" data-live-page="{{ task.pk }}">
     <!-- Breadcrumb header -->
     <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle">
         <div class="flex items-center justify-between">
@@ -140,4 +140,5 @@
         </div>
     </div>
 </div>
+{% include "live/_task_events.html" with live_project=task.project_id %}
 {% endblock %}

@@ -87,6 +87,7 @@ INSTALLED_APPS = [
     'apps.notifications',
     'apps.portal',
     'apps.mcp',
+    'apps.live',
 ]
 
 MIDDLEWARE = [
@@ -101,6 +102,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
     'django_htmx.middleware.HtmxMiddleware',
+    'apps.live.middleware.OriginTabMiddleware',
     'apps.accounts.middleware.RequireAdminTwoFactorMiddleware',
 ]
 
@@ -126,13 +128,20 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
 
 DATABASES = {
     'default': dj_database_url.config(
         default='postgres://postgres:postgres@localhost:5433/webftl_crm',
-        conn_max_age=600,
+        # Production runs under ASGI (uvicorn), where Django opens a connection per
+        # request; persistent connections are not reused there and would pile up.
+        conn_max_age=0,
     )
 }
+
+# Optional. When set, live task updates (apps/live) go through Redis pub/sub
+# instead of Postgres LISTEN/NOTIFY.
+REDIS_URL = os.getenv('REDIS_URL', '')
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},

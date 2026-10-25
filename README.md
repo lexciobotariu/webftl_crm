@@ -62,6 +62,7 @@ You're free to use it, modify it, resell it, or do whatever you want with it. Se
 - **Backend:** Django 5.1, Python 3.12+
 - **Frontend:** HTMX, Alpine.js, Tailwind CSS
 - **Database:** PostgreSQL 16
+- **Server:** gunicorn with uvicorn workers (ASGI), for live updates
 - **Auth:** django-allauth (email-based, no username)
 - **Icons:** Lucide
 
@@ -122,6 +123,13 @@ python manage.py runserver
 ```
 
 Open [http://localhost:8000](http://localhost:8000) and log in.
+
+`runserver` has no live updates on the task pages (see below). To see them,
+run the server the way production does:
+
+```bash
+gunicorn config.asgi:application -k uvicorn_worker.UvicornWorker --reload -b 127.0.0.1:8000
+```
 
 ## Running Tests
 
@@ -198,6 +206,23 @@ nothing about invoices or salaries.
   permissions; changes show as "via Claude" in task activity.
 - **Disconnecting:** Security → Connected apps → Disconnect. Deactivating a
   person stops their connections at once.
+
+## Live updates on the task pages
+
+The task list and board (project and My Tasks), the task page and the task
+drawer update by themselves when someone else changes a task: a colleague,
+Claude through MCP, the GitHub webhook. Nothing polls. Each open task page
+keeps one server-sent events connection (`/live/tasks/`), and every change to
+a task, its subtasks, comments, time or files sends one message naming the
+task. The page then reloads what it shows through the normal views; while
+someone is typing, has a menu open or is dragging a card, it waits until they
+are done. The tab that made a change does not reload for it.
+
+- **Server:** gunicorn with uvicorn workers (ASGI, `config/asgi.py`), set in
+  the Dockerfile. Under WSGI (`runserver`) the endpoint answers 204 and pages
+  simply do not update live.
+- **Carrier between server processes:** Postgres `LISTEN/NOTIFY` by default,
+  no extra service. Set `REDIS_URL` to use Redis pub/sub instead.
 
 ## Frontend dependencies
 

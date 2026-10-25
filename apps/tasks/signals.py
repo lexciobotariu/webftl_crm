@@ -1,13 +1,14 @@
 import logging
 
 from django.db import transaction
-from django.db.models.signals import post_delete, post_save, pre_save
+from django.db.models.signals import m2m_changed, post_delete, post_save, pre_save
 from django.dispatch import receiver
 
+from apps.live.bus import publish
 from apps.notifications.services import notify_assigned, withdraw_assigned
 
 from .durations import format_minutes
-from .models import Attachment, Task, TaskActivity
+from .models import Attachment, Subtask, Task, TaskActivity, TimeEntry
 
 logger = logging.getLogger(__name__)
 
@@ -178,3 +179,43 @@ def delete_attachment_file(sender, instance, **kwargs):
 
     if name:
         transaction.on_commit(remove)
+
+
+# Live updates: open task pages reload what changed (apps/live). Every change to a
+# task, its subtasks, activity (comments, status...), time and files is announced;
+# Postgres sends one message per task per transaction however many rows changed.
+
+@receiver(post_save, sender=Task)
+@receiver(post_delete, sender=Task)
+def announce_task(sender, instance, **kwargs):
+    publish(instance.project_id, instance.pk)
+
+
+@receiver(post_save, sender=Subtask)
+@receiver(post_delete, sender=Subtask)
+@receiver(post_save, sender=TaskActivity)
+@receiver(post_delete, sender=TaskActivity)
+@receiver(post_save, sender=TimeEntry)
+@receiver(post_delete, sender=TimeEntry)
+@receiver(post_save, sender=Attachment)
+@receiver(post_delete, sender=Attachment)
+def announce_task_part(sender, instance, **kwargs):
+    if not instance.task_id:
+        return
+    if sender.task.is_cached(instance):
+        project_id = instance.task.project_id
+    else:
+        project_id = Task.objects.filter(pk=instance.task_id).values_list('project_id', flat=True).first()
+    publish(project_id, instance.task_id)
+
+
+@receiver(m2m_changed, sender=Task.labels.through)
+def announce_labels(sender, instance, action, reverse, pk_set, **kwargs):
+    if not action.startswith('post_'):
+        return
+    if not reverse:
+        publish(instance.project_id, instance.pk)
+        return
+    # Changed from the label's side: every task it was added to or removed from.
+    for task_id, project_id in Task.objects.filter(pk__in=pk_set or ()).values_list('pk', 'project_id'):
+        publish(project_id, task_id)

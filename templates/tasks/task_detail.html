@@ -1,4 +1,4 @@
-<div class="flex flex-col h-full">
+<div class="flex flex-col h-full"{% if not embedded %} data-live-task="{{ task.pk }}" data-live-url="{% url 'task_detail' task.pk %}"{% endif %}>
     <!-- Header -->
     <div class="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-border-subtle">
         <div class="flex items-center gap-3">

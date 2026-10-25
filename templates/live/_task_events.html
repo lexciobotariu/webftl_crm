@@ -1,0 +1,4 @@
+{% load static %}
+{% comment %}Live updates (static/js/live.js, apps/live): this page hears about changes to tasks made elsewhere and reloads what it shows. live_project narrows it to one project.{% endcomment %}
+<div id="live-tasks" hidden data-url="{% url 'live_task_events' %}{% if live_project %}?project={{ live_project }}{% endif %}"></div>
+<script src="{% static 'js/live.js' %}"></script>
