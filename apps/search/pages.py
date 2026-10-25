@@ -40,6 +40,7 @@ PAGES = (
     Page('Estimates', 'estimate_list', 'access_invoices'),
     Page('Team', 'team_list', 'access_team'),
     Page('Settings', 'settings', 'admin'),
+    Page('Security', 'mfa_index'),
     Page('Changelog', 'changelog'),
 )
 

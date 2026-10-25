@@ -36,6 +36,13 @@ def restore_system_presets(request, django_db_blocker):
     yield
 
 
+@pytest.fixture(autouse=True)
+def admin_two_factor_off(settings):
+    """Most tests sign admins in with a password only. The tests of the rule
+    itself (apps/accounts/tests/test_two_factor.py) turn it back on."""
+    settings.REQUIRE_ADMIN_2FA = False
+
+
 @pytest.fixture
 def user(db):
     """Create a regular user with Developer preset for app-level permissions."""

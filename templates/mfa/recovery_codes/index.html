@@ -1,0 +1,16 @@
+{% extends "account/security_base.html" %}
+
+{% block security_content %}
+<section class="border border-border-subtle rounded-card p-4 space-y-4">
+    <h1 class="text-sm font-medium text-zinc-100">Recovery codes</h1>
+    <p class="text-sm text-zinc-400">{{ unused_codes|length }} of {{ total_count }} left. If you lose your phone, type one of these instead of the app's code. Each works once. Save them now, somewhere outside this app (a password manager, or printed).</p>
+    <pre class="bg-elevated border border-border-subtle rounded-control p-3 text-sm font-mono text-zinc-100 grid grid-cols-2 gap-x-6 gap-y-1 select-all">{% for code in unused_codes %}<span>{{ code }}</span>{% endfor %}</pre>
+    <div class="flex flex-wrap gap-2">
+        {% if unused_codes %}
+        <a href="{% url 'mfa_download_recovery_codes' %}" class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">Download</a>
+        {% endif %}
+        <a href="{% url 'mfa_generate_recovery_codes' %}" class="bg-elevated border border-border-subtle px-4 py-2 rounded-control text-sm text-zinc-200 hover:bg-hover">New codes</a>
+        <a href="{% url 'dashboard' %}" class="px-4 py-2 text-sm text-zinc-500 hover:text-zinc-300">Done</a>
+    </div>
+</section>
+{% endblock %}

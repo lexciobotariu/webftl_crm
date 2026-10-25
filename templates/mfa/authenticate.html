@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Two-factor sign-in - WebFTL CRM{% endblock %}
+
+{% block auth_content %}
+<div class="w-full max-w-sm mx-auto">
+    <div class="text-center mb-8">
+        <div class="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Two-factor sign-in</div>
+        <h1 class="text-xl font-semibold text-zinc-100 mt-2">Enter your code</h1>
+        <p class="text-zinc-500 mt-2 text-sm">Open your authenticator app and type the 6-digit code for WebFTL CRM. Lost your phone? Type one of your recovery codes instead.</p>
+    </div>
+
+    <form method="post" action="{% url 'mfa_authenticate' %}" class="space-y-5">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <p class="text-error text-sm">{{ form.non_field_errors.0 }}</p>
+        {% endif %}
+        <div>
+            <label for="{{ form.code.id_for_label }}" class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Code</label>
+            {% include "account/_code_input.html" with field=form.code inputmode="text" %}
+        </div>
+        <button type="submit"
+                class="w-full py-2.5 px-4 bg-accent hover:bg-accent-hover text-on-accent font-medium rounded-control transition-colors text-sm">
+            Sign in
+        </button>
+        <button type="submit" form="logout-from-stage" class="w-full text-sm text-zinc-500 hover:text-zinc-300">Cancel</button>
+    </form>
+    <form id="logout-from-stage" method="post" action="{% url 'account_logout' %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'account_login' %}">
+    </form>
+</div>
+{% endblock %}

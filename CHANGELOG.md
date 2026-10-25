@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.34.0] - 2026-10-25
+
+### Features
+- **Two-factor sign-in:** under **Security** (bottom of the sidebar) anyone can turn on a code from an authenticator app (Google Authenticator, Microsoft Authenticator, 1Password, Authy). Signing in then asks for the 6-digit code after the password
+- Turning it on also creates 10 one-time **recovery codes** to show or download, for signing in without the phone. New codes can be created at any time; the old ones then stop working
+- **Admins must use it.** An admin without it is taken to the setup page before anything else, and cannot turn it off
+- Lost both the phone and the recovery codes: `python manage.py reset_two_factor <email>` removes that person's two-factor sign-in so they can set it up again. As a last resort for admins, `REQUIRE_ADMIN_2FA=False` in the environment lifts the rule
+
 ## [0.33.0] - 2026-10-25
 
 ### Features

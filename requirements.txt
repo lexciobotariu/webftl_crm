@@ -1,5 +1,8 @@
 Django==5.1.4
-django-allauth==65.3.0
+django-allauth[mfa]==65.3.0
+# allauth 65.3 imports fido2 even with passkeys off; 2.x removed what it uses.
+fido2==1.2.0
+qrcode==8.2
 django-htmx==1.27.0
 psycopg[binary]==3.3.2
 dj-database-url==3.0.1
