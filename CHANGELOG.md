@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.37.2] - 2026-10-25
+
+### Changed
+- **Claude (MCP): how Claude writes in the CRM.** The instructions the CRM gives every connected Claude now say: write tasks and comments in the first person, as the signed-in person (never "Lex asked…" or a retelling of the chat); when the scope changes, update the description and subtasks instead of commenting; comment only for a result, a blocker or a decision colleagues need, usually once when the work is done, without progress notes; write in the task's language. The `add_comment` tool description says the same
+
 ## [0.37.1] - 2026-10-25
 
 ### Fixed
