@@ -42,8 +42,13 @@ USER appuser
 EXPOSE 8000
 
 ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["gunicorn", "config.wsgi:application", \
+# ASGI (uvicorn workers under gunicorn), so the live task updates (apps/live) can
+# keep a connection open per page without tying up a worker. Ordinary views stay
+# synchronous and run in a thread each.
+CMD ["gunicorn", "config.asgi:application", \
+     "--worker-class", "uvicorn_worker.UvicornWorker", \
      "--bind", "0.0.0.0:8000", \
      "--workers", "3", \
      "--timeout", "60", \
+     "--graceful-timeout", "5", \
      "--access-logfile", "-"]

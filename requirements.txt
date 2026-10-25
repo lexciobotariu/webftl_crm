@@ -15,6 +15,11 @@ linkify-it-py==2.2.0
 nh3==0.3.7
 cryptography>=42.0.0
 gunicorn>=22.0.0
+# ASGI workers for gunicorn: live task updates hold a connection per open page
+uvicorn==0.54.0
+uvicorn-worker==0.4.0
+# Optional carrier for live updates when REDIS_URL is set
+redis==8.1.0
 resend==2.49.1
 weasyprint==66.0
 django-storages[s3]==1.14.6

@@ -55,3 +55,4 @@
 </template>
 {% endif %}
 <script src="{% static 'js/task-view.js' %}"></script>
+{% include "live/_task_events.html" with live_project=project.pk %}

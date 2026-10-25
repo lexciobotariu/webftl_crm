@@ -29,6 +29,7 @@ urlpatterns = [
     path('inbox/', include('apps.notifications.urls')),
     path('settings/', include('apps.crm.urls')),
     path('portal/', include('apps.portal.urls')),
+    path('live/', include('apps.live.urls')),
     path('', include('apps.mcp.urls')),
 ]
 

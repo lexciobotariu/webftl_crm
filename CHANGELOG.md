@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.38.0] - 2026-10-25
+
+### Features
+- **Task pages update live.** The task list and board (project and My Tasks), the task page and the open task drawer update by themselves when someone else changes a task: a colleague, Claude through MCP, the GitHub webhook. No more refreshing. The rows and cards that changed light up for a moment. While you are typing, have a menu open, have an unsent comment or are dragging a card, the update waits until you are done, so nothing you type is lost. Your own changes do not reload the tab you made them in; your other tabs follow along
+
+### Changed
+- **Server:** the app now runs under ASGI (gunicorn with uvicorn workers) instead of plain WSGI gunicorn, so a page can keep a connection open without tying up a worker. Ordinary pages work as before. Database connections are no longer kept between requests (`conn_max_age` 0), as ASGI requires
+- Live messages travel between server processes through Postgres `LISTEN/NOTIFY`: no new service. Setting `REDIS_URL` switches them to Redis pub/sub
+- Under `runserver` there are no live updates; the README shows how to run the ASGI server locally
+
 ## [0.37.2] - 2026-10-25
 
 ### Changed

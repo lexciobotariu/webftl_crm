@@ -8,7 +8,7 @@
 # Postgres is a separate Dokploy database. The Environment tab is written to a
 # .env file next to this compose file and is not injected unless referenced
 # below. Set DATABASE_URL to that database's internal connection URL.
-# The image entrypoint runs migrate --noinput once, then execs gunicorn.
+# The image entrypoint runs migrate --noinput once, then execs gunicorn (uvicorn workers).
 
 services:
   web:
@@ -36,6 +36,8 @@ services:
       REQUIRE_ADMIN_2FA: ${REQUIRE_ADMIN_2FA:-True}
       # Callback addresses of MCP clients other than Claude, comma-separated (optional).
       MCP_EXTRA_REDIRECT_URIS: ${MCP_EXTRA_REDIRECT_URIS:-}
+      # Optional: live task updates through Redis instead of Postgres LISTEN/NOTIFY.
+      REDIS_URL: ${REDIS_URL:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_BACKEND: ${EMAIL_BACKEND:-}
       EMAIL_HOST: ${EMAIL_HOST:-}

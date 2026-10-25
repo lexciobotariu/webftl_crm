@@ -210,3 +210,15 @@ html [data-task-row].task-selected {
     box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.5);
     transition: background 0.6s ease, box-shadow 0.6s ease;
 }
+
+/* Live updates (static/js/live.js): a row or card someone else just changed. */
+@keyframes live-flash {
+    from { background-color: rgba(139, 92, 246, 0.16); } /* accent-muted */
+    to { background-color: transparent; }
+}
+.live-flash {
+    animation: live-flash 1.2s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+    .live-flash { animation: none; }
+}
