@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.34.1] - 2026-10-25
 
+### Fixed
+- **Two-factor setup:** the key and QR code stay the same from the first load until setup succeeds. Before, every load of the page (a refresh, a second tab, a browser preload) made a new key, so a phone that scanned the earlier one got "Incorrect code" and a new QR code
+- Codes from the 30 seconds before or after are accepted too, for a phone or server clock that is slightly off
+- While an admin still has to set up two-factor sign-in, the sidebar shows only Security and Logout instead of links that all lead back to the setup
+
 ### Changed
 - New task attachments are stored in one folder per task, `projects/<project id>/tasks/<task id>/`, with a short random prefix on the file name, so the bucket is easy to browse and two files with the same name never meet. Files uploaded before keep their place and still open
 - Long file names are kept up to 255 characters of path instead of 100

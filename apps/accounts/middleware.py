@@ -15,7 +15,8 @@ class RequireAdminTwoFactorMiddleware:
 
     Admins see salaries, invoices and every setting, so a password alone is not
     enough for them. Sign-in pages, the two-factor pages and sign-out stay open
-    (all under /accounts/), so the setup itself can be reached.
+    (all under /accounts/), so the setup itself can be reached. While setup is
+    required the sidebar shows only Security and sign-out.
     """
 
     def __init__(self, get_response):
@@ -23,14 +24,15 @@ class RequireAdminTwoFactorMiddleware:
 
     def __call__(self, request):
         user = getattr(request, 'user', None)
-        if (
+        request.two_factor_setup_required = (
             settings.REQUIRE_ADMIN_2FA
             and user is not None
             and user.is_authenticated
             and user.is_admin
-            and not request.path.startswith(('/accounts/', f'/{settings.STATIC_URL}'))
+            and not request.path.startswith(f'/{settings.STATIC_URL}')
             and not has_two_factor(user)
-        ):
+        )
+        if request.two_factor_setup_required and not request.path.startswith('/accounts/'):
             target = reverse('mfa_activate_totp')
             if request.headers.get('HX-Request'):
                 response = HttpResponse(status=204)
