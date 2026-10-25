@@ -8,6 +8,7 @@ from django.db import IntegrityError, models, transaction
 from django.db.models import ProtectedError, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .decorators import require_admin, require_permission
@@ -87,6 +88,14 @@ def dashboard(request):
         context['todo_count'] = Todo.objects.filter(
             owner=request.user, is_completed=False
         ).count()
+
+    from .dashboard import deadlines, money_summary
+
+    today = timezone.localdate()
+    context['today'] = today
+    context['deadlines'] = deadlines(request.user, today)
+    if request.user.has_app_permission('access_invoices'):
+        context['money'] = money_summary(request.user, today)
 
     return render(request, 'accounts/dashboard.html', context)
 

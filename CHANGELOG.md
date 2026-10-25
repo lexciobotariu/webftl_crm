@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.35.0] - 2026-10-25
+
+### Features
+- **Dashboard money row** for people with access to invoices: **To collect** (sent invoices not fully paid), **Overdue**, **Paid this month** (payments recorded since the 1st) and, for those who see everyone's time, **Not invoiced yet** (billable hours on hourly projects with their approximate value). Amounts stay per currency. The first two open the invoice list already filtered
+- **Deadlines** on the dashboard: your open tasks that are late or due in the next 7 days, and open projects whose deadline is in the next 14 days or has passed
+- **Overdue invoices** list on the dashboard, oldest due date first
+- **Two-factor code in six boxes** at sign-in, re-authentication and setup: each digit has its own box, the cursor moves to the next box by itself, Backspace goes back, a pasted or autofilled code fills all boxes, and the form submits when the last digit is typed. "Lost your phone? Use a recovery code" switches to a single field for a recovery code
+
 ## [0.34.1] - 2026-10-25
 
 ### Fixed

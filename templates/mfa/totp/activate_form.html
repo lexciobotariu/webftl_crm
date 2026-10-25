@@ -25,7 +25,7 @@
             {% csrf_token %}
             {% if form.non_field_errors %}<p class="text-error text-sm">{{ form.non_field_errors.0 }}</p>{% endif %}
             <div>
-                <label for="{{ form.code.id_for_label }}" class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Code from the app</label>
+                <div class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">Code from the app</div>
                 {% include "account/_code_input.html" with field=form.code %}
             </div>
             <button type="submit" class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">Turn on</button>

@@ -1,4 +1,33 @@
-<input type="text" name="{{ field.html_name }}" id="{{ field.id_for_label }}" inputmode="{{ inputmode|default:'numeric' }}" autocomplete="one-time-code" autofocus required
-       class="w-full px-3.5 py-2.5 bg-panel border border-border-subtle rounded-control text-zinc-100 placeholder-zinc-600 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none transition-colors text-sm font-mono tracking-widest"
-       placeholder="{{ placeholder|default:'123456' }}">
-{% if field.errors %}<p class="text-error text-sm mt-1">{{ field.errors.0 }}</p>{% endif %}
+{% load static %}
+{% comment %}
+A two-factor code as six boxes (static/js/otp-input.js). ``allow_recovery`` adds a
+switch to one field for an 8-digit recovery code, on the sign-in and confirm pages.
+{% endcomment %}
+<script src="{% static 'js/otp-input.js' %}"></script>
+<div x-data="otpInput(6, {{ allow_recovery|yesno:'true,false' }})" class="space-y-2">
+    <input type="hidden" name="{{ field.html_name }}" :value="code" :disabled="recovery">
+    <div x-show="!recovery" class="flex gap-2 justify-between" role="group" aria-label="6-digit code">
+        <template x-for="(digit, index) in digits" :key="index">
+            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" data-otp-box
+                   :autocomplete="index === 0 ? 'one-time-code' : 'off'"
+                   :aria-label="'Digit ' + (index + 1)"
+                   :value="digit"
+                   x-init="if (index === 0) $nextTick(() => $el.focus())"
+                   @input="onInput(index, $event)"
+                   @paste="onPaste(index, $event)"
+                   @keydown="onKeydown(index, $event)"
+                   @focus="$event.target.select()"
+                   class="w-11 h-12 sm:w-12 sm:h-14 text-center text-xl font-mono bg-panel border rounded-control text-zinc-100 focus:outline-none focus:ring-2 focus:ring-accent/60 focus:border-accent transition-colors {% if field.errors %}border-error/60{% else %}border-border-subtle{% endif %}"
+                   :class="digit ? 'border-border-strong' : ''">
+        </template>
+    </div>
+    {% if allow_recovery %}
+    <div x-show="recovery" x-cloak>
+        <input type="text" name="{{ field.html_name }}" x-ref="recovery" :disabled="!recovery" inputmode="numeric" autocomplete="off"
+               class="w-full px-3.5 py-2.5 bg-panel border border-border-subtle rounded-control text-zinc-100 placeholder-zinc-600 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none text-sm font-mono tracking-widest"
+               placeholder="Recovery code">
+    </div>
+    <button type="button" x-show="!recovery" @click="useRecovery()" class="text-xs text-zinc-500 hover:text-zinc-300">Lost your phone? Use a recovery code</button>
+    {% endif %}
+    {% if field.errors %}<p class="text-error text-sm" role="alert">{{ field.errors.0 }}</p>{% endif %}
+</div>
