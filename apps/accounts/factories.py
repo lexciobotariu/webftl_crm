@@ -26,7 +26,7 @@ SYSTEM_PRESET_DEFAULTS = {
         'tasks_create': True,
         'tasks_edit_own': True,
         'tasks_edit_all': True,
-        'tasks_mcp': False,
+        'tasks_mcp': True,
         'access_todos': True,
         'access_notes': True,
         'notes_view_all': True,
