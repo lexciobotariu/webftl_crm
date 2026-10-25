@@ -64,6 +64,11 @@
                        class="mt-0.5 rounded border-border-subtle bg-elevated">
                 <span>Billing contact<span class="block text-xs text-zinc-500">Gets the invoices when the client has no billing email. Only one per client.</span></span>
             </label>
+            <label class="flex items-start gap-2 text-sm text-zinc-300">
+                <input type="checkbox" name="portal_access" value="on" {% if form.portal_access.value %}checked{% endif %}
+                       class="mt-0.5 rounded border-border-subtle bg-elevated">
+                <span>Portal access<span class="block text-xs text-zinc-500">Can sign in to the client portal with a link sent to their email, and see this client's projects, invoices and estimates.</span></span>
+            </label>
             </div>
         </div>
 

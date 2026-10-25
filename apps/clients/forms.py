@@ -75,4 +75,10 @@ class ClientDrawerForm(ClientForm):
 class ClientContactForm(forms.ModelForm):
     class Meta:
         model = ClientContact
-        fields = ['name', 'role', 'email', 'phone', 'is_primary', 'is_billing']
+        fields = ['name', 'role', 'email', 'phone', 'is_primary', 'is_billing', 'portal_access']
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get('portal_access') and not cleaned.get('email'):
+            self.add_error('email', 'Add an email so this contact can sign in to the portal.')
+        return cleaned

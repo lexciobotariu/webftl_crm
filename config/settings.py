@@ -84,6 +84,7 @@ INSTALLED_APPS = [
     'apps.imports',
     'apps.search',
     'apps.notifications',
+    'apps.portal',
 ]
 
 MIDDLEWARE = [

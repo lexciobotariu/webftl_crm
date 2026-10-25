@@ -1,0 +1,103 @@
+{% extends "portal/base.html" %}
+
+{% block title %}Overview{% endblock %}
+
+{% block content %}
+<h1 class="text-lg font-semibold text-zinc-100">Hello, {{ portal_contact.name }}</h1>
+
+{% if waiting %}
+<section aria-labelledby="waiting-title" class="border border-accent/30 rounded-card bg-accent/5 overflow-hidden">
+    <h2 id="waiting-title" class="px-4 py-2 text-sm font-medium text-zinc-100 border-b border-accent/20">Waiting for your answer</h2>
+    <ul class="divide-y divide-border-subtle">
+        {% for estimate in waiting %}
+        <li class="px-4 py-3 flex items-center justify-between gap-4 text-sm">
+            <div class="min-w-0">
+                <div class="text-zinc-100">Estimate {{ estimate.number_label }}{% if estimate.project %} · {{ estimate.project.name }}{% endif %}</div>
+                <div class="text-xs text-zinc-500">Valid until {{ estimate.valid_until|date:"M j, Y" }}</div>
+            </div>
+            <div class="flex items-center gap-3 flex-shrink-0">
+                <span class="text-zinc-200 tabular-nums">{% include "invoices/partials/money.html" with invoice=estimate amount=estimate.total %}</span>
+                <a href="{% url 'portal_estimate' estimate.pk %}" class="px-3 py-1.5 bg-accent hover:bg-accent-hover text-on-accent rounded-control text-xs font-medium">Review</a>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+{% endif %}
+
+<section aria-labelledby="invoices-title" class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden">
+    <div class="px-4 py-2 border-b border-border-subtle bg-panel/80 flex items-center justify-between">
+        <h2 id="invoices-title" class="text-sm font-medium text-zinc-100">Invoices</h2>
+        {% if to_pay %}<span class="text-xs text-zinc-500">{{ to_pay|length }} to pay</span>{% endif %}
+    </div>
+    {% if invoices %}
+    <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="text-left text-xs text-zinc-500 uppercase tracking-wider border-b border-border-subtle">
+            <tr>
+                <th class="px-4 py-2 font-medium">Invoice</th>
+                <th class="px-4 py-2 font-medium">Due</th>
+                <th class="px-4 py-2 font-medium text-right">Total</th>
+                <th class="px-4 py-2 font-medium text-right">To pay</th>
+                <th class="px-4 py-2 font-medium">Status</th>
+                <th class="px-4 py-2"><span class="sr-only">PDF</span></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-border-subtle">
+            {% for invoice in invoices %}
+            <tr>
+                <td class="px-4 py-2.5 text-zinc-100">{{ invoice.number_label }}{% if invoice.project %}<span class="block text-xs text-zinc-500">{{ invoice.project.name }}</span>{% endif %}</td>
+                <td class="px-4 py-2.5 {% if invoice.status == 'overdue' %}text-error{% else %}text-zinc-400{% endif %}">{{ invoice.due_date|date:"M j, Y" }}</td>
+                <td class="px-4 py-2.5 text-right tabular-nums text-zinc-200">{% include "invoices/partials/money.html" with amount=invoice.total %}</td>
+                <td class="px-4 py-2.5 text-right tabular-nums text-zinc-200">{% include "invoices/partials/money.html" with amount=invoice.balance %}</td>
+                <td class="px-4 py-2.5">{% include "invoices/partials/status_badge.html" %}</td>
+                <td class="px-4 py-2.5 text-right"><a href="{% url 'portal_invoice_pdf' invoice.pk %}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-100"><i data-lucide="file-down" class="w-3.5 h-3.5"></i>PDF</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p class="px-4 py-4 text-sm text-zinc-500">No invoices yet.</p>
+    {% endif %}
+</section>
+
+<section aria-labelledby="estimates-title" class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden">
+    <h2 id="estimates-title" class="px-4 py-2 border-b border-border-subtle bg-panel/80 text-sm font-medium text-zinc-100">Estimates</h2>
+    {% if estimates %}
+    <ul class="divide-y divide-border-subtle">
+        {% for estimate in estimates %}
+        <li class="px-4 py-2.5 flex items-center justify-between gap-4 text-sm">
+            <a href="{% url 'portal_estimate' estimate.pk %}" class="min-w-0 text-zinc-100 hover:underline">{{ estimate.number_label }}{% if estimate.project %}<span class="text-zinc-500"> · {{ estimate.project.name }}</span>{% endif %}</a>
+            <div class="flex items-center gap-3 flex-shrink-0">
+                <span class="tabular-nums text-zinc-200">{% include "invoices/partials/money.html" with invoice=estimate amount=estimate.total %}</span>
+                {% include "portal/partials/estimate_status.html" %}
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="px-4 py-4 text-sm text-zinc-500">No estimates yet.</p>
+    {% endif %}
+</section>
+
+<section aria-labelledby="projects-title" class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden">
+    <h2 id="projects-title" class="px-4 py-2 border-b border-border-subtle bg-panel/80 text-sm font-medium text-zinc-100">Projects</h2>
+    {% if projects %}
+    <ul class="divide-y divide-border-subtle">
+        {% for project in projects %}
+        <li class="px-4 py-2.5 flex items-center justify-between gap-4 text-sm">
+            <span class="text-zinc-100 min-w-0 truncate">{{ project.name }}</span>
+            <div class="flex items-center gap-4 flex-shrink-0 text-xs text-zinc-500">
+                {% if project.start_date %}<span>Started {{ project.start_date|date:"M j, Y" }}</span>{% endif %}
+                {% if project.deadline %}<span>Deadline {{ project.deadline|date:"M j, Y" }}</span>{% endif %}
+                <span class="px-2 py-0.5 rounded border border-border-subtle text-zinc-300">{{ project.get_status_display }}</span>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="px-4 py-4 text-sm text-zinc-500">No projects yet.</p>
+    {% endif %}
+</section>
+{% endblock %}

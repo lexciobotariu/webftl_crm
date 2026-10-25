@@ -29,14 +29,29 @@
                     {% if contact.role %}<span class="text-zinc-500">{{ contact.role }}</span>{% endif %}
                     {% if contact.is_primary %}<span class="px-1.5 py-0.5 text-[10px] rounded bg-accent/10 text-accent border border-accent/20">Primary</span>{% endif %}
                     {% if contact.is_billing %}<span class="px-1.5 py-0.5 text-[10px] rounded bg-zinc-500/10 text-zinc-300 border border-border-subtle">Billing</span>{% endif %}
+                    {% if contact.portal_access %}<span class="px-1.5 py-0.5 text-[10px] rounded bg-sky-500/10 text-sky-300 border border-sky-500/20">Portal</span>{% endif %}
                 </div>
                 <div class="flex items-center gap-4 mt-1 text-zinc-400 flex-wrap">
                     {% if contact.email %}<a href="mailto:{{ contact.email }}" class="hover:text-zinc-100 transition-colors">{{ contact.email }}</a>{% endif %}
                     {% if contact.phone %}<a href="tel:{{ contact.phone }}" class="hover:text-zinc-100 transition-colors">{{ contact.phone }}</a>{% endif %}
                 </div>
+                {% if contact.portal_access %}
+                <div class="mt-1 text-xs text-zinc-500">
+                    {% if contact.portal_last_login_at %}Last signed in to the portal {{ contact.portal_last_login_at|date:"M j, Y" }}{% elif contact.portal_invited_at %}Invited to the portal {{ contact.portal_invited_at|date:"M j, Y" }}, not signed in yet{% else %}Not invited to the portal yet{% endif %}
+                </div>
+                {% endif %}
             </div>
             {% if perms_map.clients_edit %}
             <div class="flex items-center gap-1 flex-shrink-0">
+                {% if contact.portal_access and contact.email and not client.is_archived %}
+                <button hx-post="{% url 'client_contact_portal_invite' client.pk contact.pk %}"
+                        hx-swap="none"
+                        hx-confirm="Email {{ contact.email }} how to sign in to the client portal?"
+                        class="inline-flex items-center gap-1 px-2 py-1 text-xs text-zinc-400 hover:text-zinc-100 hover:bg-elevated rounded transition-colors"
+                        title="Send portal invite">
+                    <i data-lucide="send" class="w-3.5 h-3.5"></i>{% if contact.portal_invited_at %}Invite again{% else %}Send portal invite{% endif %}
+                </button>
+                {% endif %}
                 <button hx-get="{% url 'client_contact_edit' client.pk contact.pk %}"
                         hx-target="#slide-over"
                         hx-swap="innerHTML"
