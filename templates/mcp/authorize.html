@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Connect {{ application.name|default:"an app" }} - WebFTL CRM{% endblock %}
+
+{% block full_content %}
+<div class="flex-1 overflow-y-auto p-6">
+    <div class="max-w-md mx-auto mt-10 border border-border-subtle rounded-card overflow-hidden">
+        {% if not error %}
+        <form method="post" id="authorizationForm">
+            {% csrf_token %}
+            {% for field in form %}{% if field.is_hidden %}{{ field }}{% endif %}{% endfor %}
+            <div class="px-5 py-4 border-b border-border-subtle bg-panel/80 flex items-center gap-3">
+                <i data-lucide="plug" class="w-4 h-4 text-zinc-500"></i>
+                <h1 class="text-sm font-medium text-zinc-100">Connect {{ application.name|default:"this app" }} to WebFTL CRM?</h1>
+            </div>
+            <div class="p-5 space-y-4">
+                <p class="text-sm text-zinc-300">
+                    It will act as <span class="text-zinc-100">{{ user.name }}</span>, with your permissions: it sees and changes only what you can.
+                    Everything it does shows in task activity as <span class="text-zinc-100">via Claude</span>.
+                </p>
+                <fieldset class="space-y-2">
+                    <legend class="text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">It may</legend>
+                    {% for scope in scope_choices %}
+                    <label class="flex items-start gap-2">
+                        <input type="checkbox" name="scope_choice" value="{{ scope.name }}" checked
+                               {% if scope.required %}disabled{% endif %}
+                               class="mt-0.5 w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong">
+                        <span class="text-sm text-zinc-300">{{ scope.description }}{% if scope.required %} <span class="text-zinc-500">(always)</span>{% endif %}</span>
+                    </label>
+                    {% endfor %}
+                </fieldset>
+                <p class="text-xs text-zinc-500">It cannot delete anything or see invoices and salaries. You can disconnect it any time under Security.</p>
+                {% if form.errors %}<p class="text-sm text-error">{{ form.errors }}</p>{% endif %}
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="submit" class="bg-elevated border border-border-subtle px-4 py-2 rounded-control text-sm text-zinc-200 hover:bg-hover">Cancel</button>
+                    <button type="submit" name="allow" value="Authorize" class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">Allow</button>
+                </div>
+            </div>
+        </form>
+        {% else %}
+        <div class="p-5 space-y-2">
+            <h1 class="text-sm font-medium text-zinc-100">This connection request cannot be used</h1>
+            <p class="text-sm text-zinc-400">{{ error.description|default:error.error }}</p>
+            <p class="text-xs text-zinc-500">Start the connection again from Claude.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -32,6 +32,8 @@ services:
       GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:-}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       REQUIRE_ADMIN_2FA: ${REQUIRE_ADMIN_2FA:-True}
+      # Callback addresses of MCP clients other than Claude, comma-separated (optional).
+      MCP_EXTRA_REDIRECT_URIS: ${MCP_EXTRA_REDIRECT_URIS:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_BACKEND: ${EMAIL_BACKEND:-}
       EMAIL_HOST: ${EMAIL_HOST:-}

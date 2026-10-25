@@ -10,6 +10,7 @@ from django.utils import timezone
 
 from apps.projects.models import Project, ProjectAccess, Status
 
+from . import sources
 from .durations import format_minutes, format_seconds
 
 
@@ -537,6 +538,8 @@ class TaskActivity(models.Model):
     content = models.TextField(blank=True)
     old_value = models.CharField(max_length=255, blank=True)
     new_value = models.CharField(max_length=255, blank=True)
+    # "claude" when the change came through the MCP endpoint ("via Claude").
+    source = models.CharField(max_length=20, blank=True, choices=sources.CHOICES, default=sources.current)
     created_at = models.DateTimeField(auto_now_add=True)
     # Set when the author (or an admin) changes a comment's text.
     edited_at = models.DateTimeField(null=True, blank=True)
@@ -580,6 +583,8 @@ class TimeEntry(models.Model):
     # When the entry was logged, which is where it sits in the activity timeline;
     # ``started_at`` is the day the work was done on.
     created_at = models.DateTimeField(default=timezone.now)
+    # "claude" when started or logged through the MCP endpoint.
+    source = models.CharField(max_length=20, blank=True, choices=sources.CHOICES, default=sources.current)
 
     class Meta:
         ordering = ['-started_at']

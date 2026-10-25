@@ -16,6 +16,7 @@ PERMISSION_KEYS = [
     'tasks_create',
     'tasks_edit_own',
     'tasks_edit_all',
+    'tasks_mcp',
     'access_todos',
     'access_notes',
     'notes_view_all',
@@ -65,6 +66,8 @@ class PermissionPreset(models.Model):
     tasks_create = models.BooleanField(default=False)
     tasks_edit_own = models.BooleanField(default=False)
     tasks_edit_all = models.BooleanField(default=False)
+    # Connect Claude (MCP) and act through it with this person's own task rights.
+    tasks_mcp = models.BooleanField(default=False)
 
     # View own is access_notes plus a client or project the user can already open.
     # These never reach a private note. There is no create flag.

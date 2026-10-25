@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.37.0] - 2026-10-25
+
+### Features
+- **Work on tasks from Claude (MCP).** Add `https://<your domain>/mcp` as a custom connector in claude.ai, the Claude apps or Claude Code. A window opens on the CRM: sign in with two-factor, choose what Claude may do (always read tasks; optionally change tasks and use the timer) and press **Allow**. Claude can then list projects, search and read tasks, create and update tasks (assignee, priority, dates, estimate, billable), move them between statuses, add, remove and create labels, comment, add and tick subtasks, start and stop the timer, log time, and **start work** (take the task, move it to In Progress, start the timer) or **finish work** (stop the timer, move it to Done). It cannot delete anything or see invoices and salaries
+- Everything done through Claude uses the person's own permissions and shows **via Claude** in the task activity and work log
+- **Security → Connected apps** lists what is connected, when it was last used and what it may do, with **Disconnect**. It also shows the connector address
+- **Tasks → Use from Claude** in permission presets, off by default (on in the built-in Admin preset); admins always have it
+
+### Fixed
+- Signing in now returns to the page that asked for it (for example a link to a task opened while signed out) instead of always landing on the dashboard
+
+### Security
+- OAuth 2.1 authorization server (django-oauth-toolkit 3.4): authorization code with PKCE (S256), access tokens of one hour, refresh tokens rotated on every use with reuse detection, tokens stored hashed and bound to the `/mcp` address, codes valid one minute. Clients register themselves (RFC 7591), but only with Claude's callback addresses or a loopback address, at most 20 registrations per hour per IP. The `/mcp` endpoint refuses tokens in the URL and calls from other websites, and allows 120 calls per minute per connection
+
 ## [0.36.1] - 2026-10-25
 
 ### Fixed

@@ -1,4 +1,5 @@
 {% extends "account/security_base.html" %}
+{% load mcp_tags %}
 
 {% block security_content %}
 <section class="border border-border-subtle rounded-card overflow-hidden">
@@ -48,4 +49,6 @@
     </div>
 </section>
 {% endif %}
+
+{% connected_apps_section %}
 {% endblock %}

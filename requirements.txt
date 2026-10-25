@@ -19,3 +19,5 @@ resend==2.49.1
 weasyprint==66.0
 django-storages[s3]==1.14.6
 boto3==1.40.0
+# OAuth server for the Claude (MCP) connector
+django-oauth-toolkit==3.4.1
