@@ -1,4 +1,5 @@
 import json
+import os
 import re
 from datetime import timedelta
 from urllib.parse import urlencode
@@ -6,7 +7,13 @@ from urllib.parse import urlencode
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.http import HttpResponse, HttpResponseForbidden, HttpResponseRedirect
+from django.http import (
+    FileResponse,
+    Http404,
+    HttpResponse,
+    HttpResponseForbidden,
+    HttpResponseRedirect,
+)
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
@@ -36,7 +43,7 @@ from .listview import (
     render_task_row,
     resolve_view,
 )
-from .models import MyTasksView, Subtask, Task, TaskActivity, TimeEntry
+from .models import Attachment, MyTasksView, Subtask, Task, TaskActivity, TimeEntry
 from .templatetags.task_markdown import MAX_LENGTH as MARKDOWN_MAX_LENGTH
 from .viewspec import CATEGORIES, LIMIT_STEP, SORTS, TaskViewOptions, column_choices, sort_choices
 
@@ -719,7 +726,51 @@ def attachment_upload(request, pk):
         return HttpResponseForbidden(str(e))
     except ValueError as e:
         return HttpResponse(str(e), status=400)
-    return render(request, 'tasks/partials/attachment_item.html', {'attachment': attachment})
+    return render(
+        request,
+        'tasks/partials/attachment_item.html',
+        {'attachment': attachment, 'can_edit': True},
+    )
+
+
+# Opened in the browser tab; anything else downloads, so an uploaded file can never
+# run as a page on this site.
+INLINE_EXTENSIONS = {'.pdf', '.png', '.jpg', '.jpeg', '.gif', '.txt'}
+
+
+@login_required
+@require_permission('access_tasks')
+def attachment_download(request, pk):
+    """Hand out a task's file after checking the person may see the task.
+
+    A bucket gets a short signed link; a file on disk is streamed from here.
+    """
+    attachment = get_object_or_404(Attachment.objects.select_related('task__project'), pk=pk)
+    if not can_view_task(request.user, attachment.task):
+        return HttpResponseForbidden("You don't have access to this task")
+    inline = os.path.splitext(attachment.filename)[1].lower() in INLINE_EXTENSIONS
+    storage = attachment.file.storage
+    try:
+        signed = storage.signed_url(attachment.file.name, attachment.filename, inline=inline)
+        if signed:
+            return HttpResponseRedirect(signed)
+        handle = attachment.file.open('rb')
+    except (FileNotFoundError, OSError):
+        raise Http404('This file is no longer stored.') from None
+    return FileResponse(handle, as_attachment=not inline, filename=attachment.filename)
+
+
+@login_required
+@require_permission('access_tasks')
+@require_POST
+def attachment_delete(request, pk):
+    attachment = get_object_or_404(Attachment.objects.select_related('task__project'), pk=pk)
+    try:
+        from apps.tasks import services
+        services.delete_attachment(attachment, request.user)
+    except PermissionDenied as e:
+        return HttpResponseForbidden(str(e))
+    return HttpResponse('')
 
 
 @login_required

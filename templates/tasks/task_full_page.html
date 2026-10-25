@@ -80,7 +80,7 @@
                         {% for attachment in task.attachments.all %}
                         {% include "tasks/partials/attachment_item.html" %}
                         {% empty %}
-                        <p class="text-sm text-zinc-500 py-1">No attachments yet.</p>
+                        <p class="text-sm text-zinc-500 py-1" data-attachments-empty>No attachments yet.</p>
                         {% endfor %}
                     </div>
                 </div>
@@ -105,6 +105,7 @@
                                hx-target="#attachment-list-{{ task.pk }}"
                                hx-swap="beforeend"
                                hx-encoding="multipart/form-data"
+                               hx-on::after-request="if (event.detail.successful) { document.querySelector('#attachment-list-{{ task.pk }} [data-attachments-empty]')?.remove(); } this.value = '';"
                                name="file">
                     </label>
                     {% endif %}

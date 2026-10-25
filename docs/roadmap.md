@@ -146,7 +146,6 @@ None of this is committed to; it is what was deferred or noticed along the way.
 
 Small:
 
-- Attachments cannot be deleted.
 - Sub-tasks cannot be renamed or reordered.
 - The app sidebar does not collapse, so narrow screens get tight (the Inbox most of all).
 - Releases after 0.6.0 have no git tag.

@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
@@ -5,21 +6,29 @@ from django.views.decorators.http import require_POST
 
 from apps.accounts.decorators import require_admin
 
-from .forms import CompanyForm, CurrencyForm, ThemeForm
+from .forms import CompanyForm, CurrencyForm, StorageForm, ThemeForm
 from .models import Company, Currency
 
 
 def _settings_page(
-    request, company_form, currency_form, currency_error='', status=200, theme_form=None
+    request, company_form, currency_form, currency_error='', status=200, theme_form=None,
+    storage_form=None,
 ):
     if theme_form is None:
         theme_form = ThemeForm(instance=Company.load())
+    if storage_form is None:
+        storage_form = StorageForm(instance=Company.load())
     return render(
         request,
         'crm/settings.html',
         {
             'company_form': company_form,
             'theme_form': theme_form,
+            'storage_form': storage_form,
+            'files_on_disk_in_production': (
+                not settings.DEBUG
+                and not Company.load().uses_s3
+            ),
             'currency_form': currency_form,
             'currencies': Currency.objects.order_by('code'),
             'currency_error': currency_error,
@@ -42,6 +51,18 @@ def settings_page(request):
             CompanyForm(instance=Company.load()),
             CurrencyForm(),
             theme_form=theme_form,
+        )
+    if request.method == 'POST' and 'storage_backend' in request.POST:
+        storage_form = StorageForm(request.POST, instance=company)
+        if storage_form.is_valid():
+            storage_form.save()
+            return redirect('settings')
+        return _settings_page(
+            request,
+            CompanyForm(instance=Company.load()),
+            CurrencyForm(),
+            storage_form=storage_form,
+            status=400,
         )
     if request.method == 'POST':
         company_form = CompanyForm(request.POST, instance=company)

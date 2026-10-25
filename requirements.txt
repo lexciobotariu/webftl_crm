@@ -14,3 +14,5 @@ cryptography>=42.0.0
 gunicorn>=22.0.0
 resend==2.49.1
 weasyprint==66.0
+django-storages[s3]==1.14.6
+boto3==1.40.0

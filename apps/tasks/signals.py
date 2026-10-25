@@ -1,10 +1,15 @@
-from django.db.models.signals import post_save, pre_save
+import logging
+
+from django.db import transaction
+from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
 from apps.notifications.services import notify_assigned, withdraw_assigned
 
 from .durations import format_minutes
-from .models import Task, TaskActivity
+from .models import Attachment, Task, TaskActivity
+
+logger = logging.getLogger(__name__)
 
 # TaskActivity.old_value and new_value are 255 characters; titles go up to 1000.
 VALUE_LENGTH = 255
@@ -153,3 +158,23 @@ def log_task_changes(sender, instance, created, **kwargs):
             new_value=new_label,
             content=f'set the estimate to {new_label}' if new_label else 'removed the estimate'
         )
+
+
+@receiver(post_delete, sender=Attachment)
+def delete_attachment_file(sender, instance, **kwargs):
+    """Remove the stored file once the row is gone, also when its task is deleted.
+
+    Runs after the commit so a rolled-back delete keeps its file, and a storage
+    error is logged instead of undoing a delete that already happened.
+    """
+    name = instance.file.name
+    storage = instance.file.storage
+
+    def remove():
+        try:
+            storage.delete(name)
+        except Exception:
+            logger.exception('Could not delete attachment file %s', name)
+
+    if name:
+        transaction.on_commit(remove)
