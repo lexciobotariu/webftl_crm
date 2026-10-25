@@ -77,6 +77,11 @@ class TestProtocol:
         assert body['result']['capabilities'] == {'tools': {'listChanged': False}}
         assert body['result']['serverInfo']['name'] == 'webftl-crm'
 
+    def test_instructions_tell_claude_to_write_as_the_person(self, mcp):
+        instructions = mcp.rpc('initialize', {'protocolVersion': '2025-06-18'})['result']['instructions']
+        assert 'first person' in instructions
+        assert 'progress notes' in instructions
+
     def test_unknown_version_gets_the_newest(self, mcp):
         body = mcp.rpc('initialize', {'protocolVersion': '1999-01-01'})
         assert body['result']['protocolVersion'] == protocol.PROTOCOL_VERSIONS[0]

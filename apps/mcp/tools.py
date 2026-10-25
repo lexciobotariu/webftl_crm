@@ -600,7 +600,10 @@ TOOLS = [
         },
     ),
     Tool(
-        'add_comment', 'Comment on a task', 'Add a comment (Markdown) to a task, as you.',
+        'add_comment', 'Comment on a task',
+        'Add a comment (Markdown) to a task, shown under the signed-in person\'s name. Write it as '
+        'they would, in the first person, for their colleagues: a result, a blocker or a decision. '
+        'Not for changes you can make to the task itself, progress notes or retelling the chat.',
         (WRITE,), add_comment,
         params={'task': TASK, 'text': Param('string', 'The comment.', required=True)},
     ),
