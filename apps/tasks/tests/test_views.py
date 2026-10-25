@@ -531,6 +531,21 @@ class TestAttachmentDownloadAndDelete:
         )
         return editor, task, task.attachments.get()
 
+    def test_files_go_in_one_folder_per_task_and_never_collide(self, client):
+        import re
+
+        editor, task, first = self._upload(client)
+        client.post(
+            reverse('attachment_upload', args=[task.pk]),
+            {'file': SimpleUploadedFile('notes.txt', b'second')},
+        )
+        second = task.attachments.exclude(pk=first.pk).get()
+        pattern = rf'^projects/{task.project_id}/tasks/{task.pk}/[0-9a-f]{{8}}-notes\.txt$'
+        assert re.match(pattern, first.file.name)
+        assert re.match(pattern, second.file.name)
+        assert first.file.name != second.file.name
+        assert second.filename == 'notes.txt'
+
     def test_download_checks_who_may_see_the_task(self, client):
         _editor, _task, attachment = self._upload(client)
         response = client.get(reverse('attachment_download', args=[attachment.pk]))

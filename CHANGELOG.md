@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.34.1] - 2026-10-25
+
+### Changed
+- New task attachments are stored in one folder per task, `projects/<project id>/tasks/<task id>/`, with a short random prefix on the file name, so the bucket is easy to browse and two files with the same name never meet. Files uploaded before keep their place and still open
+- Long file names are kept up to 255 characters of path instead of 100
+
 ## [0.34.0] - 2026-10-25
 
 ### Features
