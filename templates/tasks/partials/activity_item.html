@@ -39,7 +39,7 @@
                     {{ activity.user.name|slice:":1"|upper|default:"?" }}
                 </span>
                 <span class="text-sm font-medium text-zinc-200">{{ activity.user.name|default:"Unknown" }}</span>
-                <span class="text-xs text-zinc-500">commented {{ activity.created_at|timesince }} ago{% if activity.edited_at %} · <span title="{{ activity.edited_at }}">edited</span>{% endif %}</span>
+                <span class="text-xs text-zinc-500">commented {{ activity.created_at|timesince }} ago{% if activity.source == 'claude' %} · via Claude{% endif %}{% if activity.edited_at %} · <span title="{{ activity.edited_at }}">edited</span>{% endif %}</span>
                 {% if activity.can_change %}
                 <div class="ml-auto flex items-center gap-0.5">
                     <button type="button" aria-label="Edit comment"
@@ -65,7 +65,7 @@
         <div class="flex items-center gap-1.5 flex-wrap text-sm">
             <span class="font-medium text-zinc-200">{{ activity.user.name|default:"System" }}</span>
             <span class="text-zinc-400">{{ activity.content }}</span>
-            <span class="text-zinc-500 text-xs">{{ activity.created_at|timesince }} ago</span>
+            <span class="text-zinc-500 text-xs">{{ activity.created_at|timesince }} ago{% if activity.source == 'claude' %} · via Claude{% endif %}</span>
         </div>
         {% endif %}
     </div>

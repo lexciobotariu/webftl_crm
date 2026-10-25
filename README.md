@@ -175,6 +175,30 @@ They then sign in with the password and set it up again. If no admin can get
 in to run that, set `REQUIRE_ADMIN_2FA=False` in the environment, redeploy,
 sign in, set it up again, and remove the variable.
 
+## Claude (MCP)
+
+People can work on tasks from Claude (claude.ai, the Claude apps, Claude Code)
+through the MCP endpoint at `https://<your domain>/mcp`: search and read
+tasks, create and update them, labels, statuses, comments, subtasks, the
+timer and logged time, plus "start work" / "finish work". No deletes and
+nothing about invoices or salaries.
+
+- **Who:** admins, and people whose permission preset has
+  **Tasks → Use from Claude** ticked (off by default).
+- **Connecting:** in Claude add a custom connector with the address above
+  (Claude Code: `claude mcp add --transport http webftl https://<your domain>/mcp`).
+  A browser window opens on the CRM: sign in (with two-factor), choose what
+  Claude may do, press Allow.
+- **How it is secured:** OAuth 2.1 with this app as the authorization server
+  (django-oauth-toolkit): authorization code with PKCE, access tokens valid
+  one hour and refresh tokens rotated on use, both stored hashed, bound to
+  the `/mcp` address. Clients register themselves, but only with Claude's
+  callback addresses or a loopback address (Claude Code); others can be added
+  with `MCP_EXTRA_REDIRECT_URIS`. Each call runs with that person's own
+  permissions; changes show as "via Claude" in task activity.
+- **Disconnecting:** Security → Connected apps → Disconnect. Deactivating a
+  person stops their connections at once.
+
 ## Frontend dependencies
 
 There is no build step. Two small scripts of our own live in `static/js/`; with

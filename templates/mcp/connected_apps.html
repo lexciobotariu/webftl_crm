@@ -1,0 +1,30 @@
+<section class="border border-border-subtle rounded-card overflow-hidden">
+    <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <h2 class="text-sm font-medium text-zinc-100">Connected apps</h2>
+    </div>
+    <div class="p-4 space-y-3">
+        {% if not allowed %}
+        <p class="text-sm text-zinc-400">Using the CRM from Claude is off for your account. An admin can turn on <span class="text-zinc-200">Tasks → Use from Claude</span> in your permission preset.</p>
+        {% elif rows %}
+        <ul class="divide-y divide-border-subtle">
+            {% for row in rows %}
+            <li class="py-2 flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <div class="text-sm text-zinc-200 truncate">{{ row.application.name|default:"Unnamed app" }}</div>
+                    <div class="text-xs text-zinc-500">Connected {{ row.since|date:"j M Y" }}{% if row.last_used %} · last used {{ row.last_used|timesince }} ago{% endif %} · {{ row.scopes|join:", " }}</div>
+                </div>
+                <form method="post" action="{% url 'mcp_disconnect' row.application.client_id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="text-sm text-zinc-500 hover:text-error">Disconnect</button>
+                </form>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-sm text-zinc-300">Nothing is connected. To control tasks from Claude, add a custom connector with the address below, then sign in and press Allow.</p>
+        {% endif %}
+        {% if allowed %}
+        <div class="text-xs text-zinc-500">Connector address: <code class="text-zinc-300 select-all">{{ mcp_url }}</code></div>
+        {% endif %}
+    </div>
+</section>

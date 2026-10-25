@@ -236,6 +236,12 @@
                                            class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong">
                                     <span class="text-sm text-zinc-300">Edit all</span>
                                 </label>
+                                <label class="flex items-center gap-2 min-w-0" title="Connect Claude (MCP) and work on tasks from it, with this preset's own task rights">
+                                    <input type="checkbox" name="tasks_mcp"{% if preset.access_tasks and preset.tasks_mcp %} checked{% endif %}{% if preset and not preset.access_tasks %} disabled{% endif %}
+                                           data-extra :disabled="!enabled"
+                                           class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong">
+                                    <span class="text-sm text-zinc-300">Use from Claude</span>
+                                </label>
                             </div>
                         </div>
                     </div>

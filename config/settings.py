@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.mfa',
     'django_htmx',
+    'oauth2_provider',
     # Local apps
     'apps.accounts',
     'apps.crm',
@@ -85,6 +86,7 @@ INSTALLED_APPS = [
     'apps.search',
     'apps.notifications',
     'apps.portal',
+    'apps.mcp',
 ]
 
 MIDDLEWARE = [
@@ -197,6 +199,40 @@ MFA_TOTP_TOLERANCE = 1
 # Set REQUIRE_ADMIN_2FA=False in the environment only to get back in after
 # losing both the phone and the recovery codes; see README "Two-factor sign-in".
 REQUIRE_ADMIN_2FA = env_value('REQUIRE_ADMIN_2FA', 'True') != 'False'
+
+# Claude (MCP): this app is the OAuth server Claude signs in to (apps/mcp).
+# Tokens are short, stored hashed, and bound to the /mcp endpoint; clients
+# register themselves (RFC 7591) but only with Claude's own redirect addresses.
+OAUTH2_PROVIDER = {
+    'SCOPES': {
+        'tasks:read': 'See projects, tasks, labels and people on your projects',
+        'tasks:write': 'Create and change tasks, labels, comments and subtasks',
+        'time': 'Start and stop your timer and log your time',
+    },
+    'DEFAULT_SCOPES': ['tasks:read', 'tasks:write', 'time'],
+    'ACCESS_TOKEN_EXPIRE_SECONDS': 60 * 60,
+    'REFRESH_TOKEN_EXPIRE_SECONDS': 60 * 60 * 24 * 30,
+    'AUTHORIZATION_CODE_EXPIRE_SECONDS': 60,
+    'ROTATE_REFRESH_TOKEN': True,
+    'REFRESH_TOKEN_REUSE_PROTECTION': True,
+    'PKCE_REQUIRED': True,
+    'COMPLIANT_BCP_RFC9700_IMPLICIT_GRANT': True,
+    'COMPLIANT_BCP_RFC9700_PASSWORD_GRANT': True,
+    'COMPLIANT_BCP_RFC9700_PKCE_METHOD': True,
+    'COMPLIANT_BCP_RFC9700_ACCESS_TOKEN_TRANSPORT': True,
+    'COMPLIANT_BCP_RFC9700_TOKEN_STORAGE': True,
+    'COMPLIANT_BCP_RFC9700_REFRESH_TOKEN': True,
+    'COMPLIANT_BCP_RFC9700_PKCE_REQUIRED': True,
+    'OAUTH2_RESPONSE_TYPES_SUPPORTED': ['code'],
+    'OAUTH2_GRANT_TYPES_SUPPORTED': ['authorization_code', 'refresh_token'],
+    'OAUTH2_TOKEN_ENDPOINT_AUTH_METHODS_SUPPORTED': ['none', 'client_secret_post', 'client_secret_basic'],
+    'DCR_ENABLED': True,
+    'DCR_REGISTRATION_PERMISSION_CLASSES': ('apps.mcp.oauth.AllowListedRedirectsDCRPermission',),
+    'DCR_REGISTRATION_TOKEN_EXPIRE_SECONDS': 60 * 60 * 24 * 30,
+    'OAUTH2_PROTECTED_RESOURCE_NAME': 'WebFTL CRM',
+}
+# Other MCP clients' callback addresses, comma-separated (Claude's are built in).
+MCP_EXTRA_REDIRECT_URIS = [u.strip() for u in env_value('MCP_EXTRA_REDIRECT_URIS').split(',') if u.strip()]
 
 # Email
 # The console backend prints mail instead of sending it. That is fine in

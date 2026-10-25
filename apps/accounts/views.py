@@ -315,6 +315,7 @@ def _apply_module_gates(values):
             'tasks_create',
             'tasks_edit_own',
             'tasks_edit_all',
+            'tasks_mcp',
         ):
             values[key] = False
     if not values['access_notes']:

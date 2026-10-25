@@ -13,6 +13,10 @@
 
     <form method="post" action="{% url 'account_login' %}" class="space-y-5">
         {% csrf_token %}
+        {% if redirect_field_value %}
+        {# Back to the page that asked for sign-in, such as connecting Claude. #}
+        <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
+        {% endif %}
 
         {% if form.errors %}
         <div class="bg-error/10 border border-error/20 rounded-card p-3">

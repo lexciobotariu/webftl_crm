@@ -29,6 +29,7 @@ urlpatterns = [
     path('inbox/', include('apps.notifications.urls')),
     path('settings/', include('apps.crm.urls')),
     path('portal/', include('apps.portal.urls')),
+    path('', include('apps.mcp.urls')),
 ]
 
 if settings.DEBUG:
