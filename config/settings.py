@@ -90,6 +90,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'config.middleware.AlwaysHttpsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -266,6 +267,8 @@ DEFAULT_FROM_EMAIL = env_value('DEFAULT_FROM_EMAIL', 'webmaster@localhost')
 # GitHub
 GITHUB_WEBHOOK_SECRET = os.getenv('GITHUB_WEBHOOK_SECRET', '')
 
+ALWAYS_HTTPS = False
+
 # Production security headers (enabled when DEBUG is False)
 if not DEBUG:
     SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'True') == 'True'
@@ -273,6 +276,9 @@ if not DEBUG:
     # would loop forever. Set this only when the proxy is trusted to set the header.
     if os.getenv('USE_X_FORWARDED_PROTO', 'False') == 'True':
         SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    # The public site is only served over https: build every absolute link with
+    # https whatever the proxy forwards (config/middleware.py).
+    ALWAYS_HTTPS = os.getenv('ALWAYS_HTTPS', 'False') == 'True'
     SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '31536000'))
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
