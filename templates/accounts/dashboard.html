@@ -51,6 +51,96 @@
             </a>
         </div>
 
+        {% if money %}
+        <!-- Money: invoices this person may open; amounts per currency, never added together -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6" id="dashboard-money">
+            <a href="{% url 'invoice_list' %}?status=outstanding" class="bg-card/90 rounded-card border border-border-subtle p-4 hover:border-border-strong hover:bg-elevated/50 transition-all">
+                <div class="text-xs uppercase tracking-wide text-zinc-500">To collect</div>
+                <div class="text-xl font-semibold text-zinc-100 mt-2">{% for amount in money.outstanding %}<div>{{ amount }}</div>{% empty %}<div>0</div>{% endfor %}</div>
+                <div class="text-xs text-zinc-500 mt-1">{{ money.outstanding_count }} invoice{{ money.outstanding_count|pluralize }} sent, not fully paid</div>
+            </a>
+            <a href="{% url 'invoice_list' %}?status=overdue" class="bg-card/90 rounded-card border p-4 hover:bg-elevated/50 transition-all {% if money.overdue %}border-error/40 hover:border-error/60{% else %}border-border-subtle hover:border-border-strong{% endif %}">
+                <div class="text-xs uppercase tracking-wide {% if money.overdue %}text-error{% else %}text-zinc-500{% endif %}">Overdue</div>
+                <div class="text-xl font-semibold mt-2 {% if money.overdue %}text-error{% else %}text-zinc-100{% endif %}">{% for amount in money.overdue %}<div>{{ amount }}</div>{% empty %}<div>0</div>{% endfor %}</div>
+                <div class="text-xs text-zinc-500 mt-1">Past the due date</div>
+            </a>
+            <div class="bg-card/90 rounded-card border border-border-subtle p-4">
+                <div class="text-xs uppercase tracking-wide text-zinc-500">Paid this month</div>
+                <div class="text-xl font-semibold text-zinc-100 mt-2">{% for amount in money.paid_this_month %}<div>{{ amount }}</div>{% empty %}<div>0</div>{% endfor %}</div>
+                <div class="text-xs text-zinc-500 mt-1">Payments recorded since 1 {{ today|date:"M" }}</div>
+            </div>
+            {% if money.show_unbilled %}
+            <div class="bg-card/90 rounded-card border border-border-subtle p-4">
+                <div class="text-xs uppercase tracking-wide text-zinc-500">Not invoiced yet</div>
+                <div class="text-xl font-semibold text-zinc-100 mt-2">{{ money.unbilled_hours }} h</div>
+                <div class="text-xs text-zinc-500 mt-1">{% if money.unbilled_amounts %}About {{ money.unbilled_amounts|join:" + " }} of billable time{% else %}Billable time on hourly projects{% endif %}</div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if deadlines.late_tasks or deadlines.week_tasks or deadlines.projects or money.overdue_invoices %}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6" id="dashboard-deadlines">
+            {% if deadlines.late_tasks or deadlines.week_tasks or deadlines.projects %}
+            <div class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden">
+                <div class="px-4 py-2 border-b border-border-subtle bg-panel/80 flex items-center gap-3">
+                    <i data-lucide="calendar-clock" class="w-4 h-4 text-zinc-500"></i>
+                    <h2 class="text-sm font-medium text-zinc-100">Deadlines</h2>
+                </div>
+                <ul class="divide-y divide-border-subtle">
+                    {% for task in deadlines.late_tasks %}
+                    <li class="px-4 py-2 flex items-center gap-3 hover:bg-elevated/50 cursor-pointer"
+                        hx-get="{% url 'task_detail' task.pk %}" hx-target="#slide-over" hx-swap="innerHTML">
+                        <span class="text-xs text-error w-20 shrink-0">{{ task.due_date|date:"j M" }}, late</span>
+                        <span class="text-sm text-zinc-100 truncate flex-1">{{ task.title }}</span>
+                        <span class="text-xs text-zinc-500 truncate">{{ task.project.name }}</span>
+                    </li>
+                    {% endfor %}
+                    {% for task in deadlines.week_tasks %}
+                    <li class="px-4 py-2 flex items-center gap-3 hover:bg-elevated/50 cursor-pointer"
+                        hx-get="{% url 'task_detail' task.pk %}" hx-target="#slide-over" hx-swap="innerHTML">
+                        <span class="text-xs w-20 shrink-0 {% if task.due_date == today %}text-amber-400{% else %}text-zinc-400{% endif %}">{% if task.due_date == today %}Today{% else %}{{ task.due_date|date:"D j M" }}{% endif %}</span>
+                        <span class="text-sm text-zinc-100 truncate flex-1">{{ task.title }}</span>
+                        <span class="text-xs text-zinc-500 truncate">{{ task.project.name }}</span>
+                    </li>
+                    {% endfor %}
+                    {% for project in deadlines.projects %}
+                    <li>
+                        <a href="{% url 'project_detail' project.pk %}" class="px-4 py-2 flex items-center gap-3 hover:bg-elevated/50">
+                            <span class="text-xs w-20 shrink-0 {% if project.deadline < today %}text-error{% else %}text-zinc-400{% endif %}">{{ project.deadline|date:"j M" }}{% if project.deadline < today %}, late{% endif %}</span>
+                            <span class="text-sm text-zinc-100 truncate flex-1"><i data-lucide="folder-kanban" class="w-3.5 h-3.5 inline text-zinc-500 mr-1"></i>{{ project.name }}</span>
+                            <span class="text-xs text-zinc-500 truncate">{{ project.client.name }}</span>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            {% if money.overdue_invoices %}
+            <div class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden">
+                <div class="px-4 py-2 border-b border-border-subtle bg-panel/80 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="alarm-clock" class="w-4 h-4 text-zinc-500"></i>
+                        <h2 class="text-sm font-medium text-zinc-100">Overdue invoices</h2>
+                    </div>
+                    <a href="{% url 'invoice_list' %}?status=overdue" class="text-xs text-zinc-200 hover:text-zinc-50">View all</a>
+                </div>
+                <ul class="divide-y divide-border-subtle">
+                    {% for invoice in money.overdue_invoices %}
+                    <li>
+                        <a href="{% url 'invoice_detail' invoice.pk %}" class="px-4 py-2 flex items-center gap-3 hover:bg-elevated/50">
+                            <span class="text-xs text-error w-20 shrink-0">due {{ invoice.due_date|date:"j M" }}</span>
+                            <span class="text-sm text-zinc-100 truncate flex-1">{{ invoice.number_label }} · {{ invoice.client.name }}</span>
+                            <span class="text-sm text-zinc-200 tabular-nums">{% include "invoices/partials/money.html" with amount=invoice.balance %}</span>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
         <!-- Recent Tasks Section -->
         <div class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden" id="dashboard-tasks">
             <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">

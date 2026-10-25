@@ -7,7 +7,7 @@
     <form method="post" action="{% url 'mfa_reauthenticate' %}" class="space-y-4">
         {% csrf_token %}
         {% if form.non_field_errors %}<p class="text-error text-sm">{{ form.non_field_errors.0 }}</p>{% endif %}
-        {% include "account/_code_input.html" with field=form.code inputmode="text" %}
+        {% include "account/_code_input.html" with field=form.code allow_recovery=True %}
         {{ redirect_field }}
         <button type="submit" class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">Confirm</button>
     </form>
