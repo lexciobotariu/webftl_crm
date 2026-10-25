@@ -28,6 +28,8 @@ services:
       CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-}
       SECURE_SSL_REDIRECT: ${SECURE_SSL_REDIRECT:-True}
       USE_X_FORWARDED_PROTO: ${USE_X_FORWARDED_PROTO:-True}
+      # Links the app builds (Claude connector address, OAuth, emails) always use https.
+      ALWAYS_HTTPS: ${ALWAYS_HTTPS:-True}
       SECURE_HSTS_SECONDS: ${SECURE_HSTS_SECONDS:-31536000}
       GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:-}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}

@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.37.1] - 2026-10-25
+
+### Fixed
+- **Claude connector address:** Security → Connected apps showed `http://…/mcp`, and the sign-in addresses Claude reads (OAuth metadata), task links returned to Claude and portal emails were built with `http://` too, because the proxy in front of the app forwards the scheme as http. New `ALWAYS_HTTPS` setting (on by default in `docker-compose.dokploy.yml`) makes every link the app builds use `https://`
+
 ## [0.37.0] - 2026-10-25
 
 ### Features
