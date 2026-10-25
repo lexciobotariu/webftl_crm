@@ -1,4 +1,5 @@
 import re
+import secrets
 from datetime import timedelta
 
 from django.conf import settings
@@ -610,9 +611,18 @@ class TimeEntry(models.Model):
         return format_seconds(self.duration.total_seconds())
 
 
+def attachment_path(attachment, filename):
+    """``projects/<project>/tasks/<task>/<random>-<name>``: one folder per task in the
+    bucket, and a random prefix so two uploads of the same name never collide."""
+    return (
+        f'projects/{attachment.task.project_id}/tasks/{attachment.task_id}/'
+        f'{secrets.token_hex(4)}-{filename}'
+    )
+
+
 class Attachment(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='attachments')
-    file = models.FileField(upload_to='attachments/%Y/%m/')
+    file = models.FileField(upload_to=attachment_path, max_length=255)
     filename = models.CharField(max_length=255)
     uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     uploaded_at = models.DateTimeField(auto_now_add=True)

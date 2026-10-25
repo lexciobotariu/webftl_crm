@@ -189,6 +189,10 @@ ACCOUNT_EMAIL_VERIFICATION = 'none'
 MFA_ADAPTER = 'apps.accounts.adapters.AgencyMFAAdapter'
 MFA_SUPPORTED_TYPES = ['totp', 'recovery_codes']
 MFA_TOTP_ISSUER = 'WebFTL CRM'
+MFA_FORMS = {'activate_totp': 'apps.accounts.forms_mfa.StableActivateTOTPForm'}
+# Also accept the code from the 30 seconds before and after, for a phone or
+# server clock that is a little off.
+MFA_TOTP_TOLERANCE = 1
 # Set REQUIRE_ADMIN_2FA=False in the environment only to get back in after
 # losing both the phone and the recovery codes; see README "Two-factor sign-in".
 REQUIRE_ADMIN_2FA = env_value('REQUIRE_ADMIN_2FA', 'True') != 'False'

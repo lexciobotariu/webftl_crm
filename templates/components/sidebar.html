@@ -12,6 +12,10 @@
         </div>
     </div>
 
+    {% if request.two_factor_setup_required %}
+    {# Until an admin turns on two-factor sign-in, every other page sends them back to the setup. #}
+    <div class="flex-1"></div>
+    {% else %}
     <!-- Search: opens the command palette, so it works without the keyboard shortcut -->
     <div class="px-2 pt-3">
         <button type="button" onclick="window.openPalette && window.openPalette()"
@@ -164,6 +168,8 @@
             Settings
         </a>
     </div>
+    {% endif %}
+
     {% endif %}
 
     <!-- Version -->

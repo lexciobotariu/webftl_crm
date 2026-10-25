@@ -55,6 +55,28 @@ class TestAdminsNeedTwoFactor:
         ).exists()
         assert client.get(reverse('dashboard')).status_code == 200
 
+    def test_the_key_stays_the_same_until_setup_succeeds(self, client, admin_user, required):
+        _sign_in(client, admin_user)
+        client.get(reverse('mfa_activate_totp'))
+        secret = client.session[SECRET_SESSION_KEY]
+        # A refresh, a second tab, a wrong code: the phone's key still works.
+        page = client.get(reverse('mfa_activate_totp')).content.decode()
+        assert secret in page
+        client.post(reverse('mfa_activate_totp'), {'code': '000000'})
+        assert client.session[SECRET_SESSION_KEY] == secret
+        response = client.post(reverse('mfa_activate_totp'), {'code': _code(secret)})
+        assert response.status_code == 302
+        assert Authenticator.objects.filter(user=admin_user).exists()
+
+    def test_the_menu_is_hidden_until_setup(self, client, admin_user, required):
+        _sign_in(client, admin_user)
+        page = client.get(reverse('mfa_activate_totp')).content.decode()
+        assert f'href="{reverse("client_list")}"' not in page
+        assert f'href="{reverse("mfa_index")}"' in page
+        TOTP.activate(admin_user, generate_totp_secret())
+        page = client.get(reverse('mfa_index')).content.decode()
+        assert f'href="{reverse("client_list")}"' in page
+
     def test_a_wrong_code_turns_nothing_on(self, client, admin_user, required):
         _sign_in(client, admin_user)
         client.get(reverse('mfa_activate_totp'))
