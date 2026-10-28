@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.39.0] - 2026-10-28
+
+### Features
+- **Billable when creating a task:** the New task drawer has a Billing switch in Properties, so a task can be created non-billable from the start. It starts on (billable), as before. The full-page edit form has the same switch
+
+### Changed
+- "Create more" keeps State, Priority and Assignee from the task just created, as before; the Billing switch goes back to billable on the fresh form, like the other fields
+
 ## [0.38.1] - 2026-10-28
 
 ### Fixed

@@ -18,10 +18,12 @@ class TaskForm(forms.ModelForm):
         required=False,
         widget=forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'e.g. 1h 30m'}),
     )
+    # Posted as "1" or "0" by the switch on the form; left out, a task stays billable.
+    billable = forms.CharField(required=False, widget=forms.HiddenInput)
 
     class Meta:
         model = Task
-        fields = ['title', 'description', 'assignee', 'priority', 'due_date', 'labels']
+        fields = ['title', 'description', 'assignee', 'priority', 'due_date', 'billable', 'labels']
         widgets = {
             'title': forms.TextInput(attrs={'class': INPUT_CLASSES}),
             'description': forms.Textarea(attrs={'class': INPUT_CLASSES, 'rows': 4}),
@@ -43,6 +45,14 @@ class TaskForm(forms.ModelForm):
         self.fields['description'].validators.append(MaxLengthValidator(MARKDOWN_MAX_LENGTH))
         if self.instance.pk and 'estimate' not in self.initial:
             self.initial['estimate'] = format_minutes(self.instance.estimate_minutes)
+
+    def clean_billable(self):
+        return self.cleaned_data['billable'] not in ('0', 'False')
+
+    @property
+    def billable_on(self):
+        """Whether the switch shows billable: what was posted, else the task's value."""
+        return self['billable'].value() not in (False, '0', 'False')
 
     def clean_estimate(self):
         text = self.cleaned_data['estimate'].strip()

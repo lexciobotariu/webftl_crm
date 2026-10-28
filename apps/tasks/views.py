@@ -264,13 +264,13 @@ def task_create(request, project_pk):
                 title=data['title'], status=status, description=data['description'],
                 assignee=data['assignee'], priority=data['priority'],
                 due_date=data['due_date'], estimate_minutes=data['estimate'],
-                labels=data['labels'],
+                billable=data['billable'], labels=data['labels'],
             )
             if request.htmx:
                 if request.POST.get('create_more'):
                     # Keep the drawer open on a fresh form in the same place: same status,
                     # assignee and priority, so a run of tasks started from a group "+"
-                    # all land in that group.
+                    # all land in that group. Everything else, billable included, starts over.
                     fresh = TaskForm(project, initial={
                         'assignee': task.assignee_id, 'priority': task.priority,
                     })

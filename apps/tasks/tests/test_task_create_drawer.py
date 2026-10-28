@@ -160,6 +160,22 @@ class TestSubmitting:
         assert form['priority'].value() == 'urgent'
         assert response.context['selected_assignee'] == user
 
+    def test_create_more_keeps_status_priority_and_assignee_but_not_billable(self, client, setup):
+        user, project = setup
+        review = project.statuses.get(name='Review')
+
+        response = _post(client, project, {
+            'title': 'First', 'status_id': review.pk, 'priority': 'low', 'assignee': user.pk,
+            'billable': '0', 'create_more': '1',
+        })
+
+        form = response.context['form']
+        assert response.context['selected_status'] == review
+        assert form['priority'].value() == 'low'
+        assert form['assignee'].value() == user.pk
+        assert form.billable_on
+        assert Task.objects.get(title='First').billable is False
+
     def test_create_more_escapes_the_title_it_echoes(self, client, setup):
         _, project = setup
 
@@ -182,6 +198,56 @@ class TestSubmitting:
         assert Task.objects.count() == 0
         assert response.context['selected_status'] == review
         assert response.context['selected_assignee'] == user
+
+
+@pytest.mark.django_db
+class TestBillable:
+    def test_the_drawer_offers_the_switch_on_by_default(self, client, setup):
+        _, project = setup
+
+        content = _open(client, project).content.decode()
+
+        assert 'name="billable" value="1"' in content
+        assert 'role="switch"' in content
+
+    def test_a_task_can_be_created_non_billable(self, client, setup):
+        _, project = setup
+
+        _post(client, project, {'title': 'Internal', 'billable': '0'})
+
+        assert Task.objects.get(title='Internal').billable is False
+
+    def test_a_task_is_billable_when_the_form_leaves_it_out(self, client, setup):
+        _, project = setup
+
+        _post(client, project, {'title': 'Client work'})
+
+        assert Task.objects.get(title='Client work').billable is True
+
+    def test_an_invalid_form_keeps_the_choice(self, client, setup):
+        _, project = setup
+
+        response = _post(client, project, {'title': '', 'billable': '0'})
+
+        assert not response.context['form'].billable_on
+        assert 'name="billable" value="0"' in response.content.decode()
+
+    def test_the_edit_form_shows_and_changes_the_task_s_value(self, client, setup):
+        from apps.tasks.factories import TaskFactory
+
+        _, project = setup
+        task = TaskFactory(project=project, billable=False, title='Old')
+        url = reverse('task_edit', args=[task.pk])
+
+        assert 'name="billable" value="0"' in client.get(url).content.decode()
+
+        client.post(url, {'title': 'Old', 'priority': '', 'billable': '1'})
+        task.refresh_from_db()
+        assert task.billable is True
+
+        client.post(url, {'title': 'Old', 'priority': ''})
+        task.refresh_from_db()
+        assert task.billable is True
 
 
 @pytest.mark.django_db

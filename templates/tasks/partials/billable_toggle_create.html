@@ -1,0 +1,12 @@
+{% comment %}Billable or not on the create and edit forms, styled like billable_toggle.html. It posts billable as 1 or 0; a new task starts billable. The look follows Alpine through :class and x-text rather than x-show, so an htmx swap (Create more) cannot leave a stale state showing.{% endcomment %}
+<div x-data="{ billable: {{ form.billable_on|yesno:'true,false' }} }">
+    <input type="hidden" name="billable" value="{{ form.billable_on|yesno:'1,0' }}" :value="billable ? '1' : '0'">
+    <button type="button" role="switch" aria-checked="{{ form.billable_on|yesno:'true,false' }}" :aria-checked="billable.toString()"
+            @click="billable = !billable"
+            class="flex items-center gap-2 px-2 py-1 rounded-control text-sm text-zinc-300 hover:bg-elevated transition-colors">
+        <span class="relative inline-flex w-7 h-4 rounded-full transition-colors" :class="billable ? 'bg-accent' : 'bg-zinc-700'">
+            <span class="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all" :class="billable ? 'left-3.5' : 'left-0.5'"></span>
+        </span>
+        <span x-text="billable ? 'Billable' : 'Non-billable'">{{ form.billable_on|yesno:'Billable,Non-billable' }}</span>
+    </button>
+</div>
