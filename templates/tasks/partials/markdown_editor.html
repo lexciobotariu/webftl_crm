@@ -1,4 +1,4 @@
-{% comment %}A textarea with Write and Preview tabs. Include with uid (unique per page), name, value, rows, placeholder, and optionally autofocus, textarea_class and mentions_id (the json_script id of the people the @ menu offers, static/js/mentions.js). Escape in Preview goes back to Write; Ctrl/Cmd+Enter submits the form around it once, and stops there so a form-level shortcut does not submit it again (static/js/markdown.js).{% endcomment %}
+{% comment %}A textarea with Write and Preview tabs. Include with uid (unique per page), name, value, rows, placeholder, and optionally autofocus, textarea_class and mentions_id (the json_script id of the people the @ menu offers, static/js/mentions.js). Escape in Preview goes back to Write; Ctrl/Cmd+Enter submits the form around it once, and stops there so a form-level shortcut does not submit it again (static/js/markdown.js). The Preview pane starts with an inline display: none, not only x-cloak: when htmx swaps in a fresh copy of the same editor (Create more, a live refresh of the drawer), its settle step puts back the new element's own style attribute after Alpine has already hidden the pane, and without one the empty pane showed under the textarea.{% endcomment %}
 <div x-data="markdownEditor('{% url 'markdown_preview' %}')"
      @keydown.escape="escape($event)"
      @keydown.ctrl.enter.prevent.stop="submit()"
@@ -25,7 +25,7 @@
             class="absolute left-0 bottom-full z-20 mb-1 w-64 max-h-56 overflow-y-auto py-1 bg-panel border border-border-strong rounded-card shadow-lg"></ul>
         {% endif %}
     </div>
-    <div role="tabpanel" id="{{ uid }}-preview" aria-labelledby="{{ uid }}-preview-tab" tabindex="0" x-ref="preview" x-show="tab === 'preview'" x-cloak
+    <div role="tabpanel" id="{{ uid }}-preview" aria-labelledby="{{ uid }}-preview-tab" tabindex="0" x-ref="preview" x-show="tab === 'preview'" style="display: none"
          aria-live="polite" :aria-busy="loading"
          class="markdown text-sm text-zinc-300 min-h-[4rem] px-3 py-2 border border-border-subtle rounded-control focus:outline-none focus-visible:border-border-strong"></div>
 </div>

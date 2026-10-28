@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.38.1] - 2026-10-28
+
+### Fixed
+- **Empty box under the description:** after creating a task with "Create more" on, the fresh drawer showed an empty bordered box under the description (the Preview pane, shown while the Write tab was selected). htmx put the new pane's style back after Alpine had hidden it; the pane now starts hidden on its own. The same could happen to the comment box when a task drawer reloaded by itself
+
 ## [0.38.0] - 2026-10-25
 
 ### Features
