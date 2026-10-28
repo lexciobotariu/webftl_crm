@@ -41,3 +41,10 @@ class TestCreateDrawerLayout:
         task = Task.objects.get(project=project, title='With text')
         assert task.description == '**bold**'
         assert task.status == status
+
+    def test_the_preview_pane_starts_hidden_without_alpine(self, client):
+        # "Create more" swaps in a fresh drawer and htmx's settle step puts back the new
+        # pane's own style after Alpine has hidden it: the pane must be hidden by itself.
+        html = self._drawer(client, ProjectFactory())
+        pane = html.split('id="task-form-description-preview"', 1)[1].split('>', 1)[0]
+        assert 'style="display: none"' in pane
