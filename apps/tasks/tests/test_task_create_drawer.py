@@ -160,7 +160,7 @@ class TestSubmitting:
         assert form['priority'].value() == 'urgent'
         assert response.context['selected_assignee'] == user
 
-    def test_create_more_keeps_status_priority_and_assignee_but_not_billable(self, client, setup):
+    def test_create_more_keeps_status_priority_assignee_and_billable(self, client, setup):
         user, project = setup
         review = project.statuses.get(name='Review')
 
@@ -173,7 +173,8 @@ class TestSubmitting:
         assert response.context['selected_status'] == review
         assert form['priority'].value() == 'low'
         assert form['assignee'].value() == user.pk
-        assert form.billable_on
+        assert not form.billable_on
+        assert 'name="billable" value="0"' in response.content.decode()
         assert Task.objects.get(title='First').billable is False
 
     def test_create_more_escapes_the_title_it_echoes(self, client, setup):
