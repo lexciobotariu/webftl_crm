@@ -81,6 +81,17 @@
             </div>
         </div>
 
+        <!-- Billing -->
+        <div class="flex items-center py-2 px-2 hover:bg-hover rounded-card">
+            <div class="flex items-center gap-2 w-28 text-zinc-500 text-sm">
+                <i data-lucide="receipt" class="w-4 h-4"></i>
+                <span>Billing</span>
+            </div>
+            <div class="flex-1">
+                {% include "tasks/partials/billable_toggle_create.html" %}
+            </div>
+        </div>
+
         <!-- Labels -->
         <div class="flex items-center py-2 px-2 hover:bg-hover rounded-card">
             <div class="flex items-center gap-2 w-28 text-zinc-500 text-sm">
