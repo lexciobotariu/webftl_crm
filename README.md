@@ -226,8 +226,8 @@ are done. The tab that made a change does not reload for it.
 
 ## Frontend dependencies
 
-There is no build step. Two small scripts of our own live in `static/js/`; with
-`DEBUG` off, run `collectstatic` after changing them. HTMX, Alpine.js (plus the `sort` and `collapse` plugins),
+There is no build step. Our own scripts live in `static/js/`; with
+`DEBUG` off, run `collectstatic` after changing them. HTMX, Alpine.js (plus the `sort`, `collapse` and `morph` plugins),
 Lucide and Iconify are loaded from a CDN, each pinned to an exact version and
 verified with Subresource Integrity — bumping one means recomputing its
 `integrity` hash in `templates/base.html`.

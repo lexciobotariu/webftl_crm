@@ -183,12 +183,21 @@ def delete_attachment_file(sender, instance, **kwargs):
 
 # Live updates: open task pages reload what changed (apps/live). Every change to a
 # task, its subtasks, activity (comments, status...), time and files is announced;
-# Postgres sends one message per task per transaction however many rows changed.
+# Postgres sends one message per task per transaction however many rows changed
+# (two when one of them asks for the whole view).
 
 @receiver(post_save, sender=Task)
 @receiver(post_delete, sender=Task)
 def announce_task(sender, instance, **kwargs):
-    publish(instance.project_id, instance.pk)
+    # Anything that can move the row or change counts makes the pages reload the
+    # whole view; any other edit, only the task's row (static/js/live.js).
+    old_status = getattr(instance, '_old_status', None)
+    whole = (
+        kwargs.get('signal') is post_delete
+        or kwargs.get('created', False)
+        or (old_status is not None and old_status.pk != instance.status_id)
+    )
+    publish(instance.project_id, instance.pk, whole=whole)
 
 
 @receiver(post_save, sender=Subtask)

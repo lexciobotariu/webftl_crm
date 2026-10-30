@@ -44,7 +44,10 @@ def event_for(payload, project_ids, tab):
     # The tab that made the change already shows it.
     if tab and message.get('tab') == tab:
         return None
-    data = json.dumps({'project': message.get('p'), 'task': message.get('t')})
+    data = {'project': message.get('p'), 'task': message.get('t')}
+    if message.get('w'):
+        data['whole'] = True
+    data = json.dumps(data)
     return f'event: task\ndata: {data}\n\n'
 
 

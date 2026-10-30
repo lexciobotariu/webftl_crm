@@ -1,8 +1,9 @@
 {% load static %}
 {% comment %}Re-fetches the view through the current URL after an edit. It sits outside #task-view so it survives every swap.
+   The refresh morphs the view (static/js/morph.js): only what changed is touched, so scroll, focus and open groups stay.
    Optional refresh_oob: a selector list for anything else the same response should update (My Tasks passes its count badge).{% endcomment %}
 <div id="task-view-refresh" hidden
-     hx-target="#task-view" hx-select="#task-view" hx-swap="outerHTML"{% if refresh_oob %}
+     hx-target="#task-view" hx-select="#task-view" hx-swap="morph"{% if refresh_oob %}
      hx-select-oob="{{ refresh_oob }}"{% endif %}></div>
 <script>
     // Back must show the URL's state, not a cached copy of an earlier list. With no
@@ -20,6 +21,13 @@
         document.body.addEventListener(name, (event) => {
             // A quick edit refreshes its own row (static/js/task-view.js, refreshRow).
             if (event.target.hasAttribute && event.target.hasAttribute('data-row-refresh')) return;
+            // An edit in the task drawer that cannot move the task (not its status) asks
+            // for that task's row alone; the row falls back to the whole view if it moved.
+            const drawerTask = name === 'taskChanged' && event.target.closest && event.target.closest('[data-live-task]');
+            if (drawerTask && window.refreshTaskRows) {
+                window.refreshTaskRows([drawerTask.dataset.liveTask]);
+                return;
+            }
             window.refreshTaskView();
         });
     });

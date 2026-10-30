@@ -13,7 +13,7 @@ from apps.accounts.permissions import PermissionPreset
 from apps.live import bus
 from apps.live.middleware import clean_tab
 from apps.live.views import event_for, stream, visible_project_ids
-from apps.projects.factories import ProjectAccessFactory, ProjectFactory
+from apps.projects.factories import ProjectAccessFactory, ProjectFactory, StatusFactory
 from apps.tasks.factories import LabelFactory, SubtaskFactory, TaskFactory, TimeEntryFactory
 from apps.tasks.services import add_comment
 
@@ -38,11 +38,24 @@ class TestAnnounced:
 
     def test_task_saved_and_deleted(self, published):
         task = TaskFactory()
-        published.assert_any_call(task.project_id, task.pk)
+        published.assert_any_call(task.project_id, task.pk, whole=True)
+        published.reset_mock()
+        task.title = 'Renamed'
+        task.save()
+        published.assert_any_call(task.project_id, task.pk, whole=False)
         published.reset_mock()
         pk, project_id = task.pk, task.project_id
         task.delete()
-        published.assert_any_call(project_id, pk)
+        published.assert_any_call(project_id, pk, whole=True)
+
+    def test_a_new_status_asks_for_the_whole_view(self, published):
+        # A new status moves the row (and changes counts); other edits keep it in place.
+        task = TaskFactory()
+        other = StatusFactory(project=task.project)
+        published.reset_mock()
+        task.status = other
+        task.save()
+        published.assert_any_call(task.project_id, task.pk, whole=True)
 
     def test_comment_subtask_time_and_labels(self, published):
         task = TaskFactory()
@@ -136,6 +149,11 @@ def test_event_for_filters_project_and_own_tab():
     assert event_for(payload, None, 'abc') is None
     assert event_for(bus.RESYNC, set(), 'abc') == 'event: resync\ndata: {}\n\n'
     assert event_for('not json', None, '') is None
+
+
+def test_event_for_says_when_the_whole_view_reloads():
+    payload = json.dumps({'p': 3, 't': 9, 'tab': '', 'w': 1})
+    assert event_for(payload, None, '') == 'event: task\ndata: {"project": 3, "task": 9, "whole": true}\n\n'
 
 
 def test_clean_tab():
