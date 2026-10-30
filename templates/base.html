@@ -19,6 +19,9 @@
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.17.1/dist/cdn.min.js"
             integrity="sha384-NArNwzWsUSF+kY2lgW4YriEkjLqi+J+za6HrENUn/3nZqkBnWbxV22kCJEK5Uu6n"
             crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/morph@3.17.1/dist/cdn.min.js"
+            integrity="sha384-96/p2MTylcBZe5Jt3qu57K7//tELPxA40djB8PF8OsNnKcOXU5GNVWpWX5Y7dFH4"
+            crossorigin="anonymous"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.17.1/dist/cdn.min.js"
             integrity="sha384-x6MR287ZDHWauvRTQIBc3b1F++s/03J/rBHbpRGwBoYbrqIN+3wRx4EXbU1u9NGO"
             crossorigin="anonymous"></script>
@@ -29,6 +32,7 @@
             integrity="sha384-63H0EhkXL6M4HAjkA3bbnT+mkm0SbHKtxxj4Iv1hXtM6FDH+c6XqvuXgDKBJdJNG"
             crossorigin="anonymous"></script>
     <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+    <script src="{% static 'js/morph.js' %}"></script>
     <script src="{% static 'js/keys.js' %}"></script>
     <script src="{% static 'js/markdown.js' %}"></script>
     <script src="{% static 'js/mentions.js' %}"></script>
@@ -36,7 +40,7 @@
     <script src="{% static 'js/inbox.js' %}"></script>
     <style>[x-cloak] { display: none !important; }</style>
 </head>
-<body class="h-full bg-bg text-zinc-100 antialiased selection:bg-border-strong selection:text-zinc-50" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' hx-indicator="#htmx-indicator">
+<body class="h-full bg-bg text-zinc-100 antialiased selection:bg-border-strong selection:text-zinc-50" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' hx-indicator="#htmx-indicator" hx-ext="morph">
     {% if user.is_authenticated %}
     <div class="h-full flex overflow-hidden">
         {% include "components/sidebar.html" %}

@@ -2,7 +2,10 @@
 // opened over them). The server sends one "task" event when anyone else changes a
 // task: a colleague, Claude (MCP), the GitHub webhook (apps/live). The page then
 // re-fetches what it shows through the usual views, after the person finishes
-// whatever they are editing, and briefly marks the rows that changed.
+// whatever they are editing, and briefly marks the rows that changed. An edit asks
+// for the changed rows alone; a new task, a deleted one or a new status (the event
+// says "whole") reloads the list or board. Reloads morph (static/js/morph.js), so
+// scroll, focus and Alpine state survive them.
 (() => {
     const config = document.getElementById('live-tasks');
     if (!config || !window.EventSource || window.liveTasks) return;
@@ -15,7 +18,9 @@
         event.detail.headers['X-Tab-Id'] = tab;
     });
 
-    const pending = { view: false, drawer: false, page: false, tasks: new Set() };
+    const pending = { view: false, whole: false, drawer: false, page: false, tasks: new Set() };
+    // More changed rows than this at once: one reload of the view is cheaper.
+    const MAX_ROWS = 5;
     let timer = null;
 
     // --- Is the person in the middle of something? -------------------------------
@@ -71,36 +76,26 @@
 
     function refreshView() {
         const changed = [...pending.tasks];
+        const rowsOnly = !pending.whole && changed.length > 0 && changed.length <= MAX_ROWS && window.refreshTaskRows;
         pending.view = false;
+        pending.whole = false;
         pending.tasks.clear();
-        const done = window.refreshTaskView ? window.refreshTaskView() : null;
+        let done = null;
+        if (rowsOnly) done = window.refreshTaskRows(changed);
+        else if (window.refreshTaskView) done = window.refreshTaskView();
         if (done && done.then) done.then(() => flash(changed));
     }
 
-    // The drawer is re-fetched whole; its scroll position is kept.
+    // The drawer and the task page are re-fetched whole and morphed into place.
     function refreshDrawer(el) {
         pending.drawer = false;
-        const panel = drawer();
-        const scrolled = [...panel.querySelectorAll('.overflow-y-auto')].map((box) => box.scrollTop);
-        htmx.ajax('GET', el.dataset.liveUrl, { target: '#slide-over', swap: 'innerHTML' }).then(() => {
-            panel.querySelectorAll('.overflow-y-auto').forEach((box, i) => {
-                if (scrolled[i]) box.scrollTop = scrolled[i];
-            });
-            if (window.lucide) lucide.createIcons();
-        });
+        htmx.ajax('GET', el.dataset.liveUrl, { target: el, select: '[data-live-task]', swap: 'morph' });
     }
 
     function refreshPage(el) {
         pending.page = false;
         const selector = '#' + el.id;
-        const scrolled = [...el.querySelectorAll('.overflow-y-auto')].map((box) => box.scrollTop);
-        htmx.ajax('GET', window.location.href, { target: selector, select: selector, swap: 'outerHTML' }).then(() => {
-            const fresh = document.querySelector(selector);
-            if (fresh) fresh.querySelectorAll('.overflow-y-auto').forEach((box, i) => {
-                if (scrolled[i]) box.scrollTop = scrolled[i];
-            });
-            if (window.lucide) lucide.createIcons();
-        });
+        htmx.ajax('GET', window.location.href, { target: selector, select: selector, swap: 'morph' });
     }
 
     // Runs what is due, and comes back every second for what has to wait.
@@ -133,9 +128,11 @@
         timer = setTimeout(run, delay);
     }
 
-    function changed(taskId) {
+    // ``taskId`` null: anything may have changed (a reconnect), so everything reloads.
+    function changed(taskId, whole) {
         pending.view = true;
-        if (taskId) pending.tasks.add(taskId);
+        if (taskId) pending.tasks.add(String(taskId));
+        if (!taskId || whole) pending.whole = true;
         const open = drawerTask();
         if (open && (!taskId || String(taskId) === open.dataset.liveTask)) pending.drawer = true;
         const page = fullPage();
@@ -162,7 +159,7 @@
     source.addEventListener('task', (event) => {
         let data = {};
         try { data = JSON.parse(event.data); } catch (e) { return; }
-        changed(data.task);
+        changed(data.task, data.whole);
     });
     window.addEventListener('pagehide', () => source.close());
 })();

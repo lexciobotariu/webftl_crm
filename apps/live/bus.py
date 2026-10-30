@@ -36,11 +36,19 @@ RESYNC = '{"resync":1}'
 origin_tab = ContextVar('live_origin_tab', default='')
 
 
-def publish(project_id, task_id):
-    """Announce that ``task_id`` on ``project_id`` changed. Never raises."""
+def publish(project_id, task_id, whole=False):
+    """Announce that ``task_id`` on ``project_id`` changed. Never raises.
+
+    ``whole``: the change can move the task or change counts elsewhere on the page
+    (created, deleted, new status), so pages reload the whole view rather than the
+    one row. The pages then also hear the same task without it, which is harmless.
+    """
     if not project_id:
         return
-    payload = json.dumps({'p': project_id, 't': task_id, 'tab': origin_tab.get()}, separators=(',', ':'))
+    message = {'p': project_id, 't': task_id, 'tab': origin_tab.get()}
+    if whole:
+        message['w'] = 1
+    payload = json.dumps(message, separators=(',', ':'))
     if getattr(settings, 'REDIS_URL', ''):
         transaction.on_commit(lambda: _redis_publish(payload))
         return

@@ -110,6 +110,15 @@ class TestDefaultView:
         assert 'hx-select-oob="#assigned-count"' in html
         assert "source: '#task-view-refresh'" in html
 
+    def test_the_refresh_morphs_the_view(self, client, person):
+        # Morphing keeps scroll, focus and Alpine state (static/js/morph.js).
+        html = client.get(_url('layout=list')).content.decode()
+        assert 'hx-ext="morph"' in html
+        assert 'js/morph.' in html
+        assert '@alpinejs/morph@' in html
+        refresher = html[html.index('id="task-view-refresh"'):]
+        assert refresher[:refresher.index('>')].count('hx-swap="morph"') == 1
+
 
 @pytest.mark.django_db
 class TestFilters:

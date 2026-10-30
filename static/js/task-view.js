@@ -151,41 +151,60 @@
         else refreshRow(pk);
     }
 
+    // The rows of ``pks`` alone, each swapped in where it was. Any row that is not on
+    // the page, left the view or moved (other group, other place) means the whole view
+    // instead, once. Returns a promise that settles when the page shows the change.
+    // Also used after an edit in the drawer and for live updates (window.refreshTaskRows).
     let rowRequests = 0;
     const latestRow = {}; // pk -> the newest request for it; older answers are dropped
-    function refreshRow(pk) {
+    function fetchRow(pk) {
         const old = document.getElementById('task-' + pk);
-        if (!old || !old.dataset.keys) {
-            window.refreshTaskView();
-            return;
-        }
+        if (!old || !old.dataset.keys) return Promise.reject(new Error('not shown'));
         const url = new URL(window.location.href);
         url.searchParams.set('row', pk);
         const mine = ++rowRequests;
         latestRow[pk] = mine;
-        fetch(url, { credentials: 'same-origin' })
+        return fetch(url, { credentials: 'same-origin' })
             .then((response) => {
                 // 204: the edit took the task out of this view.
                 if (!response.ok || response.redirected || response.status === 204) throw new Error('row');
                 return response.text();
             })
             .then((html) => {
-                if (latestRow[pk] !== mine) return;
+                if (latestRow[pk] !== mine) return null;
                 const current = document.getElementById('task-' + pk);
                 const holder = document.createElement('template');
                 holder.innerHTML = html.trim();
                 const fresh = holder.content.firstElementChild;
                 if (!current || !fresh || fresh.dataset.keys !== current.dataset.keys) throw new Error('moved');
-                const wasSelected = current.id === selectedId;
-                current.replaceWith(fresh);
-                htmx.process(fresh);
+                return { current, fresh };
+            });
+    }
+
+    function swapRow({ current, fresh }) {
+        const wasSelected = current.id === selectedId;
+        current.replaceWith(fresh);
+        htmx.process(fresh);
+        // A menu still open on this row (labels) now hangs under the new copy.
+        if (state && state.rowId === fresh.id && !state.trigger.dataset.quick) state.trigger = fresh;
+        if (wasSelected) select(fresh, { focus: isIdle(), preventScroll: true });
+    }
+
+    function refreshRows(pks) {
+        // Every row is fetched before any is swapped, so a fallback to the whole view
+        // never follows a half-updated list.
+        return Promise.all(pks.map(fetchRow))
+            .then((rows) => {
+                rows.filter(Boolean).forEach(swapRow);
                 if (window.lucide) window.lucide.createIcons();
-                // A menu still open on this row (labels) now hangs under the new copy.
-                if (state && state.rowId === fresh.id && !state.trigger.dataset.quick) state.trigger = fresh;
-                if (wasSelected) select(fresh, { focus: isIdle(), preventScroll: true });
                 restoreFocus();
             })
             .catch(() => window.refreshTaskView());
+    }
+    window.refreshTaskRows = refreshRows;
+
+    function refreshRow(pk) {
+        return refreshRows([pk]);
     }
 
     function choose(item) {

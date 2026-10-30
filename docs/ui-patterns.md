@@ -453,7 +453,15 @@ paging are never saved).
   shows up by itself. The filter form posts the checked ones (`shown_status` + `filter=1`)
   and the spec translates them.
 - **Rows go stale otherwise.** The drawer's property views emit `taskChanged` (plus
-  `taskUpdated-<pk>`); the page answers with `refreshFragment('#task-view')`.
+  `taskUpdated-<pk>`); the page asks for that task's row alone (`?row=<pk>`,
+  `window.refreshTaskRows` in `static/js/task-view.js`) and reloads the whole view only
+  when the row left the view or moved (`row_keys`). `taskStatusChanged` (new status,
+  created, deleted) always reloads the whole view. Live updates follow the same rule: the
+  server marks created, deleted and new-status events `whole` (`static/js/live.js`).
+- **Whole-view reloads morph** (`hx-swap="morph"`, `static/js/morph.js`, Alpine's morph
+  plugin): the refresher, the live drawer and the live task page change only what differs,
+  so scroll, focus and Alpine state (x-show panes) survive. The toolbar and "Show more"
+  stay `outerHTML`: they are a different view.
 - **Order by "Manual"** is the board's order (`order`, newest first on a tie). It is the
   default when grouping by status, so the list and the board agree; any other grouping
   defaults to Priority. Only a sort that differs from the grouping's default goes in the

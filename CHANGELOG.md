@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.40.0] - 2026-10-30
+
+### Changed
+- **Editing in the task drawer updates only that row** of the list or board behind it, instead of reloading the whole view. The scroll position and the row selected with the keyboard stay put. When the edit moves the task (another group or place, or out of the view), the whole view reloads as before
+- **Live updates touch only the rows that changed.** When a colleague or Claude (MCP) edits a task, other open tabs refresh just that row or card. A new task, a deleted task or a new status still reloads the list or board, since rows move and counts change
+- **Reloads change only what differs** (Alpine's morph plugin, new script `@alpinejs/morph` 3.17.1): the list or board after an edit, the open drawer and the task page when someone else changes the task. Focus, scroll and open panes survive, and panels hidden by the page no longer reappear after a reload (the cause of the empty box fixed in 0.38.1)
+
 ## [0.39.0] - 2026-10-28
 
 ### Features
