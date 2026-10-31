@@ -34,6 +34,7 @@
             integrity="sha384-63H0EhkXL6M4HAjkA3bbnT+mkm0SbHKtxxj4Iv1hXtM6FDH+c6XqvuXgDKBJdJNG"
             crossorigin="anonymous"></script>
     <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+    <script src="{% static 'js/htmx-events.js' %}"></script>
     <script src="{% static 'js/morph.js' %}"></script>
     <script src="{% static 'js/keys.js' %}"></script>
     <script src="{% static 'js/markdown.js' %}"></script>
@@ -119,10 +120,11 @@
     <!-- Initialize Lucide icons and event handlers -->
     <script>
         lucide.createIcons();
-        document.body.addEventListener('htmx:afterSwap', (event) => {
+        // htmx events reach this page through static/js/htmx-events.js (request:*, swap:*).
+        document.body.addEventListener('swap:after', (event) => {
             lucide.createIcons();
-            if (window.Alpine && event.detail && event.detail.elt) {
-                Alpine.initTree(event.detail.elt);
+            if (window.Alpine && event.target.isConnected) {
+                Alpine.initTree(event.target);
             }
         });
 
@@ -156,9 +158,9 @@
             }));
         });
 
-        // Drawer helpers — used by every `hx-on::after-request` that opens the panel.
-        window.openSlideOver = function (event) {
-            if (event && event.detail && event.detail.successful === false) return;
+        // Drawer helpers. Buttons that open the drawer say so with
+        // data-after-success="open-drawer" (static/js/htmx-events.js).
+        window.openSlideOver = function () {
             document.getElementById('slide-over').classList.remove('hidden');
             lucide.createIcons();
         };
@@ -176,14 +178,14 @@
                 slideOver.replaceChildren();
             }
         }
-        slideOver.addEventListener('htmx:beforeSend', () => { slideOverRequests += 1; });
-        slideOver.addEventListener('htmx:afterRequest', () => {
+        slideOver.addEventListener('request:start', () => { slideOverRequests += 1; });
+        slideOver.addEventListener('request:end', () => {
             slideOverRequests = Math.max(0, slideOverRequests - 1);
             setTimeout(emptySlideOverIfClosed, 0);
         });
         // New content in the drawer: whatever the old content was waiting for can no
         // longer report back here, so stop counting it.
-        slideOver.addEventListener('htmx:afterSwap', (event) => {
+        slideOver.addEventListener('swap:after', (event) => {
             if (event.detail.target === slideOver) slideOverRequests = 0;
         });
         window.closeSlideOver = function () {
@@ -233,19 +235,18 @@
             toast._hideTimer = setTimeout(() => toast.classList.add('hidden'), 2000);
         };
 
-        document.body.addEventListener('htmx:responseError', (event) => {
-            const status = event.detail.xhr.status;
+        document.body.addEventListener('response:error', (event) => {
+            const status = event.detail.status;
             // 5xx bodies are Django error pages (or worse, tracebacks) — never show them.
             const message = status >= 500
                 ? 'Something went wrong. Please try again.'
-                : (event.detail.xhr.responseText?.trim() || 'Something went wrong. Please try again.');
+                : (event.detail.text?.trim() || 'Something went wrong. Please try again.');
             showErrorToast(message);
         });
-        document.body.addEventListener('htmx:sendError', () => {
-            showErrorToast('Network error. Check your connection and try again.');
-        });
-        document.body.addEventListener('htmx:targetError', () => {
-            showErrorToast('Something went wrong. Please try again.');
+        document.body.addEventListener('request:fail', (event) => {
+            showErrorToast(event.detail.kind === 'network'
+                ? 'Network error. Check your connection and try again.'
+                : 'Something went wrong. Please try again.');
         });
     </script>
 </body>

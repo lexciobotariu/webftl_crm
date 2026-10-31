@@ -519,11 +519,11 @@
     // starts at the top. Everything else that swaps #task-view is the same view again:
     // the refresh after an edit, "Show more", and the board's refresh after a drag.
     function isRefresh(detail) {
-        const source = detail.requestConfig && detail.requestConfig.elt;
+        const source = detail.source;
         return !(source && source.closest && source.closest('#task-toolbar'));
     }
 
-    document.body.addEventListener('htmx:beforeSwap', (event) => {
+    document.body.addEventListener('swap:before', (event) => {
         const target = event.detail.target;
         if (!target || target.id !== 'task-view' || !isRefresh(event.detail)) return;
         scrolls = {};
@@ -560,8 +560,8 @@
     }
 
     // Alpine hides collapsed groups after the swap, so restore again once it has settled.
-    document.body.addEventListener('htmx:afterSwap', restoreScroll);
-    document.body.addEventListener('htmx:afterSettle', () => {
+    document.body.addEventListener('swap:after', restoreScroll);
+    document.body.addEventListener('swap:done', () => {
         restoreScroll();
         scrolls = null;
         restoreFocus();

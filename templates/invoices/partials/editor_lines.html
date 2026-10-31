@@ -3,7 +3,7 @@
     <div class="px-4 py-2 border-b border-border-subtle bg-panel/80 flex items-center justify-between">
         <h2 class="text-sm font-medium text-zinc-100">Lines</h2>
         {% if kind == 'invoice' %}
-        <button type="button" hx-get="{% url 'invoice_add_tasks' doc.pk %}" hx-target="#slide-over" hx-swap="innerHTML" hx-on::after-request="openSlideOver(event)"
+        <button type="button" hx-get="{% url 'invoice_add_tasks' doc.pk %}" hx-target="#slide-over" hx-swap="innerHTML" data-after-success="open-drawer"
                 class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
             <i data-lucide="list-checks" class="w-3.5 h-3.5"></i>
             Add tasks

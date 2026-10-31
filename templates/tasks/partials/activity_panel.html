@@ -43,8 +43,8 @@
           hx-target="#activity-items-{{ task.pk }}"
           hx-swap="beforeend"
           hx-sync="this:drop"
-          hx-on::after-request="if(event.detail.successful) this.reset()"
-          @htmx:after-request="if ($event.detail.successful) filter = 'all'"
+          data-after-success="reset"
+          @request:end="if ($event.detail.ok) filter = 'all'"
           class="mt-4 border border-border-subtle rounded-card">
         <div class="px-3 pt-2">
             {% with pk_str=task.pk|stringformat:"s" %}

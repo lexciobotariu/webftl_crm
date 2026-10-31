@@ -113,9 +113,10 @@
     function open(row) {
         if (!row || !mayLeavePane()) return;
         select(row);
-        // An aborted request (superseded by the next J) rejects; its row needs a refresh.
+        // An aborted request (superseded by the next J) ends without an answer (status 0,
+        // see the request:end listener below); its row then needs a refresh.
         htmx.ajax('POST', row.dataset.openUrl, { source: '#inbox-opener', target: '#inbox-pane', swap: 'innerHTML' })
-            .catch(() => { staleRows = true; });
+            .catch(() => {});
         list().focus({ preventScroll: true });
     }
 
@@ -248,13 +249,13 @@
     });
 
     // A slower answer for a notification that is no longer selected is not shown.
-    document.addEventListener('htmx:beforeSwap', (event) => {
+    document.addEventListener('swap:before', (event) => {
         if (!root() || event.detail.target !== pane()) return;
-        const match = /data-pane-for="(\d+)"/.exec(event.detail.serverResponse || '');
-        if (match && `notification-${match[1]}` !== selectedId) event.detail.shouldSwap = false;
+        const match = /data-pane-for="(\d+)"/.exec(event.detail.text);
+        if (match && `notification-${match[1]}` !== selectedId) event.detail.cancel();
     });
 
-    document.addEventListener('htmx:afterSwap', (event) => {
+    document.addEventListener('swap:after', (event) => {
         if (!root()) return;
         // The pane itself, not the out-of-band row and count that ride along.
         if (event.target === pane()) {
@@ -269,21 +270,21 @@
 
     // An open that failed (the notification is gone, the server erred, no network)
     // leaves the pane as it was; so does a "Show more" that failed.
-    ['htmx:responseError', 'htmx:sendError'].forEach((name) => {
+    ['response:error', 'request:fail'].forEach((name) => {
         document.addEventListener(name, (event) => {
             if (!root()) return;
-            const elt = event.detail.elt;
+            const elt = event.detail.source;
             if (elt && elt.id === 'inbox-opener') syncSelectionToPane();
             if (elt && elt.id === 'inbox-more') openAfterMore = false;
         });
     });
 
-    document.addEventListener('htmx:afterSettle', (event) => {
+    document.addEventListener('swap:done', (event) => {
         if (!root()) return;
         markSelected(false);
         // Only the answer to "Show more" carries on to the next row; another refresh of
         // the list settling in between must not open anything.
-        const source = event.detail.requestConfig && event.detail.requestConfig.elt;
+        const source = event.detail.source;
         if (openAfterMore && event.target.id === 'inbox-list' && source && source.id === 'inbox-more') {
             openAfterMore = false;
             move(1);
@@ -291,10 +292,16 @@
     });
 
     // A task deleted from the pane takes its notifications with it.
-    document.addEventListener('htmx:afterRequest', (event) => {
-        if (!root() || !event.detail.successful) return;
-        const elt = event.detail.elt;
-        if (elt && pane().contains(elt) && /\/tasks\/\d+\/delete\/$/.test(event.detail.requestConfig.path)) {
+    // An open that never got its answer (aborted by the next J, or the network).
+    document.addEventListener('request:end', (event) => {
+        if (!root() || event.detail.ok || event.detail.status !== 0) return;
+        if (event.detail.source && event.detail.source.id === 'inbox-opener') staleRows = true;
+    });
+
+    document.addEventListener('request:end', (event) => {
+        if (!root() || !event.detail.ok) return;
+        const elt = event.detail.source;
+        if (elt && pane().contains(elt) && /\/tasks\/\d+\/delete\/$/.test(event.detail.path.split('?')[0])) {
             // Its response also sends taskStatusChanged, which refreshes the list.
             clearPane(true);
         }

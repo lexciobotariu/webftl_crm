@@ -167,7 +167,7 @@ def check_drawer_opens(page):
 
 
 def check_new_task_drawer(page):
-    """The New task button opens the create drawer (hx-on::after-request today)."""
+    """The New task button opens the create drawer (data-after-success="open-drawer")."""
     open_list(page)
     page.click('#task-new')
     page.wait_for_selector('#slide-over:not(.hidden) form', timeout=TIMEOUT)
@@ -217,7 +217,7 @@ def check_description_preview(page):
 
 
 def check_comment_resets(page):
-    """A new comment appears and the form empties (hx-on::after-request reset)."""
+    """A new comment appears and the form empties (data-after-success="reset")."""
     pk = open_first_task(page)
     box = page.locator('#slide-over textarea[name="content"]')
     text = f'Smoke comment {int(time.time())}'
@@ -366,7 +366,7 @@ def check_close_drawer_events(page):
 
 
 def check_client_todos(page):
-    """My to-dos: Show completed toggles the list (hx-on::config-request rewrites the URL)."""
+    """My to-dos: Show completed toggles the list (hx-vals sends show_completed)."""
     page.goto(f'{BASE}/tasks/my/todos/')
     toggle = page.locator('[data-show-completed]').first
     toggle.wait_for(timeout=TIMEOUT)
@@ -376,6 +376,69 @@ def check_client_todos(page):
     expect(info.value.status == 200, f'to-dos answered {info.value.status}')
     expect(('show_completed=true' in info.value.url) == (before == 'false'),
            f'toggle asked for {info.value.url}')
+
+
+def check_todo_drawer(page):
+    """Add to-do opens the drawer (data-after-success="open-drawer", no script in the answer)."""
+    page.goto(f'{BASE}/tasks/my/todos/')
+    button = page.locator('button[hx-get$="/todos/create/"]').first
+    button.wait_for(timeout=TIMEOUT)
+    tap(button)
+    page.wait_for_selector('#slide-over:not(.hidden) form', timeout=TIMEOUT)
+
+
+def check_label_create(page):
+    """Project settings: a new label is added and the form empties (data-after-success="reset")."""
+    page.goto(f'{BASE}/projects/{PROJECT_PK}/settings/')
+    field = page.locator('form[hx-post$="/labels/create/"] input[name=name], form[hx-post*="label"] input[name=name]').first
+    field.wait_for(timeout=TIMEOUT)
+    name = f'Smoke {int(time.time())}'
+    field.fill(name)
+    with page.expect_response(lambda r: 'label' in r.url and r.request.method == 'POST') as info:
+        tap(field.locator('xpath=ancestor::form').locator('button[type=submit]'))
+    expect(info.value.status == 200, f'label POST answered {info.value.status}')
+    page.wait_for_selector(f':text("{name}")', timeout=TIMEOUT)
+    wait_idle(page)
+    expect(field.input_value() == '', 'label form was not reset')
+
+
+def check_time_log(page):
+    """Log time from the drawer: the popover form resets and closes (Alpine @request:end)."""
+    open_first_task(page)
+    drawer = page.locator('#slide-over')
+    tap(drawer.locator('button:has-text("Log time")'))
+    form = drawer.locator('form[hx-post*="time"]').filter(has=page.locator('input[name=duration]')).first
+    form.locator('input[name=duration]').fill('15m')
+    with page.expect_response(lambda r: 'time' in r.url and r.request.method == 'POST') as info:
+        tap(form.locator('button[type=submit]'))
+    expect(info.value.status == 200, f'log time answered {info.value.status}')
+    wait_idle(page)
+    expect(form.locator('input[name=duration]').input_value() == '', 'Log time form was not reset')
+    expect(not form.is_visible(), 'Log time popover stayed open')
+
+
+def check_inbox(page):
+    """Inbox: J opens the next notification in the pane; a slower answer for another one is dropped."""
+    page.goto(f'{BASE}/inbox/')
+    rows = page.locator('[data-notification]')
+    try:
+        rows.first.wait_for(timeout=2000)
+    except PlaywrightTimeout as exc:
+        raise CheckFailed('no notifications for the demo admin (comment on one of their tasks as someone else)') from exc
+    if rows.count() < 2:
+        raise CheckFailed('needs at least two notifications')
+    page.locator('#inbox-list').focus()
+    page.keyboard.press('j')
+    # attached, not visible: under --mirror the stub CSS has no lg:flex for the pane.
+    page.wait_for_selector('#inbox-pane [data-pane-for]', state='attached', timeout=TIMEOUT)
+    first = page.locator('#inbox-pane [data-pane-for]').first.get_attribute('data-pane-for')
+    page.keyboard.press('j')
+    page.keyboard.press('j')
+    wait_idle(page, 600)
+    shown = page.locator('#inbox-pane [data-pane-for]').first.get_attribute('data-pane-for')
+    selected = page.locator('#inbox').get_attribute('data-selected')
+    expect(shown == selected, f'pane shows {shown}, selection is {selected}')
+    expect(shown != first, 'J did not move on')
 
 
 def check_live_update(page, context):
@@ -413,6 +476,10 @@ CHECKS = [
     ('board', check_board),
     ('palette', check_palette),
     ('todos', check_client_todos),
+    ('todo-drawer', check_todo_drawer),
+    ('label', check_label_create),
+    ('time-log', check_time_log),
+    ('inbox', check_inbox),
     ('live', check_live_update),
     ('delete', check_close_drawer_events),
 ]
@@ -466,6 +533,12 @@ def main():
                 problem = ' | '.join([lines[0], *detail[:2]])[:400]
             # 4xx answers the check provoked on purpose are logged by the browser too.
             page_errors = [e for e in errors if 'status of 4' not in e and 'Error Code 4' not in e]
+            # htmx 2 logs a request it aborted itself (hx-sync replace, the inbox's quick J J)
+            # as htmx:afterRequest + htmx:sendAbort. A network failure still shows as sendError.
+            page_errors = [e for e in page_errors if 'htmx:afterRequest' not in e and 'htmx:sendAbort' not in e]
+            if args.mirror:
+                # Other hosts (icon and font APIs) are unreachable on such machines.
+                page_errors = [e for e in page_errors if 'Failed to load resource: net::ERR_' not in e]
             if not problem and page_errors:
                 problem = page_errors[0]
             results.append((name, problem))

@@ -37,7 +37,7 @@
         {# Siblings of the button, not inside it: a link or button in a button is not valid HTML. #}
         {% if can_create_task and project and group.create_query is not None %}
         <button type="button" hx-get="{% url 'task_create' project.pk %}{% if group.create_query %}?{{ group.create_query }}{% endif %}"
-                hx-target="#slide-over" hx-swap="innerHTML" hx-on::after-request="openSlideOver(event)"
+                hx-target="#slide-over" hx-swap="innerHTML" data-after-success="open-drawer"
                 title="Add task to {{ group.label }}" aria-label="Add task to {{ group.label }}"
                 class="px-3 py-1.5 text-zinc-500 hover:text-zinc-200 transition-colors">
             <i data-lucide="plus" class="w-3.5 h-3.5"></i>
@@ -100,7 +100,7 @@
     <button hx-get="{% url 'task_create' project.pk %}"
             hx-target="#slide-over"
             hx-swap="innerHTML"
-            hx-on::after-request="openSlideOver(event)"
+            data-after-success="open-drawer"
             class="text-zinc-200 hover:text-zinc-50 text-sm">
         Create the first task
     </button>

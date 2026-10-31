@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.40.3] - 2026-10-31
+
+Second step towards htmx 4. Nothing changes for people using the app.
+
+### Changed
+- New `static/js/htmx-events.js`: the only file that knows htmx's event names and details. It turns them into the app's own events (`request:start`, `request:end`, `swap:before`, `swap:after`, `swap:done`, `response:error`, `request:fail`, `request:config`), which the rest of the JavaScript listens to. htmx 4 renames these events, so the switch will change this one file
+- The 55 `hx-on::after-request` / `hx-on::config-request` handlers in the templates are gone (htmx 4 never fires them). Opening the drawer, resetting or hiding a form, emptying a file field and removing an "empty" message after success are now declared with `data-after-success`, `data-after-success-remove` and `data-after-request`; Alpine forms listen to `@request:start` / `@request:end`
+- `scripts/htmx_smoke.py` checks four more screens (Add to-do, project labels, Log time, inbox J/K): 21 checks, all passing on htmx 2
+
 ## [0.40.2] - 2026-10-31
 
 ### Changed
