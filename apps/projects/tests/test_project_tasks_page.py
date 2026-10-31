@@ -8,8 +8,8 @@ from apps.projects.factories import ProjectAccessFactory, ProjectFactory
 from apps.projects.models import ProjectTaskView, Status
 from apps.tasks.factories import LabelFactory, TaskFactory
 
-TOOLBAR = {'HTTP_HX_REQUEST': 'true', 'HTTP_HX_TRIGGER': 'task-toolbar'}
-SEARCH = {'HTTP_HX_REQUEST': 'true', 'HTTP_HX_TRIGGER': 'task-search'}
+TOOLBAR = {'HTTP_HX_REQUEST': 'true', 'HTTP_HX_SOURCE': 'form#task-toolbar'}
+SEARCH = {'HTTP_HX_REQUEST': 'true', 'HTTP_HX_SOURCE': 'input#task-search'}
 
 
 def _member(project):

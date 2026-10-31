@@ -232,10 +232,9 @@ class TestInPlaceEditAndDelete:
         })
 
         assert response.status_code == 200
-        # After the swap: while the edit form is still in the list, the list skips a
-        # refresh, and the Work log totals would keep the old duration.
-        assert response.headers['HX-Trigger-After-Settle'] == 'timerChanged'
-        assert 'HX-Trigger' not in response.headers
+        # htmx 4 fires HX-Trigger after the swap: while the edit form is still in the
+        # list, the list skips a refresh, and the Work log totals would keep the old duration.
+        assert response.headers['HX-Trigger'] == 'timerChanged'
         text = _text(response.content.decode())
         assert 'logged 2h — longer' in text
         assert '<form' not in response.content.decode()

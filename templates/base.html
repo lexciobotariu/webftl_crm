@@ -21,15 +21,16 @@
     <script src="https://unpkg.com/htmx.org@4.0.0/dist/htmx.min.js"
             integrity="sha384-BvJpBiO8Kh31EqtJe5DRIeWrHWnCGkwytKs9NKFi86Hhw96dEqdEMzZDeK9iEGTc"
             crossorigin="anonymous"></script>
+    {# htmx's own extension for Alpine: morph swaps (hx-swap="outerMorph") keep Alpine state. #}
+    <script src="https://unpkg.com/htmx.org@4.0.0/dist/ext/hx-alpine-compat.min.js"
+            integrity="sha384-M3WRSUbYGta8wFWkcZcNj+n7cx90JkGDzvOn5M6FNsErfOjIn/9uQjzFxjFAOG5p"
+            crossorigin="anonymous"></script>
     <!-- Alpine plugins must be loaded before Alpine core. -->
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/sort@3.17.1/dist/cdn.min.js"
             integrity="sha384-hqiYD2WaUm+VsLVKEqRzzkJ7HQownCb0Mjq/GQJUDyzwA+vztNBwFqsWkbRGZCv+"
             crossorigin="anonymous"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.17.1/dist/cdn.min.js"
             integrity="sha384-NArNwzWsUSF+kY2lgW4YriEkjLqi+J+za6HrENUn/3nZqkBnWbxV22kCJEK5Uu6n"
-            crossorigin="anonymous"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/morph@3.17.1/dist/cdn.min.js"
-            integrity="sha384-96/p2MTylcBZe5Jt3qu57K7//tELPxA40djB8PF8OsNnKcOXU5GNVWpWX5Y7dFH4"
             crossorigin="anonymous"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.17.1/dist/cdn.min.js"
             integrity="sha384-x6MR287ZDHWauvRTQIBc3b1F++s/03J/rBHbpRGwBoYbrqIN+3wRx4EXbU1u9NGO"
@@ -42,7 +43,6 @@
             crossorigin="anonymous"></script>
     <link rel="stylesheet" href="{% static 'css/custom.css' %}">
     <script src="{% static 'js/htmx-events.js' %}"></script>
-    <script src="{% static 'js/morph.js' %}"></script>
     <script src="{% static 'js/keys.js' %}"></script>
     <script src="{% static 'js/markdown.js' %}"></script>
     <script src="{% static 'js/mentions.js' %}"></script>

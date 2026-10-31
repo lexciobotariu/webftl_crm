@@ -256,7 +256,8 @@ def notification_delete(request, pk):
     note = get_object_or_404(inbox_for(request.user), pk=pk)
     note_id = note.pk
     note.delete()
-    gone = f'<div id="notification-{note_id}" hx-swap-oob="delete"></div>'
+    # A partial: it names the row to remove, it does not bring a new one.
+    gone = f'<hx-partial hx-target="#notification-{note_id}" hx-swap="delete"></hx-partial>'
     return _changed(HttpResponse(gone + _chip(request.user)), notificationDeleted={'id': note_id})
 
 

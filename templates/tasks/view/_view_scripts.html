@@ -1,9 +1,9 @@
 {% load static %}
 {% comment %}Re-fetches the view through the current URL after an edit. It sits outside #task-view so it survives every swap.
-   The refresh morphs the view (static/js/morph.js): only what changed is touched, so scroll, focus and open groups stay.
+   The refresh morphs the view (hx-swap="outerMorph", htmx 4; the alpine-compat extension keeps Alpine state): only what changed is touched, so scroll, focus and open groups stay.
    Optional refresh_oob: a selector list for anything else the same response should update (My Tasks passes its count badge).{% endcomment %}
 <div id="task-view-refresh" hidden
-     hx-target="#task-view" hx-select="#task-view" hx-swap="morph"{% if refresh_oob %}
+     hx-target="#task-view" hx-select="#task-view" hx-swap="outerMorph"{% if refresh_oob %}
      hx-select-oob="{{ refresh_oob }}"{% endif %}></div>
 <script>
     // Back shows the URL's state through a real page load (history: "reload" in
