@@ -117,21 +117,21 @@
         // Only the answer to what is typed now may be shown. An answer to an earlier
         // query (slow network, palette closed and reopened) is dropped, and a redirect
         // means the session ended: go and log in rather than list the login page here.
-        document.addEventListener('htmx:beforeSwap', (event) => {
+        document.addEventListener('swap:before', (event) => {
             if (!event.detail.target || event.detail.target.id !== 'palette-results') return;
-            const asked = event.detail.pathInfo.finalRequestPath;
-            const answered = new URL(event.detail.xhr.responseURL || asked, window.location.origin);
+            const asked = event.detail.path;
+            const answered = new URL(event.detail.finalUrl || asked, window.location.origin);
             if (answered.pathname !== new URL(asked, window.location.origin).pathname) {
-                event.detail.shouldSwap = false;
+                event.detail.cancel();
                 window.location.reload();
             } else if (!isPaletteOpen() || queryOf(asked) !== typedQuery()) {
-                event.detail.shouldSwap = false;
+                event.detail.cancel();
             }
         });
         // Each answer starts on its first result; an Enter that was waiting for it goes there.
-        document.addEventListener('htmx:afterSwap', (event) => {
+        document.addEventListener('swap:after', (event) => {
             if (!event.detail.target || event.detail.target.id !== 'palette-results') return;
-            shownQuery = queryOf(event.detail.pathInfo.finalRequestPath);
+            shownQuery = queryOf(event.detail.path);
             const first = paletteOptions()[0] || null;
             setActive(first);
             if (enterPending) {

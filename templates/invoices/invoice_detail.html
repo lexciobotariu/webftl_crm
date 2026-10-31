@@ -36,7 +36,7 @@
                 <button hx-get="{% url 'invoice_recurring' invoice.pk %}"
                         hx-target="#slide-over"
                         hx-swap="innerHTML"
-                        hx-on::after-request="openSlideOver(event)"
+                        data-after-success="open-drawer"
                         class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
                     <i data-lucide="repeat" class="w-3.5 h-3.5"></i>
                     Repeat
@@ -46,7 +46,7 @@
                 <button hx-get="{% url 'invoice_email' invoice.pk 'reminder' %}"
                         hx-target="#slide-over"
                         hx-swap="innerHTML"
-                        hx-on::after-request="openSlideOver(event)"
+                        data-after-success="open-drawer"
                         class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
                     <i data-lucide="bell-ring" class="w-3.5 h-3.5"></i>
                     Send reminder
@@ -56,7 +56,7 @@
                 <button hx-get="{% url 'invoice_email' invoice.pk 'invoice' %}"
                         hx-target="#slide-over"
                         hx-swap="innerHTML"
-                        hx-on::after-request="openSlideOver(event)"
+                        data-after-success="open-drawer"
                         class="inline-flex items-center gap-1.5 {% if invoice.is_draft %}bg-accent text-on-accent font-medium hover:bg-accent-hover{% else %}bg-elevated border border-border-subtle text-zinc-300 hover:bg-hover{% endif %} px-3 py-1.5 rounded-control text-xs transition-colors">
                     <i data-lucide="mail" class="w-3.5 h-3.5"></i>
                     Email invoice
@@ -74,7 +74,7 @@
                 <button hx-get="{% url 'invoice_payment_create' invoice.pk %}"
                         hx-target="#slide-over"
                         hx-swap="innerHTML"
-                        hx-on::after-request="openSlideOver(event)"
+                        data-after-success="open-drawer"
                         class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
                     <i data-lucide="banknote" class="w-3.5 h-3.5"></i>
                     Record payment
@@ -117,7 +117,7 @@
                 <button hx-get="{% url 'invoice_recurring' invoice.pk %}"
                         hx-target="#slide-over"
                         hx-swap="innerHTML"
-                        hx-on::after-request="openSlideOver(event)"
+                        data-after-success="open-drawer"
                         class="text-xs text-zinc-400 hover:text-zinc-200">Change</button>
                 <button hx-post="{% url 'invoice_recurring_stop' invoice.pk %}"
                         hx-confirm="Stop repeating {{ invoice.number_label }}? Drafts already created stay."

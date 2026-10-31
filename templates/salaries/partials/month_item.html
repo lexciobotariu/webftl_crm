@@ -54,7 +54,7 @@
                 <button hx-get="{% url 'month_edit' salary.id month.id %}"
                         hx-target="#slide-over"
                         hx-swap="innerHTML"
-                        hx-on::after-request="openSlideOver(event)"
+                        data-after-success="open-drawer"
                         @click.stop
                         class="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors"
                         title="Edit month">

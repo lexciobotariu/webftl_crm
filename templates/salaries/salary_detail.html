@@ -27,7 +27,7 @@
             <button hx-get="{% url 'salary_edit' salary.id %}"
                     hx-target="#slide-over"
                     hx-swap="innerHTML"
-                    hx-on::after-request="openSlideOver(event)"
+                    data-after-success="open-drawer"
                     class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
                 <i data-lucide="settings" class="w-3.5 h-3.5"></i>
                 Settings
@@ -98,7 +98,7 @@
                         <button hx-get="{% url 'month_create' salary.id %}"
                                 hx-target="#slide-over"
                                 hx-swap="innerHTML"
-                                hx-on::after-request="openSlideOver(event)"
+                                data-after-success="open-drawer"
                                 class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors">
                             <i data-lucide="calendar-plus" class="w-3.5 h-3.5"></i>
                             Add Month
@@ -106,7 +106,7 @@
                         <button hx-get="{% url 'payment_create' salary.id %}"
                                 hx-target="#slide-over"
                                 hx-swap="innerHTML"
-                                hx-on::after-request="openSlideOver(event)"
+                                data-after-success="open-drawer"
                                 class="inline-flex items-center gap-1.5 bg-accent text-on-accent px-3 py-1.5 rounded-control text-xs font-medium hover:bg-accent-hover transition-colors">
                             <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                             Record Payment
@@ -150,7 +150,7 @@
                 <button hx-get="{% url 'month_create' salary.id %}"
                         hx-target="#slide-over"
                         hx-swap="innerHTML"
-                        hx-on::after-request="openSlideOver(event)"
+                        data-after-success="open-drawer"
                         class="text-zinc-200 hover:text-zinc-50 text-sm">
                     Add the first month
                 </button>

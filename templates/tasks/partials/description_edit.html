@@ -10,8 +10,8 @@
     <form hx-post="{% url 'task_edit_description' task.pk %}"
           hx-target="#task-description-{{ task.pk }}"
           hx-swap="innerHTML"
-          @htmx:before-request="saving = true"
-          @htmx:after-request="saving = false"
+          @request:start="saving = true"
+          @request:end="saving = false"
           @keydown.escape="cancel($event)"
           class="space-y-2">
         {% csrf_token %}

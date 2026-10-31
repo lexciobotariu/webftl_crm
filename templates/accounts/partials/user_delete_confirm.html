@@ -44,7 +44,7 @@
         <button hx-post="{% url 'user_delete' user_obj.pk %}"
                 hx-target="#user-{{ user_obj.pk }}"
                 hx-swap="delete"
-                hx-on::after-request="closeSlideOver()"
+                data-after-request="close-drawer"
                 class="flex-1 px-3 py-1.5 text-xs text-white bg-error rounded-control hover:brightness-90 transition-colors">
             {% if counts.has_data %}Delete Permanently{% else %}Delete{% endif %}
         </button>

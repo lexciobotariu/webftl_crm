@@ -79,7 +79,7 @@
                         <form hx-post="{% url 'status_create' project.pk %}"
                               hx-target="#status-list"
                               hx-swap="beforeend"
-                              hx-on::after-request="if(event.detail.successful && event.detail.xhr.getResponseHeader('HX-Trigger')?.includes('statusCreated')) { this.reset(); document.getElementById('no-statuses')?.remove(); }"
+                              data-after-success="reset" data-success-trigger="statusCreated" data-after-success-remove="#no-statuses"
                               class="pt-3 border-t border-border-subtle">
                             {% csrf_token %}
                             <div class="flex gap-3">
@@ -129,7 +129,7 @@
                         <form hx-post="{% url 'label_create' project.pk %}"
                               hx-target="#label-list"
                               hx-swap="beforeend"
-                              hx-on::after-request="if(event.detail.successful) { this.reset(); document.getElementById('no-labels')?.remove(); }"
+                              data-after-success="reset" data-after-success-remove="#no-labels"
                               class="flex gap-3 items-center pt-3 border-t border-border-subtle">
                             {% csrf_token %}
                             <input type="text" name="name" required placeholder="Label name..."

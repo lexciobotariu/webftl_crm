@@ -24,20 +24,7 @@
                         hx-get="{% if client %}{% url 'client_todo_list' client.id %}{% else %}{% url 'todo_list' %}{% endif %}"
                         hx-target="#todos-list-container"
                         hx-swap="innerHTML"
-                        hx-on::config-request="
-                            const next = (this.dataset.showCompleted === 'true') ? 'false' : 'true';
-                            this.dataset.showCompleted = next;
-                            const list = document.getElementById('todos-list-container');
-                            const endpoint = (this.getAttribute('hx-get') || '').split('?')[0];
-                            const url = (next === 'true') ? `${endpoint}?show_completed=true` : endpoint;
-                            if (list) {
-                                list.dataset.showCompleted = next;
-                                list.setAttribute('hx-get', url);
-                            }
-                            const label = this.querySelector('[data-show-completed-label]');
-                            if (label) label.textContent = (next === 'true') ? 'Hide completed' : 'Show completed';
-                            event.detail.path = url;
-                        "
+                        hx-vals='js:{show_completed: toggleShowCompleted(this)}'
                         class="flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-hover rounded-lg transition-colors">
                     <i data-lucide="eye" class="w-3.5 h-3.5"></i>
                     <span data-show-completed-label>{% if show_completed %}Hide{% else %}Show{% endif %} completed</span>
@@ -46,7 +33,7 @@
                 <button hx-get="{% if client %}{% url 'client_todo_create' client.id %}{% else %}{% url 'todo_create' %}{% endif %}"
                         hx-target="#slide-over"
                         hx-swap="innerHTML"
-                        hx-on::after-request="openSlideOver(event)"
+                        data-after-success="open-drawer"
                         class="inline-flex items-center gap-1.5 bg-accent text-on-accent px-3 py-1.5 rounded-control text-xs font-medium hover:bg-accent-hover transition-colors">
                     <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                     Add To-Do
@@ -70,4 +57,21 @@
     if (typeof lucide !== 'undefined') {
         lucide.createIcons();
     }
+</script>
+<script>
+    // "Show completed": flips the button's state and returns it as the request's
+    // show_completed value. The list keeps the same choice for its own refreshes.
+    window.toggleShowCompleted = window.toggleShowCompleted || function (button) {
+        const next = button.dataset.showCompleted === 'true' ? 'false' : 'true';
+        button.dataset.showCompleted = next;
+        const list = document.getElementById('todos-list-container');
+        const endpoint = (button.getAttribute('hx-get') || '').split('?')[0];
+        if (list) {
+            list.dataset.showCompleted = next;
+            list.setAttribute('hx-get', next === 'true' ? `${endpoint}?show_completed=true` : endpoint);
+        }
+        const label = button.querySelector('[data-show-completed-label]');
+        if (label) label.textContent = next === 'true' ? 'Hide completed' : 'Show completed';
+        return next;
+    };
 </script>

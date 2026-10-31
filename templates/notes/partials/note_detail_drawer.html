@@ -58,7 +58,6 @@
             <button hx-get="{% url 'note_edit_drawer' note.pk %}"
                     hx-target="#slide-over"
                     hx-swap="innerHTML"
-                    hx-on::after-request="lucide.createIcons();"
                     class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">
                 <i data-lucide="pencil" class="w-4 h-4 inline-block mr-1"></i>
                 Edit

@@ -14,7 +14,7 @@
     // changes out of this tab's stream (the response already updated it).
     const tab = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Math.random()).slice(2);
     window.liveTasks = { tab };
-    document.body.addEventListener('htmx:configRequest', (event) => {
+    document.body.addEventListener('request:config', (event) => {
         event.detail.headers['X-Tab-Id'] = tab;
     });
 

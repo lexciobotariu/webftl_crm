@@ -104,7 +104,7 @@
                        hx-target="#attachment-list-{{ task.pk }}"
                        hx-swap="beforeend"
                        hx-encoding="multipart/form-data"
-                       hx-on::after-request="if (event.detail.successful) { document.querySelector('#attachment-list-{{ task.pk }} [data-attachments-empty]')?.remove(); } this.value = '';"
+                       data-after-success-remove="#attachment-list-{{ task.pk }} [data-attachments-empty]" data-after-request="clear"
                        name="file">
             </label>
             {% endif %}
@@ -112,7 +112,7 @@
 
         <!-- Inline subtask form -->
         <form hx-post="{% url 'subtask_create' task.pk %}" hx-target="#subtask-list-{{ task.pk }}" hx-swap="beforeend"
-              hx-on::after-request="if(event.detail.successful) { this.reset(); this.classList.add('hidden'); }"
+              data-after-success="reset hide"
               class="hidden flex items-center gap-2 bg-elevated border border-border-subtle rounded-card px-3 py-2"
               id="subtask-form-{{ task.pk }}">
             {% csrf_token %}

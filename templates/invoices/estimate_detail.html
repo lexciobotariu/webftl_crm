@@ -31,7 +31,7 @@
                 </button>
                 {% endif %}
                 {% if can_email %}
-                <button hx-get="{% url 'estimate_email' estimate.pk %}" hx-target="#slide-over" hx-swap="innerHTML" hx-on::after-request="openSlideOver(event)" class="{% if estimate.is_draft %}{{ primary }}{% else %}{{ btn }}{% endif %}">
+                <button hx-get="{% url 'estimate_email' estimate.pk %}" hx-target="#slide-over" hx-swap="innerHTML" data-after-success="open-drawer" class="{% if estimate.is_draft %}{{ primary }}{% else %}{{ btn }}{% endif %}">
                     <i data-lucide="mail" class="w-3.5 h-3.5"></i>Email estimate
                 </button>
                 {% endif %}
