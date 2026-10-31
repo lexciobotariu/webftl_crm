@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.41.0] - 2026-10-31
+
+**htmx 2 → htmx 4.** The app should work as before; the changes below are what htmx 4 needed. No database migrations, nothing to set in Dokploy. To go back to htmx 2, revert this release alone; the preparation in 0.40.1–0.40.3 stays.
+
+### Changed
+- htmx 2.0.11 → 4.0.0 (pinned with SRI). Its settings are in one `<meta name="htmx-config">` in `base.html`: error answers (4xx/5xx) are still shown only in the toast, never put into the page; Back loads the page again (as the task list already did); requests have no time limit, as before (htmx 4 would stop them after 60 seconds)
+- htmx 4 passes attributes from a parent element only when they are marked `:inherited`. `<body>` marks the three that every request needs: the CSRF header, the global spinner and `hx-sync="queue last"`
+- `hx-sync="queue last"`: a second change made while the first is still saving now waits for it and then saves the latest state. Without it htmx 4 would have kept the second change and dropped any later one, so in the invoice editor a line changed three times quickly would have been saved with its second value (caught by the new browser check)
+- `static/js/htmx-events.js` listens to htmx 4's events. The rest of the app is unchanged: same `request:*` / `swap:*` events, and `HX-Trigger` events still fire before the swap, from the element that sent the request, as in htmx 2
+- `static/js/morph.js` registered the htmx 4 way; it still uses Alpine's morph plugin, which keeps Alpine state
+- Removed attributes htmx 4 dropped (`hx-ext`, `hx-disinherit`, `hx-history`); `hx-disabled-elt` is now `hx-disable` (the Send button in the invoice email drawer)
+- The search field on the Tasks page updates the filter badge itself; it used to inherit that from the toolbar
+- Two click filters (task row, description) no longer use a `]` inside the filter, which htmx 4 reads as the end of it
+- `scripts/htmx_smoke.py`: three more checks (Create more, the CSRF and tab headers, invoice autosave); 24/24 pass on htmx 4
+
 ## [0.40.3] - 2026-10-31
 
 Second step towards htmx 4. Nothing changes for people using the app.

@@ -4,7 +4,7 @@
 
 {% block full_content %}
 {% comment %}The Inbox reads like an email client: notifications in a column on the left, the one you pick open on the right. static/js/inbox.js keeps the selection, the keyboard and the address in step. data-selected on the root shows the pane on narrow screens, where it covers the list.{% endcomment %}
-<div id="inbox" hx-history="false" class="group flex h-full overflow-hidden"{% if selected_pk %} data-selected="{{ selected_pk }}"{% endif %}
+<div id="inbox" class="group flex h-full overflow-hidden"{% if selected_pk %} data-selected="{{ selected_pk }}"{% endif %}
      data-show="{{ show }}">
     <section aria-label="Notifications" class="w-full lg:w-[380px] shrink-0 flex flex-col min-h-0 bg-panel border-r border-border-subtle">
         <div class="flex-shrink-0 flex items-center justify-between gap-2 min-h-[45px] px-3 py-2 border-b border-border-subtle">

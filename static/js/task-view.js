@@ -8,6 +8,10 @@
     window.__taskViewLoaded = true;
 
     const menu = () => document.getElementById('task-quick-menu');
+    // The row's hx-trigger filter asks this, so a click on a [data-quick] button opens the
+    // menu and not the drawer. (htmx 4 ends a filter at the first "]", so the selector
+    // cannot be written in the attribute itself.)
+    window.opensQuickEdit = (target) => !!(target.closest && target.closest('[data-quick]'));
     const LABELS = {
         priority: 'Set priority', status: 'Set status', assignee: 'Set assignee',
         labels: 'Set labels', due: 'Set due date',

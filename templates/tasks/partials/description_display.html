@@ -4,7 +4,7 @@
     <div hx-get="{% url 'task_edit_description' task.pk %}"
          hx-target="#task-description-{{ task.pk }}"
          hx-swap="innerHTML"
-         hx-trigger="click[!event.target.closest('a')]"
+         hx-trigger="click[!target.closest('a')]"
          class="cursor-pointer pr-8">
         {% if task.description %}
         <div class="markdown text-sm text-zinc-300">{{ task.description|render_markdown }}</div>

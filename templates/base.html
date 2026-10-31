@@ -5,14 +5,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}WebFTL CRM{% endblock %}</title>
-    {# Scripts that send their own requests (fetch) read the CSRF token here; htmx gets it from hx-headers on <body>. #}
+    {# Scripts that send their own requests (fetch) read the CSRF token here; htmx gets it from hx-headers:inherited on <body>. #}
     <meta name="csrf-token" content="{{ csrf_token }}">
     {% include "components/head_theme.html" %}
     <!-- All third-party scripts are pinned to an exact version and checked with SRI.
          cdn.tailwindcss.com is the one exception: it is a versionless JIT build.
          See README ("Frontend dependencies") for the tradeoff. -->
-    <script src="https://unpkg.com/htmx.org@2.0.11/dist/htmx.min.js"
-            integrity="sha384-2OatzQy1H+Zd/IIrjr1TcuDGqLXeHhbooAyJY1KdQMKnr4LZ22k31GBLdYKHmVjg"
+    {% comment %}htmx 4: 4xx/5xx answers are not swapped (the toast shows them, as in htmx 2); Back
+       reloads the page instead of swapping an AJAX copy of it in; no 60 s request timeout.
+       <body> passes on, explicitly as htmx 4 wants: the CSRF header, the global spinner, and
+       hx-sync "queue last", so a second change made while the first is saving waits for it
+       and then saves the latest state (htmx 4's default keeps the first one waiting and
+       drops what comes after it: an autosave field changed three times saved the second).{% endcomment %}
+    <meta name="htmx-config" content='{"noSwap": [204, 304, "4xx", "5xx"], "history": "reload", "defaultTimeout": 0}'>
+    <script src="https://unpkg.com/htmx.org@4.0.0/dist/htmx.min.js"
+            integrity="sha384-BvJpBiO8Kh31EqtJe5DRIeWrHWnCGkwytKs9NKFi86Hhw96dEqdEMzZDeK9iEGTc"
             crossorigin="anonymous"></script>
     <!-- Alpine plugins must be loaded before Alpine core. -->
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/sort@3.17.1/dist/cdn.min.js"
@@ -43,7 +50,7 @@
     <script src="{% static 'js/inbox.js' %}"></script>
     <style>[x-cloak] { display: none !important; }</style>
 </head>
-<body class="h-full bg-bg text-zinc-100 antialiased selection:bg-border-strong selection:text-zinc-50" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' hx-indicator="#htmx-indicator" hx-ext="morph">
+<body class="h-full bg-bg text-zinc-100 antialiased selection:bg-border-strong selection:text-zinc-50" hx-headers:inherited='{"X-CSRFToken": "{{ csrf_token }}"}' hx-indicator:inherited="#htmx-indicator" hx-sync:inherited="queue last">
     {% if user.is_authenticated %}
     <div class="h-full flex overflow-hidden">
         {% include "components/sidebar.html" %}

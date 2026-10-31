@@ -460,6 +460,76 @@ def check_live_update(page, context):
         other.close()
 
 
+
+def check_create_more(page):
+    """Create more: the drawer stays open on a fresh form; the hidden Preview panel stays hidden."""
+    open_list(page)
+    page.click('#task-new')
+    form = page.locator('#slide-over:not(.hidden) form')
+    form.wait_for(timeout=TIMEOUT)
+    more = form.locator('input[name=create_more]')
+    if not more.is_checked():
+        tap(more)
+    title = f'More {int(time.time())}'
+    form.locator('input[name=title]').fill(title)
+    tap(form.locator('button[type=submit]'))
+    page.wait_for_selector(f'#slide-over:not(.hidden) [role=status]:has-text("{title}")', timeout=TIMEOUT)
+    wait_idle(page)
+    expect(page.locator('#slide-over input[name=title]').input_value() == '', 'title not cleared')
+    preview = page.locator('#task-form-description-preview')
+    expect(preview.count() == 1 and not preview.is_visible(), 'Preview panel visible after Create more')
+    tap(page.locator('#slide-over input[name=create_more]'))  # leave the choice off for the next run
+    page.evaluate("localStorage.removeItem('taskCreateMore')")
+
+
+def check_tab_id(page):
+    """Every htmx request names this tab (X-Tab-Id), so live updates skip their own tab."""
+    pk = open_first_task(page)
+    drawer = page.locator('#slide-over')
+    tap(drawer.locator(f'#priority-value-{pk} button'))
+    with page.expect_request(lambda r: f'/tasks/{pk}/' in r.url and r.method == 'POST') as info:
+        tap(drawer.locator(f'#priority-value-{pk} [hx-post]').nth(2))
+    headers = info.value.headers
+    expect(headers.get('x-tab-id'), 'no X-Tab-Id header')
+    expect(headers.get('x-csrftoken'), 'no X-CSRFToken header')
+
+
+def check_autosave_latest(page):
+    """Invoice editor: three quick changes to one line save the last value (hx-sync queue last)."""
+    page.goto(f'{BASE}/invoices/')
+    tap(page.locator('[hx-get$="/invoices/create/"]'))
+    form = page.locator('#slide-over:not(.hidden) form')
+    form.wait_for(timeout=TIMEOUT)
+    client = form.locator('select[name=client] option:not([value=""])').first.get_attribute('value')
+    form.locator('select[name=client]').select_option(client)
+    tap(form.locator('button[type=submit]'))
+    try:
+        page.wait_for_selector('#doc-lines', timeout=TIMEOUT)
+    except PlaywrightTimeout:
+        raise CheckFailed('no invoice created (the first client in the list needs a currency)') from None
+    url = page.url
+    page.fill('#new-line-description', 'Autosave check')
+    page.fill('#new-line input[name=unit_price]', '10')
+    page.press('#new-line-description', 'Enter')
+    page.wait_for_selector('#doc-lines tr[id^="line-"]:not(#new-line)', timeout=TIMEOUT)
+    wait_idle(page)
+    line = page.locator('#doc-lines tr[id^="line-"]:not(#new-line)').first
+    page.route(re.compile(r'.*/lines/\d+/.*'), lambda route: (time.sleep(0.4), route.continue_()))
+    for value in ('2', '3', '4'):
+        line.locator('input[name=quantity]').evaluate(
+            "(el, v) => { el.value = v; el.dispatchEvent(new Event('change', {bubbles: true})); }", value)
+    page.unroute(re.compile(r'.*/lines/\d+/.*'))
+    wait_idle(page, 1500)
+    page.goto(url)
+    saved = page.locator('#doc-lines tr[id^="line-"]:not(#new-line) input[name=quantity]').first.input_value()
+    try:
+        expect(float(saved) == 4, f'quantity saved as {saved}, typed 4 last')
+    finally:
+        page.once('dialog', lambda dialog: dialog.accept())  # "Delete INV-…?"
+        page.evaluate("() => { const b = document.querySelector('[hx-post$=\"/delete/\"][hx-confirm^=\"Delete\"]'); if (b) b.click(); }")
+        wait_idle(page)
+
+
 CHECKS = [
     ('drawer', check_drawer_opens),
     ('new-task', check_new_task_drawer),
@@ -480,6 +550,9 @@ CHECKS = [
     ('label', check_label_create),
     ('time-log', check_time_log),
     ('inbox', check_inbox),
+    ('create-more', check_create_more),
+    ('tab-id', check_tab_id),
+    ('autosave', check_autosave_latest),
     ('live', check_live_update),
     ('delete', check_close_drawer_events),
 ]
@@ -536,6 +609,8 @@ def main():
             # htmx 2 logs a request it aborted itself (hx-sync replace, the inbox's quick J J)
             # as htmx:afterRequest + htmx:sendAbort. A network failure still shows as sendError.
             page_errors = [e for e in page_errors if 'htmx:afterRequest' not in e and 'htmx:sendAbort' not in e]
+            # htmx 4 logs the same as htmx:error with an AbortError.
+            page_errors = [e for e in page_errors if not ('htmx:error' in e and 'AbortError' in e)]
             if args.mirror:
                 # Other hosts (icon and font APIs) are unreachable on such machines.
                 page_errors = [e for e in page_errors if 'Failed to load resource: net::ERR_' not in e]

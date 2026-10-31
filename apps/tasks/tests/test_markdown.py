@@ -152,7 +152,7 @@ class TestWhereItRenders:
 
         html = client.get(reverse('task_edit_description', args=[task.pk]) + '?cancel=1').content.decode()
 
-        assert "click[!event.target.closest('a')]" in html
+        assert "click[!target.closest('a')]" in html
         assert 'aria-label="Edit description"' in html
 
     def test_a_comment_renders_markdown_and_escapes_html(self, client):
