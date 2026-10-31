@@ -49,6 +49,20 @@ python scripts/take_screenshots.py
 `seed_demo_data` refuses to run against a database that already has clients
 unless you pass `--force`.
 
+## Browser smoke test (htmx and Alpine)
+
+The Django tests check the server's answers, not what the browser does with them.
+`scripts/htmx_smoke.py` clicks through the htmx-driven screens on the same demo data
+(drawer, edits, comments, sub-tasks, toasts, toolbar, Back, board, palette, live
+updates) and reports each check. Run it before and after any change to the htmx
+plumbing, and compare. It edits the demo data, so reseed (`--force`) when it drifts.
+
+```bash
+export REQUIRE_ADMIN_2FA=False   # the demo admin has no authenticator
+gunicorn config.asgi:application -k uvicorn_worker.UvicornWorker -w 2 -b 127.0.0.1:8765 &
+python scripts/htmx_smoke.py            # --only drawer,comment  --headed
+```
+
 ## Pull requests
 
 - Keep changes focused — one logical change per PR when possible.

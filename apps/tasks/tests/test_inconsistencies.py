@@ -420,6 +420,13 @@ class TestSubtaskEditing:
         assert response.status_code == 204
         assert list(task.subtasks.values_list('pk', flat=True)) == [third.pk, first.pk, second.pk]
 
+        # htmx 4 sends an array from htmx.ajax as one comma-separated value.
+        response = client.post(
+            reverse('subtask_reorder', args=[task.pk]), {'ids': f'{second.pk},{third.pk},junk'},
+        )
+        assert response.status_code == 204
+        assert list(task.subtasks.values_list('pk', flat=True)) == [second.pk, third.pk, first.pk]
+
     def test_a_viewer_can_neither_rename_nor_reorder(self, client):
         task = TaskFactory()
         subtask = SubtaskFactory(task=task, title='Keep')

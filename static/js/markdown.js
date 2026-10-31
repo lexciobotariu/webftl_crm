@@ -7,11 +7,8 @@
     function csrfToken() {
         const input = document.querySelector('[name="csrfmiddlewaretoken"]');
         if (input) return input.value;
-        try {
-            return JSON.parse(document.body.getAttribute('hx-headers') || '{}')['X-CSRFToken'];
-        } catch (error) {
-            return null;
-        }
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? meta.content : null;
     }
 
     document.addEventListener('alpine:init', function () {

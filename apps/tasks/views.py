@@ -604,11 +604,16 @@ def subtask_rename(request, pk, subtask_pk):
 @require_permission('access_tasks')
 @require_POST
 def subtask_reorder(request, pk):
-    """``ids``: the task's sub-task ids in their new order."""
+    """``ids``: the task's sub-task ids in their new order.
+
+    Sent either repeated (``ids=3&ids=1``, htmx 2) or as one comma-separated value
+    (``ids=3,1``: htmx 4 joins an array passed to ``htmx.ajax`` into one string).
+    """
     task = get_object_or_404(Task.objects.select_related('project'), pk=pk)
+    ids = [part for value in request.POST.getlist('ids') for part in value.split(',')]
     try:
         from apps.tasks import services
-        services.reorder_subtasks(task, request.POST.getlist('ids'), request.user)
+        services.reorder_subtasks(task, ids, request.user)
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
     return HttpResponse(status=204)

@@ -5,12 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}WebFTL CRM{% endblock %}</title>
+    {# Scripts that send their own requests (fetch) read the CSRF token here; htmx gets it from hx-headers on <body>. #}
+    <meta name="csrf-token" content="{{ csrf_token }}">
     {% include "components/head_theme.html" %}
     <!-- All third-party scripts are pinned to an exact version and checked with SRI.
          cdn.tailwindcss.com is the one exception: it is a versionless JIT build.
          See README ("Frontend dependencies") for the tradeoff. -->
-    <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"
-            integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+"
+    <script src="https://unpkg.com/htmx.org@2.0.11/dist/htmx.min.js"
+            integrity="sha384-2OatzQy1H+Zd/IIrjr1TcuDGqLXeHhbooAyJY1KdQMKnr4LZ22k31GBLdYKHmVjg"
             crossorigin="anonymous"></script>
     <!-- Alpine plugins must be loaded before Alpine core. -->
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/sort@3.17.1/dist/cdn.min.js"
