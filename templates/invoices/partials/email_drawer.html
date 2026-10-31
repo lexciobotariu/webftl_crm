@@ -15,7 +15,7 @@
     <form hx-post="{% if action_url %}{{ action_url }}{% else %}{% url 'invoice_email' invoice.pk kind %}{% endif %}"
           hx-target="#slide-over"
           hx-swap="innerHTML"
-          hx-disabled-elt="find button[type=submit]"
+          hx-disable="find button[type=submit]"
           class="flex-1 overflow-y-auto p-4">
         {% csrf_token %}
         {% include "components/form_error_banner.html" %}

@@ -6,7 +6,7 @@
      hx-get="{% url 'task_detail' task.pk %}"
      hx-target="#slide-over"
      hx-swap="innerHTML"
-     hx-trigger="click[!event.target.closest('[data-quick]')]">
+     hx-trigger="click[!opensQuickEdit(target)]">
     {% if quick_edit or task.project_id in quick_edit_projects %}
     <button type="button" data-quick="priority" data-current="{{ task.priority }}" aria-haspopup="menu" aria-expanded="false"
             aria-label="Priority: {{ task.get_priority_display|default:'none' }}"

@@ -337,9 +337,10 @@ filters or pagination, so nothing is lost there.
 **Row update variant (accounts user edit):** on success only, use `HX-Retarget` + `HX-Reswap` to update a table row outside the drawer.
 
 **Global utilities (base.html):**
-- `openSlideOver(event)` / `closeSlideOver()` — use these from `hx-on::after-request`
-  instead of hand-writing `document.getElementById('slide-over')...`. `openSlideOver`
-  is a no-op when the request failed, so an error never opens an empty drawer.
+- `openSlideOver()` / `closeSlideOver()` — a button that loads a drawer declares
+  `data-after-success="open-drawer"` (handled in `static/js/htmx-events.js`, only after a
+  successful answer, so an error never opens an empty drawer); scripts call the functions.
+  No `hx-on` handlers: htmx event names live in `htmx-events.js` alone.
 - `closeSlideOver` event listener closes the drawer
 - **Closing empties the drawer, a moment later.** `closeSlideOver()` hides the panel at once
   and removes its content only when the response being handled has dispatched all its
@@ -820,7 +821,9 @@ To add or change one: `curl https://api.iconify.design/<set>/<icon>.svg -o templ
 The libraries below are loaded from a CDN, pinned to an exact version and checked with Subresource
 Integrity. Bumping a version means recomputing its `integrity` hash.
 
-- **HTMX 2.0.11** — dynamic HTML updates
+- **htmx 4.0.0** — dynamic HTML updates. Configured by `<meta name="htmx-config">` and the
+  `:inherited` attributes on `<body>` in `base.html`; only `static/js/htmx-events.js` knows
+  htmx's event names (the rest listens to `request:*` / `swap:*`)
 - **Alpine.js 3.17.1** — reactive UI components
 - **@alpinejs/sort 3.17.1** — kanban drag and drop
 - **@alpinejs/collapse 3.17.1** — `x-collapse` (used by the salary month list)

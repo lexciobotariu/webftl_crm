@@ -43,8 +43,7 @@
              hx-get="{% url 'salary_detail' salary.id %}"
              hx-trigger="refreshSalaryList from:body"
              hx-select="#salary-details"
-             hx-swap="outerHTML"
-             hx-disinherit="*">
+             hx-swap="outerHTML">
             <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
                 <div class="flex items-center gap-3">
                     <i data-lucide="wallet" class="w-4 h-4 text-zinc-500"></i>
@@ -85,8 +84,7 @@
              hx-get="{% url 'salary_detail' salary.id %}"
              hx-trigger="refreshSalaryList from:body"
              hx-select="#months-list-content"
-             hx-swap="outerHTML"
-             hx-disinherit="*">
+             hx-swap="outerHTML">
             <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80">
                 <div class="flex items-center justify-between gap-3">
                     <div class="flex items-center gap-3">

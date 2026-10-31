@@ -1,4 +1,4 @@
-{# One form drives the page. Only requests it triggers (HX-Trigger: task-toolbar) are remembered per person. #}
+{# One form drives the page. Only requests it sends (HX-Source: form#task-toolbar, or the search field) are remembered per person. #}
 <form id="task-toolbar" method="get" action="{{ page_url }}"
       hx-get="{{ page_url }}" hx-trigger="submit"
       hx-target="#task-view" hx-select="#task-view" hx-swap="outerHTML"
@@ -163,5 +163,6 @@
            hx-get="{{ page_url }}" hx-trigger="input changed delay:300ms, search"
            hx-include="#task-toolbar"
            hx-target="#task-view" hx-select="#task-view" hx-swap="outerHTML"
+           hx-select-oob="#task-filter-badge, #task-filter-fields"
            class="w-56 bg-elevated border border-border-subtle rounded-control px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-500 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
 </form>

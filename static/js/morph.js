@@ -5,9 +5,10 @@
 // Elements are matched by id, so a row that moved is moved, not rewritten in place.
 // Used where a whole view is re-fetched: the task list and board, the open drawer and
 // the task page (templates/tasks/view/_view_scripts.html, static/js/live.js).
-htmx.defineExtension('morph', {
-    isInlineSwap: (swapStyle) => swapStyle === 'morph',
-    handleSwap: (swapStyle, target, fragment) => {
+// htmx 4 offers its own innerMorph/outerMorph; this one is kept because Alpine's keeps
+// Alpine state, which htmx's cannot see.
+htmx.registerExtension('morph', {
+    handle_swap: (swapStyle, target, fragment) => {
         if (swapStyle !== 'morph') return false;
         const fresh = fragment.firstElementChild;
         if (!fresh) return [];

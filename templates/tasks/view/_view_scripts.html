@@ -6,12 +6,8 @@
      hx-target="#task-view" hx-select="#task-view" hx-swap="morph"{% if refresh_oob %}
      hx-select-oob="{{ refresh_oob }}"{% endif %}></div>
 <script>
-    // Back must show the URL's state, not a cached copy of an earlier list. With no
-    // cache every restore is a miss, and a miss is a real page load rather than an
-    // AJAX swap of <body>: that keeps these page scripts from running a second time
-    // (and registering the listeners below twice) on every Back.
-    htmx.config.historyCacheSize = 0;
-    htmx.config.refreshOnHistoryMiss = true;
+    // Back shows the URL's state through a real page load (history: "reload" in
+    // base.html), never an AJAX swap of <body> that would run these scripts twice.
     // Edits made in the drawer (and task create/delete/move) change what the list
     // shows; re-fetch it through the current URL so filters and "Show more" survive.
     // The request goes out in the refresher's name, so it is one round trip for the

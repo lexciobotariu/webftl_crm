@@ -113,7 +113,8 @@ class TestDefaultView:
     def test_the_refresh_morphs_the_view(self, client, person):
         # Morphing keeps scroll, focus and Alpine state (static/js/morph.js).
         html = client.get(_url('layout=list')).content.decode()
-        assert 'hx-ext="morph"' in html
+        # htmx 4 runs every extension that is loaded; there is no hx-ext to name it.
+        assert 'hx-ext' not in html
         assert 'js/morph.' in html
         assert '@alpinejs/morph@' in html
         refresher = html[html.index('id="task-view-refresh"'):]

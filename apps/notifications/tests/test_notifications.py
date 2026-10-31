@@ -1028,12 +1028,14 @@ class TestSplitViewReviewFixes:
 
         assert len(re.findall(r'\sdata-notification[\s>]', html)) == 60
 
-    def test_the_page_is_kept_out_of_the_history_cache_and_the_pane_is_not_live(self, client):
+    def test_back_reloads_the_inbox_and_the_pane_is_not_live(self, client):
         client.force_login(_member())
 
         html = client.get(reverse('inbox')).content.decode()
 
-        assert re.search(r'id="inbox"[^>]*hx-history="false"', html)
+        # htmx 4 keeps no copy of pages; Back loads the page again (history: reload).
+        assert '"history": "reload"' in html
+        assert 'hx-history' not in html
         pane = re.search(r'<section id="inbox-pane"[^>]*>', html).group(0)
         assert 'aria-live' not in pane
 
