@@ -54,8 +54,9 @@ unless you pass `--force`.
 The Django tests check the server's answers, not what the browser does with them.
 `scripts/htmx_smoke.py` clicks through the htmx-driven screens on the same demo data
 (drawer, edits, comments, sub-tasks, toasts, toolbar, Back, board, palette, inbox,
-Create more, invoice autosave, live updates) and reports each check. The autosave check
-needs the first client to have a currency. Run it before and after any change to the htmx
+Create more, invoice autosave, live updates, morph, timer, statuses) and reports each check.
+The autosave check needs the first client to have a currency; `inbox-actions` deletes a
+notification and needs at least three for the demo admin. Run it before and after any change to the htmx
 plumbing, and compare. It edits the demo data, so reseed (`--force`) when it drifts.
 
 ```bash

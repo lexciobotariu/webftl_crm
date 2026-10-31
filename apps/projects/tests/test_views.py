@@ -160,6 +160,19 @@ class TestStatusManagement:
         )
         assert response.status_code == 200
         assert project.statuses.count() == initial_count + 1
+        # The list gets the new row; the error line under the form is emptied (htmx 4 partial).
+        assert '<hx-partial hx-target="#status-form-error"></hx-partial>' in response.content.decode()
+
+    def test_create_status_error_fills_the_error_line(self, client):
+        user = _with_edit_own(UserFactory())
+        project = ProjectFactory()
+        ProjectAccessFactory(project=project, user=user)
+        client.force_login(user)
+        response = client.post(reverse('status_create', args=[project.pk]), {'name': ''})
+        html = response.content.decode()
+        assert response.status_code == 200
+        assert html.startswith('<hx-partial hx-target="#status-form-error">')
+        assert 'required' in html
 
     def test_delete_empty_status(self, client):
         user = _with_edit_own(UserFactory())

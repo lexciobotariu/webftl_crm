@@ -448,7 +448,7 @@ paging are never saved).
   of band (`hx-select-oob`). The OOB elements carry no Alpine state. The server sets the
   URL with `push_url` (toolbar) or `replace_url` (search, "Show more", refreshes).
 - **Only the toolbar form saves the view.** It is `<form id="task-toolbar">`, so its
-  requests arrive with `HX-Trigger: task-toolbar`. A shared link, a refresh after a drawer
+  requests arrive with `HX-Source: form#task-toolbar` (`listview.sent_by`). A shared link, a refresh after a drawer
   edit, search-as-you-type and "Show more" never overwrite what someone chose.
 - **Statuses are stored as the ones hidden** (`hide_status=<id>`), so a status added later
   shows up by itself. The filter form posts the checked ones (`shown_status` + `filter=1`)
@@ -459,8 +459,8 @@ paging are never saved).
   when the row left the view or moved (`row_keys`). `taskStatusChanged` (new status,
   created, deleted) always reloads the whole view. Live updates follow the same rule: the
   server marks created, deleted and new-status events `whole` (`static/js/live.js`).
-- **Whole-view reloads morph** (`hx-swap="morph"`, `static/js/morph.js`, Alpine's morph
-  plugin): the refresher, the live drawer and the live task page change only what differs,
+- **Whole-view reloads morph** (`hx-swap="outerMorph"`, built into htmx 4, plus htmx's
+  `hx-alpine-compat` extension loaded in `base.html`): the refresher, the live drawer and the live task page change only what differs,
   so scroll, focus and Alpine state (x-show panes) survive. The toolbar and "Show more"
   stay `outerHTML`: they are a different view.
 - **Order by "Manual"** is the board's order (`order`, newest first on a tie). It is the
@@ -503,7 +503,8 @@ column is the status) without opening the drawer.
   goes out with `htmx.ajax(..., {source: '#task-quick-menu', swap: 'none'})`, so
   `taskChanged` / `taskStatusChanged` reach `body` and the page re-fetches the view, even
   though the pressed option is gone by then.
-- **The click does not also open the drawer.** Rows use `hx-trigger="click[!event.target.closest('[data-quick]')]"`,
+- **The click does not also open the drawer.** Rows use `hx-trigger="click[!opensQuickEdit(target)]"`
+  (`static/js/task-view.js`; an htmx 4 trigger filter ends at its first `]`),
   and the card's `onclick` has the same guard. Don't use `click consume`: it would also stop
   click-outside listeners. Opening a menu closes the drawer.
 - **Who gets buttons.** The page works out edit rights once (`quick_edit`, plus
@@ -816,6 +817,28 @@ To add or change one: `curl https://api.iconify.design/<set>/<icon>.svg -o templ
 
 ---
 
+## htmx 4: morph, out-of-band and partials
+
+A response can update more than the element that asked. Which tool to use:
+
+- **Morph** (`hx-swap="outerMorph"`) when a whole view comes back and most of it is
+  unchanged: the task list/board refresher, the live drawer and task page. Elements are
+  matched by id, so scroll, focus and (with the alpine-compat extension) Alpine state stay.
+- **Out of band** (`hx-swap-oob="true"`) when the response carries a whole element with an
+  id that replaces the element with the same id: counters, badges, the invoice totals, the
+  timer bar and header button, a notification row. The element comes from the same template
+  the page renders it with, switched by an `oob` flag (`{% if oob %} hx-swap-oob="true"{% endif %}`),
+  so its markup lives in one place. `hx-select-oob` does the same for full-page answers
+  (toolbar, refresher).
+- **Partial** (`<hx-partial hx-target="..." hx-swap="...">`, default `innerHTML`) when the
+  response only fills in or removes something whose markup lives elsewhere: a table cell
+  (`<td>` cannot travel on its own), an error line under a form, a row to delete
+  (`hx-swap="delete"`), or content inserted into a container by selector.
+
+A response made only of OOB elements or partials swaps nothing else (htmx 4 skips the empty
+main swap). `HX-Trigger` events fire after the swap has settled, from the element that sent
+the request, or from the new content if the swap replaced it.
+
 ## JavaScript Libraries
 
 The libraries below are loaded from a CDN, pinned to an exact version and checked with Subresource
@@ -824,6 +847,9 @@ Integrity. Bumping a version means recomputing its `integrity` hash.
 - **htmx 4.0.0** — dynamic HTML updates. Configured by `<meta name="htmx-config">` and the
   `:inherited` attributes on `<body>` in `base.html`; only `static/js/htmx-events.js` knows
   htmx's event names (the rest listens to `request:*` / `swap:*`)
+- **htmx alpine-compat extension** (`dist/ext/hx-alpine-compat.min.js`, same htmx 4.0.0
+  package) — keeps Alpine state through `outerMorph` swaps. Loaded right after htmx; htmx 4
+  runs every registered extension, there is no `hx-ext`.
 - **Alpine.js 3.17.1** — reactive UI components
 - **@alpinejs/sort 3.17.1** — kanban drag and drop
 - **@alpinejs/collapse 3.17.1** — `x-collapse` (used by the salary month list)

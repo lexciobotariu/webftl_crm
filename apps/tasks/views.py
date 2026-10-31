@@ -549,7 +549,7 @@ def subtask_create(request, pk):
     html = render(request, 'tasks/partials/subtask_item.html', {
         'subtask': subtask, 'can_edit': can_edit_task(request.user, task),
     }).content.decode()
-    counter_html = render(request, 'tasks/partials/subtask_counter.html', {'task': task}).content.decode()
+    counter_html = render(request, 'tasks/partials/subtask_counter.html', {'task': task, 'oob': True}).content.decode()
     return _subtasks_changed(HttpResponse(html + counter_html))
 
 
@@ -565,7 +565,7 @@ def subtask_toggle(request, pk, subtask_pk):
         return HttpResponseForbidden(str(e))
     task = subtask.task
     html = render(request, 'tasks/partials/subtask_item.html', {'subtask': subtask, 'can_edit': True}).content.decode()
-    counter_html = render(request, 'tasks/partials/subtask_counter.html', {'task': task}).content.decode()
+    counter_html = render(request, 'tasks/partials/subtask_counter.html', {'task': task, 'oob': True}).content.decode()
     return _subtasks_changed(HttpResponse(html + counter_html))
 
 
@@ -580,7 +580,7 @@ def subtask_delete(request, pk, subtask_pk):
         services.delete_subtask(subtask, request.user)
     except PermissionDenied as e:
         return HttpResponseForbidden(str(e))
-    counter_html = render(request, 'tasks/partials/subtask_counter.html', {'task': task}).content.decode()
+    counter_html = render(request, 'tasks/partials/subtask_counter.html', {'task': task, 'oob': True}).content.decode()
     return _subtasks_changed(HttpResponse(counter_html))
 
 
@@ -1259,10 +1259,10 @@ def time_entry_edit(request, entry_pk):
             except ValueError as e:
                 form.add_error(None, str(e))
             else:
-                # After the swap, not with it: the activity list skips a refresh while a
-                # form is open in it, and this form is only gone once the row is back.
+                # htmx 4 fires HX-Trigger after the swap: the activity list skips a refresh
+                # while a form is open in it, and this form is only gone once the row is back.
                 response = _work_log_row(request, entry)
-                response['HX-Trigger-After-Settle'] = 'timerChanged'
+                response['HX-Trigger'] = 'timerChanged'
                 return response
     elif request.GET.get('cancel') == '1':
         return _work_log_row(request, entry)

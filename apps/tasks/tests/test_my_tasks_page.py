@@ -8,8 +8,8 @@ from apps.projects.factories import ProjectAccessFactory, ProjectFactory
 from apps.tasks.factories import LabelFactory, TaskFactory
 from apps.tasks.models import MyTasksView
 
-TOOLBAR = {'HTTP_HX_REQUEST': 'true', 'HTTP_HX_TRIGGER': 'task-toolbar'}
-SEARCH = {'HTTP_HX_REQUEST': 'true', 'HTTP_HX_TRIGGER': 'task-search'}
+TOOLBAR = {'HTTP_HX_REQUEST': 'true', 'HTTP_HX_SOURCE': 'form#task-toolbar'}
+SEARCH = {'HTTP_HX_REQUEST': 'true', 'HTTP_HX_SOURCE': 'input#task-search'}
 
 
 def _project(user, name=None):
@@ -111,14 +111,13 @@ class TestDefaultView:
         assert "source: '#task-view-refresh'" in html
 
     def test_the_refresh_morphs_the_view(self, client, person):
-        # Morphing keeps scroll, focus and Alpine state (static/js/morph.js).
+        # htmx 4's outerMorph keeps scroll and focus; the alpine-compat extension keeps Alpine state.
         html = client.get(_url('layout=list')).content.decode()
         # htmx 4 runs every extension that is loaded; there is no hx-ext to name it.
         assert 'hx-ext' not in html
-        assert 'js/morph.' in html
-        assert '@alpinejs/morph@' in html
+        assert 'hx-alpine-compat.min.js' in html
         refresher = html[html.index('id="task-view-refresh"'):]
-        assert refresher[:refresher.index('>')].count('hx-swap="morph"') == 1
+        assert refresher[:refresher.index('>')].count('hx-swap="outerMorph"') == 1
 
 
 @pytest.mark.django_db

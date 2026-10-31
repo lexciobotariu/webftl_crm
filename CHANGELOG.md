@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.42.0] - 2026-10-31
+
+**Finishes the move to htmx 4**: the app now uses htmx 4's own morph, partials and `HX-Trigger` timing, and the htmx 2 leftovers are gone. Nothing changes for people using the app. No database migrations, nothing to set in Dokploy.
+
+### Changed
+- Whole-view reloads (task list and board refresh, live drawer and task page) use htmx 4's built-in `outerMorph` with htmx's official `alpine-compat` extension (same htmx 4.0.0 package, pinned with SRI), which keeps Alpine state such as collapsed groups. Alpine's morph plugin and `static/js/morph.js` are removed: one dependency less
+- `HX-Trigger` events now fire the htmx 4 way: after the swap has settled, from the element that sent the request. The work log edit sends `HX-Trigger` instead of `HX-Trigger-After-Settle`, which htmx 4 no longer knows; `static/js/htmx-events.js` no longer re-implements either
+- Partials (`<hx-partial>`) where a response only fills in something whose markup lives elsewhere: the invoice line amount and error cells, the error line under "Add status", removing a deleted notification. Whole elements with an id (counters, totals, timer, notification rows) stay out of band. The rule is in `docs/ui-patterns.md` ("htmx 4: morph, out-of-band and partials")
+- The sub-task counter is rendered by one template on the page and in out-of-band answers
+- The Tasks toolbar is recognised by `HX-Source` only; the htmx 2 `HX-Trigger` fallback is removed
+- `scripts/htmx_smoke.py`: five more checks (morph of the view, morph of the drawer, timer Start/Stop, Add status errors, inbox read/delete), and the autosave check also looks at the line amount cell; 29/29 pass
+
 ## [0.41.0] - 2026-10-31
 
 **htmx 2 → htmx 4.** The app should work as before; the changes below are what htmx 4 needed. No database migrations, nothing to set in Dokploy. To go back to htmx 2, revert this release alone; the preparation in 0.40.1–0.40.3 stays.

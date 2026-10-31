@@ -402,6 +402,58 @@ def check_label_create(page):
     expect(field.input_value() == '', 'label form was not reset')
 
 
+def check_timer(page):
+    """Start/Stop in the drawer: HX-Trigger timerChanged redraws the top bar, and the header button comes back out of band."""
+    pk = open_first_task(page)
+    drawer = page.locator('#slide-over')
+    if drawer.locator(f'#time-header-stop-{pk}').count():
+        tap(drawer.locator(f'#time-header-stop-{pk}'))
+        drawer.locator(f'#time-header-start-{pk}').wait_for(state='attached', timeout=TIMEOUT)
+    tap(drawer.locator(f'#time-header-start-{pk}'))
+    page.wait_for_selector('#running-timer-indicator [x-data^="runningTimer"]', state='attached', timeout=TIMEOUT)
+    drawer.locator(f'#time-header-stop-{pk}').wait_for(state='attached', timeout=TIMEOUT)
+    wait_idle(page)
+    expect(page.locator(f'#time-header-{pk}').count() == 1, 'header button doubled')
+    tap(drawer.locator(f'#time-header-stop-{pk}'))
+    drawer.locator(f'#time-header-start-{pk}').wait_for(state='attached', timeout=TIMEOUT)
+    page.wait_for_function("() => !document.querySelector('#running-timer-indicator [x-data]')", timeout=TIMEOUT)
+    wait_idle(page)
+
+
+def check_status_partials(page):
+    """Project settings: a new status is appended; a duplicate name fills the error line (partial), the next add empties it."""
+    page.goto(f'{BASE}/projects/{PROJECT_PK}/settings/')
+    form = page.locator('form[hx-post$="/statuses/create/"], form[hx-post*="status"]:has(input[name=name])').first
+    field = form.locator('input[name=name]')
+    field.wait_for(timeout=TIMEOUT)
+    error = page.locator('#status-form-error')
+    name = f'Smoke status {int(time.time())}'
+    field.fill(name)
+    tap(form.locator('button[type=submit]'))
+    page.wait_for_selector(f'#status-list :text("{name}")', timeout=TIMEOUT)
+    wait_idle(page)
+    expect(field.input_value() == '', 'status form was not reset')
+    field.fill(name)
+    tap(form.locator('button[type=submit]'))
+    page.wait_for_function("() => document.getElementById('status-form-error').textContent.includes('already exists')",
+                           timeout=TIMEOUT)
+    expect('text-error' in (error.get_attribute('class') or ''), 'the error line lost its markup')
+    expect(page.locator('#status-form-error #status-form-error').count() == 0, 'error line nested in itself')
+    other = name + ' b'
+    field.fill(other)
+    tap(form.locator('button[type=submit]'))
+    page.wait_for_selector(f'#status-list :text("{other}")', timeout=TIMEOUT)
+    wait_idle(page)
+    expect(error.inner_text().strip() == '', f'error line not emptied: {error.inner_text()!r}')
+    for label in (name, other):  # leave the project as it was
+        row = page.locator(f'#status-list > div:has(span:text-is("{label}"))')
+        delete = row.locator('[hx-post$="/delete/"]')
+        if delete.count():
+            page.once('dialog', lambda dialog: dialog.accept())
+            tap(delete)
+            wait_idle(page)
+
+
 def check_time_log(page):
     """Log time from the drawer: the popover form resets and closes (Alpine @request:end)."""
     open_first_task(page)
@@ -441,6 +493,41 @@ def check_inbox(page):
     expect(shown != first, 'J did not move on')
 
 
+def check_inbox_actions(page):
+    """Inbox: E toggles read (row and Unread count out of band); Delete removes the row (partial with hx-swap="delete").
+
+    Deletes one notification: seed a few for the demo admin before running it."""
+    page.goto(f'{BASE}/inbox/')
+    rows = page.locator('[data-notification]')
+    try:
+        rows.first.wait_for(timeout=2000)
+    except PlaywrightTimeout as exc:
+        raise CheckFailed('no notifications for the demo admin') from exc
+    if rows.count() < 3:
+        raise CheckFailed('needs at least three notifications (it deletes one)')
+    page.locator('#inbox-list').focus()
+    page.keyboard.press('j')
+    page.wait_for_selector('#inbox-pane [data-pane-for]', state='attached', timeout=TIMEOUT)
+    wait_idle(page)
+    pk = page.locator('#inbox').get_attribute('data-selected')
+    row = page.locator(f'#notification-{pk}')
+    before = row.get_attribute('data-unread')
+    page.keyboard.press('e')
+    page.wait_for_function(
+        "([pk, before]) => { const r = document.getElementById('notification-' + pk); return r && r.dataset.unread !== before; }",
+        arg=[pk, before], timeout=TIMEOUT)
+    wait_idle(page)
+    expect(page.locator(f'#notification-{pk}').count() == 1, 'row doubled after toggling read')
+    total = rows.count()
+    page.locator('#inbox-list').focus()
+    page.keyboard.press('Delete')
+    page.wait_for_selector(f'#notification-{pk}', state='detached', timeout=TIMEOUT)
+    wait_idle(page)
+    expect(rows.count() == total - 1, f'{total - rows.count()} rows went away, expected 1')
+    nxt = page.locator('#inbox').get_attribute('data-selected')
+    expect(nxt and nxt != pk, 'nothing selected after the delete')
+
+
 def check_live_update(page, context):
     """A change made in another tab reaches this one through SSE and updates the row."""
     open_list(page)
@@ -459,6 +546,56 @@ def check_live_update(page, context):
     finally:
         other.close()
 
+
+
+def check_morph_keeps_state(page):
+    """A whole-view refresh morphs (outerMorph): rows stay the same elements, a collapsed group stays collapsed."""
+    open_list(page)
+    toggle = page.locator('#task-view [\\@click^="collapsed"]').first
+    tap(toggle)
+    body = page.locator('#task-view div[x-show^="!collapsed"]').first
+    page.wait_for_function('el => getComputedStyle(el).display === "none"', arg=body.element_handle(), timeout=TIMEOUT)
+    page.evaluate("""() => {
+        const row = document.querySelector('#task-view [data-task-row]');
+        window.__morphRow = row; row.__morphMark = true;
+    }""")
+    page.evaluate('() => window.refreshTaskView()')
+    wait_idle(page)
+    page.wait_for_timeout(300)
+    same = page.evaluate("""() => {
+        const row = document.getElementById(window.__morphRow.id);
+        return !!row && row === window.__morphRow && row.__morphMark === true;
+    }""")
+    expect(same, 'the refresh replaced the row element instead of morphing it')
+    body = page.locator('#task-view div[x-show^="!collapsed"]').first
+    expect(not body.is_visible(), 'a collapsed group opened again after the refresh')
+    tap(page.locator('#task-view [\\@click^="collapsed"]').first)  # Alpine still drives the morphed element
+    page.wait_for_function('el => getComputedStyle(el).display !== "none"', arg=body.element_handle(), timeout=TIMEOUT)
+
+
+def check_morph_drawer(page, context):
+    """A live change morphs the open drawer: same elements, new title, Alpine dropdowns still work."""
+    pk = open_first_task(page)
+    page.evaluate("""() => { window.__drawerRoot = document.querySelector('#slide-over [data-live-task]'); }""")
+    title = f'Morph {int(time.time())}'
+    other = context.new_page()
+    other.goto(page.url)
+    other.wait_for_selector('[data-task-row]')
+    page.wait_for_timeout(1500)  # the stream connects
+    other.evaluate(
+        "([pk, title]) => htmx.ajax('POST', `/tasks/${pk}/title/`, {target: 'body', swap: 'none', values: {title}})",
+        [pk, title])
+    try:
+        page.wait_for_selector(f'#slide-over #task-title-{pk}:has-text("{title}")', timeout=8000)
+    finally:
+        other.close()
+    wait_idle(page)
+    expect(page.evaluate("() => document.querySelector('#slide-over [data-live-task]') === window.__drawerRoot"),
+           'the drawer was replaced instead of morphed')
+    button = page.locator(f'#slide-over #priority-value-{pk} button')
+    tap(button)
+    page.wait_for_selector(f'#slide-over #priority-value-{pk} [x-show="open"]', state='visible', timeout=TIMEOUT)
+    tap(button)
 
 
 def check_create_more(page):
@@ -520,9 +657,16 @@ def check_autosave_latest(page):
             "(el, v) => { el.value = v; el.dispatchEvent(new Event('change', {bubbles: true})); }", value)
     page.unroute(re.compile(r'.*/lines/\d+/.*'))
     wait_idle(page, 1500)
-    page.goto(url)
-    saved = page.locator('#doc-lines tr[id^="line-"]:not(#new-line) input[name=quantity]').first.input_value()
     try:
+        # The line's amount cell is filled in by a partial; the cell itself (and its classes) stays.
+        pk = line.get_attribute('id').replace('line-', '')
+        amount = page.locator(f'#line-amount-{pk}')
+        expect('40' in amount.inner_text(), f'amount cell shows {amount.inner_text()!r}, expected 40')
+        expect('text-right' in (amount.get_attribute('class') or ''), 'the amount cell lost its markup')
+        expect(amount.locator('td').count() == 0, 'a cell was nested inside the amount cell')
+        expect('40' in page.locator('#doc-totals').inner_text(), 'totals not updated (OOB)')
+        page.goto(url)
+        saved = page.locator('#doc-lines tr[id^="line-"]:not(#new-line) input[name=quantity]').first.input_value()
         expect(float(saved) == 4, f'quantity saved as {saved}, typed 4 last')
     finally:
         page.once('dialog', lambda dialog: dialog.accept())  # "Delete INV-…?"
@@ -546,14 +690,19 @@ CHECKS = [
     ('board', check_board),
     ('palette', check_palette),
     ('todos', check_client_todos),
+    ('morph', check_morph_keeps_state),
     ('todo-drawer', check_todo_drawer),
     ('label', check_label_create),
+    ('statuses', check_status_partials),
     ('time-log', check_time_log),
+    ('timer', check_timer),
     ('inbox', check_inbox),
+    ('inbox-actions', check_inbox_actions),
     ('create-more', check_create_more),
     ('tab-id', check_tab_id),
     ('autosave', check_autosave_latest),
     ('live', check_live_update),
+    ('morph-drawer', check_morph_drawer),
     ('delete', check_close_drawer_events),
 ]
 
@@ -595,7 +744,7 @@ def main():
                 continue
             errors.clear()
             try:
-                if name == 'live':
+                if name in ('live', 'morph-drawer'):
                     check(page, context)
                 else:
                     check(page)

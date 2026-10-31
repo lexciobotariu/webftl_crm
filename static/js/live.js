@@ -4,7 +4,7 @@
 // re-fetches what it shows through the usual views, after the person finishes
 // whatever they are editing, and briefly marks the rows that changed. An edit asks
 // for the changed rows alone; a new task, a deleted one or a new status (the event
-// says "whole") reloads the list or board. Reloads morph (static/js/morph.js), so
+// says "whole") reloads the list or board. Reloads use htmx's outerMorph (with the alpine-compat extension), so
 // scroll, focus and Alpine state survive them.
 (() => {
     const config = document.getElementById('live-tasks');
@@ -89,13 +89,13 @@
     // The drawer and the task page are re-fetched whole and morphed into place.
     function refreshDrawer(el) {
         pending.drawer = false;
-        htmx.ajax('GET', el.dataset.liveUrl, { target: el, select: '[data-live-task]', swap: 'morph' });
+        htmx.ajax('GET', el.dataset.liveUrl, { target: el, select: '[data-live-task]', swap: 'outerMorph' });
     }
 
     function refreshPage(el) {
         pending.page = false;
         const selector = '#' + el.id;
-        htmx.ajax('GET', window.location.href, { target: selector, select: selector, swap: 'morph' });
+        htmx.ajax('GET', window.location.href, { target: selector, select: selector, swap: 'outerMorph' });
     }
 
     // Runs what is due, and comes back every second for what has to wait.

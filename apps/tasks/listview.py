@@ -50,14 +50,10 @@ TOOLBAR_TRIGGER = 'task-toolbar'
 def sent_by(request, element_id):
     """Whether this htmx request came from the element with ``element_id``.
 
-    htmx 2 names that element in ``HX-Trigger`` (its id); htmx 4 in ``HX-Source``
-    (``tag#id``, e.g. ``form#task-toolbar``). Both are read, so the check holds
-    through the move from one to the other.
+    htmx 4 names it in ``HX-Source`` as ``tag#id`` (e.g. ``form#task-toolbar``).
     """
     if not request.htmx:
         return False
-    if request.htmx.trigger == element_id:
-        return True
     return (request.htmx.source or '').endswith(f'#{element_id}')
 
 
