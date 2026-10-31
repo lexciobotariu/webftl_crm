@@ -47,6 +47,21 @@ GROUP_LABELS = {
 TOOLBAR_TRIGGER = 'task-toolbar'
 
 
+def sent_by(request, element_id):
+    """Whether this htmx request came from the element with ``element_id``.
+
+    htmx 2 names that element in ``HX-Trigger`` (its id); htmx 4 in ``HX-Source``
+    (``tag#id``, e.g. ``form#task-toolbar``). Both are read, so the check holds
+    through the move from one to the other.
+    """
+    if not request.htmx:
+        return False
+    if request.htmx.trigger == element_id:
+        return True
+    source = request.headers.get('HX-Source') or ''
+    return source.endswith(f'#{element_id}')
+
+
 def resolve_view(request, *, options, model, lookup, page_url):
     """The plumbing every URL-driven task page shares.
 
@@ -67,7 +82,7 @@ def resolve_view(request, *, options, model, lookup, page_url):
         return redirect(f'{page_url}?{restored.to_query_string()}')
 
     spec = TaskViewSpec.from_params(request.GET, options)
-    from_toolbar = bool(request.htmx) and request.htmx.trigger == TOOLBAR_TRIGGER
+    from_toolbar = sent_by(request, TOOLBAR_TRIGGER)
     if from_toolbar:
         if spec.is_default:
             model.objects.filter(**lookup).delete()

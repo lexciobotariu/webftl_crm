@@ -820,7 +820,7 @@ To add or change one: `curl https://api.iconify.design/<set>/<icon>.svg -o templ
 The libraries below are loaded from a CDN, pinned to an exact version and checked with Subresource
 Integrity. Bumping a version means recomputing its `integrity` hash.
 
-- **HTMX 2.0.4** — dynamic HTML updates
+- **HTMX 2.0.11** — dynamic HTML updates
 - **Alpine.js 3.17.1** — reactive UI components
 - **@alpinejs/sort 3.17.1** — kanban drag and drop
 - **@alpinejs/collapse 3.17.1** — `x-collapse` (used by the salary month list)

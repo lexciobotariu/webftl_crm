@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.40.1] - 2026-10-31
+
+First step towards htmx 4. Nothing changes for people using the app.
+
+### Changed
+- htmx 2.0.4 → 2.0.11, the latest 2.x (bug fixes only)
+- The task list recognizes its toolbar both by the header htmx 2 sends (`HX-Trigger`) and by the one htmx 4 sends (`HX-Source`), so saved views keep working through the switch
+- Reordering sub-tasks also accepts the ids as one comma-separated value, which is how htmx 4 sends a list
+- New `scripts/htmx_smoke.py` (see CONTRIBUTING): a browser check of the htmx screens, run before and after each step of the htmx 4 move. Playwright stays out of `requirements-dev.txt`, like for the screenshots
+- The CSRF token is also in a `<meta name="csrf-token">` tag; the description Preview reads it from there instead of from `<body hx-headers>`, which htmx 4 changes
+
 ## [0.40.0] - 2026-10-30
 
 ### Changed

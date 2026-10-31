@@ -242,6 +242,32 @@ class TestSavedView:
             'layout': 'list', 'hide_status': [str(done.pk)], 'group': 'assignee',
         }
 
+    def test_toolbar_request_from_htmx_4_saves_the_view(self, client):
+        # htmx 4 names the sending element in HX-Source, as tag#id.
+        project = ProjectFactory()
+        user = _member(project)
+        client.force_login(user)
+        client.get(
+            _url(project, 'layout=list&group=assignee'),
+            HTTP_HX_REQUEST='true', HTTP_HX_SOURCE='form#task-toolbar',
+        )
+        saved = ProjectTaskView.objects.get(user=user, project=project)
+        assert saved.params == {'layout': 'list', 'group': 'assignee'}
+
+    def test_other_htmx_4_sources_do_not_save(self, client):
+        project = ProjectFactory()
+        user = _member(project)
+        client.force_login(user)
+        client.get(
+            _url(project, 'layout=list&q=abc'),
+            HTTP_HX_REQUEST='true', HTTP_HX_SOURCE='input#task-search',
+        )
+        client.get(
+            _url(project, 'layout=list&group=assignee'),
+            HTTP_HX_REQUEST='true', HTTP_HX_SOURCE='div#not-task-toolbar',
+        )
+        assert not ProjectTaskView.objects.filter(user=user).exists()
+
     def test_plain_get_does_not_save(self, client):
         project = ProjectFactory()
         user = _member(project)
