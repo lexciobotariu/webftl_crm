@@ -58,8 +58,7 @@ def sent_by(request, element_id):
         return False
     if request.htmx.trigger == element_id:
         return True
-    source = request.headers.get('HX-Source') or ''
-    return source.endswith(f'#{element_id}')
+    return (request.htmx.source or '').endswith(f'#{element_id}')
 
 
 def resolve_view(request, *, options, model, lookup, page_url):

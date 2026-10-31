@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.40.2] - 2026-10-31
+
+### Changed
+- **Django 5.1.4 → 5.2.18 (LTS, security fixes until April 2028).** Django 5.1 stopped receiving security fixes in December 2025. No database migrations; Django 5.2 needs PostgreSQL 14 or newer (production runs 18)
+- `django-htmx` 1.27.0 → 1.29.0 (needs Django 5.2): reads htmx 4's `HX-Source` header as `request.htmx.source`, now used to recognize the task toolbar
+
 ## [0.40.1] - 2026-10-31
 
 First step towards htmx 4. Nothing changes for people using the app.

@@ -59,7 +59,7 @@ You're free to use it, modify it, resell it, or do whatever you want with it. Se
 
 ## Tech Stack
 
-- **Backend:** Django 5.1, Python 3.12+
+- **Backend:** Django 5.2 (LTS), Python 3.12+
 - **Frontend:** HTMX, Alpine.js, Tailwind CSS
 - **Database:** PostgreSQL 16
 - **Server:** gunicorn with uvicorn workers (ASGI), for live updates
