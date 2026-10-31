@@ -40,8 +40,9 @@
 //
 // Alpine listens with @request:start / @request:end (detail.ok, detail.text).
 //
-// HX-Trigger events still fire before the swap, from the sender, as in htmx 2; the
-// HX-Trigger-After-Swap / -After-Settle headers htmx 4 dropped fire after it.
+// HX-Trigger is htmx 4's own: its events fire once the answer is swapped and settled,
+// from the element that sent the request (or, if the swap replaced it, from the new
+// content), just before request:end.
 (() => {
     if (!window.htmx) return;
 
@@ -60,25 +61,6 @@
     const statusOf = (ctx) => (ctx && ctx.response ? ctx.response.status : 0);
     const finalUrlOf = (ctx) => (ctx && ctx.response && ctx.response.raw && ctx.response.raw.url) || '';
     const headerOf = (ctx, name) => (ctx && ctx.response && ctx.response.headers ? ctx.response.headers.get(name) : null);
-
-    // HX-Trigger as htmx 2 fired it: from the element that sent the request, before the
-    // swap. htmx 4 fires it after the swap, from wherever the swap left the source, and
-    // listeners here (closeSlideOver, taskChanged on a quick-edit row) expect the former.
-    function fireTriggerHeader(value, element) {
-        if (!value) return;
-        const on = element && element.isConnected ? element : document.body;
-        if (value.trim()[0] === '{') {
-            let events;
-            try { events = JSON.parse(value); } catch (e) { return; }
-            Object.keys(events).forEach((name) => {
-                const detail = events[name];
-                const target = detail && detail.target ? document.querySelector(detail.target) : on;
-                htmx.trigger(target || on, name, detail !== null && typeof detail === 'object' ? detail : { value: detail });
-            });
-        } else {
-            value.split(',').forEach((name) => { if (name.trim()) htmx.trigger(on, name.trim(), {}); });
-        }
-    }
 
     document.addEventListener('htmx:config:request', (event) => {
         const ctx = ctxOf(event);
@@ -101,14 +83,6 @@
         ctx.appAncestors = [];
         for (let el = source && source.parentElement; el; el = el.parentElement) ctx.appAncestors.push(el);
         fire(source, 'request:start', { source, target: ctx.target || null, path: pathOf(ctx) });
-    });
-
-    document.addEventListener('htmx:after:request', (event) => {
-        const ctx = ctxOf(event);
-        if (!ctx || !ctx.hx || !ctx.hx.trigger) return;
-        const value = ctx.hx.trigger;
-        ctx.hx.trigger = null; // fired here, so htmx does not fire it again after the swap
-        fireTriggerHeader(value, sourceOf(ctx));
     });
 
     document.addEventListener('htmx:response:error', (event) => {
@@ -141,9 +115,6 @@
             header: (name) => headerOf(ctx, name),
         };
         ended(source, detail, ctx.appAncestors || []);
-        // htmx 4 dropped these two; one view still sends HX-Trigger-After-Settle.
-        fireTriggerHeader(headerOf(ctx, 'HX-Trigger-After-Swap'), source);
-        fireTriggerHeader(headerOf(ctx, 'HX-Trigger-After-Settle'), source);
     });
 
     document.addEventListener('htmx:before:swap', (event) => {

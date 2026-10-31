@@ -797,7 +797,7 @@ class TestUnreadAndDelete:
         assert not Notification.objects.filter(pk=note.pk).exists()
         assert Notification.objects.filter(pk=keep.pk).exists()
         html = response.content.decode()
-        assert f'<div id="notification-{note.pk}" hx-swap-oob="delete"></div>' in html
+        assert f'<hx-partial hx-target="#notification-{note.pk}" hx-swap="delete"></hx-partial>' in html
         assert re.search(r'id="inbox-unread-count"[^>]*>1<', html)
         assert 'notificationsChanged' in response['HX-Trigger']
         assert f'"notificationDeleted": {{"id": {note.pk}}}' in response['HX-Trigger']

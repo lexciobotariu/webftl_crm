@@ -11,7 +11,7 @@ from apps.projects.factories import ProjectAccessFactory, ProjectFactory
 from apps.projects.models import ProjectTaskView
 from apps.tasks.factories import LabelFactory, SubtaskFactory, TaskFactory
 
-TOOLBAR = {'HTTP_HX_REQUEST': 'true', 'HTTP_HX_TRIGGER': 'task-toolbar'}
+TOOLBAR = {'HTTP_HX_REQUEST': 'true', 'HTTP_HX_SOURCE': 'form#task-toolbar'}
 
 
 def _member(project):

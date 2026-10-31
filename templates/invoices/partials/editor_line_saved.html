@@ -1,3 +1,4 @@
-<template><td id="line-amount-{{ saved_line.pk }}" hx-swap-oob="true" class="px-4 py-1.5 text-sm text-zinc-200 text-right tabular-nums">{% include "invoices/partials/money.html" with amount=saved_line.amount %}</td></template>
-<p id="line-error-{{ saved_line.pk }}" hx-swap-oob="true" class="px-2 text-xs text-error">{{ error }}</p>
+{# Partials, not out-of-band elements: the cells' markup lives in editor_lines.html; this answer only fills them in. #}
+<hx-partial hx-target="#line-amount-{{ saved_line.pk }}">{% include "invoices/partials/money.html" with amount=saved_line.amount %}</hx-partial>
+<hx-partial hx-target="#line-error-{{ saved_line.pk }}">{{ error }}</hx-partial>
 {% include "invoices/partials/editor_totals.html" %}

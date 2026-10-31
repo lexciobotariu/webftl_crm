@@ -132,7 +132,9 @@ class TestInvoiceEditor:
         edited = client.post(reverse('invoice_line_edit', args=[invoice.pk, line.pk]),
                              {'description': 'Hosting (year)', 'quantity': '12', 'unit_price': '30'})
         html = edited.content.decode()
-        assert f'id="line-amount-{line.pk}" hx-swap-oob="true"' in html
+        # The cell's markup stays in the page; the answer only fills it in (htmx 4 partial).
+        assert f'<hx-partial hx-target="#line-amount-{line.pk}">' in html
+        assert f'<hx-partial hx-target="#line-error-{line.pk}"></hx-partial>' in html
         assert 'id="doc-totals" hx-swap-oob="true"' in html
         assert '396.00' in html  # 360 + 10%
         line.refresh_from_db()
