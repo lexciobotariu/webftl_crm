@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.42.1] - 2026-11-13
+
+**Claude can check the CRM connector again**: adding the connector in claude.ai stopped at "Couldn't determine how this server signs in". No database migrations. In Dokploy, `ALWAYS_HTTPS=True` and `USE_X_FORWARDED_PROTO=True` must be set (done on 2026-11-13) so the sign-in addresses Claude reads are `https://`.
+
+### Fixed
+- `/mcp` accepted only requests without an `Origin` or from the app itself, so a request from Claude's web app (`https://claude.ai`, `https://claude.com`) got a 403 instead of the 401 that points to the sign-in metadata. Those two origins are now allowed; the bearer token still decides who gets in
+- `/mcp` answers the CORS preflight (`OPTIONS`) for those origins and lets them read `WWW-Authenticate`, so the connector check can also run from the browser
+
 ## [0.42.0] - 2026-10-31
 
 **Finishes the move to htmx 4**: the app now uses htmx 4's own morph, partials and `HX-Trigger` timing, and the htmx 2 leftovers are gone. Nothing changes for people using the app. No database migrations, nothing to set in Dokploy.

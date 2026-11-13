@@ -53,6 +53,30 @@ class TestAccess:
         response = mcp.post({'jsonrpc': '2.0', 'id': 1, 'method': 'ping'}, HTTP_ORIGIN='http://testserver')
         assert response.status_code == 200
 
+    @pytest.mark.parametrize('origin', ['https://claude.ai', 'https://claude.com'])
+    def test_claude_origin_gets_the_401_challenge_it_can_read(self, client, origin):
+        response = McpClient(client, None).post({'jsonrpc': '2.0', 'id': 1, 'method': 'ping'}, HTTP_ORIGIN=origin)
+        assert response.status_code == 401
+        assert 'resource_metadata=' in response['WWW-Authenticate']
+        assert response['Access-Control-Allow-Origin'] == origin
+        assert 'WWW-Authenticate' in response['Access-Control-Expose-Headers']
+
+    def test_claude_origin_with_token_is_fine(self, mcp):
+        response = mcp.post({'jsonrpc': '2.0', 'id': 1, 'method': 'ping'}, HTTP_ORIGIN='https://claude.ai')
+        assert response.status_code == 200
+
+    def test_preflight_from_claude_is_allowed(self, client):
+        response = client.options('/mcp', HTTP_ORIGIN='https://claude.ai',
+                                  HTTP_ACCESS_CONTROL_REQUEST_METHOD='POST')
+        assert response.status_code == 204
+        assert response['Access-Control-Allow-Origin'] == 'https://claude.ai'
+        assert 'Authorization' in response['Access-Control-Allow-Headers']
+
+    def test_preflight_from_elsewhere_gets_no_cors(self, client):
+        response = client.options('/mcp', HTTP_ORIGIN='https://evil.example',
+                                  HTTP_ACCESS_CONTROL_REQUEST_METHOD='POST')
+        assert 'Access-Control-Allow-Origin' not in response
+
     def test_get_is_405(self, client, bearer):
         response = client.get('/mcp', HTTP_AUTHORIZATION=f'Bearer {bearer}')
         assert response.status_code == 405

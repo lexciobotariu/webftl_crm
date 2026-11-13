@@ -28,6 +28,13 @@ MAX_BODY_BYTES = 1024 * 1024
 LAST_USED_EVERY = timedelta(minutes=1)
 
 
+# Claude's web app may call the endpoint with its own Origin (for example while
+# checking a new connector); the bearer token still decides who gets in.
+CLAUDE_ORIGINS = ('https://claude.ai', 'https://claude.com')
+CORS_ALLOW_HEADERS = 'Authorization, Content-Type, Accept, MCP-Protocol-Version, Mcp-Session-Id, Last-Event-ID'
+CORS_EXPOSE_HEADERS = 'WWW-Authenticate, Mcp-Session-Id, MCP-Protocol-Version'
+
+
 def _unauthorized(request, error=None):
     challenge = f'Bearer resource_metadata="{resource_metadata_url(request)}"'
     if error:
@@ -45,7 +52,18 @@ def _origin_allowed(request):
     origin = request.headers.get('Origin')
     if not origin:
         return True
-    return origin.rstrip('/') == request.build_absolute_uri('/').rstrip('/')
+    origin = origin.rstrip('/')
+    return origin in CLAUDE_ORIGINS or origin == request.build_absolute_uri('/').rstrip('/')
+
+
+def _with_cors(request, response):
+    """Let Claude's web app read the answer (the 401 challenge included)."""
+    origin = (request.headers.get('Origin') or '').rstrip('/')
+    if origin in CLAUDE_ORIGINS:
+        response['Access-Control-Allow-Origin'] = origin
+        response['Access-Control-Expose-Headers'] = CORS_EXPOSE_HEADERS
+        response['Vary'] = 'Origin'
+    return response
 
 
 def _over_limit(token):
@@ -65,6 +83,19 @@ def _touch(token):
 @csrf_exempt
 def mcp_endpoint(request):
     """Streamable HTTP endpoint, stateless: one JSON-RPC message per POST, one JSON answer."""
+    return _with_cors(request, _mcp_answer(request))
+
+
+def _mcp_answer(request):
+    if request.method == 'OPTIONS':
+        # CORS preflight from Claude's web app.
+        response = HttpResponse(status=204)
+        response['Allow'] = 'POST, OPTIONS'
+        if (request.headers.get('Origin') or '').rstrip('/') in CLAUDE_ORIGINS:
+            response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+            response['Access-Control-Allow-Headers'] = CORS_ALLOW_HEADERS
+            response['Access-Control-Max-Age'] = '600'
+        return response
     if request.method != 'POST':
         # No server-initiated stream (GET) and no sessions to end (DELETE).
         response = HttpResponse(status=405)
