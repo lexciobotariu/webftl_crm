@@ -149,7 +149,7 @@ class TestInvoiceSnapshot:
 
         printed = client.get(reverse('invoice_print', args=[invoice.pk]))
         html = printed.content.decode()
-        company_block = html.split('>Company<', 1)[1].split('>Bill to<', 1)[0]
+        company_block = html.split('class="company"', 1)[1].split('>Bill to<', 1)[0]
         assert 'Harbor Studio LLC' in company_block
         assert '4 Quay Street' in company_block
         assert 'billing@harbor.test' in company_block
@@ -182,7 +182,7 @@ class TestInvoiceSnapshot:
             unit_price=Decimal('8.00'),
         )
         old = client.get(reverse('invoice_print', args=[legacy.pk])).content.decode()
-        assert '>Company<' not in old
+        assert 'class="company"' not in old
         assert '€' not in old
         assert '8.00' in old
         old_detail = client.get(reverse('invoice_detail', args=[legacy.pk])).content.decode()

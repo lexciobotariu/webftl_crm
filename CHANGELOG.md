@@ -13,11 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Settings > **Bank accounts**: several accounts, each **UK** (beneficiary, bank, sort code, account number) or **International** (beneficiary, bank, SWIFT/BIC, IBAN), with an optional currency. Light checks catch typing errors: sort code 6 digits (shown 12-34-56), account number 8 digits, SWIFT/BIC 8 or 11 characters, IBAN checksum. Spaces and dashes are accepted and stored compact
 - **Default per currency**: one account per currency can be the default, and a default with no currency is the fallback. New invoices get the default for the client's currency; changing the invoice's client to another currency moves it to that currency's default
 - Invoice editor: **Bank account** selector in the header ("No bank details" leaves the block out)
-- Invoice print page and PDF (download, email attachment, client portal): **Payment details** block with "Reference: INV-xxxx": in the PDF it sits at the bottom left of the last page, just above the footer; on the print page it follows the totals. A sent invoice's page shows the same details
+- Invoice print page and PDF (download, email attachment, client portal): **Payment details** box with "Reference: INV-xxxx" at the bottom left, next to the Summary. A sent invoice's page shows the same details
 - Invoice and estimate PDFs: footer with "Page X of Y", 2cm from the bottom edge like the top margin
 - Repeats: each new draft keeps the template's account; if that account was archived, it gets the currency default. "Convert to invoice" on an estimate uses the currency default. Estimates themselves carry no bank details
 
 ### Changed
+- **New invoice and estimate design** (CRM-1), the same on the print page and every PDF: company and a large "INVOICE"/"ESTIMATE" title at the top; bordered boxes on a two-column grid (Bill to + Invoice details, lines, Payment details/Notes + Summary) whose lines line up with the item table's columns; every detail row the same height; Invoice details adds **Payment terms** (days between issue and due date). Neutral colours, the platform accent only on the title and on what the client has to pay (Balance due, or the estimate's Total)
 - An invoice copies the account's details. Drafts follow later edits to the account; a sent invoice keeps the details it was sent with (they are locked with the rest of the invoice)
 - An account used on an invoice cannot be deleted, only archived (it then leaves the selector and stops being a default; Restore brings it back). A currency used by a bank account cannot be deleted
 

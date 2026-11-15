@@ -168,6 +168,14 @@ class Invoice(models.Model):
         return self.sent_at is None
 
     @property
+    def payment_terms_label(self):
+        """Days from issue to due date, as printed on the invoice."""
+        days = (self.due_date - self.issue_date).days
+        if days <= 0:
+            return 'Due on receipt'
+        return f'{days} day' if days == 1 else f'{days} days'
+
+    @property
     def has_bank_details(self):
         return bool(self.bank_kind)
 

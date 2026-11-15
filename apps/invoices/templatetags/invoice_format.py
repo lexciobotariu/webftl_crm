@@ -32,3 +32,12 @@ def client_money(client, amount):
     if currency is None:
         return f'{amount:.2f}'
     return format_money(amount, currency.symbol, currency.symbol_before)
+
+
+@register.filter
+def address_parts(address):
+    """A typed address as (first line, the other lines joined by commas), for the two address rows."""
+    lines = [line.strip().rstrip(',') for line in (address or '').splitlines() if line.strip()]
+    if not lines:
+        return ('', '')
+    return (lines[0], ', '.join(lines[1:]))

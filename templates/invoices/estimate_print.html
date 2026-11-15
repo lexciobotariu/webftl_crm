@@ -3,25 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>{{ invoice.number_label }}</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #111; background: #fff; margin: 2rem auto; max-width: 800px; }
-        h1 { font-size: 1.5rem; margin: 0; }
-        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-        th, td { text-align: left; padding: 0.4rem 0; border-bottom: 1px solid #ddd; font-size: 0.95rem; }
-        th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: #555; }
-        .right { text-align: right; }
-        .meta { display: flex; justify-content: space-between; gap: 2rem; margin-top: 1.5rem; }
-        .muted { color: #555; }
-        .totals { margin-left: auto; width: 16rem; margin-top: 1rem; }
-        .totals div { display: flex; justify-content: space-between; padding: 0.2rem 0; }
-        .no-print { margin-bottom: 1.5rem; }
-        button, a.button { font: inherit; padding: 0.4rem 0.8rem; margin-right: 0.5rem; }
-        @media print { .no-print { display: none; } body { margin: 0; } }
-        @page { size: A4; margin: 2cm; }
-        {% if for_pdf %}
-        @page { margin-bottom: 2.8cm; @bottom-right { content: "Page " counter(page) " of " counter(pages); vertical-align: bottom; padding-bottom: 2cm; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 8pt; color: #555; } }
-        {% endif %}
-    </style>
+    {% include "invoices/partials/document_print_style.html" %}
 </head>
 <body>
     {% if not for_pdf %}
@@ -31,60 +13,37 @@
         <a href="{% url 'estimate_detail' estimate.pk %}">Back to estimate</a>
     </div>
     {% endif %}
-    <h1>{{ invoice.number_label }}</h1>
-    <p class="muted">Estimate</p>
-    <div class="meta">
-        {% if invoice.currency_code %}
-        <div>
-            <div class="muted">Company</div>
-            {% if invoice.company_legal_name %}<strong>{{ invoice.company_legal_name }}</strong>{% endif %}
-            {% if invoice.company_email %}<div>{{ invoice.company_email }}</div>{% endif %}
-            {% if invoice.company_phone %}<div>{{ invoice.company_phone }}</div>{% endif %}
-            {% if invoice.company_address %}<div style="white-space: pre-line;">{{ invoice.company_address }}</div>{% endif %}
-            {% if invoice.company_tax_id %}<div>Tax ID {{ invoice.company_tax_id }}</div>{% endif %}
-        </div>
+    {% include "invoices/partials/document_print_header.html" with title="ESTIMATE" %}
+    <div class="row first">
+        {% include "invoices/partials/document_print_bill_to.html" with heading="Prepared for" %}
+        <section class="box right">
+            <div class="bar">Estimate details</div>
+            <table class="meta">
+                <tr><th>Estimate #</th><td>{{ invoice.number_label }}</td></tr>
+                <tr><th>Date</th><td>{{ invoice.issue_date|date:"j M Y" }}</td></tr>
+                <tr class="strong"><th>Valid until</th><td>{{ invoice.valid_until|date:"j M Y" }}</td></tr>
+                {% if invoice.project %}<tr><th>Project</th><td>{{ invoice.project.name }}</td></tr>{% endif %}
+            </table>
+        </section>
+    </div>
+    {% include "invoices/partials/document_print_lines.html" %}
+    <div class="row bottom">
+        {% if estimate.notes %}
+        <section class="box left">
+            <div class="bar">Notes</div>
+            <div class="notes">{{ estimate.notes }}</div>
+        </section>
+        {% else %}
+        <div class="left"></div>
         {% endif %}
-        <div>
-            <div class="muted">Prepared for</div>
-            <strong>{{ invoice.bill_to_name }}</strong>
-            {% if invoice.bill_to_email %}<div>{{ invoice.bill_to_email }}</div>{% endif %}
-            {% if invoice.bill_to_address %}<div style="white-space: pre-line;">{{ invoice.bill_to_address }}</div>{% endif %}
-            {% if invoice.bill_to_tax_id %}<div>Tax ID {{ invoice.bill_to_tax_id }}</div>{% endif %}
-            {% if invoice.project %}<div style="margin-top: 0.5rem;"><span class="muted">Project</span> {{ invoice.project.name }}</div>{% endif %}
-        </div>
-        <div>
-            <div>Issued {{ invoice.issue_date|date:"M j, Y" }}</div>
-            <div>Valid until {{ invoice.valid_until|date:"M j, Y" }}</div>
-        </div>
+        <section class="box right summary">
+            <div class="bar">Summary</div>
+            <table class="meta">
+                <tr><th>Subtotal</th><td>{% include "invoices/partials/money.html" with amount=invoice.subtotal %}</td></tr>
+                <tr><th>Tax ({{ invoice.tax_rate|floatformat:"-2" }}%)</th><td>{% include "invoices/partials/money.html" with amount=invoice.tax_amount %}</td></tr>
+                <tr class="pay"><th>Total</th><td>{% include "invoices/partials/money.html" with amount=invoice.total %}</td></tr>
+            </table>
+        </section>
     </div>
-    <table>
-        <thead>
-            <tr>
-                <th>Item</th>
-                <th class="right">Qty</th>
-                <th class="right">Price</th>
-                <th class="right">Amount</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for line in invoice.lines.all %}
-            <tr>
-                <td>{{ line.description }}{% if line.details %}<div style="white-space: pre-line; color: #71717a; font-size: 0.9em; margin-top: 2px;">{{ line.details }}</div>{% endif %}</td>
-                <td class="right">{{ line.quantity|floatformat:2 }}</td>
-                <td class="right">{% include "invoices/partials/money.html" with amount=line.unit_price %}</td>
-                <td class="right">{% include "invoices/partials/money.html" with amount=line.amount %}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    <div class="totals">
-        <div><span>Subtotal</span><span>{% include "invoices/partials/money.html" with amount=invoice.subtotal %}</span></div>
-        <div><span>Tax {{ invoice.tax_rate|floatformat:2 }}%</span><span>{% include "invoices/partials/money.html" with amount=invoice.tax_amount %}</span></div>
-        <div><strong>Total</strong><strong>{% include "invoices/partials/money.html" with amount=invoice.total %}</strong></div>
-    </div>
-    {% if estimate.notes %}
-    <h2>Notes</h2>
-    <p style="white-space: pre-line;">{{ estimate.notes }}</p>
-    {% endif %}
 </body>
 </html>

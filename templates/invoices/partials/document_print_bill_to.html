@@ -1,0 +1,12 @@
+{% load invoice_format %}{% with address=invoice.bill_to_address|address_parts %}
+<section class="box left">
+    <div class="bar">{{ heading }}</div>
+    <table class="meta">
+        <tr><th>Company</th><td><strong>{{ invoice.bill_to_name }}</strong></td></tr>
+        {% if address.0 %}<tr><th>Address</th><td>{{ address.0 }}</td></tr>{% endif %}
+        {% if address.1 %}<tr><th>City</th><td>{{ address.1 }}</td></tr>{% endif %}
+        {% if invoice.bill_to_tax_id %}<tr><th>Tax ID</th><td>{{ invoice.bill_to_tax_id }}</td></tr>{% endif %}
+        {% if invoice.bill_to_email %}<tr><th>Email</th><td>{{ invoice.bill_to_email }}</td></tr>{% endif %}
+    </table>
+</section>
+{% endwith %}

@@ -1,0 +1,15 @@
+<table class="lines">
+    <thead>
+        <tr><th>Item</th><th class="num qty">Qty</th><th class="num price">Unit price</th><th class="num amount">Amount</th></tr>
+    </thead>
+    <tbody>
+        {% for line in invoice.lines.all %}
+        <tr>
+            <td>{{ line.description }}{% if line.details %}<div class="details">{{ line.details }}</div>{% endif %}</td>
+            <td class="num">{{ line.quantity|floatformat:2 }}</td>
+            <td class="num">{% include "invoices/partials/money.html" with amount=line.unit_price %}</td>
+            <td class="num">{% include "invoices/partials/money.html" with amount=line.amount %}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
