@@ -13,7 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Settings > **Bank accounts**: several accounts, each **UK** (beneficiary, bank, sort code, account number) or **International** (beneficiary, bank, SWIFT/BIC, IBAN), with an optional currency. Light checks catch typing errors: sort code 6 digits (shown 12-34-56), account number 8 digits, SWIFT/BIC 8 or 11 characters, IBAN checksum. Spaces and dashes are accepted and stored compact
 - **Default per currency**: one account per currency can be the default, and a default with no currency is the fallback. New invoices get the default for the client's currency; changing the invoice's client to another currency moves it to that currency's default
 - Invoice editor: **Bank account** selector in the header ("No bank details" leaves the block out)
-- Invoice print page and PDF (download, email attachment, client portal): **Payment details** block with "Reference: INV-xxxx": in the PDF it sits at the bottom left of the last page, on the print page it follows the totals. A sent invoice's page shows the same details
+- Invoice print page and PDF (download, email attachment, client portal): **Payment details** block with "Reference: INV-xxxx": in the PDF it sits at the bottom left of the last page, just above the footer; on the print page it follows the totals. A sent invoice's page shows the same details
+- Invoice and estimate PDFs: footer with "Page X of Y", 2cm from the bottom edge like the top margin
 - Repeats: each new draft keeps the template's account; if that account was archived, it gets the currency default. "Convert to invoice" on an estimate uses the currency default. Estimates themselves carry no bank details
 
 ### Changed

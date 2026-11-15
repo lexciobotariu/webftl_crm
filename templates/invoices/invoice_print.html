@@ -21,10 +21,15 @@
         button, a.button { font: inherit; padding: 0.4rem 0.8rem; margin-right: 0.5rem; }
         @media print { .no-print { display: none; } body { margin: 0; } }
         @page { size: A4; margin: 2cm; }
-        {% if for_pdf and invoice.has_bank_details %}
-        /* The PDF pins payment details to the bottom left of the last page. */
+        {% if for_pdf %}
+        /* PDF footer: the page count, 2cm from the bottom edge like the top margin.
+           Payment details sit just above it, at the bottom left of the last page. */
+        @page {
+            margin-bottom: {% if invoice.has_bank_details %}6.4cm{% else %}2.8cm{% endif %};
+            @bottom-right { content: "Page " counter(page) " of " counter(pages); vertical-align: bottom; padding-bottom: 2cm; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 8pt; color: #555; }
+            {% if invoice.has_bank_details %}@bottom-left { content: element(payment); vertical-align: bottom; width: 60%; padding-bottom: 2.6cm; }{% endif %}
+        }
         .payment { position: running(payment); margin-top: 0; }
-        @page { margin-bottom: 4.5cm; @bottom-left { content: element(payment); vertical-align: bottom; width: 60%; padding-bottom: 0.4cm; } }
         {% endif %}
     </style>
 </head>
