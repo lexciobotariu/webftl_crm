@@ -206,6 +206,23 @@
         {% include "invoices/partials/editor_header.html" %}
         {% include "invoices/partials/editor_lines.html" %}
         {% else %}
+        {% if invoice.has_bank_details %}
+        <div class="bg-panel/50 border border-border-subtle rounded-card p-4 mb-6">
+            <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Payment details</div>
+            <dl class="grid grid-cols-[8rem_1fr] gap-y-1 text-sm">
+                <dt class="text-zinc-500">Beneficiary</dt><dd class="text-zinc-200">{{ invoice.bank_beneficiary_name }}</dd>
+                <dt class="text-zinc-500">Bank</dt><dd class="text-zinc-200">{{ invoice.bank_name }}</dd>
+                {% if invoice.bank_kind == 'uk' %}
+                <dt class="text-zinc-500">Sort code</dt><dd class="text-zinc-200 tabular-nums">{{ invoice.bank_sort_code_display }}</dd>
+                <dt class="text-zinc-500">Account number</dt><dd class="text-zinc-200 tabular-nums">{{ invoice.bank_account_number }}</dd>
+                {% else %}
+                <dt class="text-zinc-500">SWIFT/BIC</dt><dd class="text-zinc-200">{{ invoice.bank_swift_bic }}</dd>
+                <dt class="text-zinc-500">IBAN</dt><dd class="text-zinc-200 tabular-nums">{{ invoice.bank_iban_display }}</dd>
+                {% endif %}
+            </dl>
+            <p class="text-xs text-zinc-600 mt-3">From Settings › Bank accounts. Once the invoice is sent, later edits to the account do not change it.</p>
+        </div>
+        {% endif %}
         <div class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden mb-6">
             <div class="px-4 py-2 border-b border-border-subtle bg-panel/80 flex items-center justify-between">
                 <h2 class="text-sm font-medium text-zinc-100">Lines</h2>

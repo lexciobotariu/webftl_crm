@@ -89,9 +89,11 @@ def header_form(user, document, kind, data=None):
         initial.update(valid_until=document.valid_until, notes=document.notes)
     else:
         initial['due_date'] = document.due_date
+        initial['bank_account'] = document.bank_account_id
+    extra = {} if kind == ESTIMATE else {'current_bank_account_id': document.bank_account_id}
     return form_class(
         data, user=user, initial=initial,
-        current_client_id=document.client_id, current_project_id=document.project_id,
+        current_client_id=document.client_id, current_project_id=document.project_id, **extra,
     )
 
 
@@ -125,7 +127,9 @@ def header(request, kind, pk):
                 update_estimate(document, valid_until=form.cleaned_data['valid_until'],
                                 notes=form.cleaned_data['notes'], **values)
             else:
-                update_invoice(document, due_date=form.cleaned_data['due_date'], **values)
+                # A new client may call for its currency's default account instead.
+                bank = {} if client_changed else {'bank_account': form.cleaned_data['bank_account']}
+                update_invoice(document, due_date=form.cleaned_data['due_date'], **values, **bank)
         except (InvoiceLocked, EstimateLocked):
             return HttpResponseForbidden('This document has been sent.')
         except ValidationError as exc:

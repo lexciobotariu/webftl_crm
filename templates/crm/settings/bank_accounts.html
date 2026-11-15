@@ -1,0 +1,56 @@
+{% extends "crm/settings/_layout.html" %}
+
+{% block page_title %}Bank accounts{% endblock %}
+
+{% block settings_content %}
+{% url 'bank_account_add' as add_url %}
+<section class="bg-card border border-border-subtle rounded-card overflow-hidden shadow-sm">
+    {% include "crm/settings/_card_header.html" with icon="landmark" title="Bank accounts" description="Payment details printed on invoices. The default for a currency is picked for new invoices in it." action_url=add_url action_label="Add account" %}
+    {% if bank_account_error %}<p class="px-5 pt-4 text-sm text-error">{{ bank_account_error }}</p>{% endif %}
+    {% if bank_accounts %}
+    <div class="overflow-x-auto">
+    <table class="w-full">
+        <thead class="border-b border-border-subtle">
+            <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
+                <th class="px-5 py-2 font-medium">Name</th>
+                <th class="px-5 py-2 font-medium">Details</th>
+                <th class="px-5 py-2 font-medium">Currency</th>
+                <th class="px-5 py-2 font-medium w-40"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-border-subtle">
+            {% for account in bank_accounts %}
+            <tr class="{% if account.archived_at %}opacity-60{% endif %}">
+                <td class="px-5 py-3 text-sm text-zinc-100 min-w-[11rem]">
+                    <a href="{% url 'bank_account_edit' account.pk %}" class="hover:text-zinc-50">{{ account.label }}</a>
+                    {% if account.is_default %}<span class="ml-1.5 text-[10px] uppercase tracking-wider text-zinc-400 border border-border-subtle rounded px-1 py-0.5">Default</span>{% endif %}
+                    {% if account.archived_at %}<span class="ml-1.5 text-[10px] uppercase tracking-wider text-zinc-500">Archived</span>{% endif %}
+                    <span class="block text-xs text-zinc-500">{{ account.bank_name }} · {{ account.beneficiary_name }}</span>
+                </td>
+                <td class="px-5 py-3 text-sm text-zinc-300 tabular-nums whitespace-nowrap">
+                    {% if account.is_uk %}{{ account.sort_code_display }} · {{ account.account_number }}{% else %}{{ account.swift_bic }} · {{ account.iban_display }}{% endif %}
+                </td>
+                <td class="px-5 py-3 text-sm text-zinc-300">{{ account.currency.code|default:"Any" }}</td>
+                <td class="px-5 py-3 text-right whitespace-nowrap">
+                    <a href="{% url 'bank_account_edit' account.pk %}" class="text-xs text-zinc-500 hover:text-zinc-100 transition-colors">Edit</a>
+                    <form method="post" action="{% url 'bank_account_archive' account.pk %}" class="inline ml-3">
+                        {% csrf_token %}
+                        <button type="submit" class="text-xs text-zinc-500 hover:text-zinc-100 transition-colors">{% if account.archived_at %}Restore{% else %}Archive{% endif %}</button>
+                    </form>
+                    {% if not account.invoice_count %}
+                    <form method="post" action="{% url 'bank_account_delete' account.pk %}" class="inline ml-3">
+                        {% csrf_token %}
+                        <button type="submit" class="text-xs text-zinc-500 hover:text-error transition-colors">Delete</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p class="px-5 py-4 text-sm text-zinc-500">No bank accounts yet. Add one to print payment details on invoices.</p>
+    {% endif %}
+</section>
+{% endblock %}

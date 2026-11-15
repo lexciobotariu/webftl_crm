@@ -39,6 +39,16 @@
             <input id="doc-due" type="date" name="due_date" value="{{ form.due_date.value|date:'Y-m-d'|default:form.due_date.value }}" required class="{{ field }}">
             {% if form.due_date.errors %}<p class="mt-1 text-xs text-error">{{ form.due_date.errors.0 }}</p>{% endif %}
         </div>
+        <div class="col-span-2">
+            <label class="{{ label }}" for="doc-bank">Bank account</label>
+            <select id="doc-bank" name="bank_account" class="{{ field }}">
+                <option value="">No bank details</option>
+                {% for choice in form.bank_account.field.queryset %}
+                <option value="{{ choice.pk }}" {% if form.bank_account.value|stringformat:"s" == choice.pk|stringformat:"s" %}selected{% endif %}>{{ choice.label }}{% if choice.currency %} · {{ choice.currency.code }}{% endif %}{% if choice.archived_at %} (archived){% endif %}</option>
+                {% endfor %}
+            </select>
+            {% if form.bank_account.errors %}<p class="mt-1 text-xs text-error">{{ form.bank_account.errors.0 }}</p>{% endif %}
+        </div>
         {% endif %}
         {% if kind == 'estimate' %}
         <div class="col-span-2 lg:col-span-4">

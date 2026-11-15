@@ -1,0 +1,17 @@
+{# A settings card's header: icon, title, one line on what it is for, and an optional action. #}
+<div class="px-5 py-4 border-b border-border-subtle flex flex-wrap items-start justify-between gap-3">
+    <div class="flex items-start gap-3 min-w-[12rem] flex-1">
+        <span class="mt-0.5 w-8 h-8 flex-shrink-0 rounded-control bg-elevated border border-border-subtle flex items-center justify-center">
+            <i data-lucide="{{ icon }}" class="w-4 h-4 text-zinc-400"></i>
+        </span>
+        <div class="min-w-0">
+            <h2 class="text-sm font-medium text-zinc-100">{{ title }}</h2>
+            {% if description %}<p class="text-xs text-zinc-500 mt-0.5">{{ description }}</p>{% endif %}
+        </div>
+    </div>
+    {% if action_url %}
+    <a href="{{ action_url }}" class="flex-shrink-0 inline-flex items-center gap-1 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-200 hover:bg-hover transition-colors">
+        <i data-lucide="plus" class="w-3.5 h-3.5"></i>{{ action_label }}
+    </a>
+    {% endif %}
+</div>

@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Company, Currency
+from .models import BankAccount, Company, Currency
 from .storage import StorageCheckError, bucket_for, check_bucket
 
 
@@ -197,3 +197,88 @@ class CurrencyForm(forms.ModelForm):
         if len(code) != 3 or not code.isalpha():
             raise forms.ValidationError('Enter a 3-letter code.')
         return code
+
+
+CHECKBOX_CLASSES = (
+    'w-3.5 h-3.5 rounded border-border-subtle bg-panel accent-zinc-200 '
+    'focus:ring-border-strong focus:ring-offset-0'
+)
+
+
+class BankAccountForm(forms.ModelForm):
+    """One account. The model cleans the numbers and checks them for its kind."""
+
+    class Meta:
+        model = BankAccount
+        fields = [
+            'kind', 'label', 'beneficiary_name', 'bank_name',
+            'sort_code', 'account_number', 'swift_bic', 'iban',
+            'currency', 'is_default',
+        ]
+        labels = {
+            'kind': 'Type',
+            'label': 'Name in the CRM',
+            'beneficiary_name': 'Beneficiary name',
+            'bank_name': 'Bank name',
+            'sort_code': 'Sort code',
+            'account_number': 'Account number',
+            'swift_bic': 'SWIFT/BIC',
+            'iban': 'IBAN',
+            'currency': 'Currency',
+            'is_default': 'Default for this currency',
+        }
+        help_texts = {
+            'label': 'Only you see it, in the invoice selector. For example "Wise GBP".',
+            'currency': 'Optional. New invoices in this currency get the default account for it.',
+            'is_default': (
+                'New invoices in this currency get this account. '
+                'A default with no currency is used when a currency has none.'
+            ),
+        }
+        widgets = {
+            'kind': forms.RadioSelect(attrs={'class': RADIO_CLASSES}),
+            'label': forms.TextInput(attrs={'class': INPUT_CLASSES}),
+            'beneficiary_name': forms.TextInput(attrs={'class': INPUT_CLASSES}),
+            'bank_name': forms.TextInput(attrs={'class': INPUT_CLASSES}),
+            'sort_code': forms.TextInput(attrs={
+                'class': INPUT_CLASSES, 'placeholder': '12-34-56', 'maxlength': '8',
+                'inputmode': 'numeric', 'autocomplete': 'off',
+            }),
+            'account_number': forms.TextInput(attrs={
+                'class': INPUT_CLASSES, 'placeholder': '12345678', 'maxlength': '10',
+                'inputmode': 'numeric', 'autocomplete': 'off',
+            }),
+            'swift_bic': forms.TextInput(attrs={
+                'class': INPUT_CLASSES, 'maxlength': '11', 'autocapitalize': 'characters',
+                'autocomplete': 'off',
+            }),
+            'iban': forms.TextInput(attrs={
+                'class': INPUT_CLASSES, 'maxlength': '42', 'autocapitalize': 'characters',
+                'autocomplete': 'off',
+            }),
+            'currency': forms.Select(attrs={'class': INPUT_CLASSES}),
+            'is_default': forms.CheckboxInput(attrs={'class': CHECKBOX_CLASSES}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['currency'].empty_label = 'Any currency'
+        # Typed with spaces or dashes; the model stores them compact.
+        for name, size in (('sort_code', 8), ('account_number', 10), ('swift_bic', 11), ('iban', 42)):
+            self.fields[name].max_length = size
+            self.fields[name].validators = []
+
+    def _compact(self, name):
+        return ''.join((self.cleaned_data.get(name) or '').split()).replace('-', '').upper()
+
+    def clean_sort_code(self):
+        return self._compact('sort_code')
+
+    def clean_account_number(self):
+        return self._compact('account_number')
+
+    def clean_swift_bic(self):
+        return self._compact('swift_bic')
+
+    def clean_iban(self):
+        return self._compact('iban')

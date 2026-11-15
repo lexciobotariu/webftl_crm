@@ -6,6 +6,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from apps.clients.models import Client, visible_clients
+from apps.crm.models import BankAccount
 from apps.projects.models import Project
 
 from .models import RecurringInvoice, money
@@ -46,9 +47,19 @@ class InvoiceForm(forms.Form):
     )
 
     project = forms.ModelChoiceField(queryset=Project.objects.none(), required=False)
+    # Only the inline editor sends it; empty means no bank details on the invoice.
+    bank_account = forms.ModelChoiceField(queryset=BankAccount.objects.none(), required=False)
 
-    def __init__(self, *args, user, current_client_id=None, current_project_id=None, **kwargs):
+    def __init__(
+        self, *args, user, current_client_id=None, current_project_id=None,
+        current_bank_account_id=None, **kwargs,
+    ):
         super().__init__(*args, **kwargs)
+        # Archived accounts are not offered, except the one a draft already has.
+        self.fields['bank_account'].queryset = BankAccount.objects.filter(
+            Q(archived_at__isnull=True) | Q(pk=current_bank_account_id)
+        ).select_related('currency')
+        self.fields['bank_account'].empty_label = 'No bank details'
         # Archived clients are not offered, except the one a draft already has.
         clients = visible_clients(user).filter(
             Q(archived_at__isnull=True) | Q(pk=current_client_id)
@@ -142,5 +153,6 @@ class EstimateForm(InvoiceForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         del self.fields['due_date']
+        del self.fields['bank_account']
         if not self.is_bound and 'valid_until' not in self.initial:
             self.initial.setdefault('valid_until', timezone.localdate() + timedelta(days=30))

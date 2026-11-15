@@ -13,7 +13,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from .models import RecurringInvoice
-from .services import add_line, create_invoice
+from .services import add_line, create_invoice, usable_account
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +67,7 @@ def _create_one(recurring):
         due_date=issue_date + timedelta(days=payment_days),
         tax_rate=template.tax_rate,
         project=template.project,
+        bank_account=usable_account(template.bank_account, getattr(template.client.currency, 'code', '')),
     )
     invoice.from_recurring = recurring
     invoice.save(update_fields=['from_recurring', 'updated_at'])

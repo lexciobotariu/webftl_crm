@@ -67,8 +67,10 @@ class TestSettingsAccess:
         assert currency.symbol == 'Fr'
         assert currency.symbol_before is True
 
-        listed = client.get(reverse('settings')).content.decode()
-        assert 'Harbor Studio LLC' in listed
+        assert added.url == reverse('settings_currencies')
+        listed = client.get(reverse('settings_currencies')).content.decode()
+        assert 'CHF added.' in listed
+        assert 'Harbor Studio LLC' in client.get(reverse('settings')).content.decode()
         assert 'CHF' in listed
         assert 'Swiss Franc' in listed
         assert 'EUR' in listed
@@ -178,7 +180,7 @@ class TestCurrencySymbolPosition:
         self, client, admin_user
     ):
         client.force_login(admin_user)
-        page = client.get(reverse('settings')).content.decode()
+        page = client.get(reverse('settings_currencies')).content.decode()
         assert 'name="symbol_before"' in page
         assert 'Before the amount' in page
         assert 'After the amount' in page
@@ -197,7 +199,7 @@ class TestCurrencySymbolPosition:
         franc = Currency.objects.get(code='CHF')
         assert franc.symbol_before is False
 
-        listed = client.get(reverse('settings')).content.decode()
+        listed = client.get(reverse('settings_currencies')).content.decode()
         assert '>After<' in _currency_row(listed, 'CHF')
 
 
@@ -217,23 +219,23 @@ class TestTheme:
         company.save(update_fields=['legal_name'])
         client.force_login(admin_user)
 
-        page = client.get(reverse('settings'))
+        page = client.get(reverse('settings_appearance'))
         html = page.content.decode()
         assert page.status_code == 200
         assert 'Appearance' in html
         assert 'value="dark"' in html
         assert 'value="light"' in html
         assert 'class="dark h-full"' in html
-        company_form = _form_around(html, 'Save company')
         appearance_form = _form_around(html, 'Save appearance')
-        assert 'name="legal_name"' in company_form
-        assert 'name="theme"' not in company_form
         assert 'name="theme"' in appearance_form
-        assert 'name="legal_name"' not in appearance_form
+        assert 'name="legal_name"' not in html
+        company_page = client.get(reverse('settings')).content.decode()
+        assert 'name="legal_name"' in _form_around(company_page, 'Save company')
+        assert 'name="theme"' not in company_page
 
-        saved = client.post(reverse('settings'), {'theme': 'light'})
+        saved = client.post(reverse('settings_appearance'), {'theme': 'light'})
         assert saved.status_code == 302
-        assert saved.url == reverse('settings')
+        assert saved.url == reverse('settings_appearance')
         company.refresh_from_db()
         assert company.theme == 'light'
         assert company.legal_name == 'Harbor Studio LLC'
@@ -249,7 +251,8 @@ class TestTheme:
     def test_member_gets_403_on_settings(self, client, user):
         client.force_login(user)
         assert client.get(reverse('settings')).status_code == 403
-        refused = client.post(reverse('settings'), {'theme': 'light'})
+        assert client.get(reverse('settings_appearance')).status_code == 403
+        refused = client.post(reverse('settings_appearance'), {'theme': 'light'})
         assert refused.status_code == 403
         assert not Company.objects.filter(theme='light').exists()
 
