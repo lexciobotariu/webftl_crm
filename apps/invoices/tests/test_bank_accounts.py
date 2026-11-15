@@ -311,7 +311,7 @@ class TestSettings:
         assert account.sort_code == '608371'
         assert account.is_default
 
-        page = client.get(reverse('settings')).content.decode()
+        page = client.get(reverse('settings_bank_accounts')).content.decode()
         assert 'Starling' in page and '60-83-71' in page
 
         bad = client.post(reverse('bank_account_edit', args=[account.pk]), {

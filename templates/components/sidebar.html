@@ -159,7 +159,7 @@
     <div class="px-2 pb-2">
         <a href="{% url 'settings' %}"
            class="flex items-center gap-2.5 px-3 py-2 rounded-control text-[13px] font-medium transition-colors duration-150
-                  {% if request.resolver_match.url_name == 'settings' or request.resolver_match.url_name == 'currency_add' or request.resolver_match.url_name == 'currency_delete' %}
+                  {% if request.path|slice:':10' == '/settings/' %}
                   bg-elevated text-zinc-100 border border-border-subtle
                   {% else %}
                   text-zinc-400 hover:text-zinc-200 hover:bg-hover

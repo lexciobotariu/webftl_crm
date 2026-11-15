@@ -1,0 +1,31 @@
+{% extends "crm/settings/_layout.html" %}
+
+{% block page_title %}Company details{% endblock %}
+
+{% block settings_content %}
+{# Settings used to be one page; send old links such as /settings/#storage to their own page. #}
+<script>
+    (function () {
+        var moved = {'#storage': '{% url 'settings_storage' %}', '#bank-accounts': '{% url 'settings_bank_accounts' %}'};
+        if (moved[window.location.hash]) window.location.replace(moved[window.location.hash]);
+    })();
+</script>
+<section class="bg-card border border-border-subtle rounded-card overflow-hidden shadow-sm">
+    {% include "crm/settings/_card_header.html" with icon="building-2" title="Company details" description="Your company's name and contact details, printed on invoices and estimates." %}
+    <form method="post" action="{% url 'settings' %}">
+        {% csrf_token %}
+        <div class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {% for field in form %}
+            {% if field.name == 'legal_name' or field.name == 'address' %}
+            {% include "crm/settings/_field.html" with wide=True %}
+            {% else %}
+            {% include "crm/settings/_field.html" %}
+            {% endif %}
+            {% endfor %}
+        </div>
+        <div class="px-5 py-3 border-t border-border-subtle bg-panel/60 flex items-center gap-3">
+            <button type="submit" class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">Save company</button>
+        </div>
+    </form>
+</section>
+{% endblock %}

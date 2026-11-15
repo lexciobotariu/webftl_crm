@@ -1,0 +1,27 @@
+{% extends "crm/settings/_layout.html" %}
+
+{% block page_title %}Appearance{% endblock %}
+
+{% block settings_content %}
+<section class="bg-card border border-border-subtle rounded-card overflow-hidden shadow-sm">
+    {% include "crm/settings/_card_header.html" with icon="palette" title="Appearance" description="The theme everyone in the CRM sees, including the sign-in page." %}
+    <form method="post" action="{% url 'settings_appearance' %}">
+        {% csrf_token %}
+        <fieldset class="p-5">
+            <legend class="sr-only">Theme</legend>
+            <div class="space-y-2">
+                {% for choice in form.theme %}
+                <label class="flex items-center gap-2 text-sm text-zinc-100 cursor-pointer">
+                    {{ choice.tag }}
+                    <span>{{ choice.choice_label }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            {% if form.theme.errors %}<p class="text-error text-sm mt-1">{{ form.theme.errors.0 }}</p>{% endif %}
+        </fieldset>
+        <div class="px-5 py-3 border-t border-border-subtle bg-panel/60 flex items-center gap-3">
+            <button type="submit" class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">Save appearance</button>
+        </div>
+    </form>
+</section>
+{% endblock %}

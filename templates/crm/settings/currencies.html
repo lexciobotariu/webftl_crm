@@ -1,0 +1,56 @@
+{% extends "crm/settings/_layout.html" %}
+
+{% block page_title %}Currencies{% endblock %}
+
+{% block settings_content %}
+<section class="bg-card border border-border-subtle rounded-card overflow-hidden shadow-sm">
+    {% include "crm/settings/_card_header.html" with icon="coins" title="Currencies" description="Currencies you can give a client. Each client is invoiced in its own currency." %}
+    {% if currency_error %}<p class="px-5 pt-4 text-sm text-error">{{ currency_error }}</p>{% endif %}
+    {% if currencies %}
+    <div class="overflow-x-auto">
+    <table class="w-full">
+        <thead class="border-b border-border-subtle">
+            <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
+                <th class="px-5 py-2 font-medium">Code</th>
+                <th class="px-5 py-2 font-medium">Name</th>
+                <th class="px-5 py-2 font-medium">Symbol</th>
+                <th class="px-5 py-2 font-medium">Position</th>
+                <th class="px-5 py-2 font-medium w-24"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-border-subtle">
+            {% for currency in currencies %}
+            <tr>
+                <td class="px-5 py-3 text-sm text-zinc-100">{{ currency.code }}</td>
+                <td class="px-5 py-3 text-sm text-zinc-300">{{ currency.name }}</td>
+                <td class="px-5 py-3 text-sm text-zinc-300">{{ currency.symbol }}</td>
+                <td class="px-5 py-3 text-sm text-zinc-300">{% if currency.symbol_before %}Before{% else %}After{% endif %}</td>
+                <td class="px-5 py-3 text-right">
+                    <form method="post" action="{% url 'currency_delete' currency.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="text-xs text-zinc-500 hover:text-error transition-colors">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p class="px-5 py-4 text-sm text-zinc-500">No currencies yet.</p>
+    {% endif %}
+</section>
+
+<section class="bg-card border border-border-subtle rounded-card overflow-hidden shadow-sm">
+    {% include "crm/settings/_card_header.html" with icon="plus" title="Add a currency" description="Three-letter ISO code, such as CHF. The code cannot change later." %}
+    <form method="post" action="{% url 'currency_add' %}">
+        {% csrf_token %}
+        <div class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {% for field in form %}{% include "crm/settings/_field.html" %}{% endfor %}
+        </div>
+        <div class="px-5 py-3 border-t border-border-subtle bg-panel/60 flex items-center gap-3">
+            <button type="submit" class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">Add currency</button>
+        </div>
+    </form>
+</section>
+{% endblock %}

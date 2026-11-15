@@ -53,7 +53,7 @@ def _keys(s3):
 class TestStorageSettings:
     def test_admin_connects_a_bucket_after_a_test_write(self, client, admin_user, s3):
         client.force_login(admin_user)
-        response = client.post(reverse('settings'), _storage_post())
+        response = client.post(reverse('settings_storage'), _storage_post())
         assert response.status_code == 302
 
         company = Company.load()
@@ -66,18 +66,18 @@ class TestStorageSettings:
             cursor.execute('SELECT s3_secret_key FROM crm_company WHERE id = 1')
             assert cursor.fetchone()[0].startswith('gAAAAA')
 
-        page = client.get(reverse('settings')).content.decode()
+        page = client.get(reverse('settings_storage')).content.decode()
         assert 'very-secret' not in page
         assert 'Saved. Leave blank to keep it.' in page
 
         # A blank secret keeps the saved one.
-        response = client.post(reverse('settings'), _storage_post(s3_secret_key=''))
+        response = client.post(reverse('settings_storage'), _storage_post(s3_secret_key=''))
         assert response.status_code == 302
         assert Company.load().s3_secret_key == 'very-secret'
 
     def test_a_bucket_that_cannot_be_written_saves_nothing(self, client, admin_user, s3):
         client.force_login(admin_user)
-        response = client.post(reverse('settings'), _storage_post(s3_bucket='missing-bucket'))
+        response = client.post(reverse('settings_storage'), _storage_post(s3_bucket='missing-bucket'))
         assert response.status_code == 400
         assert 'Could not write a test file to the bucket' in response.content.decode()
         assert Company.load().storage_backend == Company.STORAGE_DISK
@@ -85,7 +85,7 @@ class TestStorageSettings:
 
     def test_bucket_name_and_keys_are_required(self, client, admin_user):
         client.force_login(admin_user)
-        response = client.post(reverse('settings'), _storage_post(
+        response = client.post(reverse('settings_storage'), _storage_post(
             s3_bucket='', s3_access_key='', s3_secret_key='',
         ))
         assert response.status_code == 400
@@ -93,13 +93,13 @@ class TestStorageSettings:
 
     def test_back_to_disk_needs_no_bucket(self, client, admin_user):
         client.force_login(admin_user)
-        response = client.post(reverse('settings'), {'storage_backend': 'disk'})
+        response = client.post(reverse('settings_storage'), {'storage_backend': 'disk'})
         assert response.status_code == 302
         assert not Company.load().uses_s3
 
     def test_member_cannot_change_storage(self, client, user):
         client.force_login(user)
-        response = client.post(reverse('settings'), _storage_post())
+        response = client.post(reverse('settings_storage'), _storage_post())
         assert response.status_code == 403
         assert not Company.load().uses_s3
 
@@ -107,13 +107,13 @@ class TestStorageSettings:
         client.force_login(admin_user)
         warning = 'they are lost on every deploy'
         settings.DEBUG = True
-        assert warning not in client.get(reverse('settings')).content.decode()
+        assert warning not in client.get(reverse('settings_storage')).content.decode()
         settings.DEBUG = False
         settings.STORAGES = {
             **settings.STORAGES,
             'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
         }
-        assert warning in client.get(reverse('settings')).content.decode()
+        assert warning in client.get(reverse('settings_storage')).content.decode()
 
 
 @pytest.mark.django_db

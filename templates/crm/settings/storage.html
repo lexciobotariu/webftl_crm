@@ -1,0 +1,40 @@
+{% extends "crm/settings/_layout.html" %}
+
+{% block page_title %}File storage{% endblock %}
+
+{% block settings_content %}
+<section class="bg-card border border-border-subtle rounded-card overflow-hidden shadow-sm">
+    {% include "crm/settings/_card_header.html" with icon="hard-drive" title="File storage" description="Where task attachments and other uploads are kept." %}
+    <form method="post" action="{% url 'settings_storage' %}"
+          x-data="{ backend: '{{ form.storage_backend.value|default:'disk' }}' }">
+        {% csrf_token %}
+        <div class="p-5 space-y-4">
+            <p class="text-sm text-zinc-400">A bucket stays private: people download through the app, which checks they may see the file first.</p>
+            {% if files_on_disk_in_production %}
+            <p class="text-sm text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-control px-3 py-2">Files are on the server disk. Unless a volume is mounted, they are lost on every deploy. Connect a bucket to keep them.</p>
+            {% endif %}
+            {% if form.non_field_errors %}<p class="text-error text-sm">{{ form.non_field_errors.0 }}</p>{% endif %}
+            <fieldset>
+                <legend class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2">{{ form.storage_backend.label }}</legend>
+                <div class="space-y-2">
+                    {% for choice in form.storage_backend %}
+                    <label class="flex items-center gap-2 text-sm text-zinc-100 cursor-pointer">
+                        <input type="radio" name="{{ choice.data.name }}" value="{{ choice.data.value }}" class="{{ choice.data.attrs.class }}" x-model="backend" {% if choice.data.selected %}checked{% endif %}>
+                        <span>{{ choice.choice_label }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </fieldset>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" x-show="backend === 's3'"{% if form.storage_backend.value != 's3' %} style="display: none"{% endif %}>
+                {% for field in form %}{% if field.name != 'storage_backend' %}
+                {% if field.name == 's3_endpoint_url' %}{% include "crm/settings/_field.html" with wide=True %}{% else %}{% include "crm/settings/_field.html" %}{% endif %}
+                {% endif %}{% endfor %}
+            </div>
+        </div>
+        <div class="px-5 py-3 border-t border-border-subtle bg-panel/60 flex items-center gap-3">
+            <button type="submit" class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">Save storage</button>
+            <span class="text-xs text-zinc-500" x-show="backend === 's3'"{% if form.storage_backend.value != 's3' %} style="display: none"{% endif %}>Saving writes, reads and deletes a small test file first.</span>
+        </div>
+    </form>
+</section>
+{% endblock %}
