@@ -12,9 +12,8 @@
         .right { text-align: right; }
         .meta { display: flex; justify-content: space-between; gap: 2rem; margin-top: 1.5rem; }
         .muted { color: #555; }
-        .summary { display: flex; justify-content: space-between; align-items: flex-start; gap: 2rem; margin-top: 1rem; }
-        .totals { margin-left: auto; width: 16rem; }
-        .payment { font-size: 0.9rem; line-height: 1.5; }
+        .totals { margin-left: auto; width: 16rem; margin-top: 1rem; }
+        .payment { font-size: 0.85rem; line-height: 1.5; margin-top: 2.5rem; }
         .payment h2 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: #555; margin: 0 0 0.3rem; font-weight: 600; }
         .payment span.label { color: #555; display: inline-block; min-width: 7.5rem; }
         .totals div { display: flex; justify-content: space-between; padding: 0.2rem 0; }
@@ -22,6 +21,11 @@
         button, a.button { font: inherit; padding: 0.4rem 0.8rem; margin-right: 0.5rem; }
         @media print { .no-print { display: none; } body { margin: 0; } }
         @page { size: A4; margin: 2cm; }
+        {% if for_pdf and invoice.has_bank_details %}
+        /* The PDF pins payment details to the bottom left of the last page. */
+        .payment { position: running(payment); margin-top: 0; }
+        @page { margin-bottom: 4.5cm; @bottom-left { content: element(payment); vertical-align: bottom; width: 60%; padding-bottom: 0.4cm; } }
+        {% endif %}
     </style>
 </head>
 <body>
@@ -78,29 +82,12 @@
             {% endfor %}
         </tbody>
     </table>
-    <div class="summary">
-    {% if invoice.has_bank_details %}
-    <div class="payment">
-        <h2>Payment details</h2>
-        <div><span class="label">Beneficiary</span>{{ invoice.bank_beneficiary_name }}</div>
-        <div><span class="label">Bank</span>{{ invoice.bank_name }}</div>
-        {% if invoice.bank_kind == 'uk' %}
-        <div><span class="label">Sort code</span>{{ invoice.bank_sort_code_display }}</div>
-        <div><span class="label">Account number</span>{{ invoice.bank_account_number }}</div>
-        {% else %}
-        <div><span class="label">SWIFT/BIC</span>{{ invoice.bank_swift_bic }}</div>
-        <div><span class="label">IBAN</span>{{ invoice.bank_iban_display }}</div>
-        {% endif %}
-        <div><span class="label">Reference</span>{{ invoice.number_label }}</div>
-    </div>
-    {% endif %}
     <div class="totals">
         <div><span>Subtotal</span><span>{% include "invoices/partials/money.html" with amount=invoice.subtotal %}</span></div>
         <div><span>Tax {{ invoice.tax_rate|floatformat:2 }}%</span><span>{% include "invoices/partials/money.html" with amount=invoice.tax_amount %}</span></div>
         <div><strong>Total</strong><strong>{% include "invoices/partials/money.html" with amount=invoice.total %}</strong></div>
         <div><span>Paid</span><span>{% include "invoices/partials/money.html" with amount=invoice.amount_paid %}</span></div>
         <div><strong>Balance</strong><strong>{% include "invoices/partials/money.html" with amount=invoice.balance %}</strong></div>
-    </div>
     </div>
     {% if invoice.payments.all %}
     <h2>Payments</h2>
@@ -122,6 +109,21 @@
             {% endfor %}
         </tbody>
     </table>
+    {% endif %}
+    {% if invoice.has_bank_details %}
+    <div class="payment">
+        <h2>Payment details</h2>
+        <div><span class="label">Beneficiary</span>{{ invoice.bank_beneficiary_name }}</div>
+        <div><span class="label">Bank</span>{{ invoice.bank_name }}</div>
+        {% if invoice.bank_kind == 'uk' %}
+        <div><span class="label">Sort code</span>{{ invoice.bank_sort_code_display }}</div>
+        <div><span class="label">Account number</span>{{ invoice.bank_account_number }}</div>
+        {% else %}
+        <div><span class="label">SWIFT/BIC</span>{{ invoice.bank_swift_bic }}</div>
+        <div><span class="label">IBAN</span>{{ invoice.bank_iban_display }}</div>
+        {% endif %}
+        <div><span class="label">Reference</span>{{ invoice.number_label }}</div>
+    </div>
     {% endif %}
 </body>
 </html>
