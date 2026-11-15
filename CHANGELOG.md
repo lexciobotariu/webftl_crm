@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.43.0] - 2026-11-15
+
+**Bank accounts on invoices** (CRM-3): save the company's bank accounts in Settings and choose on each invoice which one is printed. Two database migrations (`crm.0005_bank_accounts`, `invoices.0010_invoice_bank_account`), both only add a table and empty columns; existing invoices get no bank details and print as before. Nothing to set in Dokploy, no new dependencies.
+
+### Added
+- Settings > **Bank accounts**: several accounts, each **UK** (beneficiary, bank, sort code, account number) or **International** (beneficiary, bank, SWIFT/BIC, IBAN), with an optional currency. Light checks catch typing errors: sort code 6 digits (shown 12-34-56), account number 8 digits, SWIFT/BIC 8 or 11 characters, IBAN checksum. Spaces and dashes are accepted and stored compact
+- **Default per currency**: one account per currency can be the default, and a default with no currency is the fallback. New invoices get the default for the client's currency; changing the invoice's client to another currency moves it to that currency's default
+- Invoice editor: **Bank account** selector in the header ("No bank details" leaves the block out)
+- Invoice print page and PDF (download, email attachment, client portal): **Payment details** block at the bottom left, next to the totals, with "Reference: INV-xxxx". A sent invoice's page shows the same details
+- Repeats: each new draft keeps the template's account; if that account was archived, it gets the currency default. "Convert to invoice" on an estimate uses the currency default. Estimates themselves carry no bank details
+
+### Changed
+- An invoice copies the account's details. Drafts follow later edits to the account; a sent invoice keeps the details it was sent with (they are locked with the rest of the invoice)
+- An account used on an invoice cannot be deleted, only archived (it then leaves the selector and stops being a default; Restore brings it back). A currency used by a bank account cannot be deleted
+
 ## [0.42.1] - 2026-11-13
 
 **Claude can check the CRM connector again**: adding the connector in claude.ai stopped at "Couldn't determine how this server signs in". No database migrations. In Dokploy, `ALWAYS_HTTPS=True` and `USE_X_FORWARDED_PROTO=True` must be set (done on 2026-11-13) so the sign-in addresses Claude reads are `https://`.

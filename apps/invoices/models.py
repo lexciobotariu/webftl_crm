@@ -72,6 +72,14 @@ _LOCKED_AFTER_SEND = (
     'currency_code',
     'currency_symbol',
     'symbol_before',
+    'bank_account_id',
+    'bank_kind',
+    'bank_beneficiary_name',
+    'bank_name',
+    'bank_sort_code',
+    'bank_account_number',
+    'bank_swift_bic',
+    'bank_iban',
     'number',
     'sent_at',
 )
@@ -116,6 +124,18 @@ class Invoice(models.Model):
     currency_code = models.CharField(max_length=3, blank=True, default='')
     currency_symbol = models.CharField(max_length=16, blank=True, default='')
     symbol_before = models.BooleanField(default=True)
+    # The account the client pays into, chosen in Settings > Bank accounts. Its
+    # details are copied so a sent invoice keeps them after the account changes.
+    bank_account = models.ForeignKey(
+        'crm.BankAccount', on_delete=models.PROTECT, null=True, blank=True, related_name='invoices',
+    )
+    bank_kind = models.CharField(max_length=13, blank=True, default='')
+    bank_beneficiary_name = models.CharField(max_length=255, blank=True, default='')
+    bank_name = models.CharField(max_length=255, blank=True, default='')
+    bank_sort_code = models.CharField(max_length=6, blank=True, default='')
+    bank_account_number = models.CharField(max_length=8, blank=True, default='')
+    bank_swift_bic = models.CharField(max_length=11, blank=True, default='')
+    bank_iban = models.CharField(max_length=34, blank=True, default='')
     sent_at = models.DateTimeField(null=True, blank=True)
     # A sent invoice that no longer stands. It keeps its number and lines, owes
     # nothing, and cannot be reopened.
@@ -146,6 +166,19 @@ class Invoice(models.Model):
     @property
     def is_draft(self):
         return self.sent_at is None
+
+    @property
+    def has_bank_details(self):
+        return bool(self.bank_kind)
+
+    @property
+    def bank_sort_code_display(self):
+        code = self.bank_sort_code
+        return f'{code[0:2]}-{code[2:4]}-{code[4:6]}' if len(code) == 6 else code
+
+    @property
+    def bank_iban_display(self):
+        return ' '.join(self.bank_iban[i:i + 4] for i in range(0, len(self.bank_iban), 4))
 
     @property
     def subtotal(self):

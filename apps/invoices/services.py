@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from apps.crm.models import Company
+from apps.crm.models import BankAccount, Company
 
 from .models import Invoice, InvoiceLine, Payment, money
 
@@ -47,6 +47,29 @@ def currency_snapshot(client):
     }
 
 
+BANK_FIELDS = (
+    'bank_kind', 'bank_beneficiary_name', 'bank_name', 'bank_sort_code',
+    'bank_account_number', 'bank_swift_bic', 'bank_iban',
+)
+
+# ``create_invoice`` picks the default account for the currency unless told otherwise.
+DEFAULT_ACCOUNT = object()
+
+
+def bank_snapshot(account):
+    """The account and a copy of its details; ``None`` clears them."""
+    if account is None:
+        return {'bank_account': None, **{name: '' for name in BANK_FIELDS}}
+    return {'bank_account': account, **account.snapshot()}
+
+
+def usable_account(account, currency_code):
+    """``account`` if it is still active, else the default for the currency."""
+    if account is not None and account.archived_at is None:
+        return account
+    return BankAccount.default_for(currency_code)
+
+
 def check_project(client, project):
     """A document's project must belong to its client."""
     if project is not None and project.client_id != client.pk:
@@ -58,13 +81,22 @@ def _next_number():
     return (last.number if last else 0) + 1
 
 
-def create_invoice(*, client, issue_date, due_date, tax_rate, project=None):
-    """Allocate the next number and store bill-to, company, and currency."""
+def create_invoice(
+    *, client, issue_date, due_date, tax_rate, project=None, bank_account=DEFAULT_ACCOUNT,
+):
+    """Allocate the next number and store bill-to, company, currency and bank account.
+
+    Without ``bank_account`` the invoice gets the default account for the client's currency.
+    """
     check_project(client, project)
+    currency = currency_snapshot(client)
+    if bank_account is DEFAULT_ACCOUNT:
+        bank_account = BankAccount.default_for(currency['currency_code'])
     snapshot = {
-        **currency_snapshot(client),
+        **currency,
         **company_snapshot(),
         **bill_to_snapshot(client),
+        **bank_snapshot(bank_account),
     }
     rate = money(tax_rate)
     for _ in range(5):
@@ -84,8 +116,14 @@ def create_invoice(*, client, issue_date, due_date, tax_rate, project=None):
     raise IntegrityError('Could not allocate an invoice number.')
 
 
-def update_invoice(invoice, *, client, issue_date, due_date, tax_rate, project=None):
-    """Update a draft. Changing the client refreshes bill-to and currency."""
+def update_invoice(
+    invoice, *, client, issue_date, due_date, tax_rate, project=None, bank_account=DEFAULT_ACCOUNT,
+):
+    """Update a draft. Changing the client refreshes bill-to and currency.
+
+    ``bank_account`` left out keeps the account, unless the new client's currency
+    calls for another: an account kept for one currency moves to the new default.
+    """
     check_project(client, project)
     with transaction.atomic():
         locked = Invoice.objects.select_for_update().get(pk=invoice.pk)
@@ -101,6 +139,15 @@ def update_invoice(invoice, *, client, issue_date, due_date, tax_rate, project=N
             for key, value in bill_to_snapshot(client).items():
                 setattr(locked, key, value)
             for key, value in currency_snapshot(client).items():
+                setattr(locked, key, value)
+            current = locked.bank_account
+            if bank_account is DEFAULT_ACCOUNT and (
+                current is None
+                or (current.currency_id and current.currency.code != locked.currency_code)
+            ):
+                bank_account = BankAccount.default_for(locked.currency_code)
+        if bank_account is not DEFAULT_ACCOUNT:
+            for key, value in bank_snapshot(bank_account).items():
                 setattr(locked, key, value)
         locked.project = project
         locked.issue_date = issue_date

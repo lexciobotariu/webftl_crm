@@ -1,13 +1,16 @@
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.db.models import ProtectedError
+from django.db.models import Count, ProtectedError
+from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.accounts.decorators import require_admin
 
-from .forms import CompanyForm, CurrencyForm, StorageForm, ThemeForm
-from .models import Company, Currency
+from .forms import BankAccountForm, CompanyForm, CurrencyForm, StorageForm, ThemeForm
+from .models import BankAccount, Company, Currency
 
 
 def _settings_page(
@@ -32,6 +35,9 @@ def _settings_page(
             'currency_form': currency_form,
             'currencies': Currency.objects.order_by('code'),
             'currency_error': currency_error,
+            'bank_accounts': BankAccount.objects.select_related('currency').annotate(
+                invoice_count=Count('invoices'),
+            ).order_by('archived_at', 'label', 'pk'),
         },
         status=status,
     )
@@ -102,6 +108,14 @@ def currency_delete(request, pk):
             currency_error='This currency is used by a client.',
             status=400,
         )
+    if currency.bank_accounts.exists():
+        return _settings_page(
+            request,
+            CompanyForm(instance=Company.load()),
+            CurrencyForm(),
+            currency_error='This currency is used by a bank account.',
+            status=400,
+        )
     try:
         currency.delete()
     except ProtectedError:
@@ -113,3 +127,59 @@ def currency_delete(request, pk):
             status=400,
         )
     return redirect('settings')
+
+
+def _bank_account_page(request, form, account=None, status=200):
+    return render(
+        request, 'crm/bank_account_form.html',
+        {'form': form, 'account': account}, status=status,
+    )
+
+
+@login_required
+@require_admin
+def bank_account_add(request):
+    if request.method == 'POST':
+        form = BankAccountForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect(f"{reverse('settings')}#bank-accounts")
+        return _bank_account_page(request, form, status=400)
+    return _bank_account_page(request, BankAccountForm())
+
+
+@login_required
+@require_admin
+def bank_account_edit(request, pk):
+    account = get_object_or_404(BankAccount, pk=pk)
+    if request.method == 'POST':
+        form = BankAccountForm(request.POST, instance=account)
+        if form.is_valid():
+            form.save()
+            return redirect(f"{reverse('settings')}#bank-accounts")
+        return _bank_account_page(request, form, account, status=400)
+    return _bank_account_page(request, BankAccountForm(instance=account), account)
+
+
+@login_required
+@require_admin
+@require_POST
+def bank_account_archive(request, pk):
+    """Archive hides the account from new invoices; restore brings it back."""
+    account = get_object_or_404(BankAccount, pk=pk)
+    account.archived_at = None if account.archived_at else timezone.now()
+    account.save()
+    return redirect(f"{reverse('settings')}#bank-accounts")
+
+
+@login_required
+@require_admin
+@require_POST
+def bank_account_delete(request, pk):
+    """Only an account no invoice uses can go; the others are archived."""
+    account = get_object_or_404(BankAccount, pk=pk)
+    try:
+        account.delete()
+    except ProtectedError:
+        return HttpResponseBadRequest('This account is on an invoice. Archive it instead.')
+    return redirect(f"{reverse('settings')}#bank-accounts")
