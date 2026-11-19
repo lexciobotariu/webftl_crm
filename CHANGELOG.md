@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.48.1] - 2026-11-19
+
+Layout follow-up to 0.48.0. No migrations, nothing to set in Dokploy, no new dependencies.
+
+### Changed
+- **Repeat** shows as property rows like the others: Repeat, Every, On (weekdays) or On day, and Until, each with its label on the left. Until is a date in a dropdown, like Due date. In the task drawer every change saves at once
+- The client **Vault** card looks like Projects and To-Dos (count next to the title) and has one accent **Add entry** button; Login or Note is chosen in the drawer
+- **Add contact** on the client profile is an accent button, like Add Project
+
 ## [0.48.0] - 2026-11-19
 
 **Services is removed**: a maintenance contract is now a normal project with start and end dates, a recurring invoice on that project (Invoices > Repeat, with the project in the header) and tasks that **repeat**. Clients get a **Vault** for logins and private notes. Six database migrations; projects, tasks, logged time and recurring invoices are kept:
