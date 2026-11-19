@@ -1,12 +1,16 @@
-"""Recurring tasks: when a rule repeats, and the task it creates each time.
+"""Repeating tasks: "Repeat" in the task drawer, and the copies it makes.
 
-A ``RecurringTask`` repeats every ``interval`` days, weeks, months or years
-from its start date, until its end date. The daily job (the
-``create_recurring_invoices`` command) calls ``create_due_tasks``: each rule
-whose next date has come gets the task of the latest date that has come, even
-when the previous task is still open, so every period has its own task. Dates
-that went by without a task (the job did not run, the rule was paused, the
-project was not Active) are skipped, not created late.
+Setting Repeat on a task puts it in a series (``RecurringTask``, the schedule
+only): every ``interval`` days, weeks, months or years, until an optional end
+date. The daily job (the ``create_recurring_invoices`` command) calls
+``create_due_tasks``: each series whose next date has come gets a copy of its
+latest task for the latest date that has come, even when the previous task is
+still open. A copy is a normal task: same title, description, assignee,
+priority, estimate, billing, labels and sub-tasks (unticked), in the first
+column, with its due date as far from its start as on the task it copies.
+Dates that went by without a task (the job did not run, the project was not
+Active) are skipped, not created late. Repeat set to Never on any task of the
+series ends it; the tasks already made stay.
 """
 import calendar
 import logging
@@ -121,47 +125,90 @@ def describe(rule):
     return every
 
 
-def date_label(rule, day):
-    """What goes after the title: "November 2026", "2026", "19 Nov 2026"."""
-    if rule.frequency == RecurringTask.MONTHLY:
-        return f'{day:%B %Y}'
-    if rule.frequency == RecurringTask.YEARLY:
-        return f'{day:%Y}'
-    return f'{day:%-d %b %Y}'
+# --- Setting Repeat on a task ---------------------------------------------
+
+FREQUENCIES = {RecurringTask.DAILY, RecurringTask.WEEKLY, RecurringTask.MONTHLY, RecurringTask.YEARLY}
 
 
-def task_title(rule, day):
-    return f'{rule.title} · {date_label(rule, day)}' if rule.add_date_to_title else rule.title
+def parse_repeat(data):
+    """Read Repeat from a form (``repeat``, ``repeat_interval``, ``repeat_days``,
+    ``repeat_month_day``, ``repeat_end``). Returns a dict, or None for Never.
+
+    Raises ValidationError on a value that makes no sense.
+    """
+    frequency = (data.get('repeat') or '').strip()
+    if frequency in ('', 'never'):
+        return None
+    if frequency not in FREQUENCIES:
+        raise ValidationError('Choose how often it repeats.')
+    try:
+        interval = int(data.get('repeat_interval') or 1)
+    except ValueError:
+        raise ValidationError('Repeat every must be a number.') from None
+    if not 1 <= interval <= 99:
+        raise ValidationError('Repeat every 1 to 99.')
+    days = data.getlist('repeat_days') if hasattr(data, 'getlist') else (data.get('repeat_days') or [])
+    weekdays = sorted({int(day) for day in days if str(day).isdigit() and int(day) < 7})
+    raw_day = str(data.get('repeat_month_day') or '').strip()
+    month_day = int(raw_day) if raw_day.isdigit() and int(raw_day) <= 31 else None
+    raw_end = data.get('repeat_end') or ''
+    end_date = date_of(raw_end) if raw_end else None
+    if raw_end and end_date is None:
+        raise ValidationError('The end date is not a date.')
+    return {
+        'frequency': frequency,
+        'interval': interval,
+        'weekdays': ','.join(str(day) for day in weekdays) if frequency == RecurringTask.WEEKLY else '',
+        'month_day': month_day if frequency == RecurringTask.MONTHLY else None,
+        'end_date': end_date,
+    }
 
 
-# --- Saving a rule -------------------------------------------------------
+def set_repeat(task, spec, user=None, today=None):
+    """Make ``task`` repeat as ``spec`` (from ``parse_repeat``), change its series, or end it (None).
 
-
-def schedule(rule, today=None):
-    """Set the rule's next date: its first date from today on (or from its start).
-
-    Called when a rule is saved: a rule created or changed today does not get
-    the tasks of dates already gone; "Create now" makes today's period's task.
+    A task that does not repeat yet starts a series from today: it counts as
+    the current period's task, and the first copy comes on the next date.
+    Returns the series, or None.
     """
     today = today or timezone.localdate()
-    rule.next_date = first_on_or_after(rule, today)
+    rule = task.recurring
+    if spec is None:
+        if rule is not None:
+            rule.delete()  # the tasks stay, out of the series
+            task.recurring, task.recurring_date = None, None
+        return None
+    if spec['end_date'] and spec['end_date'] < today:
+        raise ValidationError('The end date has passed.')
+    with transaction.atomic():
+        if rule is None:
+            rule = RecurringTask(project=task.project, start_date=today, created_by=user)
+        for name, value in spec.items():
+            setattr(rule, name, value)
+        rule.next_date = next_after(rule, today)
+        rule.save()
+        if task.recurring_id != rule.pk:
+            task.recurring = rule
+            task.recurring_date = latest_on_or_before(rule, today) or today
+            Task.objects.filter(pk=task.pk).update(recurring=rule, recurring_date=task.recurring_date)
     return rule
 
 
-def validate(rule):
-    if rule.end_date and rule.end_date < rule.start_date:
-        raise ValidationError('The end date is before the start date.')
-    if rule.interval < 1:
-        raise ValidationError('Repeat at least every 1.')
+def summary(task):
+    """"Every month on day 1, until 31 Dec 2026", or "" when the task does not repeat."""
+    rule = task.recurring
+    if rule is None:
+        return ''
+    text = describe(rule)
+    if rule.end_date:
+        text += f', until {rule.end_date:%-d %b %Y}'
+    return text
 
 
 # --- Creating tasks ------------------------------------------------------
 
 
-def _status(rule):
-    if rule.status_id and rule.status.project_id == rule.project_id:
-        return rule.status
-    project = rule.project
+def _first_column(project):
     return (
         project.statuses.filter(category=Status.UNSTARTED, visible_on_board=True).first()
         or project.statuses.filter(visible_on_board=True).first()
@@ -169,37 +216,48 @@ def _status(rule):
     )
 
 
-def create_task_for(rule, day, user=None):
-    """The rule's task for ``day``, with its sub-tasks. None when that date already has one."""
+def _due_offset(task):
+    """How many days after its start the task is due, or None."""
+    if task.due_date is None:
+        return None
+    start = task.start_date or task.recurring_date or timezone.localtime(task.created_at).date()
+    return max((task.due_date - start).days, 0)
+
+
+def create_task_for(rule, day):
+    """A copy of the series' latest task for ``day``. None when that date has one or the series has no task."""
     if Task.objects.filter(recurring=rule, recurring_date=day).exists():
         return None
-    assignee = rule.assignee
+    source = rule.latest_task()
+    if source is None:
+        return None
+    assignee = source.assignee
     if assignee is not None and not get_assignable_users(rule.project).filter(pk=assignee.pk).exists():
         assignee = None
+    offset = _due_offset(source)
     try:
         with transaction.atomic():
             task = Task(
                 project=rule.project,
-                status=_status(rule),
-                title=task_title(rule, day)[:1000],
-                description=rule.description,
+                status=_first_column(rule.project),
+                title=source.title,
+                description=source.description,
                 assignee=assignee,
-                priority=rule.priority,
+                priority=source.priority,
                 start_date=day,
-                due_date=day + timedelta(days=rule.due_after_days) if rule.due_after_days is not None else None,
-                estimate_minutes=rule.estimate_minutes,
-                billable=rule.billable,
+                due_date=day + timedelta(days=offset) if offset is not None else None,
+                estimate_minutes=source.estimate_minutes,
+                billable=source.billable,
                 recurring=rule,
                 recurring_date=day,
             )
-            task._changed_by = user
             task.save()
-            labels = list(rule.labels.filter(project=rule.project))
+            labels = list(source.labels.all())
             if labels:
                 task.labels.set(labels)
             Subtask.objects.bulk_create([
-                Subtask(task=task, title=title[:255], order=index)
-                for index, title in enumerate(rule.checklist_items)
+                Subtask(task=task, title=subtask.title, order=index)
+                for index, subtask in enumerate(source.subtasks.order_by('order', 'pk'))
             ])
     except IntegrityError:
         # Created at the same moment by another run.
@@ -207,25 +265,8 @@ def create_task_for(rule, day, user=None):
     return task
 
 
-def create_now(rule, user=None, today=None):
-    """Create the task of the rule's current period now. Returns (date, task); task None when it exists.
-
-    Raises ValidationError when the rule has not started yet or has ended.
-    """
-    today = today or timezone.localdate()
-    day = latest_on_or_before(rule, today)
-    if day is None:
-        raise ValidationError(f'It starts on {first_on_or_after(rule, rule.start_date):%-d %b %Y}.'
-                              if first_on_or_after(rule, rule.start_date) else 'Its schedule has ended.')
-    task = create_task_for(rule, day, user)
-    if rule.next_date is None or rule.next_date <= day:
-        rule.next_date = next_after(rule, day)
-        rule.save(update_fields=['next_date', 'updated_at'])
-    return day, task
-
-
 def create_due_tasks(today=None):
-    """Create the task of every rule whose next date has come. Returns the tasks created."""
+    """Create the task of every series whose next date has come. Returns the tasks created."""
     today = today or timezone.localdate()
     created = []
     rules = RecurringTask.objects.filter(next_date__isnull=False, next_date__lte=today).select_related('project')
@@ -236,19 +277,15 @@ def create_due_tasks(today=None):
                 if item > today:
                     break
                 day = item
-            if day is not None and not rule.paused and rule.project.status == Project.ACTIVE:
+            if day is not None and rule.project.status == Project.ACTIVE:
                 task = create_task_for(rule, day)
                 if task is not None:
                     created.append(task)
             rule.next_date = next_after(rule, day or today)
             rule.save(update_fields=['next_date', 'updated_at'])
         except Exception:
-            logger.exception('Recurring task %s could not create its task', rule.pk)
+            logger.exception('Repeating task %s could not create its task', rule.pk)
     return created
-
-
-def recent_tasks(rule, count=4):
-    return list(rule.tasks.select_related('status', 'project').order_by('-recurring_date')[:count])
 
 
 def date_of(value):

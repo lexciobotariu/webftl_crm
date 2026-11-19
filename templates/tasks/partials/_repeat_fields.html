@@ -1,0 +1,42 @@
+{% comment %}The Repeat fields, inside an element whose Alpine state has `freq`. Shared by the task drawer
+(repeat_property.html) and the create forms (task_form_fields.html). repeat_rule is the task's series, if any.{% endcomment %}
+{% now "j" as today_day %}
+{% with field="bg-panel border border-border-subtle rounded-control px-2 py-1.5 text-sm text-zinc-100 focus:border-border-strong focus:outline-none" %}
+<div class="space-y-3">
+    <label class="block">
+        <span class="sr-only">Repeat</span>
+        <select name="repeat" x-model="freq" class="{{ field }} w-full">
+            <option value="never">Does not repeat</option>
+            <option value="daily" {% if repeat_rule.frequency == 'daily' %}selected{% endif %}>Daily</option>
+            <option value="weekly" {% if repeat_rule.frequency == 'weekly' %}selected{% endif %}>Weekly</option>
+            <option value="monthly" {% if repeat_rule.frequency == 'monthly' %}selected{% endif %}>Monthly</option>
+            <option value="yearly" {% if repeat_rule.frequency == 'yearly' %}selected{% endif %}>Yearly</option>
+        </select>
+    </label>
+    <div x-show="freq !== 'never'" {% if not repeat_rule %}style="display:none"{% endif %} class="space-y-3">
+        <label class="flex items-center gap-2 text-sm text-zinc-400">Every
+            <input type="number" name="repeat_interval" min="1" max="99" value="{{ repeat_rule.interval|default:1 }}" class="{{ field }} w-16">
+            <span x-text="{daily: 'day(s)', weekly: 'week(s)', monthly: 'month(s)', yearly: 'year(s)'}[freq] || ''"></span>
+        </label>
+        <fieldset x-show="freq === 'weekly'" {% if repeat_rule.frequency != 'weekly' %}style="display:none"{% endif %}>
+            <legend class="text-xs text-zinc-500 mb-1">On</legend>
+            <div class="flex flex-wrap gap-x-3 gap-y-1">
+                {% for value, name in weekday_choices %}
+                <label class="inline-flex items-center gap-1 text-xs text-zinc-300"><input type="checkbox" name="repeat_days" value="{{ value }}" {% if value in repeat_days %}checked{% endif %} class="w-3.5 h-3.5 bg-elevated border-border-subtle rounded">{{ name }}</label>
+                {% endfor %}
+            </div>
+            <p class="text-[11px] text-zinc-600 mt-1">None ticked: the same day as today.</p>
+        </fieldset>
+        <label x-show="freq === 'monthly'" {% if repeat_rule.frequency != 'monthly' %}style="display:none"{% endif %} class="flex items-center gap-2 text-sm text-zinc-400">On day
+            <select name="repeat_month_day" class="{{ field }}">
+                {% for day in month_days %}<option value="{{ day }}" {% if repeat_rule %}{% if repeat_rule.month_day == day %}selected{% endif %}{% elif day|stringformat:'s' == today_day %}selected{% endif %}>{{ day }}</option>{% endfor %}
+                <option value="0" {% if repeat_rule.month_day == 0 %}selected{% endif %}>Last day</option>
+            </select>
+        </label>
+        <label class="flex items-center gap-2 text-sm text-zinc-400">Until
+            <input type="date" name="repeat_end" value="{{ repeat_rule.end_date|date:'Y-m-d' }}" class="{{ field }}">
+        </label>
+        <p class="text-[11px] text-zinc-500">A copy of the latest task is created on each date, with its sub-tasks unticked, even if the previous one is still open.</p>
+    </div>
+</div>
+{% endwith %}

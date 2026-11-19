@@ -11,5 +11,4 @@ urlpatterns = [
     path('estimates/<int:pk>/', views.estimate_detail, name='portal_estimate'),
     path('estimates/<int:pk>/pdf/', views.estimate_pdf_view, name='portal_estimate_pdf'),
     path('invoices/<int:pk>/pdf/', views.invoice_pdf_view, name='portal_invoice_pdf'),
-    path('services/<int:pk>/pdf/', views.service_report_pdf_view, name='portal_service_report_pdf'),
 ]

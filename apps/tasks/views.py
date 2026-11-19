@@ -44,6 +44,7 @@ from .listview import (
     resolve_view,
 )
 from .models import Attachment, MyTasksView, Subtask, Task, TaskActivity, TimeEntry
+from .recurring_views import REPEAT_CHOICES, can_repeat, repeat_context
 from .templatetags.task_markdown import MAX_LENGTH as MARKDOWN_MAX_LENGTH
 from .viewspec import CATEGORIES, LIMIT_STEP, SORTS, TaskViewOptions, column_choices, sort_choices
 
@@ -214,6 +215,7 @@ def _create_context(project, form, status, **extra):
         'selected_assignee': next((u for u in team_members if str(u.pk) == chosen), None),
         'project_labels': project.labels.all(),
         'priority_choices': Task.PRIORITY_CHOICES,
+        **REPEAT_CHOICES,
         **extra,
     }
 
@@ -239,6 +241,7 @@ def task_create(request, project_pk):
 
     if request.method == 'POST':
         form = TaskForm(project, request.POST)
+        repeat = _repeat_from(request.POST, form) if form.is_valid() else None
         if form.is_valid():
             from apps.tasks import services
 
@@ -250,6 +253,10 @@ def task_create(request, project_pk):
                 due_date=data['due_date'], estimate_minutes=data['estimate'],
                 billable=data['billable'], labels=data['labels'],
             )
+            if repeat is not None:
+                from apps.tasks import recurring
+
+                recurring.set_repeat(task, repeat, request.user)
             if request.htmx:
                 if request.POST.get('create_more'):
                     # Keep the drawer open on a fresh form in the same place: same status,
@@ -290,6 +297,22 @@ def task_create(request, project_pk):
     return render(request, 'tasks/task_form.html', context)
 
 
+def _repeat_from(data, form):
+    """Repeat chosen on the create form, or None; a wrong value becomes a form error."""
+    from django.core.exceptions import ValidationError
+
+    from apps.tasks import recurring
+
+    try:
+        spec = recurring.parse_repeat(data)
+        if spec and spec['end_date'] and spec['end_date'] < timezone.localdate():
+            raise ValidationError('The end date has passed.')
+        return spec
+    except ValidationError as error:
+        form.add_error(None, error.messages[0])
+        return None
+
+
 def render_task_drawer(request, task_id, embedded=False):
     """The task drawer, or a 403 when the person may not view the task.
 
@@ -298,7 +321,7 @@ def render_task_drawer(request, task_id, embedded=False):
     back or close buttons, and it does not open the drawer.
     """
     task = get_object_or_404(
-        Task.objects.select_related('project', 'status', 'assignee')
+        Task.objects.select_related('project', 'status', 'assignee', 'recurring')
         .prefetch_related('subtasks', 'attachments', 'labels', 'project__labels'),
         pk=task_id
     )
@@ -316,7 +339,7 @@ def render_task_drawer(request, task_id, embedded=False):
         'priority_choices': priority_choices,
         'embedded': embedded,
         'can_add_subtask': can_add_subtask(request.user, task),
-        'can_create_recurring': not embedded and can_create_task(request.user, task.project),
+        **repeat_context(task, can_repeat(request.user, task)),
         **_time_context(request.user, task),
     })
 
@@ -773,7 +796,7 @@ def attachment_delete(request, pk):
 def task_full_page(request, project_pk, task_pk):
     """Full page task view with properties sidebar."""
     task = get_object_or_404(
-        Task.objects.select_related('project', 'status', 'assignee')
+        Task.objects.select_related('project', 'status', 'assignee', 'recurring')
         .prefetch_related('subtasks', 'labels', 'project__labels'),
         pk=task_pk, project_id=project_pk
     )
@@ -788,6 +811,7 @@ def task_full_page(request, project_pk, task_pk):
         'project_labels': project_labels,
         'priority_choices': priority_choices,
         'can_add_subtask': can_add_subtask(request.user, task),
+        **repeat_context(task, can_repeat(request.user, task)),
         **_time_context(request.user, task),
     })
 

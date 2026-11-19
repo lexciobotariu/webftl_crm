@@ -79,7 +79,7 @@
         </div>
         {% endif %}
 
-        {% if deadlines.late_tasks or deadlines.week_tasks or deadlines.projects or money.overdue_invoices or follow_ups or service_alerts %}
+        {% if deadlines.late_tasks or deadlines.week_tasks or deadlines.projects or money.overdue_invoices or follow_ups %}
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6" id="dashboard-deadlines">
             {% if deadlines.late_tasks or deadlines.week_tasks or deadlines.projects %}
             <div class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden">
@@ -132,28 +132,6 @@
                             <span class="text-xs w-20 shrink-0 {% if lead.next_follow_up < today %}text-error{% elif lead.next_follow_up == today %}text-amber-400{% else %}text-zinc-400{% endif %}">{% if lead.next_follow_up == today %}Today{% else %}{{ lead.next_follow_up|date:"D j M" }}{% if lead.next_follow_up < today %}, late{% endif %}{% endif %}</span>
                             <span class="text-sm text-zinc-100 truncate flex-1"><i data-lucide="target" class="w-3.5 h-3.5 inline text-zinc-500 mr-1"></i>{{ lead.name }}</span>
                             <span class="text-xs text-zinc-500 truncate">{{ lead.status.name }}</span>
-                        </a>
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
-            {% endif %}
-            {% if service_alerts %}
-            <div class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden" id="dashboard-services">
-                <div class="px-4 py-2 border-b border-border-subtle bg-panel/80 flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <i data-lucide="layers" class="w-4 h-4 text-zinc-500"></i>
-                        <h2 class="text-sm font-medium text-zinc-100">Services</h2>
-                    </div>
-                    <a href="{% url 'service_list' %}" class="text-xs text-zinc-200 hover:text-zinc-50">All services</a>
-                </div>
-                <ul class="divide-y divide-border-subtle">
-                    {% for alert in service_alerts %}
-                    <li>
-                        <a href="{{ alert.url }}" class="px-4 py-2 flex items-center gap-3 hover:bg-elevated/50">
-                            <span class="text-xs w-20 shrink-0 {% if alert.state == 'late' %}text-error{% elif alert.day == today %}text-amber-400{% else %}text-zinc-400{% endif %}">{% if alert.day == today %}Today{% else %}{{ alert.day|date:"D j M" }}{% if alert.day < today %}, late{% endif %}{% endif %}</span>
-                            <span class="text-sm text-zinc-100 truncate flex-1"><i data-lucide="{{ alert.icon }}" class="w-3.5 h-3.5 inline text-zinc-500 mr-1"></i>{{ alert.label }}</span>
-                            <span class="text-xs {% if alert.state == 'late' %}text-error{% else %}text-zinc-500{% endif %} truncate">{{ alert.detail }}</span>
                         </a>
                     </li>
                     {% endfor %}

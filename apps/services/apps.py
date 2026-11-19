@@ -2,8 +2,9 @@ from django.apps import AppConfig
 
 
 class ServicesConfig(AppConfig):
+    """Removed in 0.48.0; kept for its migrations only (see models.py)."""
+
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'apps.services'
-    # The module began as "Maintenance": the label keeps its tables and migrations.
     label = 'maintenance'
-    verbose_name = 'Services'
+    verbose_name = 'Services (removed)'

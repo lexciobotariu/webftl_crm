@@ -374,7 +374,8 @@ class Task(models.Model):
     labels = models.ManyToManyField(Label, blank=True, related_name='tasks')
     order = models.PositiveIntegerField(default=0)
 
-    # Made by a recurring task (apps/tasks/recurring.py), for the date it was due to repeat.
+    # The repeating series the task belongs to ("Repeat" in the drawer, apps/tasks/recurring.py)
+    # and the date of the series it is for.
     recurring = models.ForeignKey(
         'RecurringTask', on_delete=models.SET_NULL, null=True, blank=True, related_name='tasks',
     )
@@ -481,12 +482,14 @@ class Task(models.Model):
 
 
 class RecurringTask(models.Model):
-    """A task that is created again on a schedule, on any project.
+    """The schedule of a repeating task: "Repeat" in the task drawer.
 
-    The daily job (``create_recurring_invoices``) creates the task of each date
-    that has come (``apps/tasks/recurring.py``), even when the previous one is
-    still open, so every period has its own task. Dates missed while the
-    project was not Active or the rule was paused are skipped.
+    It holds only when the task repeats. What each new task looks like comes
+    from the series' latest task (``Task.recurring``), so the copies are normal
+    tasks that anyone edits as usual. The daily job (``create_recurring_invoices``)
+    creates the task of each date that has come (``apps/tasks/recurring.py``),
+    even when the previous one is still open. Dates that pass while the project
+    is not Active are skipped.
     """
 
     DAILY = 'daily'
@@ -497,20 +500,6 @@ class RecurringTask(models.Model):
     LAST_DAY = 0  # month_day: the month's last day
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='recurring_tasks')
-    title = models.CharField(max_length=500)
-    description = models.TextField(blank=True)
-    # One sub-task per line.
-    checklist = models.TextField(blank=True)
-    # The status, assignee, priority, estimate, billing and labels each new task gets.
-    status = models.ForeignKey(Status, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
-    assignee = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
-    )
-    priority = models.CharField(max_length=20, choices=Task.PRIORITY_CHOICES, blank=True)
-    estimate_minutes = models.PositiveIntegerField(null=True, blank=True)
-    billable = models.BooleanField(default=True)
-    labels = models.ManyToManyField(Label, blank=True, related_name='recurring_tasks')
-
     # Every ``interval`` days, weeks, months or years from ``start_date``.
     frequency = models.CharField(max_length=10, choices=FREQUENCY_CHOICES, default=MONTHLY)
     interval = models.PositiveSmallIntegerField(default=1)
@@ -521,11 +510,6 @@ class RecurringTask(models.Model):
     month_day = models.PositiveSmallIntegerField(null=True, blank=True)
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)
-    # The new task is due this many days after it is created. Blank: no due date.
-    due_after_days = models.PositiveSmallIntegerField(null=True, blank=True)
-    # "Checks · November 2026" rather than "Checks".
-    add_date_to_title = models.BooleanField(default=True)
-    paused = models.BooleanField(default=False)
     # The next date that gets a task. Blank once the schedule has ended.
     next_date = models.DateField(null=True, blank=True)
 
@@ -536,7 +520,7 @@ class RecurringTask(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['title', 'pk']
+        ordering = ['pk']
         constraints = [
             models.CheckConstraint(condition=Q(interval__gte=1), name='recurring_interval_positive'),
             models.CheckConstraint(
@@ -545,15 +529,15 @@ class RecurringTask(models.Model):
         ]
 
     def __str__(self):
-        return self.title
+        return f'Repeat {self.pk} on {self.project_id}'
 
     @property
     def weekday_list(self):
         return sorted({int(day) for day in self.weekdays.split(',') if day.strip().isdigit() and int(day) < 7})
 
-    @property
-    def checklist_items(self):
-        return [line.strip() for line in self.checklist.splitlines() if line.strip()][:100]
+    def latest_task(self):
+        """The series' latest task: the one the next task is copied from."""
+        return self.tasks.order_by(models.F('recurring_date').desc(nulls_last=True), '-pk').first()
 
 
 def _on_project(user, project):

@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.48.0] - 2026-11-19
+
+**Services is removed**: a maintenance contract is now a normal project with start and end dates, a recurring invoice on that project (Invoices > Repeat, with the project in the header) and tasks that **repeat**. Clients get a **Vault** for logins and private notes. Six database migrations; projects, tasks, logged time and recurring invoices are kept:
+- `accounts.0018_access_vault` adds the Vault permission (on for the Admin preset only) and drops the Services one.
+- `vault.0001_initial` adds the vault tables. `vault.0002_from_sites` turns every site into a Note (address, who built it, platform, hosting, domain and SSL dates, admin and repository links, notes) and every site login into a Login called "site · label", in the site's client's Vault. Usernames, passwords and notes are copied still encrypted, never decrypted on the way.
+- `tasks.0030_repeat_from_task`: a repeating series now copies its latest task. The latest task of each series loses the date in its title ("Checks November 2026" becomes "Checks"); a series that has no task yet gets its first task now, for its first date, from the old settings (sub-tasks, assignee, labels, ...); a paused series is ended (its tasks stay). `tasks.0031_repeat_schedule_only` then drops the old settings from the series.
+- `maintenance.0005_remove_services` drops services, service types, overages, reports, sites and site logins, after the move above.
+
+Nothing to set in Dokploy (the daily `create_recurring_invoices` schedule creates the repeating tasks), no new dependencies.
+
+### Added
+- **Repeat** in a task's Properties (drawer, full page and New task): never, or every N days, weeks (on chosen days), months (on day N or the last day) or years, until an optional date. On each date the daily job copies the latest task of the series: title, description, assignee, priority, estimate, billing, labels and sub-tasks (unticked), in the first column, due as many days after its start as the task it copies. It comes even if the previous one is still open; dates missed while the project is not Active are skipped. Changing Repeat on any task of the series changes the series; "Stop repeating" ends it and keeps the tasks
+- **Vault** tab on the client page: Logins (address, username, password) and Notes, encrypted. Passwords and notes show only on "Show" or "Copy password", and each time is logged with who and when (also when the edit form is opened). Seen only with the new Vault permission (Admin by default). Never in search, Claude (MCP), the client portal or emails
+
+### Removed
+- **Services**: the Services page and sidebar link, the client Services and Sites tabs (sites and logins are in the Vault now), service types in Settings, the dashboard Services card, included hours and extra-hour billing, the monthly client report (and its portal section), renewal and domain/SSL reminders. Old `/services/` and `/maintenance/` links open Projects
+- The separate recurring-task list and drawer (Tasks > Recurring, "Make recurring"): Repeat on the task replaces them
+
 ## [0.47.0] - 2026-11-19
 
 **Maintenance becomes Services**, and **recurring tasks** on any project. Five database migrations, all keeping existing data:
