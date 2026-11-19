@@ -110,12 +110,22 @@ def _month_choices(plan, today):
 @require_permission('access_maintenance')
 def plan_detail(request, pk):
     plan = _plan_or_404(pk)
-    today = timezone.localdate()
-    month = services.parse_month(request.GET.get('month'), services.month_start(today))
-    used = services.usage(plan, month)
-    overage = plan.overages.filter(month=month).select_related('invoice').first()
+    return render(request, 'maintenance/plan_detail.html', _plan_context(request, plan, request.GET.get('month')))
+
+
+@login_required
+@require_permission('access_maintenance')
+def plan_sections(request, pk):
+    """The plan page's sections alone: reloaded when its tasks, time or checks change."""
+    plan = _plan_or_404(pk)
+    return _sections(request, plan, request.GET.get('month'))
+
+
+def _plan_context(request, plan, raw_month=None, check_form=None):
     from apps.tasks.models import Task, can_view_tasks_on
 
+    today = timezone.localdate()
+    month = services.parse_month(raw_month, services.month_start(today))
     can_see_tasks = can_view_tasks_on(request.user, plan.project)
     open_tasks = (
         Task.objects.filter(project=plan.project, closed_at__isnull=True)
@@ -123,25 +133,33 @@ def plan_detail(request, pk):
         if can_see_tasks else []
     )
     can_bill = request.user.has_app_permission('access_invoices') and request.user.has_app_permission('invoices_create')
-    return render(request, 'maintenance/plan_detail.html', {
+    return {
         'plan': plan,
         'sites': plan.sites.all(),
         'month': month,
         'months': _month_choices(plan, today),
-        'usage': used,
-        'overage': overage,
+        'usage': services.usage(plan, month),
+        'overage': plan.overages.filter(month=month).select_related('invoice').first(),
         'can_bill': can_bill,
         'can_see_tasks': can_see_tasks,
         'open_tasks': open_tasks,
         'checks': plan.checks.all(),
-        'check_form': CheckForm(),
+        'check_form': check_form or CheckForm(),
         'runs': plan.check_runs.select_related('task__status')[:6],
         'invoices': services.plan_invoices(plan)[:6] if request.user.has_app_permission('access_invoices') else [],
         'reports': plan.reports.all()[:12],
         'this_month': services.month_start(today),
         'last_month': services.month_start(services.month_start(today) - timedelta(days=1)),
         'today': today,
-    })
+    }
+
+
+def _sections(request, plan, raw_month=None, check_form=None, toast=''):
+    response = render(request, 'maintenance/partials/plan_sections.html',
+                      _plan_context(request, plan, raw_month, check_form))
+    if toast:
+        response['HX-Trigger'] = json.dumps({'infoToast': {'target': 'body', 'message': toast}})
+    return response
 
 
 @login_required
@@ -156,25 +174,19 @@ def plan_status(request, pk):
     return _redirect(reverse('maintenance_plan_detail', args=[plan.pk]))
 
 
-def _checks_panel(request, plan, form=None):
-    return render(request, 'maintenance/partials/checks.html', {
-        'plan': plan, 'checks': plan.checks.all(), 'check_form': form or CheckForm(),
-        'runs': plan.check_runs.select_related('task__status')[:6],
-    })
-
-
 @login_required
 @require_permission('access_maintenance')
 @require_POST
 def check_create(request, pk):
     plan = _plan_or_404(pk)
     form = CheckForm(request.POST)
-    if form.is_valid() and form.cleaned_data['title'].strip():
-        position = (plan.checks.aggregate(top=Max('position'))['top'] or 0) + 1
-        MaintenanceCheck.objects.create(plan=plan, title=form.cleaned_data['title'].strip(), position=position)
-        services.schedule_checks(plan)
-        form = None
-    return _checks_panel(request, plan, form)
+    title = form.cleaned_data['title'].strip() if form.is_valid() else ''
+    if not title:
+        return _sections(request, plan, request.POST.get('month'), check_form=form)
+    position = (plan.checks.aggregate(top=Max('position'))['top'] or 0) + 1
+    MaintenanceCheck.objects.create(plan=plan, title=title, position=position)
+    services.schedule_checks(plan)
+    return _sections(request, plan, request.POST.get('month'), toast=f'Check added: {title}')
 
 
 @login_required
@@ -182,8 +194,9 @@ def check_create(request, pk):
 @require_POST
 def check_delete(request, pk, check_pk):
     plan = _plan_or_404(pk)
-    get_object_or_404(MaintenanceCheck, pk=check_pk, plan=plan).delete()
-    return _checks_panel(request, plan)
+    check = get_object_or_404(MaintenanceCheck, pk=check_pk, plan=plan)
+    check.delete()
+    return _sections(request, plan, request.POST.get('month'), toast=f'Check removed: {check.title}')
 
 
 @login_required
@@ -194,9 +207,14 @@ def check_run(request, pk):
     plan = _plan_or_404(pk)
     if not plan.checks.exists():
         return HttpResponse('Add a check first.', status=400)
-    services.schedule_checks(plan)
-    services.create_due_checks()
-    return _checks_panel(request, plan)
+    if not plan.is_active:
+        return HttpResponse('The plan is not active.', status=400)
+    period, task = services.create_current_checks(plan, request.user)
+    if task is None:
+        toast = f'"{services.check_task_title(plan, period)}" was already created.'
+    else:
+        toast = f'Created {task.identifier}: {task.title}'
+    return _sections(request, plan, request.POST.get('month'), toast=toast)
 
 
 @login_required

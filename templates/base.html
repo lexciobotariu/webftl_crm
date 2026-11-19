@@ -242,6 +242,11 @@
             toast._hideTimer = setTimeout(() => toast.classList.add('hidden'), 2000);
         };
 
+        // A view answers HX-Trigger {"infoToast": {"target": "body", "message": "..."}} to confirm what it did.
+        document.body.addEventListener('infoToast', (event) => {
+            if (event.detail && event.detail.message) window.showInfoToast(event.detail.message);
+        });
+
         document.body.addEventListener('response:error', (event) => {
             const status = event.detail.status;
             // 5xx bodies are Django error pages (or worse, tracebacks) — never show them.

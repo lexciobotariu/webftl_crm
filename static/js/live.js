@@ -6,6 +6,11 @@
 // for the changed rows alone; a new task, a deleted one or a new status (the event
 // says "whole") reloads the list or board. Reloads use htmx's outerMorph (with the alpine-compat extension), so
 // scroll, focus and Alpine state survive them.
+//
+// A page can also show a summary built from a project's tasks (a maintenance plan's
+// hours, open tasks and checks): an element with data-live-section="<url>" is re-fetched
+// from that URL and morphed into place on any change, including changes this tab makes
+// in the task drawer (its taskChanged / taskStatusChanged / timerChanged events).
 (() => {
     const config = document.getElementById('live-tasks');
     if (!config || !window.EventSource || window.liveTasks) return;
@@ -18,7 +23,7 @@
         event.detail.headers['X-Tab-Id'] = tab;
     });
 
-    const pending = { view: false, whole: false, drawer: false, page: false, tasks: new Set() };
+    const pending = { view: false, whole: false, drawer: false, page: false, section: false, tasks: new Set() };
     // More changed rows than this at once: one reload of the view is cheaper.
     const MAX_ROWS = 5;
     let timer = null;
@@ -61,6 +66,7 @@
         return panel.querySelector('[data-live-task]');
     };
     const fullPage = () => document.querySelector('[data-live-page]');
+    const section = () => document.querySelector('[data-live-section]');
 
     // --- Refreshing --------------------------------------------------------------
     function flash(ids) {
@@ -98,6 +104,11 @@
         htmx.ajax('GET', window.location.href, { target: selector, select: selector, swap: 'outerMorph' });
     }
 
+    function refreshSection(el) {
+        pending.section = false;
+        htmx.ajax('GET', el.dataset.liveSection, { target: '#' + el.id, swap: 'outerMorph' });
+    }
+
     // Runs what is due, and comes back every second for what has to wait.
     function run() {
         timer = null;
@@ -119,7 +130,14 @@
         } else {
             pending.page = false;
         }
-        if (pending.view || pending.drawer || pending.page) timer = setTimeout(run, 1000);
+        const summary = section();
+        if (pending.section && summary) {
+            // Only typed text holds it back: focus alone (after adding a check) does not.
+            if (!hasDraft(summary) && !dropdownOpen(summary)) refreshSection(summary);
+        } else {
+            pending.section = false;
+        }
+        if (pending.view || pending.drawer || pending.page || pending.section) timer = setTimeout(run, 1000);
     }
 
     // Several changes in a row (Claude often makes a few) become one refresh.
@@ -137,11 +155,21 @@
         if (open && (!taskId || String(taskId) === open.dataset.liveTask)) pending.drawer = true;
         const page = fullPage();
         if (page && (!taskId || String(taskId) === page.dataset.livePage)) pending.page = true;
+        if (section()) pending.section = true;
         schedule(300);
     }
 
+    // This tab's own task changes are left out of its stream; a summary still follows them.
+    ['taskChanged', 'taskStatusChanged', 'timerChanged'].forEach((name) => {
+        document.body.addEventListener(name, () => {
+            if (!section()) return;
+            pending.section = true;
+            schedule(300);
+        });
+    });
+
     document.addEventListener('visibilitychange', () => {
-        if (!document.hidden && (pending.view || pending.drawer || pending.page)) schedule(0);
+        if (!document.hidden && (pending.view || pending.drawer || pending.page || pending.section)) schedule(0);
     });
 
     // --- The connection ----------------------------------------------------------

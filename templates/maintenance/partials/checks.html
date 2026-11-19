@@ -2,7 +2,7 @@
     <div class="px-4 py-2 border-b border-border-subtle bg-panel/80 flex items-center justify-between gap-3">
         <h2 class="text-sm font-medium text-zinc-100">Checks <span class="text-xs font-normal text-zinc-500">{{ plan.get_check_frequency_display|lower }}</span></h2>
         {% if checks and plan.status == 'active' %}
-        <button hx-post="{% url 'maintenance_check_run' plan.pk %}" hx-target="#plan-checks" hx-swap="outerHTML" class="text-xs text-zinc-300 hover:text-zinc-50 inline-flex items-center gap-1" title="Create the checks task of the current period now">
+        <button hx-post="{% url 'maintenance_check_run' plan.pk %}" hx-target="#plan-sections" hx-swap="outerMorph" hx-vals='{"month": "{{ month|date:'Y-m' }}"}' class="text-xs text-zinc-300 hover:text-zinc-50 inline-flex items-center gap-1" title="Create the checks task of the current period now">
             <i data-lucide="list-plus" class="w-3.5 h-3.5"></i>Create this period's task
         </button>
         {% endif %}
@@ -13,7 +13,7 @@
             {% for check in checks %}
             <li class="flex items-center justify-between gap-3 text-sm group">
                 <span class="flex items-center gap-2 text-zinc-200"><i data-lucide="square-check" class="w-3.5 h-3.5 text-zinc-500"></i>{{ check.title }}</span>
-                <button hx-post="{% url 'maintenance_check_delete' plan.pk check.pk %}" hx-target="#plan-checks" hx-swap="outerHTML" aria-label="Remove {{ check.title }}"
+                <button hx-post="{% url 'maintenance_check_delete' plan.pk check.pk %}" hx-target="#plan-sections" hx-swap="outerMorph" hx-vals='{"month": "{{ month|date:'Y-m' }}"}' aria-label="Remove {{ check.title }}"
                         class="p-1 text-zinc-600 hover:text-error opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
             </li>
             {% endfor %}
@@ -21,7 +21,7 @@
         {% else %}
         <p class="text-sm text-zinc-500">No checks yet. Each {% if plan.check_frequency == 'monthly' %}month{% else %}period{% endif %} the plan creates one task with a sub-task per check, in its project.</p>
         {% endif %}
-        <form hx-post="{% url 'maintenance_check_create' plan.pk %}" hx-target="#plan-checks" hx-swap="outerHTML" class="flex items-center gap-2">
+        <form hx-post="{% url 'maintenance_check_create' plan.pk %}" hx-target="#plan-sections" hx-swap="outerMorph" hx-vals='{"month": "{{ month|date:'Y-m' }}"}' data-after-success="reset" data-success-trigger="infoToast" class="flex items-center gap-2">
             {% csrf_token %}
             <label for="{{ check_form.title.id_for_label }}" class="sr-only">New check</label>
             {{ check_form.title }}
@@ -49,4 +49,3 @@
         {% endif %}
     </div>
 </section>
-<script>if (typeof lucide !== 'undefined') { lucide.createIcons(); }</script>
