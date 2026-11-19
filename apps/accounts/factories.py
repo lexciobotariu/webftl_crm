@@ -6,7 +6,7 @@ from apps.accounts.permissions import PermissionPreset
 User = get_user_model()
 
 
-# Mirrors the seeded Admin and Developer presets (migrations 0005 through 0015).
+# Mirrors the seeded Admin and Developer presets (migrations 0005 through 0016).
 SYSTEM_PRESET_DEFAULTS = {
     'Admin': {
         'description': 'Full access to all sections',
@@ -39,6 +39,7 @@ SYSTEM_PRESET_DEFAULTS = {
         'invoices_create': True,
         'invoices_edit': True,
         'access_leads': True,
+        'access_maintenance': True,
         'access_team': True,
         'team_create': True,
         'team_edit': True,
@@ -74,6 +75,7 @@ SYSTEM_PRESET_DEFAULTS = {
         'invoices_create': False,
         'invoices_edit': False,
         'access_leads': False,
+        'access_maintenance': False,
         'access_team': False,
         'team_create': False,
         'team_edit': False,

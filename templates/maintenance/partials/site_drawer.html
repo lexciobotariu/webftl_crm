@@ -1,0 +1,32 @@
+<div class="flex flex-col h-full">
+    {% if site %}{% include "maintenance/partials/drawer_header.html" with title="Edit site" icon="globe" %}{% else %}{% include "maintenance/partials/drawer_header.html" with title="New site" icon="globe" %}{% endif %}
+    <form hx-post="{% if site %}{% url 'maintenance_site_edit' site.pk %}{% else %}{% url 'maintenance_site_create' %}?client={{ client.pk }}{% endif %}" hx-target="#slide-over" hx-swap="innerHTML"
+          class="flex-1 overflow-y-auto p-4"
+          onkeydown="if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); this.requestSubmit(); }">
+        {% csrf_token %}
+        {% include "components/form_error_banner.html" %}
+        <p class="text-xs text-zinc-500 mb-4">{{ client.name }}</p>
+        <div class="grid grid-cols-2 gap-4" x-data="{ builtBy: '{{ form.built_by.value|default:'us' }}' }">
+            {% include "maintenance/partials/_field.html" with field=form.name %}
+            {% include "maintenance/partials/_field.html" with field=form.url %}
+            <div x-on:change="builtBy = $event.target.value">{% include "maintenance/partials/_field.html" with field=form.built_by %}</div>
+            <div x-show="builtBy === 'other'" {% if form.built_by.value != 'other' %}style="display: none"{% endif %}>{% include "maintenance/partials/_field.html" with field=form.built_by_name %}</div>
+            <div x-show="builtBy !== 'other'" {% if form.built_by.value == 'other' %}style="display: none"{% endif %}>{% include "maintenance/partials/_field.html" with field=form.project %}</div>
+            {% include "maintenance/partials/_field.html" with field=form.platform %}
+            {% include "maintenance/partials/_field.html" with field=form.hosting %}
+
+            <div class="col-span-2 pt-3 border-t border-border-subtle"><p class="text-xs uppercase tracking-wide text-zinc-500">Domain and certificate</p></div>
+            {% include "maintenance/partials/_field.html" with field=form.domain_registrar wide=True %}
+            {% include "maintenance/partials/_field.html" with field=form.domain_expires %}
+            {% include "maintenance/partials/_field.html" with field=form.ssl_expires %}
+
+            <div class="col-span-2 pt-3 border-t border-border-subtle"><p class="text-xs uppercase tracking-wide text-zinc-500">Technical</p></div>
+            {% include "maintenance/partials/_field.html" with field=form.admin_url %}
+            {% include "maintenance/partials/_field.html" with field=form.repo_url %}
+            {% include "maintenance/partials/_field.html" with field=form.notes wide=True %}
+        </div>
+        <p class="mt-4 text-xs text-zinc-500">Logins (hosting, admin, FTP) are added on the site's page, encrypted.</p>
+        {% if site %}{% include "maintenance/partials/drawer_buttons.html" with label="Save changes" %}{% else %}{% include "maintenance/partials/drawer_buttons.html" with label="Add site" %}{% endif %}
+    </form>
+</div>
+<script>if (typeof lucide !== 'undefined') { lucide.createIcons(); }</script>

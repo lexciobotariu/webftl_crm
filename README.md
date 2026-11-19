@@ -152,7 +152,8 @@ python manage.py create_recurring_invoices
 ```
 
 Running it more than once a day is harmless, and a missed day is caught up on
-the next run.
+the next run. The same command creates the monthly checks tasks of maintenance
+plans and renews (or ends) plans past their renewal date.
 
 ## File storage
 
