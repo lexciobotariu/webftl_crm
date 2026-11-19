@@ -59,11 +59,11 @@ def _estimates(client):
     return Estimate.objects.filter(client=client, sent_at__isnull=False)
 
 
-def _maintenance_reports(client):
+def _service_reports(client):
     """Monthly maintenance reports that were emailed to the client."""
-    from apps.maintenance.models import MaintenanceReport
+    from apps.services.models import ServiceReport
 
-    return MaintenanceReport.objects.filter(plan__client=client, sent_at__isnull=False).select_related('plan')
+    return ServiceReport.objects.filter(service__client=client, sent_at__isnull=False).select_related('service')
 
 
 def login(request):
@@ -123,7 +123,7 @@ def home(request):
         invoices=invoices,
         to_pay=[invoice for invoice in invoices if invoice.balance > 0],
         projects=projects,
-        maintenance_reports=_maintenance_reports(client)[:12],
+        service_reports=_service_reports(client)[:12],
     ))
 
 
@@ -173,10 +173,10 @@ def estimate_pdf_view(request, pk):
 
 
 @portal_login_required
-def maintenance_report_pdf_view(request, pk):
-    from apps.maintenance.services import report_filename, report_pdf
+def service_report_pdf_view(request, pk):
+    from apps.services.core import report_filename, report_pdf
 
-    report = get_object_or_404(_maintenance_reports(request.portal_client), pk=pk)
+    report = get_object_or_404(_service_reports(request.portal_client), pk=pk)
     response = HttpResponse(report_pdf(report), content_type='application/pdf')
     response['Content-Disposition'] = f'inline; filename="{report_filename(report)}"'
     return response

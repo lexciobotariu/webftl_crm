@@ -126,14 +126,14 @@
                         <span class="text-xs text-zinc-500 bg-panel px-1.5 py-0.5 rounded">{{ invoice_count }}</span>
                     </a>
                     {% endif %}
-                    {% if perms_map.access_maintenance %}
-                    <a href="{% url 'client_detail_maintenance' client.pk %}"
-                       class="w-full flex items-center justify-between px-3 py-2 rounded-control text-sm transition-colors text-left {% if active_tab == 'maintenance' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
+                    {% if perms_map.access_services %}
+                    <a href="{% url 'client_detail_services' client.pk %}"
+                       class="w-full flex items-center justify-between px-3 py-2 rounded-control text-sm transition-colors text-left {% if active_tab == 'services' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
                         <span class="flex items-center gap-3">
-                            <i data-lucide="wrench" class="w-4 h-4"></i>
-                            Maintenance
+                            <i data-lucide="layers" class="w-4 h-4"></i>
+                            Services
                         </span>
-                        <span class="text-xs text-zinc-500 bg-panel px-1.5 py-0.5 rounded">{{ maintenance_count }}</span>
+                        <span class="text-xs text-zinc-500 bg-panel px-1.5 py-0.5 rounded">{{ service_count }}</span>
                     </a>
                     <a href="{% url 'client_detail_sites' client.pk %}"
                        class="w-full flex items-center justify-between px-3 py-2 rounded-control text-sm transition-colors text-left {% if active_tab == 'sites' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200 hover:bg-elevated/50{% endif %}">
@@ -181,10 +181,10 @@
                     {% include "clients/partials/invoices_content.html" %}
                 </div>
             </div>
-            {% elif active_tab == 'maintenance' %}
-            {% include "maintenance/partials/client_plans.html" %}
+            {% elif active_tab == 'services' %}
+            {% include "services/partials/client_services.html" %}
             {% elif active_tab == 'sites' %}
-            {% include "maintenance/partials/client_sites.html" %}
+            {% include "services/partials/client_sites.html" %}
             {% elif active_tab == 'messages' %}
             {% include "clients/partials/messages_content.html" %}
             {% elif active_tab == 'notes' %}

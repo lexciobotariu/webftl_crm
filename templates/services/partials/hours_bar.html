@@ -1,0 +1,14 @@
+{% comment %}The month's hours against the included ones. Needs service and usage.{% endcomment %}
+{% if service.has_hour_limit %}
+<div class="min-w-[8rem]">
+    <div class="flex items-baseline justify-between gap-2 text-xs">
+        <span class="tabular-nums {% if usage.state == 'over' %}text-error{% elif usage.state == 'warn' %}text-amber-400{% else %}text-zinc-200{% endif %}">{{ usage.hours }} / {{ service.included_hours|floatformat:"-2" }} h</span>
+        {% if not compact %}<span class="text-zinc-500">{{ usage.month|date:"F" }}</span>{% endif %}
+    </div>
+    <div class="mt-1 h-1.5 rounded-full bg-elevated overflow-hidden" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ usage.percent }}" aria-label="Hours used">
+        <div class="h-full rounded-full {% if usage.state == 'over' %}bg-error{% elif usage.state == 'warn' %}bg-amber-400{% else %}bg-accent{% endif %}" style="width: {{ usage.percent }}%"></div>
+    </div>
+</div>
+{% else %}
+<span class="text-xs text-zinc-400 tabular-nums">{{ usage.hours }} h{% if not compact %} in {{ usage.month|date:"F" }}{% endif %}</span>
+{% endif %}

@@ -1,0 +1,23 @@
+{% load invoice_format %}
+<div class="flex flex-col h-full">
+    {% include "services/partials/drawer_header.html" with title="Repeating invoice" icon="repeat" %}
+    <form hx-post="{% url 'service_invoicing' service.pk %}" hx-target="#slide-over" hx-swap="innerHTML" hx-disable="find button[type=submit]"
+          class="flex-1 overflow-y-auto p-4"
+          onkeydown="if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); this.requestSubmit(); }">
+        {% csrf_token %}
+        {% include "components/form_error_banner.html" %}
+        <p class="text-sm text-zinc-300 mb-4">
+            A draft invoice for {{ service.client.name }} with one line,
+            <span class="text-zinc-100">{{ service.name }}</span>,
+            {% if service.price is not None %}{% client_money service.client service.price %}{% else %}<span class="text-error">no price set</span>{% endif %}.
+            It repeats {{ service.get_frequency_display|lower }} as a new draft, which you check and send. Drafts stop while the service is paused or ended.
+        </p>
+        <div class="grid grid-cols-2 gap-4">
+            {% include "services/partials/_field.html" with field=form.issue_date wide=True %}
+            {% include "services/partials/_field.html" with field=form.payment_days %}
+            {% include "services/partials/_field.html" with field=form.tax_rate %}
+        </div>
+        {% include "services/partials/drawer_buttons.html" with label="Create the first draft" %}
+    </form>
+</div>
+<script>if (typeof lucide !== 'undefined') { lucide.createIcons(); }</script>

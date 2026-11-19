@@ -47,6 +47,10 @@
                     New Task
                 </button>
                 {% endif %}
+                <a href="{% url 'recurring_list' project.pk %}" title="Recurring tasks" class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
+                    <i data-lucide="repeat" class="w-3.5 h-3.5"></i>
+                    Recurring
+                </a>
                 {% if can_edit_project %}
                 <a href="{% url 'project_settings' project.pk %}?next=tasks" class="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">
                     <i data-lucide="settings" class="w-3.5 h-3.5"></i>

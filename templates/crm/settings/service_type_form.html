@@ -1,0 +1,34 @@
+{% extends "crm/settings/_layout.html" %}
+
+{% block page_title %}{% if kind %}{{ kind.name }}{% else %}New service type{% endif %}{% endblock %}
+
+{% block settings_content %}
+<a href="{% url 'settings_service_types' %}" class="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-200 transition-colors">
+    <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>Service types
+</a>
+<form method="post" class="bg-card border border-border-subtle rounded-card overflow-hidden shadow-sm">
+    {% csrf_token %}
+    {% if kind %}
+    {% include "crm/settings/_card_header.html" with icon="layers" title=kind.name description="Changes apply to new services of this type. Existing services keep their own values." %}
+    {% else %}
+    {% include "crm/settings/_card_header.html" with icon="layers" title="New service type" description="Its values fill in a new service of this type; each service can change them." %}
+    {% endif %}
+    <div class="p-5 space-y-4">
+        {% if form.non_field_errors %}<p class="text-error text-sm">{{ form.non_field_errors.0 }}</p>{% endif %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {% for field in form %}
+            <div{% if field.name == 'name' or field.name == 'description' or field.name == 'checklist' %} class="sm:col-span-2"{% endif %}>
+                <label class="block text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}<p class="text-xs text-zinc-500 mt-1">{{ field.help_text }}</p>{% endif %}
+                {% if field.errors %}<p class="text-error text-sm mt-1">{{ field.errors.0 }}</p>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="px-5 py-3 border-t border-border-subtle bg-panel/60 flex items-center gap-3">
+        <button type="submit" class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">{% if kind %}Save type{% else %}Add type{% endif %}</button>
+        <a href="{% url 'settings_service_types' %}" class="text-sm text-zinc-400 hover:text-zinc-100">Cancel</a>
+    </div>
+</form>
+{% endblock %}

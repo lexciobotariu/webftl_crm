@@ -1,0 +1,48 @@
+{% extends "crm/settings/_layout.html" %}
+
+{% block page_title %}Service types{% endblock %}
+
+{% block settings_content %}
+{% url 'settings_service_type_add' as add_url %}
+<section class="bg-card border border-border-subtle rounded-card overflow-hidden shadow-sm">
+    {% include "crm/settings/_card_header.html" with icon="layers" title="Service types" description="The kinds of service you sell. A type fills in the price, hours and description of a new service, and can give it a monthly recurring task with sub-tasks." action_url=add_url action_label="Add type" %}
+    {% if error %}<p class="px-5 pt-4 text-sm text-error">{{ error }}</p>{% endif %}
+    {% if service_types %}
+    <div class="overflow-x-auto">
+    <table class="w-full">
+        <thead class="border-b border-border-subtle">
+            <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
+                <th class="px-5 py-2 font-medium">Name</th>
+                <th class="px-5 py-2 font-medium">Monthly task</th>
+                <th class="px-5 py-2 font-medium">Services</th>
+                <th class="px-5 py-2 font-medium w-32"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-border-subtle">
+            {% for kind in service_types %}
+            <tr>
+                <td class="px-5 py-3 text-sm text-zinc-100 min-w-[11rem]">
+                    <a href="{% url 'settings_service_type_edit' kind.pk %}" class="hover:text-zinc-50">{{ kind.name }}</a>
+                    {% if kind.description %}<span class="block text-xs text-zinc-500 truncate max-w-xs">{{ kind.description }}</span>{% endif %}
+                </td>
+                <td class="px-5 py-3 text-sm text-zinc-300">{% if kind.checklist.strip %}{{ kind.checklist_title|default:"Checks" }}{% else %}<span class="text-zinc-500">None</span>{% endif %}</td>
+                <td class="px-5 py-3 text-sm text-zinc-300 tabular-nums">{{ kind.service_count }}</td>
+                <td class="px-5 py-3 text-right whitespace-nowrap">
+                    <a href="{% url 'settings_service_type_edit' kind.pk %}" class="text-xs text-zinc-500 hover:text-zinc-100 transition-colors">Edit</a>
+                    {% if not kind.service_count %}
+                    <form method="post" action="{% url 'settings_service_type_delete' kind.pk %}" class="inline ml-3">
+                        {% csrf_token %}
+                        <button type="submit" class="text-xs text-zinc-500 hover:text-error transition-colors">Delete</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p class="px-5 py-4 text-sm text-zinc-500">No service types yet. Add Maintenance, Social media, Content, ... to fill in new services faster.</p>
+    {% endif %}
+</section>
+{% endblock %}

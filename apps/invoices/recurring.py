@@ -12,7 +12,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from apps.maintenance.services import paused_invoice
+from apps.services.core import paused_invoice
 
 from .models import RecurringInvoice
 from .services import add_line, create_invoice, usable_account
@@ -88,7 +88,7 @@ def _create_one(recurring):
 def create_due_invoices(today=None):
     """Create every draft that is due by ``today``. Returns the new invoices.
 
-    A client that has been archived, or a maintenance plan that is paused or
+    A client that has been archived, or a service that is paused or
     ended, gets no new drafts; its dates still move on.
     A schedule that cannot be invoiced (a client with no currency) is logged and
     left on its date, so it is tried again on the next run.
