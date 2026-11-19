@@ -1,42 +1,94 @@
-{% comment %}The Repeat fields, inside an element whose Alpine state has `freq`. Shared by the task drawer
-(repeat_property.html) and the create forms (task_form_fields.html). repeat_rule is the task's series, if any.{% endcomment %}
+{% comment %}Repeat as property rows (Repeat, Every, On, On day, Until), like the rows around it.
+Shared by the task drawer (repeat_property.html, which saves on every change: autosave) and the
+create forms (task_form_fields.html). repeat_rule is the task's series, if any.{% endcomment %}
 {% now "j" as today_day %}
-{% with field="bg-panel border border-border-subtle rounded-control px-2 py-1.5 text-sm text-zinc-100 focus:border-border-strong focus:outline-none" %}
-<div class="space-y-3">
-    <label class="block">
-        <span class="sr-only">Repeat</span>
-        <select name="repeat" x-model="freq" class="{{ field }} w-full">
-            <option value="never">Does not repeat</option>
-            <option value="daily" {% if repeat_rule.frequency == 'daily' %}selected{% endif %}>Daily</option>
-            <option value="weekly" {% if repeat_rule.frequency == 'weekly' %}selected{% endif %}>Weekly</option>
-            <option value="monthly" {% if repeat_rule.frequency == 'monthly' %}selected{% endif %}>Monthly</option>
-            <option value="yearly" {% if repeat_rule.frequency == 'yearly' %}selected{% endif %}>Yearly</option>
-        </select>
-    </label>
-    <div x-show="freq !== 'never'" {% if not repeat_rule %}style="display:none"{% endif %} class="space-y-3">
-        <label class="flex items-center gap-2 text-sm text-zinc-400">Every
-            <input type="number" name="repeat_interval" min="1" max="99" value="{{ repeat_rule.interval|default:1 }}" class="{{ field }} w-16">
-            <span x-text="{daily: 'day(s)', weekly: 'week(s)', monthly: 'month(s)', yearly: 'year(s)'}[freq] || ''"></span>
-        </label>
-        <fieldset x-show="freq === 'weekly'" {% if repeat_rule.frequency != 'weekly' %}style="display:none"{% endif %}>
-            <legend class="text-xs text-zinc-500 mb-1">On</legend>
-            <div class="flex flex-wrap gap-x-3 gap-y-1">
+{% with row="flex items-center py-2 px-2 hover:bg-hover rounded-card" label="flex items-center gap-2 w-28 shrink-0 text-zinc-500 text-sm" value_button="flex items-center gap-2 px-2 py-1.5 rounded-control text-sm text-zinc-300 hover:bg-elevated transition-colors disabled:cursor-default disabled:hover:bg-transparent" panel="absolute left-0 top-full mt-1 bg-elevated border border-border-subtle rounded-card shadow-lg z-20" option="w-full flex items-center gap-2 text-left px-3 py-2 text-sm hover:bg-hover-strong transition-colors text-zinc-300" field="bg-panel border border-border-subtle rounded-control px-2 py-1 text-sm text-zinc-100 focus:border-border-strong focus:outline-none" %}
+<div x-data="{ freq: '{% if repeat_rule %}{{ repeat_rule.frequency }}{% else %}{{ request.POST.repeat|default:'never' }}{% endif %}',
+              save() { {% if autosave %}$nextTick(() => document.getElementById('repeat-form-{{ task.pk }}').requestSubmit()){% endif %} } }"
+     class="space-y-1">
+    <!-- Repeat -->
+    <div class="{{ row }}">
+        <div class="{{ label }}"><i data-lucide="repeat" class="w-4 h-4"></i><span>Repeat</span></div>
+        <div class="flex-1 min-w-0 flex flex-wrap items-center gap-x-2">
+            <input type="hidden" name="repeat" :value="freq">
+            <div class="relative" x-data="{ open: false }">
+                <button type="button" {% if can_change %}@click="open = !open"{% else %}disabled{% endif %} class="{{ value_button }}">
+                    <span x-show="freq === 'never'" class="text-zinc-500" {% if repeat_rule %}style="display:none"{% endif %}>{% if can_change %}Does not repeat{% else %}No{% endif %}</span>
+                    <span x-show="freq !== 'never'" {% if not repeat_rule %}style="display:none"{% endif %}
+                          x-text="{daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly'}[freq]">{{ repeat_rule.frequency|capfirst }}</span>
+                </button>
+                {% if can_change %}
+                <div x-show="open" x-cloak @click.away="open = false" x-transition class="{{ panel }} w-44 py-1">
+                    {% for value, name in repeat_frequencies %}
+                    <button type="button" @click="freq = '{{ value }}'; open = false; save()" class="{{ option }}">{{ name }}</button>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% if repeat_rule and repeat_next %}<span class="text-xs text-zinc-500">Next task {{ repeat_next|date:"j M Y" }}</span>{% elif repeat_rule %}<span class="text-xs text-zinc-500">Ended</span>{% endif %}
+        </div>
+    </div>
+
+    <div x-show="freq !== 'never'" {% if not repeat_rule %}style="display:none"{% endif %} class="space-y-1">
+        <!-- Every -->
+        <div class="{{ row }}">
+            <div class="{{ label }}"><i data-lucide="iteration-cw" class="w-4 h-4"></i><span>Every</span></div>
+            <div class="flex-1 min-w-0 flex items-center gap-2 px-2 text-sm text-zinc-300">
+                <input type="number" name="repeat_interval" min="1" max="99" value="{{ repeat_rule.interval|default:1 }}"
+                       {% if can_change %}@change="save()"{% else %}disabled{% endif %} class="{{ field }} w-12" aria-label="Every">
+                <span x-text="{daily: 'day(s)', weekly: 'week(s)', monthly: 'month(s)', yearly: 'year(s)'}[freq] || ''"></span>
+            </div>
+        </div>
+
+        <!-- On (weekly) -->
+        <div class="{{ row }}" x-show="freq === 'weekly'" {% if repeat_rule.frequency != 'weekly' %}style="display:none"{% endif %}>
+            <div class="{{ label }}"><i data-lucide="calendar-days" class="w-4 h-4"></i><span>On</span></div>
+            <div class="flex-1 flex flex-wrap gap-1 px-2" title="None ticked: the same weekday as the day it starts">
                 {% for value, name in weekday_choices %}
-                <label class="inline-flex items-center gap-1 text-xs text-zinc-300"><input type="checkbox" name="repeat_days" value="{{ value }}" {% if value in repeat_days %}checked{% endif %} class="w-3.5 h-3.5 bg-elevated border-border-subtle rounded">{{ name }}</label>
+                <label class="cursor-pointer">
+                    <input type="checkbox" name="repeat_days" value="{{ value }}" {% if value in repeat_days %}checked{% endif %}
+                           {% if can_change %}@change="save()"{% else %}disabled{% endif %} class="peer sr-only">
+                    <span class="inline-block px-2 py-1 rounded-control text-xs border border-border-subtle text-zinc-400 hover:text-zinc-200 peer-checked:bg-accent peer-checked:border-accent peer-checked:text-on-accent peer-focus-visible:ring-1 peer-focus-visible:ring-border-strong">{{ name }}</span>
+                </label>
                 {% endfor %}
             </div>
-            <p class="text-[11px] text-zinc-600 mt-1">None ticked: the same day as today.</p>
-        </fieldset>
-        <label x-show="freq === 'monthly'" {% if repeat_rule.frequency != 'monthly' %}style="display:none"{% endif %} class="flex items-center gap-2 text-sm text-zinc-400">On day
-            <select name="repeat_month_day" class="{{ field }}">
-                {% for day in month_days %}<option value="{{ day }}" {% if repeat_rule %}{% if repeat_rule.month_day == day %}selected{% endif %}{% elif day|stringformat:'s' == today_day %}selected{% endif %}>{{ day }}</option>{% endfor %}
-                <option value="0" {% if repeat_rule.month_day == 0 %}selected{% endif %}>Last day</option>
-            </select>
-        </label>
-        <label class="flex items-center gap-2 text-sm text-zinc-400">Until
-            <input type="date" name="repeat_end" value="{{ repeat_rule.end_date|date:'Y-m-d' }}" class="{{ field }}">
-        </label>
-        <p class="text-[11px] text-zinc-500">A copy of the latest task is created on each date, with its sub-tasks unticked, even if the previous one is still open.</p>
+        </div>
+
+        <!-- On day (monthly) -->
+        <div class="{{ row }}" x-show="freq === 'monthly'" {% if repeat_rule.frequency != 'monthly' %}style="display:none"{% endif %}>
+            <div class="{{ label }}"><i data-lucide="calendar-days" class="w-4 h-4"></i><span>On day</span></div>
+            <div class="flex-1 px-2">
+                <select name="repeat_month_day" {% if can_change %}@change="save()"{% else %}disabled{% endif %} class="{{ field }}" aria-label="On day">
+                    {% for day in month_days %}<option value="{{ day }}" {% if repeat_rule.month_day is not None %}{% if repeat_rule.month_day == day %}selected{% endif %}{% elif day|stringformat:'s' == today_day %}selected{% endif %}>{{ day }}</option>{% endfor %}
+                    <option value="0" {% if repeat_rule.month_day == 0 %}selected{% endif %}>Last day</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Until: like Due date, a date in a dropdown -->
+        <div class="{{ row }}">
+            <div class="{{ label }}"><i data-lucide="calendar-x" class="w-4 h-4"></i><span>Until</span></div>
+            <div class="flex-1 relative" x-data="{ open: false, date: '{% if repeat_rule %}{{ repeat_rule.end_date|date:'Y-m-d' }}{% else %}{{ request.POST.repeat_end|default:'' }}{% endif %}' }">
+                <input type="hidden" name="repeat_end" :value="date" value="{{ repeat_rule.end_date|date:'Y-m-d' }}">
+                <button type="button" {% if can_change %}@click="open = !open"{% else %}disabled{% endif %} class="{{ value_button }}">
+                    <span x-show="date" class="flex items-center gap-2" {% if not repeat_rule.end_date %}style="display:none"{% endif %}>
+                        <i data-lucide="calendar" class="w-3.5 h-3.5 text-zinc-500"></i>
+                        <span x-text="date && new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })">{{ repeat_rule.end_date|date:"M d, Y" }}</span>
+                    </span>
+                    <span x-show="!date" class="text-zinc-500" {% if repeat_rule.end_date %}style="display:none"{% endif %}>No end date</span>
+                </button>
+                {% if can_change %}
+                <div x-show="open" x-cloak @click.away="open = false" x-transition class="{{ panel }} p-3">
+                    <input type="date" x-ref="end" :value="date" class="{{ field }} px-3 py-2" aria-label="Until">
+                    <div class="flex gap-2 mt-2">
+                        <button type="button" @click="date = $refs.end.value; open = false; save()" class="bg-accent text-on-accent px-3 py-1 rounded-control text-xs">{% if autosave %}Save{% else %}Done{% endif %}</button>
+                        <button type="button" x-show="date" @click="date = ''; open = false; save()" class="text-zinc-400 hover:text-error px-3 py-1 text-xs">Clear</button>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
     </div>
+    {% if repeat_error %}<p class="px-2 pl-[8.5rem] text-xs text-error">{{ repeat_error }}</p>{% endif %}
 </div>
 {% endwith %}

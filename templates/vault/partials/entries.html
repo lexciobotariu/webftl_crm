@@ -2,11 +2,21 @@
 Reloads itself after any change (vaultChanged).{% endcomment %}
 <section id="vault-entries" class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden" aria-label="Vault"
          hx-get="{% url 'vault_list' client.pk %}" hx-trigger="vaultChanged from:body" hx-swap="outerMorph">
-    <div class="px-4 py-2 border-b border-border-subtle bg-panel/80 flex items-center justify-between gap-3">
-        <h2 class="text-sm font-medium text-zinc-100 flex items-center gap-2"><i data-lucide="lock-keyhole" class="w-4 h-4 text-zinc-500"></i>Vault</h2>
-        <div class="flex items-center gap-3">
-            <button hx-get="{% url 'vault_create' client.pk %}?kind=login" hx-target="#slide-over" hx-swap="innerHTML" data-after-success="open-drawer" class="text-xs text-zinc-300 hover:text-zinc-50 inline-flex items-center gap-1"><i data-lucide="key-round" class="w-3.5 h-3.5"></i>New login</button>
-            <button hx-get="{% url 'vault_create' client.pk %}?kind=note" hx-target="#slide-over" hx-swap="innerHTML" data-after-success="open-drawer" class="text-xs text-zinc-300 hover:text-zinc-50 inline-flex items-center gap-1"><i data-lucide="file-lock" class="w-3.5 h-3.5"></i>New note</button>
+    <div class="px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <i data-lucide="lock-keyhole" class="w-4 h-4 text-zinc-500"></i>
+                <h2 class="text-sm font-medium text-zinc-100">Vault</h2>
+                <span class="text-xs text-zinc-500 bg-elevated px-1.5 py-0.5 rounded">{{ vault_rows|length }}</span>
+            </div>
+            <button hx-get="{% url 'vault_create' client.pk %}"
+                    hx-target="#slide-over"
+                    hx-swap="innerHTML"
+                    data-after-success="open-drawer"
+                    class="inline-flex items-center gap-1.5 bg-accent text-on-accent px-3 py-1.5 rounded-control text-xs font-medium hover:bg-accent-hover transition-colors">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                Add entry
+            </button>
         </div>
     </div>
     {% if vault_rows %}

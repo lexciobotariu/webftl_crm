@@ -1,32 +1,7 @@
-{% comment %}Repeat in the task drawer's properties (apps/tasks/recurring_views.py). Saving answers with this partial.{% endcomment %}
-<div class="relative" x-data="{ open: {% if repeat_error %}true{% else %}false{% endif %}, freq: '{{ repeat_rule.frequency|default:'never' }}' }">
-    <button type="button" {% if can_repeat %}@click="open = !open"{% else %}disabled{% endif %}
-            class="flex items-center gap-2 px-2 py-1 rounded-control text-sm text-zinc-300 hover:bg-elevated transition-colors disabled:cursor-default disabled:hover:bg-transparent text-left">
-        {% if repeat_summary %}
-        <i data-lucide="repeat" class="w-3.5 h-3.5 text-zinc-500 shrink-0"></i><span>{{ repeat_summary }}</span>
-        {% else %}
-        <span class="text-zinc-500">{% if can_repeat %}Does not repeat{% else %}No{% endif %}</span>
-        {% endif %}
-    </button>
-    {% if repeat_rule and repeat_next %}<p class="px-2 text-xs text-zinc-500">Next task {{ repeat_next|date:"j M Y" }}</p>{% elif repeat_rule %}<p class="px-2 text-xs text-zinc-500">Ended: no more tasks.</p>{% endif %}
-    {% if can_repeat %}
-    <div x-show="open" {% if not repeat_error %}style="display:none"{% endif %} @click.away="open = false" x-transition
-         class="absolute right-0 top-full mt-1 bg-elevated border border-border-subtle rounded-card shadow-lg z-20 p-3 w-64">
-        <form hx-post="{% url 'task_update_repeat' task.pk %}" hx-target="#repeat-value-{{ task.pk }}" hx-swap="innerHTML">
-            {% csrf_token %}
-            {% include "tasks/partials/_repeat_fields.html" %}
-            {% if repeat_error %}<p class="mt-2 text-xs text-error">{{ repeat_error }}</p>{% endif %}
-            <div class="flex gap-2 mt-3">
-                <button type="submit" class="bg-accent text-on-accent px-3 py-1 rounded-control text-xs">Save</button>
-                {% if repeat_rule %}
-                <button type="button" hx-post="{% url 'task_update_repeat' task.pk %}" hx-vals='{"repeat": "never"}'
-                        hx-target="#repeat-value-{{ task.pk }}" hx-swap="innerHTML"
-                        hx-confirm="Stop repeating? The tasks already created stay."
-                        class="text-zinc-400 hover:text-error px-3 py-1 text-xs">Stop repeating</button>
-                {% endif %}
-            </div>
-        </form>
-    </div>
-    {% endif %}
-</div>
+{% comment %}Repeat in the task drawer's properties (apps/tasks/recurring_views.py): the rows save on
+every change, and the answer is this partial again.{% endcomment %}
+<form id="repeat-form-{{ task.pk }}" hx-post="{% url 'task_update_repeat' task.pk %}" hx-target="#repeat-value-{{ task.pk }}" hx-swap="innerHTML">
+    {% csrf_token %}
+    {% include "tasks/partials/_repeat_fields.html" with repeat_rule=repeat_rule can_change=can_repeat autosave=True %}
+</form>
 <script>if (typeof lucide !== 'undefined') { lucide.createIcons(); }</script>

@@ -243,7 +243,7 @@ def test_drawer_shows_repeat_and_saves_it(client):
 
     response = _post_repeat(client, task, repeat='weekly', repeat_interval='1', repeat_days=['0', '3'])
     assert response.status_code == 200
-    assert b'Every week on Mon, Thu' in response.content
+    assert b'Next task ' in response.content and b'value="0" checked' in response.content
     trigger = json.loads(response['HX-Trigger'])
     assert trigger['infoToast']['message'].startswith('Repeats every week on Mon, Thu. Next task on ')
     assert f'taskUpdated-{task.pk}' in trigger

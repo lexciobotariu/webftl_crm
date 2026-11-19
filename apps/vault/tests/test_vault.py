@@ -134,3 +134,10 @@ def test_search_never_finds_the_vault():
     _entry(title='Zanzibar hosting', notes='Zanzibar codes')
     results = search(AdminUserFactory(), 'Zanzibar')
     assert 'Zanzibar' not in repr({key: value for key, value in vars(results).items() if key != 'query'})
+
+
+def test_the_vault_card_has_one_add_button(client):
+    client.force_login(AdminUserFactory())
+    entry = _entry()
+    page = client.get(reverse('client_detail_vault', args=[entry.client_id])).content.decode()
+    assert 'Add entry' in page and 'New login' not in page and 'New note' not in page

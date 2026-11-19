@@ -17,6 +17,10 @@ from . import recurring
 from .models import Task, can_create_task, can_edit_task
 
 REPEAT_CHOICES = {
+    'repeat_frequencies': [
+        ('never', 'Does not repeat'), ('daily', 'Daily'), ('weekly', 'Weekly'),
+        ('monthly', 'Monthly'), ('yearly', 'Yearly'),
+    ],
     'weekday_choices': list(enumerate(recurring.WEEKDAY_NAMES)),
     'month_days': range(1, 32),
 }
