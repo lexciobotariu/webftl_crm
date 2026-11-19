@@ -49,6 +49,30 @@ class TodoViewTest(TestCase):
         self.assertContains(response, 'Todo 1')
         self.assertNotContains(response, 'Todo 2')  # Completed hidden by default
 
+    def test_todos_page_lists_open_todos(self):
+        Todo.objects.create(owner=self.user, title='Open one')
+        Todo.objects.create(owner=self.user, title='Done one', is_completed=True)
+        Todo.objects.create(owner=self.other_user, title='Not mine')
+        response = self.client.get(reverse('todos'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'todos/todos_page.html')
+        self.assertContains(response, 'Open one')
+        self.assertNotContains(response, 'Done one')
+        self.assertNotContains(response, 'Not mine')
+        self.assertEqual(response.context['todo_count'], 1)
+
+    def test_todos_page_is_in_the_sidebar_with_its_count(self):
+        Todo.objects.create(owner=self.user, title='Open one')
+        Todo.objects.create(owner=self.user, title='Open two')
+        html = self.client.get(reverse('todos')).content.decode()
+        sidebar = html.split('</aside>', 1)[0]
+        self.assertIn(f'href="{reverse("todos")}"', sidebar)
+        self.assertIn('aria-label="2 open"', sidebar)
+
+    def test_todos_page_needs_the_todos_permission(self):
+        self.client.force_login(self.other_user)
+        self.assertEqual(self.client.get(reverse('todos')).status_code, 403)
+
     def test_todo_list_with_completed(self):
         """Test showing completed todos."""
         Todo.objects.create(owner=self.user, title='Todo 1', is_completed=True)

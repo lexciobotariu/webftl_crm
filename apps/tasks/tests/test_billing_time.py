@@ -248,7 +248,8 @@ class TestTimeTotals:
         _entry(billable, admin, 60, day=first - timedelta(days=1))
         client.force_login(admin)
         page = client.get(reverse('time_week'), {'month': f'{first:%Y-%m}'}).content.decode()
-        assert 'My Month' in page
+        assert 'My Time' in page
+        assert 'aria-current="true">Month<' in page
         assert 'Total 1h' in page
         assert client.get(reverse('time_week'), {'month': '2026-13'}).status_code == 400
         assert client.get(reverse('time_week'), {'month': 'x'}).status_code == 400

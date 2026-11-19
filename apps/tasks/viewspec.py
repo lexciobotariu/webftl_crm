@@ -25,6 +25,16 @@ START_CHOICES = (
     ('later', 'Not started yet'),
 )
 START_VALUES = tuple(value for value, _ in START_CHOICES)
+# The Due filter: "Today" and "This week" mean due by then, overdue included.
+DUE_CHOICES = (
+    ('', 'Any'),
+    ('overdue', 'Overdue'),
+    ('today', 'Today'),
+    ('week', 'This week'),
+    ('next_week', 'Next week'),
+    ('none', 'No due date'),
+)
+DUE_VALUES = tuple(value for value, _ in DUE_CHOICES)
 
 SORT_CHOICES = (
     ('manual', 'Manual'),
@@ -87,9 +97,14 @@ def column_choices(spec):
 
 
 def default_sort(group, options):
-    """Grouped by status, the list follows the board's manual order by default."""
+    """Grouped by status, the list follows the board's manual order by default.
+
+    Grouped by due date, the earliest due comes first inside each group.
+    """
     if group == 'status' and 'manual' in options.sorts:
         return 'manual'
+    if group == 'due' and 'due' in options.sorts:
+        return 'due'
     return 'priority'
 
 
@@ -187,6 +202,8 @@ class TaskViewSpec:
     # START_CHOICES: '' for any, 'started' (no start date or one today or earlier),
     # 'later' (a start date after today).
     start: str = ''
+    # DUE_CHOICES: '' for any, else which due dates to keep.
+    due: str = ''
     # Carried so ``to_params`` and ``is_default`` can tell what the page's defaults
     # are. Not part of the state itself, so it stays out of equality and repr.
     options: TaskViewOptions = field(default_factory=TaskViewOptions, compare=False, repr=False)
@@ -258,6 +275,7 @@ class TaskViewSpec:
             categories=categories,
             archived=_getone(params, 'archived') == '1',
             start=_choice(_getone(params, 'start'), START_VALUES, ''),
+            due=_choice(_getone(params, 'due'), DUE_VALUES, ''),
             options=options,
         )
         if clearing:
@@ -270,6 +288,7 @@ class TaskViewSpec:
                 categories=frozenset(options.default_categories),
                 archived=False,
                 start='',
+                due='',
             )
         return spec
 
@@ -286,7 +305,9 @@ class TaskViewSpec:
         return sum(
             bool(group)
             for group in (self.hidden_statuses, self.priorities, self.assignees, self.labels)
-        ) + (self.categories != self.options.default_categories) + self.archived + bool(self.start)
+        ) + (self.categories != self.options.default_categories) + self.archived + bool(
+            self.start
+        ) + bool(self.due)
 
     @property
     def is_default(self):
@@ -314,6 +335,8 @@ class TaskViewSpec:
             params['archived'] = '1'
         if self.start:
             params['start'] = self.start
+        if self.due:
+            params['due'] = self.due
         if self.q:
             params['q'] = self.q
         if self.group != self.options.default_group:

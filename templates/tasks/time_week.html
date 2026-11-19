@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}{% if period == 'month' %}My Month{% else %}My Week{% endif %} - WebFTL CRM{% endblock %}
+{% block title %}My Time - WebFTL CRM{% endblock %}
 
 {% block full_content %}
 <div class="flex flex-col h-full">
     <div class="flex-shrink-0 flex items-center min-h-[45px] px-4 py-2 border-b border-border-subtle bg-panel/80">
         <div class="flex items-center gap-3">
             <i data-lucide="clock" class="w-4 h-4 text-zinc-500"></i>
-            <h1 class="text-sm font-medium text-zinc-100">{% if period == 'month' %}My Month{% else %}My Week{% endif %}</h1>
+            <h1 class="text-sm font-medium text-zinc-100">My Time</h1>
         </div>
     </div>
 

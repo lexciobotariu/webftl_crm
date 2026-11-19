@@ -50,6 +50,17 @@
                     {% include "components/checkbox_filter_group.html" with title="Labels" name="label" options=label_options %}
                     {% endif %}
                     <fieldset class="space-y-1">
+                        <legend class="text-[10px] uppercase tracking-wider text-zinc-500 font-medium mb-1">Due date</legend>
+                        {% for value, label in due_choices %}
+                        <label class="flex items-center gap-2 py-1 text-sm text-zinc-300 cursor-pointer">
+                            <input type="radio" name="due" value="{{ value }}" {% if spec.due == value %}checked{% endif %}
+                                   {% if value == 'today' or value == 'week' %}aria-describedby="task-due-help"{% endif %} class="accent-accent w-4 h-4">
+                            <span>{{ label }}</span>
+                        </label>
+                        {% endfor %}
+                        <p id="task-due-help" class="text-[11px] text-zinc-500">Today and This week include overdue tasks.</p>
+                    </fieldset>
+                    <fieldset class="space-y-1">
                         <legend class="text-[10px] uppercase tracking-wider text-zinc-500 font-medium mb-1">Start date</legend>
                         {% for value, label in start_choices %}
                         <label class="flex items-center gap-2 py-1 text-sm text-zinc-300 cursor-pointer">

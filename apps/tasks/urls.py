@@ -1,10 +1,12 @@
 from django.urls import path
+from django.views.generic import RedirectView
 
 from . import views
 
 urlpatterns = [
     path('my/', views.my_tasks, name='my_tasks'),
-    path('my/todos/', views.my_tasks, name='my_tasks_todos'),
+    # To-Dos used to be a tab here; old links and bookmarks land on their own page.
+    path('my/todos/', RedirectView.as_view(pattern_name='todos'), name='my_tasks_todos'),
     path('my/week/', views.time_week, name='time_week'),
     path('timer/stop/', views.timer_stop, name='timer_stop'),
     path('timer/indicator/', views.running_timer_indicator, name='running_timer_indicator'),

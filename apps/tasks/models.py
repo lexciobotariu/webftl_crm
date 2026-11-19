@@ -69,6 +69,74 @@ def _priority_rank():
     )
 
 
+# Due-date groups on a task list, in list order. "This week" is the rest of the
+# current week (Monday to Sunday) after today; "Next week" the whole week after.
+DUE_BUCKETS = (
+    ('overdue', 'Overdue'),
+    ('today', 'Today'),
+    ('week', 'This week'),
+    ('next_week', 'Next week'),
+    ('later', 'Later'),
+    ('none', 'No due date'),
+)
+DUE_BUCKET_KEYS = tuple(key for key, _label in DUE_BUCKETS)
+
+
+def due_week_ends(today):
+    """The last day (Sunday) of this week and of next week."""
+    end_of_week = today + timedelta(days=6 - today.weekday())
+    return end_of_week, end_of_week + timedelta(days=7)
+
+
+def due_bucket(due_date, today=None):
+    """Which :data:`DUE_BUCKETS` key a due date falls in."""
+    if due_date is None:
+        return 'none'
+    if today is None:
+        today = timezone.localdate()
+    end_of_week, end_of_next_week = due_week_ends(today)
+    if due_date < today:
+        return 'overdue'
+    if due_date == today:
+        return 'today'
+    if due_date <= end_of_week:
+        return 'week'
+    if due_date <= end_of_next_week:
+        return 'next_week'
+    return 'later'
+
+
+def _due_rank(today):
+    """Position of a task's due-date group in :data:`DUE_BUCKETS`, in SQL."""
+    end_of_week, end_of_next_week = due_week_ends(today)
+    rank = DUE_BUCKET_KEYS.index
+    return Case(
+        When(due_date__isnull=True, then=Value(rank('none'))),
+        When(due_date__lt=today, then=Value(rank('overdue'))),
+        When(due_date=today, then=Value(rank('today'))),
+        When(due_date__lte=end_of_week, then=Value(rank('week'))),
+        When(due_date__lte=end_of_next_week, then=Value(rank('next_week'))),
+        default=Value(rank('later')),
+    )
+
+
+def due_filter_query(value, today=None):
+    """The ``Q`` for the Due filter (``viewspec.DUE_CHOICES``); ``None`` for no filter.
+
+    "Today" and "This week" mean "due by then", so overdue tasks stay in them.
+    """
+    if today is None:
+        today = timezone.localdate()
+    end_of_week, end_of_next_week = due_week_ends(today)
+    return {
+        'overdue': Q(due_date__lt=today),
+        'today': Q(due_date__lte=today),
+        'week': Q(due_date__lte=end_of_week),
+        'next_week': Q(due_date__gt=end_of_week, due_date__lte=end_of_next_week),
+        'none': Q(due_date__isnull=True),
+    }.get(value)
+
+
 def _category_rank():
     """Position of the status type in ``Status.CATEGORY_CHOICES``: backlog first."""
     return Case(
@@ -166,6 +234,9 @@ class TaskQuerySet(models.QuerySet):
                 qs = qs.filter(start_date__gt=today)
             else:
                 qs = qs.filter(Q(start_date__isnull=True) | Q(start_date__lte=today))
+        due = due_filter_query(spec.due)
+        if due is not None:
+            qs = qs.filter(due)
         if spec.q:
             qs = qs.filter(_search_query(spec.q))
         return qs
@@ -186,6 +257,8 @@ class TaskQuerySet(models.QuerySet):
             ordering.append('project_id')
         elif spec.group == 'category':
             ordering.append(_category_rank().asc())
+        elif spec.group == 'due':
+            ordering.append(_due_rank(timezone.localdate()).asc())
 
         descending = spec.dir == 'desc'
         if spec.sort == 'manual':
@@ -218,9 +291,16 @@ class TaskQuerySet(models.QuerySet):
 
         The list only loads the first page of rows, so headers take their counts
         from here. The keys are ``status_id``, ``assignee_id`` (``None`` for
-        unassigned), the priority string, ``project_id`` or the status type;
-        ``group=none`` has no groups.
+        unassigned), the priority string, ``project_id``, the status type or the
+        due-date group (:data:`DUE_BUCKETS`); ``group=none`` has no groups.
         """
+        if spec.group == 'due':
+            rows = (
+                self.matching(spec).order_by()
+                .annotate(due_rank=_due_rank(timezone.localdate()))
+                .values('due_rank').annotate(total=Count('pk'))
+            )
+            return {DUE_BUCKET_KEYS[row['due_rank']]: row['total'] for row in rows}
         field = {
             'status': 'status_id',
             'assignee': 'assignee_id',

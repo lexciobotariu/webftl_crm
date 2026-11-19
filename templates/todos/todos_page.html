@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}To-Dos - WebFTL CRM{% endblock %}
+
+{% block full_content %}
+<div class="flex flex-col h-full overflow-hidden">
+    <div class="flex-shrink-0 flex items-center min-h-[45px] px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center gap-3">
+            <i data-lucide="list-checks" class="w-4 h-4 text-zinc-500"></i>
+            <h1 class="text-sm font-medium text-zinc-100">To-Dos</h1>
+            <span class="inline-flex items-center gap-1 text-xs text-zinc-500">
+                <i data-lucide="lock" class="w-3 h-3"></i>
+                Only you see these
+            </span>
+        </div>
+    </div>
+    <div class="flex-1 min-h-0 overflow-y-auto p-6">
+        {% include 'todos/partials/todos_section.html' %}
+    </div>
+</div>
+{% endblock %}

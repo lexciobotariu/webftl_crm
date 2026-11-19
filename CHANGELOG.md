@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.44.0] - 2026-11-19
+
+**My Tasks, To-Dos and My Time, simplified.** No database migrations, nothing to set in Dokploy, no new dependencies.
+
+### Added
+- My Tasks: **Due date** filter (Any, Overdue, Today, This week, Next week, No due date). Today and This week mean "due by then", so overdue tasks stay in them. It is remembered with the rest of the view and counts in the Filter badge. The project Tasks page has the same filter
+- My Tasks: **Group by Due date** (Overdue, Today, This week, Next week, Later, No due date). Inside each group the earliest due comes first. Weeks run Monday to Sunday
+- **To-Dos** has its own page and sidebar entry (`/todos/`), with the number of open to-dos next to it. It shows for everyone with the To-Dos permission
+
+### Changed
+- My Tasks is only the task list: the To-Dos tab is gone. Old `/tasks/my/todos/` links open the To-Dos page, and the dashboard's "View all" goes there too
+- **My Week is now My Time**, a normal sidebar entry instead of a sub-item under My Tasks. It is the same timesheet (week or month, grouping, CSV) at the same address; the project's "Time Tracking" link still opens it
+- Command palette (Ctrl K): "To-Dos" and "My Time" instead of "My Week"
+
 ## [0.43.1] - 2026-11-19
 
 **Invoice PDF: nothing cut off any more.** No database migrations, nothing to set in Dokploy, no new dependencies.

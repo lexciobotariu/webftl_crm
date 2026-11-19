@@ -183,12 +183,13 @@ class TestTimerViews:
 
 @pytest.mark.django_db
 class TestWeekAndProjectViews:
-    def test_week_page_is_linked_under_my_tasks(self, client):
+    def test_my_time_is_in_the_sidebar(self, client):
         user, _task = _member()
         client.force_login(user)
         content = client.get(reverse('my_tasks'), {'layout': 'list'}).content.decode()
         assert reverse('time_week') in content
-        assert 'My Week' in content
+        assert 'My Time' in content
+        assert 'My Week' not in content
 
     def test_week_and_project_filters(self, client):
         user, task = _member()
