@@ -11,7 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Bill to, Invoice details and Payment details: a long company name, address, email or project wraps onto more lines and the row grows, instead of ending in "…". The column line and the row lines run the full height of the taller row
-- "Payment terms" ran past the column line in the PDF: the label column is wider (36mm), so every label fits on one line also in DejaVu Sans, the font the server draws PDFs with
+- "Payment terms" ran past the column line in the PDF: the Invoice details label column is wider (36mm), so every label fits on one line also in DejaVu Sans, the font the server draws PDFs with. Bill to and Payment details keep 30mm labels, so their values have more room
+- The Bill to email can wrap after the @ instead of breaking mid-word
 
 ## [0.43.0] - 2026-11-15
 
