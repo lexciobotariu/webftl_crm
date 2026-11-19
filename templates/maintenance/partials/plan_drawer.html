@@ -1,0 +1,51 @@
+<div class="flex flex-col h-full">
+    {% if plan %}{% include "maintenance/partials/drawer_header.html" with title="Edit maintenance plan" %}{% else %}{% include "maintenance/partials/drawer_header.html" with title="New maintenance plan" %}{% endif %}
+    <form hx-post="{% if plan %}{% url 'maintenance_plan_edit' plan.pk %}{% else %}{% url 'maintenance_plan_create' %}{% endif %}" hx-target="#slide-over" hx-swap="innerHTML"
+          class="flex-1 overflow-y-auto p-4"
+          onkeydown="if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); this.requestSubmit(); }">
+        {% csrf_token %}
+        {% include "components/form_error_banner.html" %}
+        <div class="grid grid-cols-2 gap-4">
+            {% if form.client %}
+            <div class="col-span-2">
+                <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5" for="{{ form.client.id_for_label }}">Client</label>
+                {# Changing the client reloads the drawer so its sites can be picked. #}
+                <select name="client" id="{{ form.client.id_for_label }}" class="{{ form.client.field.widget.attrs.class }}"
+                        hx-get="{% url 'maintenance_plan_create' %}" hx-target="#slide-over" hx-swap="innerHTML" hx-trigger="change" hx-include="this">
+                    {% for value, label in form.client.field.choices %}
+                    <option value="{{ value }}" {% if value|stringformat:'s' == form.client.value|stringformat:'s' %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                {% if form.client.errors %}<p class="mt-1 text-xs text-error">{{ form.client.errors.0 }}</p>{% endif %}
+            </div>
+            {% else %}
+            <p class="col-span-2 text-sm text-zinc-400">Client: <span class="text-zinc-200">{{ plan.client.name }}</span></p>
+            {% endif %}
+            {% include "maintenance/partials/_field.html" with field=form.name wide=True %}
+            {% include "maintenance/partials/_field.html" with field=form.sites %}
+            {% include "maintenance/partials/_field.html" with field=form.description wide=True %}
+
+            <div class="col-span-2 pt-3 border-t border-border-subtle"><p class="text-xs uppercase tracking-wide text-zinc-500">Agreement</p></div>
+            {% include "maintenance/partials/_field.html" with field=form.start_date %}
+            {% include "maintenance/partials/_field.html" with field=form.renewal_date %}
+            {% include "maintenance/partials/_field.html" with field=form.auto_renew %}
+            {% include "maintenance/partials/_field.html" with field=form.term_months %}
+            {% include "maintenance/partials/_field.html" with field=form.notice_days %}
+            <div></div>
+
+            <div class="col-span-2 pt-3 border-t border-border-subtle"><p class="text-xs uppercase tracking-wide text-zinc-500">Price and hours</p></div>
+            {% include "maintenance/partials/_field.html" with field=form.frequency %}
+            {% include "maintenance/partials/_field.html" with field=form.price %}
+            {% include "maintenance/partials/_field.html" with field=form.included_hours %}
+            {% include "maintenance/partials/_field.html" with field=form.overage_rate %}
+
+            <div class="col-span-2 pt-3 border-t border-border-subtle"><p class="text-xs uppercase tracking-wide text-zinc-500">Checks</p></div>
+            {% include "maintenance/partials/_field.html" with field=form.check_frequency %}
+            <p class="text-xs text-zinc-500 self-end pb-2">The checklist itself is on the plan's page.</p>
+        </div>
+        {% if plan %}{% include "maintenance/partials/drawer_buttons.html" with label="Save changes" %}{% else %}
+        <p class="mt-4 text-xs text-zinc-500">The plan gets its own project for its tasks, time and notes.</p>
+        {% include "maintenance/partials/drawer_buttons.html" with label="Create plan" %}{% endif %}
+    </form>
+</div>
+<script>if (typeof lucide !== 'undefined') { lucide.createIcons(); }</script>

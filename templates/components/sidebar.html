@@ -64,6 +64,18 @@
             Leads
         </a>
         {% endif %}
+        {% if perms_map.access_maintenance %}
+        <a href="{% url 'maintenance_plan_list' %}"
+           class="flex items-center gap-2.5 px-3 py-2 rounded-control text-[13px] font-medium transition-colors duration-150
+                  {% if request.resolver_match.url_name|slice:':12' == 'maintenance_' %}
+                  bg-elevated text-zinc-100 border border-border-subtle
+                  {% else %}
+                  text-zinc-400 hover:text-zinc-200 hover:bg-hover
+                  {% endif %}">
+            <i data-lucide="wrench" class="w-4 h-4"></i>
+            Maintenance
+        </a>
+        {% endif %}
         {% if perms_map.access_projects %}
         <a href="{% url 'project_list' %}"
            class="flex items-center gap-2.5 px-3 py-2 rounded-control text-[13px] font-medium transition-colors duration-150

@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.46.0] - 2026-11-19
+
+**Maintenance**: agreements to look after a client's sites, whether we built them or someone else did. Two database migrations (`maintenance.0001_initial`, `accounts.0016_access_maintenance`): they add the maintenance tables and a new preset permission; nothing existing changes. Only the Admin preset gets the new Maintenance permission. Nothing to set in Dokploy (the daily `create_recurring_invoices` schedule now also runs the maintenance work), no new dependencies.
+
+### Added
+- **Maintenance** in the sidebar (`/maintenance/`), for presets with the new **Maintenance** permission (on for Admin, off for the others and for new presets). The list shows each plan's client, sites, hours used this month, price, renewal and status (Active, Paused, Ended)
+- **Sites** on a client (new **Sites** tab): address, built by us (with our project) or by someone else (with their name), platform, hosting, registrar, **domain expiry**, **SSL expiry**, admin address, repository and technical notes
+- **Logins** on a site (hosting, admin, FTP, ...): username, password and notes are stored **encrypted** and the password is shown only when you click "Show password"
+- **Maintenance plans** on a client (new **Maintenance** tab): sites covered, what it covers, start date, renewal or end date (renews automatically for N months, or ends), reminder days, price per billing period (monthly, every 3 months, yearly), **hours included each month** (0 = no limit) and the price of an extra hour. Unused hours do not move to the next month
+- Each plan gets **its own project** (fixed price, so its time is never billed again by the hour). Its tasks, timer, notes and Claude (MCP) work as on any project; time logged there fills the plan's **hour bar** (amber from 80%, red past 100%). Pausing a plan puts the project On hold, ending it marks it Finished
+- **Repeating invoice** from the plan: creates the first draft with the plan's price and repeats it like "Repeat". Drafts stop while the plan is paused or ended
+- **Add extra hours to invoice**: puts the month's hours past the included ones on the plan's newest draft (or a new draft) at the extra-hour price, once per month
+- **Checks**: a checklist per plan (e.g. update plugins, test backup). At the start of each month (or quarter, or year) the daily job creates one task "Checks November 2026" with a sub-task per check in the plan's project. "Create this period's task" makes it at once. This is the only place where tasks are created on a schedule
+- **Monthly report** per plan: hours used against included, tasks worked on or closed in the month with their hours, the checks, and an introduction you write. Download it as a PDF or **email it** to the client (logged on the Messages tab); once emailed it also shows in the **client portal** under "Maintenance reports"
+- Dashboard: **Maintenance** card with renewals within the reminder period, plans at 80% of their hours or more this month, and domains or certificates expiring within 30 days
+- The daily job renews plans past their renewal date (by their term) and ends those that do not renew
+- Command palette (Ctrl K): "Maintenance"
+
 ## [0.45.0] - 2026-11-19
 
 **Leads** (CRM-4): keep prospects apart from clients, send them an estimate with an online Accept link, and turn them into a client when they say yes. Five database migrations (`leads.0001_initial`, `leads.0002_seed_statuses_and_sources`, `invoices.0011_estimate_lead_and_online_link`, `clients.0010_clientmessage_lead`, `accounts.0015_access_leads`): they add the leads tables with default statuses and sources, and empty columns on estimates and messages; existing estimates keep their client and are unchanged. Only the Admin preset gets the new Leads permission. Nothing to set in Dokploy, no new dependencies.

@@ -115,10 +115,24 @@ def client_detail(request, pk):
         'client_detail_notes': 'notes',
         'client_detail_invoices': 'invoices',
         'client_detail_messages': 'messages',
+        'client_detail_maintenance': 'maintenance',
+        'client_detail_sites': 'sites',
     }
     active_tab = tab_mapping.get(url_name, 'overview')
     if active_tab == 'invoices' and not request.user.has_app_permission('access_invoices'):
         return HttpResponseForbidden("You don't have access to this section")
+    can_maintain = request.user.has_app_permission('access_maintenance')
+    if active_tab in ('maintenance', 'sites') and not can_maintain:
+        return HttpResponseForbidden("You don't have access to this section")
+    maintenance = {}
+    if can_maintain:
+        maintenance = {
+            'maintenance_count': client.maintenance_plans.count(),
+            'site_count': client.sites.count(),
+        }
+        if active_tab in ('maintenance', 'sites'):
+            from apps.maintenance.views import client_tab_context
+            maintenance.update(client_tab_context(client, active_tab))
 
     from apps.invoices.models import visible_invoices
     from apps.notes.models import notes_visible_to_user
@@ -157,6 +171,7 @@ def client_detail(request, pk):
         'show_completed': False,
         'today': timezone.localdate(),
         'active_tab': active_tab,
+        **maintenance,
     })
 
 
