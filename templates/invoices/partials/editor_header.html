@@ -3,6 +3,14 @@
       class="bg-panel/50 border border-border-subtle rounded-card p-4 mb-6">
     {% if form.non_field_errors %}<p class="mb-3 text-xs text-error">{{ form.non_field_errors.0 }}</p>{% endif %}
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {% if kind == 'estimate' and doc.for_lead %}
+        <div class="col-span-2">
+            <span class="{{ label }}">Lead</span>
+            <a href="{% url 'lead_detail' doc.lead_id %}" class="flex items-center gap-1.5 px-2.5 py-1.5 text-sm text-zinc-100 hover:text-zinc-50 bg-elevated/40 border border-border-subtle rounded-control">
+                <i data-lucide="target" class="w-3.5 h-3.5 text-zinc-500"></i>{{ doc.lead.name }}
+            </a>
+        </div>
+        {% else %}
         <div>
             <label class="{{ label }}" for="doc-client">Client</label>
             <select id="doc-client" name="client" class="{{ field }}">
@@ -22,6 +30,7 @@
             </select>
             {% if form.project.errors %}<p class="mt-1 text-xs text-error">{{ form.project.errors.0 }}</p>{% endif %}
         </div>
+        {% endif %}
         <div>
             <label class="{{ label }}" for="doc-issue">Issued</label>
             <input id="doc-issue" type="date" name="issue_date" value="{{ form.issue_date.value|date:'Y-m-d'|default:form.issue_date.value }}" required class="{{ field }}">
@@ -51,6 +60,11 @@
         </div>
         {% endif %}
         {% if kind == 'estimate' %}
+        <div class="col-span-2 lg:col-span-4">
+            <label class="{{ label }}" for="doc-intro">Introduction</label>
+            <textarea id="doc-intro" name="introduction" rows="4" placeholder="What the work is and how it will go (optional). Markdown: **bold**, lists, headings. Shown above the lines." class="{{ field }} font-mono text-[13px]">{{ form.introduction.value|default_if_none:'' }}</textarea>
+            {% if form.introduction.errors %}<p class="mt-1 text-xs text-error">{{ form.introduction.errors.0 }}</p>{% endif %}
+        </div>
         <div class="col-span-2 lg:col-span-4">
             <label class="{{ label }}" for="doc-notes">Notes</label>
             <textarea id="doc-notes" name="notes" rows="2" placeholder="Scope, timeline, terms (optional). Printed on the estimate." class="{{ field }}">{{ form.notes.value|default_if_none:'' }}</textarea>

@@ -19,7 +19,18 @@
         {% csrf_token %}
         {% include "components/form_error_banner.html" %}
 
-        <div class="space-y-4" x-data="{ client: '{{ form.client.value|default_if_none:'' }}' }">
+        <div class="space-y-4" {% if not lead %}x-data="{ client: '{{ form.client.value|default_if_none:'' }}' }"{% endif %}>
+            {% if lead %}
+            <input type="hidden" name="lead" value="{{ lead.pk }}">
+            <div>
+                <span class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Lead</span>
+                <div class="flex items-center gap-2 px-3 py-2 bg-elevated/40 border border-border-subtle rounded-control text-sm text-zinc-100">
+                    <i data-lucide="target" class="w-3.5 h-3.5 text-zinc-500"></i>{{ lead.name }}
+                    {% if lead.currency %}<span class="ml-auto text-xs text-zinc-500">{{ lead.currency.code }}</span>{% endif %}
+                </div>
+                <p class="mt-1 text-xs text-zinc-600">Prepared for the lead, without adding it to Clients.</p>
+            </div>
+            {% else %}
             <div>
                 <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Client</label>
                 <select name="client" required x-model="client" @change="$refs.project.value = ''"
@@ -49,6 +60,7 @@
                 <p class="mt-1 text-xs text-error">{{ form.project.errors.0 }}</p>
                 {% endif %}
             </div>
+            {% endif %}
             <div>
                 <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Issue date</label>
                 {{ form.issue_date }}

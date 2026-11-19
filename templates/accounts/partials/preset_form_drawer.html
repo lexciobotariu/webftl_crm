@@ -405,6 +405,16 @@
                         </div>
                     </div>
 
+                    <label data-module="leads" class="flex items-center justify-between gap-3 p-3 bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors cursor-pointer">
+                        <span class="flex items-center gap-2 min-w-0">
+                            <i data-lucide="target" class="w-4 h-4 text-zinc-500"></i>
+                            <span class="text-sm text-zinc-300">Leads</span>
+                            <span class="text-xs text-zinc-500 truncate">All leads; estimates for them also need Invoices</span>
+                        </span>
+                        <input type="checkbox" name="access_leads" {% if preset.access_leads %}checked{% endif %}
+                               class="w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded text-zinc-200 focus:ring-border-strong">
+                    </label>
+
                     <div data-module="team"
                          class="bg-elevated/50 rounded-card border border-border-subtle hover:border-border-strong transition-colors"
                          x-data="{

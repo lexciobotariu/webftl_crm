@@ -1,0 +1,78 @@
+<div class="flex flex-col h-full">
+    <div class="flex-shrink-0 px-4 py-3 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <i data-lucide="user-check" class="w-4 h-4 text-zinc-500"></i>
+                <h2 class="text-sm font-medium text-zinc-100">Convert {{ lead.name }} to a client</h2>
+            </div>
+            <button onclick="closeSlideOver()" class="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors" aria-label="Close">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </div>
+
+    <form hx-post="{% url 'lead_convert' lead.pk %}" hx-target="#slide-over" hx-swap="innerHTML" class="flex-1 overflow-y-auto p-4"
+          x-data="{ target: '{{ form.target.value|default:'new' }}', project: {% if form.create_project.value %}true{% else %}false{% endif %} }">
+        {% csrf_token %}
+        {% if from_estimate %}<input type="hidden" name="estimate" value="{{ from_estimate.pk }}">{% endif %}
+        {% include "components/form_error_banner.html" %}
+
+        {% if can_invoice %}
+        <p class="mb-4 text-sm text-zinc-400">{{ from_estimate.number_label }} is for a lead. Make {{ lead.name }} a client and the draft invoice is created right after.</p>
+        {% endif %}
+
+        <fieldset class="space-y-2">
+            <legend class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Client</legend>
+            <label class="flex items-start gap-2 p-3 rounded-card border border-border-subtle cursor-pointer" :class="target === 'new' ? 'bg-elevated border-border-strong' : ''">
+                <input type="radio" name="target" value="new" x-model="target" class="mt-0.5">
+                <span class="text-sm text-zinc-200">A new client from the lead's details
+                    <span class="block text-xs text-zinc-500">{{ lead.name }}{% if lead.currency %}, invoiced in {{ lead.currency.code }}{% endif %}{% if lead.contact_name or lead.email %}, with {% firstof lead.contact_name lead.email %} as Primary and Billing contact{% endif %}.</span>
+                </span>
+            </label>
+            <label class="flex items-start gap-2 p-3 rounded-card border border-border-subtle cursor-pointer" :class="target === 'existing' ? 'bg-elevated border-border-strong' : ''">
+                <input type="radio" name="target" value="existing" x-model="target" class="mt-0.5">
+                <span class="text-sm text-zinc-200">A client we already have
+                    <span class="block text-xs text-zinc-500">The lead's contact is added to it if it is not there yet.</span>
+                </span>
+            </label>
+            <div x-show="target === 'existing'" {% if form.target.value != 'existing' %}style="display: none"{% endif %}>
+                <label for="convert-client" class="sr-only">Client</label>
+                <select id="convert-client" name="client" class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:outline-none">
+                    <option value="">Select a client</option>
+                    {% for client in form.fields.client.queryset %}
+                    <option value="{{ client.pk }}" {% if form.client.value|stringformat:'s' == client.pk|stringformat:'s' %}selected{% endif %}>{{ client.name }}</option>
+                    {% endfor %}
+                </select>
+                {% if form.client.errors %}<p class="mt-1 text-xs text-error">{{ form.client.errors.0 }}</p>{% endif %}
+            </div>
+        </fieldset>
+
+        {% if can_project %}
+        <div class="mt-5 space-y-2">
+            <label class="flex items-center gap-2 text-sm text-zinc-200">
+                <input type="checkbox" name="create_project" value="1" x-model="project" class="w-4 h-4 bg-elevated border-border-subtle rounded">
+                Create a project{% if project_estimate %} for {{ project_estimate.number_label }}{% endif %}
+            </label>
+            <div x-show="project" {% if not form.create_project.value %}style="display: none"{% endif %}>
+                <label for="convert-project" class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Project name</label>
+                <input id="convert-project" type="text" name="project_name" maxlength="255" value="{{ form.project_name.value|default_if_none:'' }}"
+                       class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:outline-none">
+                {% if form.project_name.errors %}<p class="mt-1 text-xs text-error">{{ form.project_name.errors.0 }}</p>{% endif %}
+                {% if project_estimate %}<p class="mt-1 text-xs text-zinc-600">{{ project_estimate.number_label }} is linked to the new project.</p>{% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="mt-5 p-3 rounded-card bg-panel/60 border border-border-subtle text-xs text-zinc-500 space-y-1">
+            <p>Moves to the client: the lead's estimates, emails and notes. The lead stays in Leads as Won, linked to the client.</p>
+        </div>
+
+        <div class="flex gap-3 mt-6 pt-4 border-t border-border-subtle">
+            <button type="submit" class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">
+                {% if can_invoice %}Convert and create invoice{% else %}Convert to client{% endif %}
+            </button>
+            <button type="button" onclick="closeSlideOver()" class="bg-elevated border border-border-subtle px-4 py-2 rounded-control text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">Cancel</button>
+        </div>
+    </form>
+</div>
+<script>if (typeof lucide !== 'undefined') { lucide.createIcons(); }</script>

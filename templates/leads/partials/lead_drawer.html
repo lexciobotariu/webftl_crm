@@ -1,0 +1,47 @@
+<div class="flex flex-col h-full">
+    <div class="flex-shrink-0 px-4 py-3 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <i data-lucide="target" class="w-4 h-4 text-zinc-500"></i>
+                <h2 class="text-sm font-medium text-zinc-100">{% if lead %}Edit lead{% else %}New lead{% endif %}</h2>
+            </div>
+            <button onclick="closeSlideOver()" class="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors" aria-label="Close">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </div>
+
+    <form hx-post="{% if lead %}{% url 'lead_edit' lead.pk %}{% else %}{% url 'lead_create' %}{% endif %}" hx-target="#slide-over" hx-swap="innerHTML"
+          class="flex-1 overflow-y-auto p-4"
+          onkeydown="if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); this.requestSubmit(); }">
+        {% csrf_token %}
+        {% include "components/form_error_banner.html" %}
+        <div class="grid grid-cols-2 gap-4">
+            {% include "leads/partials/_field.html" with field=form.name wide=True %}
+            {% include "leads/partials/_field.html" with field=form.contact_name %}
+            {% include "leads/partials/_field.html" with field=form.email %}
+            {% include "leads/partials/_field.html" with field=form.phone %}
+            {% include "leads/partials/_field.html" with field=form.website %}
+            {% include "leads/partials/_field.html" with field=form.address wide=True %}
+            {% include "leads/partials/_field.html" with field=form.tax_id %}
+            {% include "leads/partials/_field.html" with field=form.currency %}
+
+            <div class="col-span-2 pt-3 border-t border-border-subtle"><p class="text-xs uppercase tracking-wide text-zinc-500">Pipeline</p></div>
+            {% include "leads/partials/_field.html" with field=form.status %}
+            {% include "leads/partials/_field.html" with field=form.source %}
+            {% include "leads/partials/_field.html" with field=form.assignee %}
+            {% include "leads/partials/_field.html" with field=form.value %}
+            {% include "leads/partials/_field.html" with field=form.next_follow_up %}
+            <div></div>
+            {% include "leads/partials/_field.html" with field=form.description wide=True %}
+            {% include "leads/partials/_field.html" with field=form.lost_reason wide=True %}
+        </div>
+
+        <div class="flex gap-3 mt-6 pt-4 border-t border-border-subtle">
+            <button type="submit" title="Save (Ctrl/⌘ Enter)" aria-keyshortcuts="Control+Enter Meta+Enter"
+                    class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">{% if lead %}Save changes{% else %}Create lead{% endif %}</button>
+            <button type="button" onclick="closeSlideOver()" class="bg-elevated border border-border-subtle px-4 py-2 rounded-control text-sm text-zinc-400 hover:text-zinc-200 hover:bg-hover-strong transition-colors">Cancel</button>
+        </div>
+    </form>
+</div>
+<script>if (typeof lucide !== 'undefined') { lucide.createIcons(); }</script>

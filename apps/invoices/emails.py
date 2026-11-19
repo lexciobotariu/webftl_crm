@@ -37,6 +37,8 @@ def can_email(invoice, kind):
 
 
 def default_recipient(invoice):
+    if invoice.client_id is None:  # an estimate for a lead
+        return invoice.bill_to_email or invoice.lead.email or ''
     return invoice.bill_to_email or invoice.client.bill_to_email or ''
 
 
@@ -58,7 +60,8 @@ def default_subject(invoice, kind):
     return f'Invoice {invoice.number_label}{suffix}'
 
 
-def default_message(invoice, kind):
+def default_message(invoice, kind, link=''):
+    """The email text. ``link`` is an estimate's online page, where it can be accepted."""
     greeting = f'Hello {invoice.bill_to_name},' if invoice.bill_to_name else 'Hello,'
     if kind == ESTIMATE:
         valid = formats.date_format(invoice.valid_until, 'j F Y')
@@ -72,8 +75,8 @@ def default_message(invoice, kind):
             f'Total: {_money(invoice, invoice.total)}',
             f'Valid until: {valid}',
             '',
-            'Let us know if you would like to go ahead.',
-            '',
+            *([f'You can read it and accept it online: {link}', ''] if link else
+              ['Let us know if you would like to go ahead.', '']),
             'Thank you,',
         ]
     else:
@@ -133,7 +136,7 @@ def send_invoice_email(invoice, *, kind, to, subject, message, author=None):
         error = str(exc) or exc.__class__.__name__
         invoice.refresh_from_db()
 
-    link = {'estimate': invoice} if kind == ESTIMATE else {'invoice': invoice}
+    link = {'estimate': invoice, 'lead': invoice.lead} if kind == ESTIMATE else {'invoice': invoice}
     return ClientMessage.objects.create(
         client=invoice.client,
         kind=ClientMessage.EMAIL,

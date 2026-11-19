@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% load invoice_format %}
+
+{% block title %}Leads - WebFTL CRM{% endblock %}
+
+{% block full_content %}
+{% with field="bg-elevated border border-border-subtle rounded-control px-2.5 py-1.5 text-xs text-zinc-200 focus:border-border-strong focus:outline-none" %}
+<div class="flex flex-col h-full">
+    <div class="flex-shrink-0 flex items-center gap-3 min-h-[45px] px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <i data-lucide="target" class="w-4 h-4 text-zinc-500"></i>
+        <h1 class="text-sm font-medium text-zinc-100">Leads</h1>
+        <div class="ml-2 inline-flex rounded-control border border-border-subtle overflow-hidden text-xs" role="tablist" aria-label="View">
+            <a href="{% querystring view='board' page=None status=None %}" role="tab" aria-selected="{% if view == 'board' %}true{% else %}false{% endif %}"
+               class="px-2.5 py-1 inline-flex items-center gap-1.5 {% if view == 'board' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200{% endif %}"><i data-lucide="columns-3" class="w-3.5 h-3.5"></i>Board</a>
+            <a href="{% querystring view='list' page=None %}" role="tab" aria-selected="{% if view == 'list' %}true{% else %}false{% endif %}"
+               class="px-2.5 py-1 inline-flex items-center gap-1.5 border-l border-border-subtle {% if view == 'list' %}bg-elevated text-zinc-100{% else %}text-zinc-400 hover:text-zinc-200{% endif %}"><i data-lucide="list" class="w-3.5 h-3.5"></i>List</a>
+        </div>
+        <button hx-get="{% url 'lead_create' %}" hx-target="#slide-over" hx-swap="innerHTML" data-after-success="open-drawer"
+                class="ml-auto inline-flex items-center gap-1.5 bg-accent text-on-accent px-3 py-1.5 rounded-control text-xs font-medium hover:bg-accent-hover transition-colors">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>New lead
+        </button>
+    </div>
+
+    <form method="get" action="{% url 'lead_list' %}" class="flex-shrink-0 flex items-center gap-2 flex-wrap px-4 py-2 border-b border-border-subtle" role="search">
+        <input type="hidden" name="view" value="{{ view }}">
+        <div class="relative">
+            <i data-lucide="search" class="w-3.5 h-3.5 text-zinc-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+            <input type="search" name="q" value="{{ query }}" placeholder="Search leads" aria-label="Search leads"
+                   class="w-52 pl-8 {{ field }}" onchange="this.form.requestSubmit()">
+        </div>
+        {% if view == 'list' %}
+        <select name="status" aria-label="Status" class="{{ field }}" onchange="this.form.requestSubmit()">
+            <option value="open" {% if status == 'open' %}selected{% endif %}>Open leads</option>
+            <option value="all" {% if status == 'all' %}selected{% endif %}>All statuses</option>
+            {% for item in statuses %}<option value="{{ item.pk }}" {% if status == item.pk|stringformat:'s' %}selected{% endif %}>{{ item.name }}</option>{% endfor %}
+        </select>
+        {% endif %}
+        <select name="assignee" aria-label="Assignee" class="{{ field }}" onchange="this.form.requestSubmit()">
+            <option value="">Anyone</option>
+            <option value="me" {% if assignee == 'me' %}selected{% endif %}>Assigned to me</option>
+            <option value="none" {% if assignee == 'none' %}selected{% endif %}>Nobody</option>
+        </select>
+        <select name="source" aria-label="Source" class="{{ field }}" onchange="this.form.requestSubmit()">
+            <option value="">Any source</option>
+            {% for item in sources %}<option value="{{ item.pk }}" {% if source == item.pk|stringformat:'s' %}selected{% endif %}>{{ item.name }}</option>{% endfor %}
+        </select>
+        <label class="inline-flex items-center gap-1.5 text-xs text-zinc-400">
+            <input type="checkbox" name="follow_up" value="due" {% if follow_up == 'due' %}checked{% endif %} onchange="this.form.requestSubmit()" class="w-3.5 h-3.5 bg-elevated border-border-subtle rounded">
+            Follow-up due
+        </label>
+        {% if query or assignee or source or follow_up %}<a href="{% url 'lead_list' %}?view={{ view }}" class="text-xs text-zinc-500 hover:text-zinc-300">Clear</a>{% endif %}
+    </form>
+
+    <div id="lead-view" class="flex-1 min-h-0 {% if view == 'board' %}overflow-x-auto overflow-y-hidden p-4{% else %}overflow-y-auto p-6{% endif %}">
+        {% if view == 'board' %}
+        <div class="flex gap-3 h-full">
+            {% for column in columns %}
+            <div class="flex-shrink-0 w-72 h-full flex flex-col bg-card/50 rounded-panel border border-border-subtle group/column" id="lead-column-{{ column.status.pk }}">
+                <div class="flex-shrink-0 px-3 py-2.5 border-b border-border-subtle">
+                    <div class="flex items-center justify-between">
+                        <h2 class="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                            {% include "leads/partials/status_dot.html" with status=column.status %}{{ column.status.name }}
+                        </h2>
+                        <div class="flex items-center gap-2">
+                            {% if column.status.is_open %}
+                            <button hx-get="{% url 'lead_create' %}?status={{ column.status.pk }}" hx-target="#slide-over" hx-swap="innerHTML" data-after-success="open-drawer"
+                                    class="p-1 text-zinc-600 hover:text-zinc-300 hover:bg-elevated rounded opacity-0 group-hover/column:opacity-100 focus-visible:opacity-100"
+                                    aria-label="Add lead to {{ column.status.name }}" title="Add lead to {{ column.status.name }}"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                            {% endif %}
+                            <span class="text-[10px] text-zinc-500 bg-elevated border border-border-subtle rounded px-1.5 py-0.5 tabular-nums">{{ column.leads|length }}</span>
+                        </div>
+                    </div>
+                    {% if column.totals %}
+                    <div class="mt-1 text-[11px] text-zinc-500 tabular-nums">{% for total in column.totals %}{% if not forloop.first %} · {% endif %}{% client_money total total.amount %}{% endfor %}</div>
+                    {% endif %}
+                </div>
+                <div class="flex-1 overflow-y-auto p-2">
+                    <div class="space-y-2 min-h-[3rem] h-full" data-status-id="{{ column.status.pk }}"
+                         x-sort:group="leads" x-sort:config="{ animation: 150 }"
+                         x-sort="$store.leadBoard.move($item, {{ column.status.pk }})">
+                        {% for lead in column.leads %}
+                        <a href="{% url 'lead_detail' lead.pk %}" id="lead-{{ lead.pk }}" x-sort:item="{{ lead.pk }}"
+                           class="block bg-card border border-border-subtle rounded-card p-2.5 hover:border-border-strong transition-colors">
+                            <div class="text-sm text-zinc-100 truncate">{{ lead.name }}</div>
+                            {% if lead.contact_name %}<div class="text-xs text-zinc-500 truncate">{{ lead.contact_name }}</div>{% endif %}
+                            <div class="mt-1.5 flex items-center gap-2 flex-wrap text-xs text-zinc-500">
+                                {% if lead.value is not None %}<span class="text-zinc-300 tabular-nums">{% client_money lead lead.value %}</span>{% endif %}
+                                {% include "leads/partials/follow_up.html" %}
+                                {% if lead.source %}<span>{{ lead.source.name }}</span>{% endif %}
+                                {% if lead.client_id %}<span class="text-success">Client</span>{% endif %}
+                                {% if lead.assignee %}<span class="ml-auto">{% include "components/avatar.html" with user=lead.assignee size=18 %}</span>{% endif %}
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="border border-border-subtle rounded-card overflow-hidden bg-panel/50">
+            <div class="px-4 py-2 border-b border-border-subtle bg-panel/80 flex items-center gap-3 text-xs text-zinc-500">
+                <span class="bg-elevated px-1.5 py-0.5 rounded">{{ total_count }}</span> lead{{ total_count|pluralize }}
+                {% if totals %}<span class="ml-auto tabular-nums">Estimated: {% for total in totals %}{% if not forloop.first %} · {% endif %}{% client_money total total.amount %}{% endfor %}</span>{% endif %}
+            </div>
+            {% if leads %}
+            <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-panel border-b border-border-subtle">
+                    <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
+                        <th class="px-4 py-2 font-medium">Lead</th>
+                        <th class="px-4 py-2 font-medium">Status</th>
+                        <th class="px-4 py-2 font-medium">Source</th>
+                        <th class="px-4 py-2 font-medium">Assignee</th>
+                        <th class="px-4 py-2 font-medium">Follow-up</th>
+                        <th class="px-4 py-2 font-medium text-right">Value</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-border-subtle">
+                    {% for lead in leads %}
+                    <tr class="hover:bg-elevated/50 cursor-pointer" onclick="window.location='{% url 'lead_detail' lead.pk %}'">
+                        <td class="px-4 py-3 text-sm"><a href="{% url 'lead_detail' lead.pk %}" class="text-zinc-100 hover:text-zinc-50">{{ lead.name }}</a>{% if lead.contact_name %}<span class="block text-xs text-zinc-500">{{ lead.contact_name }}</span>{% endif %}</td>
+                        <td class="px-4 py-3">{% include "leads/partials/status_badge.html" with status=lead.status %}</td>
+                        <td class="px-4 py-3 text-sm text-zinc-400">{{ lead.source.name|default:"" }}</td>
+                        <td class="px-4 py-3 text-sm text-zinc-400">{% if lead.assignee %}{% firstof lead.assignee.name lead.assignee.email %}{% endif %}</td>
+                        <td class="px-4 py-3">{% include "leads/partials/follow_up.html" %}</td>
+                        <td class="px-4 py-3 text-sm text-zinc-200 text-right tabular-nums">{% if lead.value is not None %}{% client_money lead lead.value %}{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            </div>
+            {% elif query or assignee or source or follow_up %}
+            {% include "components/empty_state.html" with icon="search" message="No leads match these filters" %}
+            {% else %}
+            {% url 'lead_create' as lead_create_url %}
+            {% include "components/empty_state.html" with icon="target" message="No leads here yet" action_hx_get=lead_create_url action_label="Add a lead" %}
+            {% endif %}
+            {% include "components/pagination.html" %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endwith %}
+
+<script>
+    // Drag a card to another column to change its status. Won comes from "Convert to client",
+    // so the server refuses that drop and the board is drawn again from what is saved.
+    document.addEventListener('alpine:init', () => {
+        Alpine.store('leadBoard', {
+            move(leadId, statusId) {
+                fetch('{% url "lead_move" 0 %}'.replace('/0/', '/' + leadId + '/'), {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': '{{ csrf_token }}'},
+                    body: new URLSearchParams({status: statusId}),
+                }).then(async (response) => {
+                    if (!response.ok) {
+                        window.showErrorToast((await response.text()) || 'Could not move that lead.');
+                    }
+                    refreshFragment('#lead-view');
+                }).catch(() => {
+                    refreshFragment('#lead-view');
+                    window.showErrorToast('Could not move that lead. The board has been refreshed.');
+                });
+            },
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,112 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en" class="{{ theme }} h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="no-referrer">
+    <title>Estimate {{ estimate.number_label }} - {{ company_name }}</title>
+    {% include "components/head_theme.html" %}
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+</head>
+<body class="min-h-full bg-bg text-zinc-100 antialiased">
+    <header class="border-b border-border-subtle bg-panel">
+        <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+            <div class="text-sm font-semibold text-zinc-100 truncate">{{ company_name }}</div>
+            {% if estimate.status != 'expired' %}
+            <a href="{% url 'estimate_public_pdf' estimate.pk request.resolver_match.kwargs.token %}" target="_blank" rel="noopener"
+               class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-elevated border border-border-subtle rounded-control text-sm text-zinc-300 hover:text-zinc-100">Download PDF</a>
+            {% endif %}
+        </div>
+    </header>
+    <main class="max-w-3xl mx-auto px-4 py-6 space-y-6">
+        {% if estimate.status == 'expired' %}
+        <section class="bg-panel/50 border border-border-subtle rounded-card p-6 space-y-2">
+            <h1 class="text-lg font-semibold text-zinc-100">Estimate {{ estimate.number_label }} has expired</h1>
+            <p class="text-sm text-zinc-400">It was valid until {{ estimate.valid_until|date:"j F Y" }}. If you would still like to go ahead, {% if company_email %}write to <a href="mailto:{{ company_email }}" class="text-zinc-200 underline">{{ company_email }}</a>{% else %}contact us{% endif %} and we will send you a new one.</p>
+        </section>
+        {% else %}
+        <div class="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+                <h1 class="text-lg font-semibold text-zinc-100 flex items-center gap-2 flex-wrap">Estimate {{ estimate.number_label }} {% include "portal/partials/estimate_status.html" %}</h1>
+                <p class="text-sm text-zinc-500 mt-1">Prepared for {{ estimate.bill_to_name }} · Issued {{ estimate.issue_date|date:"j M Y" }} · Valid until {{ estimate.valid_until|date:"j M Y" }}</p>
+            </div>
+        </div>
+
+        {% if error %}<p role="alert" class="bg-error/10 border border-error/20 rounded-card p-3 text-sm text-error">{{ error }}</p>{% endif %}
+
+        {% if estimate.introduction %}
+        <section aria-label="Introduction" class="border border-border-subtle rounded-card bg-panel/50 p-5">
+            {% include "invoices/partials/estimate_introduction.html" %}
+        </section>
+        {% endif %}
+
+        <section aria-label="Lines" class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden">
+            <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="text-left text-xs text-zinc-500 uppercase tracking-wider border-b border-border-subtle">
+                    <tr>
+                        <th class="px-4 py-2 font-medium">Description</th>
+                        <th class="px-4 py-2 font-medium text-right">Qty</th>
+                        <th class="px-4 py-2 font-medium text-right">Price</th>
+                        <th class="px-4 py-2 font-medium text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-border-subtle">
+                    {% for line in estimate.lines.all %}
+                    <tr>
+                        <td class="px-4 py-3 text-zinc-200">{{ line.description }}{% if line.details %}<span class="block text-xs text-zinc-400 whitespace-pre-line mt-0.5">{{ line.details }}</span>{% endif %}</td>
+                        <td class="px-4 py-3 text-right text-zinc-400 tabular-nums">{{ line.quantity|floatformat:"-2" }}</td>
+                        <td class="px-4 py-3 text-right text-zinc-400 tabular-nums whitespace-nowrap">{% include "invoices/partials/money.html" with amount=line.unit_price %}</td>
+                        <td class="px-4 py-3 text-right text-zinc-200 tabular-nums whitespace-nowrap">{% include "invoices/partials/money.html" with amount=line.amount %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            </div>
+            <div class="border-t border-border-subtle px-4 py-3 space-y-1 text-sm">
+                <div class="flex justify-end gap-8"><span class="text-zinc-500">Subtotal</span><span class="text-zinc-200 w-28 text-right tabular-nums">{% include "invoices/partials/money.html" with amount=estimate.subtotal %}</span></div>
+                <div class="flex justify-end gap-8"><span class="text-zinc-500">Tax ({{ estimate.tax_rate|floatformat:"-2" }}%)</span><span class="text-zinc-200 w-28 text-right tabular-nums">{% include "invoices/partials/money.html" with amount=estimate.tax_amount %}</span></div>
+                <div class="flex justify-end gap-8 font-medium"><span class="text-zinc-300">Total</span><span class="text-zinc-100 w-28 text-right tabular-nums">{% include "invoices/partials/money.html" with amount=estimate.total %}</span></div>
+            </div>
+        </section>
+
+        {% if estimate.notes %}
+        <section aria-label="Notes" class="border border-border-subtle rounded-card bg-panel/50 p-4 text-sm text-zinc-300 whitespace-pre-line">{{ estimate.notes }}</section>
+        {% endif %}
+
+        {% if estimate.status == 'sent' %}
+        <section aria-label="Your answer" class="border border-border-subtle rounded-card bg-panel/50 p-5">
+            <form method="post" class="space-y-4" novalidate>
+                {% csrf_token %}
+                <div>
+                    <label for="accept-name" class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">Your full name</label>
+                    <input id="accept-name" type="text" name="name" autocomplete="name" maxlength="255" value="{{ form.name.value|default_if_none:'' }}"
+                           class="w-full sm:w-80 bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none">
+                    {% if form.name.errors %}<p class="text-xs text-error mt-1">{{ form.name.errors.0 }}</p>{% endif %}
+                </div>
+                <label class="flex items-start gap-2 text-sm text-zinc-300">
+                    <input type="checkbox" name="agree" value="1" {% if form.agree.value %}checked{% endif %} class="mt-0.5 w-4 h-4 shrink-0 bg-elevated border-border-subtle rounded">
+                    <span>I accept estimate {{ estimate.number_label }} for {% include "invoices/partials/money.html" with amount=estimate.total %}, as described above.</span>
+                </label>
+                {% if form.agree.errors %}<p class="text-xs text-error">{{ form.agree.errors.0 }}</p>{% endif %}
+                <div class="flex items-center gap-3 flex-wrap">
+                    <button type="submit" name="answer" value="accepted" class="px-4 py-2 bg-accent hover:bg-accent-hover text-on-accent rounded-control text-sm font-medium">Accept estimate</button>
+                    <button type="submit" name="answer" value="declined" onclick="return confirm('Decline estimate {{ estimate.number_label }}?')"
+                            class="px-4 py-2 bg-elevated border border-border-subtle rounded-control text-sm text-zinc-300 hover:text-error">Decline</button>
+                    <span class="text-xs text-zinc-500">We are notified right away. Your name, the time and your IP address are recorded with your answer.</span>
+                </div>
+            </form>
+        </section>
+        {% elif estimate.accepted_at %}
+        <p class="text-sm text-success">Accepted{% if estimate.answered_name %} by {{ estimate.answered_name }}{% endif %} on {{ estimate.accepted_at|date:"j F Y" }}. Thank you, we will be in touch.</p>
+        {% elif estimate.declined_at %}
+        <p class="text-sm text-zinc-400">Declined on {{ estimate.declined_at|date:"j F Y" }}.</p>
+        {% endif %}
+        {% endif %}
+    </main>
+    {% if company_email %}
+    <footer class="max-w-3xl mx-auto px-4 pb-8 text-xs text-zinc-500">Questions? Write to <a href="mailto:{{ company_email }}" class="text-zinc-300 hover:text-zinc-100">{{ company_email }}</a>.</footer>
+    {% endif %}
+</body>
+</html>

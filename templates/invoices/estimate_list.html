@@ -44,7 +44,7 @@
                 <thead class="bg-panel border-b border-border-subtle sticky top-0">
                     <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
                         <th class="px-4 py-2 font-medium w-[14%]">Number</th>
-                        <th class="px-4 py-2 font-medium w-[30%]">Client</th>
+                        <th class="px-4 py-2 font-medium w-[30%]">For</th>
                         <th class="px-4 py-2 font-medium w-[14%]">Issued</th>
                         <th class="px-4 py-2 font-medium w-[14%]">Valid until</th>
                         <th class="px-4 py-2 font-medium text-right w-[14%]">Total</th>
@@ -57,7 +57,7 @@
                         <td class="px-4 py-3">
                             <a href="{% url 'estimate_detail' estimate.pk %}" class="text-sm font-medium text-zinc-100 hover:text-zinc-50 transition-colors">{{ estimate.number_label }}</a>
                         </td>
-                        <td class="px-4 py-3 text-sm text-zinc-300 truncate">{{ estimate.client.name }}</td>
+                        <td class="px-4 py-3 text-sm text-zinc-300 truncate">{% if estimate.client_id %}{{ estimate.client.name }}{% else %}{{ estimate.lead.name }} <span class="ml-1 px-1.5 py-0.5 text-[10px] rounded bg-accent/10 text-accent border border-accent/20">Lead</span>{% endif %}</td>
                         <td class="px-4 py-3 text-sm text-zinc-400">{{ estimate.issue_date|date:"M j, Y" }}</td>
                         <td class="px-4 py-3 text-sm text-zinc-400">{{ estimate.valid_until|date:"M j, Y" }}</td>
                         <td class="px-4 py-3 text-sm text-zinc-200 text-right">{% include "invoices/partials/money.html" with invoice=estimate amount=estimate.total %}</td>

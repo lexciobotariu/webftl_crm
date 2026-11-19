@@ -12,6 +12,7 @@ urlpatterns = [
     path('<int:pk>/send/', views.estimate_mark_sent, name='estimate_mark_sent'),
     path('<int:pk>/email/', views.estimate_email, name='estimate_email'),
     path('<int:pk>/answer/<str:answer>/', views.estimate_answer, name='estimate_answer'),
+    path('<int:pk>/link/reset/', views.estimate_link_reset, name='estimate_link_reset'),
     path('<int:pk>/convert/', views.estimate_convert, name='estimate_convert'),
     path('<int:pk>/print/', views.estimate_print, name='estimate_print'),
     path('<int:pk>/pdf/', views.estimate_pdf_download, name='estimate_pdf'),

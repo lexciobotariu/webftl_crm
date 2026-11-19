@@ -31,6 +31,7 @@ class Page:
 PAGES = (
     Page('Dashboard', 'dashboard', 'access_dashboard'),
     Page('Clients', 'client_list', 'access_clients'),
+    Page('Leads', 'lead_list', 'access_leads'),
     Page('Projects', 'project_list', 'access_projects'),
     Page('Inbox', 'inbox', 'access_tasks'),
     Page('My Tasks', 'my_tasks', 'access_tasks'),

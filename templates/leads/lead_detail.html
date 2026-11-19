@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% load invoice_format task_markdown %}
+
+{% block title %}{{ lead.name }} - Leads - WebFTL CRM{% endblock %}
+
+{% block full_content %}
+{% with btn="inline-flex items-center gap-1.5 bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-300 hover:bg-hover transition-colors" primary="inline-flex items-center gap-1.5 bg-accent text-on-accent px-3 py-1.5 rounded-control text-xs font-medium hover:bg-accent-hover transition-colors" row="flex items-start justify-between gap-4 text-sm" key="text-zinc-500 shrink-0" %}
+<div class="flex flex-col h-full">
+    <div class="flex-shrink-0 px-4 py-2 border-b border-border-subtle bg-panel/80">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+            <div class="flex items-center gap-3 min-w-0">
+                <a href="{% url 'lead_list' %}" class="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded transition-colors" title="Back to Leads">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                </a>
+                <div class="flex items-center gap-2 text-sm min-w-0">
+                    <a href="{% url 'lead_list' %}" class="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 transition-colors">
+                        <i data-lucide="target" class="w-3.5 h-3.5"></i><span>Leads</span>
+                    </a>
+                    <span class="text-zinc-600">/</span>
+                    <span class="text-zinc-100 font-medium truncate">{{ lead.name }}</span>
+                </div>
+                {% if lead.is_converted %}
+                {% include "leads/partials/status_badge.html" with status=lead.status %}
+                {% else %}
+                <form hx-post="{% url 'lead_move' lead.pk %}" hx-trigger="change" class="flex items-center">
+                    <input type="hidden" name="reload" value="1">
+                    <label for="lead-status" class="sr-only">Status</label>
+                    <select id="lead-status" name="status" class="bg-elevated border border-border-subtle rounded-control px-2 py-1 text-xs text-zinc-200 focus:border-border-strong focus:outline-none">
+                        {% for status in statuses %}{% if status.kind != 'won' %}
+                        <option value="{{ status.pk }}" {% if status.pk == lead.status_id %}selected{% endif %}>{{ status.name }}</option>
+                        {% endif %}{% endfor %}
+                    </select>
+                </form>
+                {% endif %}
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <button hx-get="{% url 'lead_edit' lead.pk %}" hx-target="#slide-over" hx-swap="innerHTML" data-after-success="open-drawer" class="{{ btn }}">
+                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>Edit
+                </button>
+                {% if can_estimate %}
+                <button hx-get="{% url 'estimate_create' %}?lead={{ lead.pk }}" hx-target="#slide-over" hx-swap="innerHTML" data-after-success="open-drawer" class="{{ btn }}">
+                    <i data-lucide="file-text" class="w-3.5 h-3.5"></i>New estimate
+                </button>
+                {% endif %}
+                {% if can_convert %}
+                <button hx-get="{% url 'lead_convert' lead.pk %}" hx-target="#slide-over" hx-swap="innerHTML" data-after-success="open-drawer" class="{{ primary }}">
+                    <i data-lucide="user-check" class="w-3.5 h-3.5"></i>Convert to client
+                </button>
+                {% endif %}
+                {% if request.user.is_admin and not lead.is_converted %}
+                <button hx-post="{% url 'lead_delete' lead.pk %}" hx-confirm="Delete the lead {{ lead.name }}? Its notes go with it." title="Delete lead"
+                        class="inline-flex items-center gap-1.5 bg-error/10 border border-error/20 text-error px-3 py-1.5 rounded-control text-xs hover:bg-error/20 transition-colors">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i><span class="sr-only">Delete</span>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-6">
+        {% if lead.is_converted %}
+        <p class="mb-4 text-sm text-zinc-400 flex items-center gap-1.5">
+            <i data-lucide="user-check" class="w-4 h-4 text-success"></i>
+            Became a client on {{ lead.converted_at|date:"j M Y" }}:
+            {% if perms_map.access_clients %}<a href="{% url 'client_detail' lead.client_id %}" class="text-zinc-100 hover:text-zinc-50">{{ lead.client.name }}</a>{% else %}{{ lead.client.name }}{% endif %}.
+        </p>
+        {% endif %}
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div class="space-y-6">
+                <section class="bg-panel/50 border border-border-subtle rounded-card p-4 space-y-2.5" aria-label="Details">
+                    {% if lead.contact_name %}<div class="{{ row }}"><span class="{{ key }}">Contact</span><span class="text-zinc-200 text-right">{{ lead.contact_name }}</span></div>{% endif %}
+                    {% if lead.email %}<div class="{{ row }}"><span class="{{ key }}">Email</span><a href="mailto:{{ lead.email }}" class="text-zinc-200 hover:text-zinc-50 text-right break-all">{{ lead.email }}</a></div>{% endif %}
+                    {% if lead.phone %}<div class="{{ row }}"><span class="{{ key }}">Phone</span><a href="tel:{{ lead.phone }}" class="text-zinc-200 hover:text-zinc-50 text-right">{{ lead.phone }}</a></div>{% endif %}
+                    {% if lead.website %}<div class="{{ row }}"><span class="{{ key }}">Website</span><span class="text-zinc-200 text-right break-all">{{ lead.website }}</span></div>{% endif %}
+                    {% if lead.address %}<div class="{{ row }}"><span class="{{ key }}">Address</span><span class="text-zinc-200 text-right whitespace-pre-line">{{ lead.address }}</span></div>{% endif %}
+                    {% if lead.tax_id %}<div class="{{ row }}"><span class="{{ key }}">Tax ID</span><span class="text-zinc-200 text-right">{{ lead.tax_id }}</span></div>{% endif %}
+                    <div class="{{ row }}"><span class="{{ key }}">Currency</span><span class="text-zinc-200">{% if lead.currency %}{{ lead.currency.code }}{% else %}<span class="text-zinc-500">Not set</span>{% endif %}</span></div>
+                    <div class="pt-2 mt-2 border-t border-border-subtle"></div>
+                    <div class="{{ row }}"><span class="{{ key }}">Value</span><span class="text-zinc-200 tabular-nums">{% if lead.value is not None %}{% client_money lead lead.value %}{% else %}<span class="text-zinc-500">Not set</span>{% endif %}</span></div>
+                    <div class="{{ row }}"><span class="{{ key }}">Source</span><span class="text-zinc-200">{{ lead.source.name|default:"Unknown" }}</span></div>
+                    <div class="{{ row }}"><span class="{{ key }}">Assignee</span><span class="text-zinc-200">{% if lead.assignee %}{% firstof lead.assignee.name lead.assignee.email %}{% else %}<span class="text-zinc-500">Nobody</span>{% endif %}</span></div>
+                    <div class="{{ row }}"><span class="{{ key }}">Next follow-up</span><span>{% if lead.next_follow_up %}{% include "leads/partials/follow_up.html" %}{% else %}<span class="text-zinc-500">None</span>{% endif %}</span></div>
+                    <div class="{{ row }}"><span class="{{ key }}">Added</span><span class="text-zinc-400">{{ lead.created_at|date:"j M Y" }}{% if lead.created_by %} by {% firstof lead.created_by.name lead.created_by.email %}{% endif %}</span></div>
+                </section>
+                {% if lead.description %}
+                <section class="bg-panel/50 border border-border-subtle rounded-card p-4" aria-label="About">
+                    <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">About</div>
+                    <div class="text-sm text-zinc-300 whitespace-pre-line">{{ lead.description }}</div>
+                </section>
+                {% endif %}
+                {% if lead.status.kind == 'lost' or lead.lost_reason %}
+                <section class="bg-panel/50 border border-border-subtle rounded-card p-4" aria-label="Why it was lost">
+                    <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Why it was lost</div>
+                    {% if lead.lost_reason %}<div class="text-sm text-zinc-300 whitespace-pre-line">{{ lead.lost_reason }}</div>{% else %}<button hx-get="{% url 'lead_edit' lead.pk %}" hx-target="#slide-over" hx-swap="innerHTML" data-after-success="open-drawer" class="text-sm text-zinc-400 hover:text-zinc-200">Add the reason</button>{% endif %}
+                </section>
+                {% endif %}
+            </div>
+
+            <div class="xl:col-span-2 space-y-6">
+                {% if can_see_estimates %}
+                <section class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden" aria-label="Estimates">
+                    <div class="px-4 py-2 border-b border-border-subtle bg-panel/80 flex items-center justify-between">
+                        <h2 class="text-sm font-medium text-zinc-100">Estimates</h2>
+                        {% if can_estimate %}
+                        <button hx-get="{% url 'estimate_create' %}?lead={{ lead.pk }}" hx-target="#slide-over" hx-swap="innerHTML" data-after-success="open-drawer" class="text-xs text-zinc-300 hover:text-zinc-50 inline-flex items-center gap-1"><i data-lucide="plus" class="w-3.5 h-3.5"></i>New estimate</button>
+                        {% endif %}
+                    </div>
+                    {% if estimates %}
+                    <ul class="divide-y divide-border-subtle">
+                        {% for estimate in estimates %}
+                        <li>
+                            <a href="{% url 'estimate_detail' estimate.pk %}" class="px-4 py-2.5 flex items-center gap-3 hover:bg-elevated/50">
+                                <span class="text-sm text-zinc-100 w-20 shrink-0">{{ estimate.number_label }}</span>
+                                {% include "invoices/partials/estimate_status_badge.html" %}
+                                <span class="text-xs text-zinc-500 flex-1 truncate">Issued {{ estimate.issue_date|date:"j M Y" }} · valid until {{ estimate.valid_until|date:"j M Y" }}</span>
+                                <span class="text-sm text-zinc-200 tabular-nums">{% include "invoices/partials/money.html" with invoice=estimate amount=estimate.total %}</span>
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="px-4 py-5 text-sm text-zinc-500">{% if lead.currency %}No estimates yet.{% else %}No estimates yet. Set the lead's currency first: estimates are in it.{% endif %}</p>
+                    {% endif %}
+                </section>
+                {% endif %}
+
+                {% include "leads/partials/notes.html" %}
+
+                <section class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden" aria-label="Emails and answers">
+                    <div class="px-4 py-2 border-b border-border-subtle bg-panel/80"><h2 class="text-sm font-medium text-zinc-100">Emails and answers</h2></div>
+                    {% if sent_messages %}
+                    <ul class="divide-y divide-border-subtle">
+                        {% for message in sent_messages %}
+                        <li class="px-4 py-3 flex items-start justify-between gap-4 text-sm">
+                            <div class="min-w-0">
+                                <div class="text-zinc-200">{% if message.kind == 'email' %}<i data-lucide="mail" class="w-3.5 h-3.5 inline text-zinc-500 mr-1"></i>{% else %}<i data-lucide="check-circle" class="w-3.5 h-3.5 inline text-zinc-500 mr-1"></i>{% endif %}{{ message.subject }}</div>
+                                <div class="text-xs text-zinc-500">{% if message.recipients %}To {{ message.recipients }}{% else %}{{ message.body }}{% endif %}{% if message.author %} · by {% firstof message.author.name message.author.email %}{% endif %}</div>
+                                {% if message.failed %}<div class="text-xs text-error mt-1">Not sent: {{ message.error }}</div>{% endif %}
+                            </div>
+                            <span class="text-xs {% if message.failed %}text-error{% else %}text-zinc-500{% endif %} flex-shrink-0">{{ message.created_at|date:"j M Y H:i" }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="px-4 py-5 text-sm text-zinc-500">Nothing sent yet. Emails of this lead's estimates show here.</p>
+                    {% endif %}
+                </section>
+            </div>
+        </div>
+    </div>
+</div>
+{% endwith %}
+{% endblock %}

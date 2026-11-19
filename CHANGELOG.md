@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.45.0] - 2026-11-19
+
+**Leads** (CRM-4): keep prospects apart from clients, send them an estimate with an online Accept link, and turn them into a client when they say yes. Five database migrations (`leads.0001_initial`, `leads.0002_seed_statuses_and_sources`, `invoices.0011_estimate_lead_and_online_link`, `clients.0010_clientmessage_lead`, `accounts.0015_access_leads`): they add the leads tables with default statuses and sources, and empty columns on estimates and messages; existing estimates keep their client and are unchanged. Only the Admin preset gets the new Leads permission. Nothing to set in Dokploy, no new dependencies.
+
+### Added
+- **Leads** in the sidebar (`/leads/`), for presets with the new **Leads** permission (on for Admin, off for the others and for new presets). Leads are not clients: they do not show in Clients, client search or client pickers
+- A lead has a company or person name, contact, email, phone, website, address, tax ID, currency, **status**, **source**, **assignee**, **estimated value**, **next follow-up** date and notes
+- **Board** (one column per status, drag a card to move it, totals per currency) and **list** (filters for status, source, assignee, due follow-ups; 25 per page). The board shows open leads and those closed in the last 30 days
+- Settings > Leads: **Lead statuses** (name, colour, Open/Won/Lost, order) and **Lead sources**. Defaults: New, Contacted, Proposal sent, Won, Lost; Website, Referral, LinkedIn, Email, Other. A Lost lead has a reason field, and its page offers "Add the reason" until one is set
+- **Estimates for a lead**: "New estimate" on the lead page uses the same EST numbers, editor, PDF and email as a client's. The estimate list shows a Lead badge in the "For" column
+- Estimates: optional **Introduction** (Markdown), printed above the lines in the PDF and shown on the online page and in the client portal
+- **Online link** for each sent estimate (`/e/<id>/<secret>/`), included in the estimate email. The client reads the estimate, downloads the PDF and **accepts** (typing their full name and ticking a box) or **declines**. The name, date and IP are stored and a note plus an email go to the company. The link stops working after "Valid until"; "New link" on the estimate makes the old one stop working
+- **Convert to client** on the lead page: creates a new client from the lead or adds it to an existing one (same currency), moves its estimates, notes and emails there, and can create a project. The lead stays as Won with a link to the client. An accepted lead estimate can be converted to an invoice in one step: convert the lead, then invoice
+- Dashboard: **Follow-ups** card with your leads (and unassigned ones) due in the next 7 days, overdue first
+- Command palette (Ctrl K): "Leads"
+
+### Changed
+- An estimate for a lead must be converted to a client before it can become an invoice
+- A currency used by a lead cannot be deleted
+
 ## [0.44.0] - 2026-11-19
 
 **My Tasks, To-Dos and My Time, simplified.** No database migrations, nothing to set in Dokploy, no new dependencies.

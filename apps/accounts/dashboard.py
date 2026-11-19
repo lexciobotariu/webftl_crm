@@ -137,3 +137,26 @@ def deadlines(user, today=None):
             .order_by('deadline', 'name')[:LIST_LIMIT]
         )
     return result
+
+
+FOLLOW_UPS_AHEAD = timedelta(days=7)
+
+
+def follow_ups(user, today=None):
+    """Open leads to follow up within a week, overdue first: the user's own and nobody's."""
+    from django.db.models import Q
+
+    from apps.leads.models import Lead, LeadStatus
+
+    today = today or timezone.localdate()
+    return list(
+        Lead.objects.filter(
+            Q(assignee=user) | Q(assignee__isnull=True),
+            status__kind=LeadStatus.OPEN,
+            client__isnull=True,
+            next_follow_up__isnull=False,
+            next_follow_up__lte=today + FOLLOW_UPS_AHEAD,
+        )
+        .select_related('status')
+        .order_by('next_follow_up', 'name')[:LIST_LIMIT]
+    )

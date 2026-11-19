@@ -105,7 +105,11 @@ class ClientMessage(models.Model):
     EMAIL = 'email'
     KIND_CHOICES = [(NOTE, 'Note'), (EMAIL, 'Email')]
 
-    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='messages')
+    # Empty only for a lead that is not a client yet; converting the lead fills it in.
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, null=True, blank=True, related_name='messages')
+    lead = models.ForeignKey(
+        'leads.Lead', on_delete=models.CASCADE, null=True, blank=True, related_name='messages',
+    )
     project = models.ForeignKey(
         'projects.Project', on_delete=models.SET_NULL, null=True, blank=True, related_name='client_messages',
     )

@@ -22,6 +22,10 @@ SECTIONS = (
         ('settings_bank_accounts', 'Bank accounts', 'landmark'),
         ('settings_currencies', 'Currencies', 'coins'),
     )),
+    ('Leads', (
+        ('settings_lead_statuses', 'Lead statuses', 'columns-3'),
+        ('settings_lead_sources', 'Lead sources', 'signpost'),
+    )),
     ('Integrations', (
         ('settings_storage', 'File storage', 'hard-drive'),
     )),
@@ -122,6 +126,8 @@ def currency_delete(request, pk):
     currency = get_object_or_404(Currency, pk=pk)
     if currency.clients.exists():
         return _currencies_page(request, error='This currency is used by a client.', status=400)
+    if currency.leads.exists():
+        return _currencies_page(request, error='This currency is used by a lead.', status=400)
     if currency.bank_accounts.exists():
         return _currencies_page(request, error='This currency is used by a bank account.', status=400)
     try:

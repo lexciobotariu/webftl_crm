@@ -1,0 +1,61 @@
+{% extends "crm/settings/_layout.html" %}
+
+{% block page_title %}Lead sources{% endblock %}
+
+{% block settings_content %}
+{% with field="bg-elevated border border-border-subtle rounded-control px-2.5 py-1.5 text-sm text-zinc-100 focus:border-border-strong focus:outline-none" %}
+<section class="bg-card border border-border-subtle rounded-card overflow-hidden shadow-sm">
+    {% include "crm/settings/_card_header.html" with icon="signpost" title="Lead sources" description="Where leads come from, to pick on each lead. Deleting one leaves its leads with an unknown source." %}
+    {% if source_error %}<p class="px-5 pt-4 text-sm text-error">{{ source_error }}</p>{% endif %}
+    {% if edit_form and edit_form.errors %}<p class="px-5 pt-4 text-sm text-error">{% for errors in edit_form.errors.values %}{{ errors.0 }} {% endfor %}</p>{% endif %}
+    {% if sources %}
+    <div class="overflow-x-auto">
+    <table class="w-full">
+        <thead class="border-b border-border-subtle">
+            <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
+                <th class="px-5 py-2 font-medium">Name</th>
+                <th class="px-3 py-2 font-medium w-20">Position</th>
+                <th class="px-3 py-2 font-medium text-right">Leads</th>
+                <th class="px-5 py-2 font-medium w-32"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-border-subtle">
+            {% for source in sources %}
+            <tr>
+                <td class="px-5 py-2">
+                    <form id="source-{{ source.pk }}" method="post" action="{% url 'lead_source_edit' source.pk %}">{% csrf_token %}</form>
+                    <input form="source-{{ source.pk }}" type="text" name="s{{ source.pk }}-name" value="{{ source.name }}" maxlength="50" required aria-label="Name" class="w-full {{ field }}">
+                </td>
+                <td class="px-3 py-2"><input form="source-{{ source.pk }}" type="number" min="0" name="s{{ source.pk }}-position" value="{{ source.position }}" aria-label="Position" class="w-16 {{ field }}"></td>
+                <td class="px-3 py-2 text-sm text-zinc-400 text-right tabular-nums">{{ source.lead_count }}</td>
+                <td class="px-5 py-2 text-right whitespace-nowrap">
+                    <button form="source-{{ source.pk }}" type="submit" class="text-xs text-zinc-300 hover:text-zinc-50">Save</button>
+                    <form method="post" action="{% url 'lead_source_delete' source.pk %}" class="inline ml-3">
+                        {% csrf_token %}
+                        <button type="submit" class="text-xs text-zinc-500 hover:text-error transition-colors">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p class="px-5 py-4 text-sm text-zinc-500">No sources yet.</p>
+    {% endif %}
+</section>
+
+<section class="bg-card border border-border-subtle rounded-card overflow-hidden shadow-sm">
+    {% include "crm/settings/_card_header.html" with icon="plus" title="Add a source" description="For example Website, Referral or a trade fair." %}
+    <form method="post" action="{% url 'lead_source_add' %}">
+        {% csrf_token %}
+        <div class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {% for field in form %}{% include "crm/settings/_field.html" %}{% endfor %}
+        </div>
+        <div class="px-5 py-3 border-t border-border-subtle bg-panel/60 flex items-center gap-3">
+            <button type="submit" class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">Add source</button>
+        </div>
+    </form>
+</section>
+{% endwith %}
+{% endblock %}
