@@ -19,9 +19,15 @@ The only coloured element is what the client has to pay (and the title).
     .box { border: 1px solid #9aa1b0; box-sizing: border-box; }
     .bar { color: #1b2130; border-bottom: 1px solid #9aa1b0; font-size: 8pt; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; padding: 4px 8px; }
     .meta { table-layout: fixed; }
-    .meta th { width: 30mm; text-align: left; font-size: 8pt; text-transform: uppercase; letter-spacing: .06em; color: #5d6474; font-weight: 600; border-right: 1px solid #d5d9e1; }
-    .meta td { text-align: right; overflow: hidden; text-overflow: ellipsis; }
-    .meta th, .meta td { height: 7mm; padding: 0 8px; border-bottom: 1px solid #d5d9e1; vertical-align: middle; white-space: nowrap; line-height: 1.2; box-sizing: border-box; }
+    /* A long value (company, address, email, project) wraps and its row grows; the cell borders are
+       table borders, so the column line and the row line always run the full height of the row.
+       7mm is a minimum (a table cell's height never cuts its content). */
+    .meta th { width: 36mm; text-align: left; font-size: 8pt; text-transform: uppercase; letter-spacing: .06em; color: #5d6474; font-weight: 600; border-right: 1px solid #d5d9e1; }
+    .meta td { text-align: right; overflow-wrap: anywhere; }
+    .meta th, .meta td { height: 7mm; padding: 3px 8px; border-bottom: 1px solid #d5d9e1; vertical-align: middle; line-height: 1.25; box-sizing: border-box; }
+    /* The left boxes (client, bank) have short labels, so their values get more room;
+       the right box needs 36mm for "Payment terms" in DejaVu Sans, the server's PDF font. */
+    .left .meta th { width: 30mm; }
     .meta tr:last-child th, .meta tr:last-child td { border-bottom: 0; }
     .meta .strong td { font-weight: 700; }
     .summary .meta th { width: 43.8mm; }

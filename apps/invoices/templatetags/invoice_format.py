@@ -41,3 +41,15 @@ def address_parts(address):
     if not lines:
         return ('', '')
     return (lines[0], ', '.join(lines[1:]))
+
+
+@register.filter
+def email_breaks(email):
+    """An email that may wrap after the @ (and only mid-word if one half is still too long)."""
+    from django.utils.html import escape
+    from django.utils.safestring import mark_safe
+
+    local, at, domain = (email or '').partition('@')
+    if not at:
+        return escape(email or '')
+    return mark_safe(f'{escape(local)}@<wbr>{escape(domain)}')

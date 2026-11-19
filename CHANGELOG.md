@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.43.1] - 2026-11-19
+
+**Invoice PDF: nothing cut off any more.** No database migrations, nothing to set in Dokploy, no new dependencies.
+
+### Fixed
+- Bill to, Invoice details and Payment details: a long company name, address, email or project wraps onto more lines and the row grows, instead of ending in "…". The column line and the row lines run the full height of the taller row
+- "Payment terms" ran past the column line in the PDF: the Invoice details label column is wider (36mm), so every label fits on one line also in DejaVu Sans, the font the server draws PDFs with. Bill to and Payment details keep 30mm labels, so their values have more room
+- The Bill to email can wrap after the @ instead of breaking mid-word
+
 ## [0.43.0] - 2026-11-15
 
 **Bank accounts on invoices** (CRM-3): save the company's bank accounts in Settings and choose on each invoice which one is printed. Two database migrations (`crm.0005_bank_accounts`, `invoices.0010_invoice_bank_account`), both only add a table and empty columns; existing invoices get no bank details and print as before. Nothing to set in Dokploy, no new dependencies.
