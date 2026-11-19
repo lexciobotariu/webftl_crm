@@ -86,11 +86,12 @@ def header_form(user, document, kind, data=None):
         'tax_rate': document.tax_rate,
     }
     if kind == ESTIMATE:
-        initial.update(valid_until=document.valid_until, notes=document.notes)
+        initial.update(valid_until=document.valid_until, notes=document.notes, introduction=document.introduction)
+        extra = {'for_lead': document.client_id is None}
     else:
         initial['due_date'] = document.due_date
         initial['bank_account'] = document.bank_account_id
-    extra = {} if kind == ESTIMATE else {'current_bank_account_id': document.bank_account_id}
+        extra = {'current_bank_account_id': document.bank_account_id}
     return form_class(
         data, user=user, initial=initial,
         current_client_id=document.client_id, current_project_id=document.project_id, **extra,
@@ -116,16 +117,18 @@ def header(request, kind, pk):
     if refused:
         return refused
     data = request.POST.copy()
-    client_changed = data.get('client') != str(document.client_id)
+    # A lead's estimate has no client to change.
+    client_changed = document.client_id is not None and data.get('client') != str(document.client_id)
     if client_changed:
         data['project'] = ''
     form = header_form(request.user, document, kind, data)
     if form.is_valid():
-        values = {key: form.cleaned_data[key] for key in ('client', 'project', 'issue_date', 'tax_rate')}
+        values = {key: form.cleaned_data.get(key) for key in ('client', 'project', 'issue_date', 'tax_rate')}
         try:
             if kind == ESTIMATE:
                 update_estimate(document, valid_until=form.cleaned_data['valid_until'],
-                                notes=form.cleaned_data['notes'], **values)
+                                notes=form.cleaned_data['notes'],
+                                introduction=form.cleaned_data['introduction'], **values)
             else:
                 # A new client may call for its currency's default account instead.
                 bank = {} if client_changed else {'bank_account': form.cleaned_data['bank_account']}

@@ -81,6 +81,7 @@ INSTALLED_APPS = [
     'apps.notes',
     'apps.salaries',
     'apps.invoices',
+    'apps.leads',
     'apps.integrations',
     'apps.imports',
     'apps.search',

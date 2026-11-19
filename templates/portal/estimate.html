@@ -18,6 +18,12 @@
 
 {% if error %}<p role="alert" class="bg-error/10 border border-error/20 rounded-card p-3 text-sm text-error">{{ error }}</p>{% endif %}
 
+{% if estimate.introduction %}
+<section aria-label="Introduction" class="border border-border-subtle rounded-card bg-panel/50 p-5">
+    {% include "invoices/partials/estimate_introduction.html" %}
+</section>
+{% endif %}
+
 <section aria-label="Lines" class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden">
     <div class="overflow-x-auto">
     <table class="w-full text-sm">

@@ -28,6 +28,7 @@ PERMISSION_KEYS = [
     'invoices_view_all',
     'invoices_create',
     'invoices_edit',
+    'access_leads',
     'access_team',
     'team_create',
     'team_edit',
@@ -48,6 +49,8 @@ class PermissionPreset(models.Model):
     # Money is opt-in: a new preset sees no salaries or invoices until ticked.
     access_salaries = models.BooleanField(default=False)
     access_invoices = models.BooleanField(default=False)
+    # Leads: every lead is visible to whoever has the module. Opt-in, like money.
+    access_leads = models.BooleanField(default=False)
     access_team = models.BooleanField(default=True)
 
     # Unchecked means view own. Admins still see everything via has_app_permission.

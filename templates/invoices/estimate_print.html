@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+{% load task_markdown %}<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -26,6 +26,9 @@
             </table>
         </section>
     </div>
+    {% if estimate.introduction %}
+    <section class="intro">{{ estimate.introduction|render_markdown }}</section>
+    {% endif %}
     {% include "invoices/partials/document_print_lines.html" %}
     <div class="row bottom">
         {% if estimate.notes %}

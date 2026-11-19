@@ -15,7 +15,7 @@ from django.views.decorators.http import require_POST
 from apps.accounts.decorators import require_permission
 from apps.clients.models import visible_clients
 
-from . import editor, emails
+from . import editor, emails, public
 from .estimates import (
     EstimateLocked,
     convert_to_invoice,
@@ -81,10 +81,48 @@ def estimate_list(request):
     })
 
 
+def _lead_for_estimate(user, raw):
+    """The lead a new estimate is for, from ``?lead=`` or the form: Leads module, not converted."""
+    if not raw or not str(raw).isdigit() or not user.has_app_permission('access_leads'):
+        return None
+    from apps.leads.models import Lead
+
+    return Lead.objects.select_related('currency').filter(pk=raw, client__isnull=True).first()
+
+
+def _create_for_lead(request, lead):
+    if request.method == 'POST':
+        form = EstimateForm(request.POST, user=request.user, for_lead=True)
+        if form.is_valid():
+            try:
+                estimate = create_estimate(
+                    lead=lead,
+                    issue_date=form.cleaned_data['issue_date'],
+                    valid_until=form.cleaned_data['valid_until'],
+                    tax_rate=form.cleaned_data['tax_rate'],
+                    notes=form.cleaned_data['notes'],
+                    introduction=form.cleaned_data['introduction'],
+                )
+            except ValidationError as exc:
+                _form_errors(form, exc)
+            else:
+                return _redirect_to('estimate_detail', estimate.pk)
+    else:
+        form = EstimateForm(user=request.user, for_lead=True)
+    return render(request, 'invoices/partials/estimate_drawer.html', {'form': form, 'estimate': None, 'lead': lead})
+
+
 @login_required
 @require_permission('access_invoices')
 @require_permission('invoices_create')
 def estimate_create(request):
+    raw_lead = request.POST.get('lead') if request.method == 'POST' else request.GET.get('lead')
+    if raw_lead:
+        lead = _lead_for_estimate(request.user, raw_lead)
+        if lead is None:
+            return HttpResponse('This lead cannot get an estimate: it is a client now, or you cannot see it.',
+                                status=404)
+        return _create_for_lead(request, lead)
     initial = {}
     raw_client = request.GET.get('client', '')
     if request.method != 'POST' and raw_client.isdigit():
@@ -125,6 +163,8 @@ def estimate_create(request):
 def estimate_detail(request, pk):
     estimate = _estimate_or_404(request.user, pk)
     context = {}
+    if not estimate.is_draft:
+        context['public_url'] = public.public_url(request, estimate)
     if estimate.is_draft and request.user.has_app_permission('invoices_edit'):
         context = editor.editor_context(
             estimate, editor.ESTIMATE, editor=True,
@@ -147,13 +187,14 @@ def estimate_edit(request, pk):
     refused = _draft_refusal(estimate)
     if refused:
         return refused
+    for_lead = estimate.for_lead
     if request.method == 'POST':
         form = EstimateForm(request.POST, user=request.user, current_client_id=estimate.client_id,
-                            current_project_id=estimate.project_id)
+                            current_project_id=estimate.project_id, for_lead=for_lead)
         if form.is_valid():
             try:
-                update_estimate(estimate, **{key: form.cleaned_data[key] for key in (
-                    'client', 'project', 'issue_date', 'valid_until', 'tax_rate', 'notes')})
+                update_estimate(estimate, **{key: form.cleaned_data.get(key) for key in (
+                    'client', 'project', 'issue_date', 'valid_until', 'tax_rate', 'notes', 'introduction')})
             except EstimateLocked:
                 return HttpResponseForbidden('This estimate has been sent.')
             except ValidationError as exc:
@@ -162,15 +203,18 @@ def estimate_edit(request, pk):
                 return _redirect_to('estimate_detail', estimate.pk)
     else:
         form = EstimateForm(user=request.user, current_client_id=estimate.client_id,
-                            current_project_id=estimate.project_id, initial={
+                            current_project_id=estimate.project_id, for_lead=for_lead, initial={
             'client': estimate.client_id,
             'project': estimate.project_id,
             'issue_date': estimate.issue_date,
             'valid_until': estimate.valid_until,
             'tax_rate': estimate.tax_rate,
             'notes': estimate.notes,
+            'introduction': estimate.introduction,
         })
-    return render(request, 'invoices/partials/estimate_drawer.html', {'form': form, 'estimate': estimate})
+    return render(request, 'invoices/partials/estimate_drawer.html', {
+        'form': form, 'estimate': estimate, 'lead': estimate.lead if for_lead else None,
+    })
 
 
 @login_required
@@ -249,6 +293,17 @@ def estimate_answer(request, pk, answer):
 
 @login_required
 @require_permission('access_invoices')
+@require_permission('invoices_edit')
+@require_POST
+def estimate_link_reset(request, pk):
+    """A new online link: the old one stops working."""
+    estimate = _estimate_or_404(request.user, pk)
+    public.reset_key(estimate)
+    return _redirect_to('estimate_detail', estimate.pk)
+
+
+@login_required
+@require_permission('access_invoices')
 @require_permission('invoices_create')
 @require_POST
 def estimate_convert(request, pk):
@@ -285,7 +340,7 @@ def estimate_email(request, pk):
         form = InvoiceEmailForm(initial={
             'to': emails.default_recipient(estimate),
             'subject': emails.default_subject(estimate, emails.ESTIMATE),
-            'message': emails.default_message(estimate, emails.ESTIMATE),
+            'message': emails.default_message(estimate, emails.ESTIMATE, link=public.public_url(request, estimate)),
         })
     return render(request, 'invoices/partials/email_drawer.html', {
         'form': form,

@@ -145,14 +145,22 @@ class RecurringInvoiceForm(forms.Form):
 
 
 class EstimateForm(InvoiceForm):
-    """Client, dates, tax and notes of an estimate. ``valid_until`` takes the place of the due date."""
+    """Client, dates, tax and notes of an estimate. ``valid_until`` takes the place of the due date.
+
+    ``for_lead`` is an estimate for a lead: no client or project to choose.
+    """
 
     valid_until = forms.DateField(input_formats=['%Y-%m-%d'], widget=HtmlDateInput())
     notes = forms.CharField(widget=forms.Textarea, required=False)
+    introduction = forms.CharField(widget=forms.Textarea, required=False, max_length=20000)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, for_lead=False, **kwargs):
         super().__init__(*args, **kwargs)
         del self.fields['due_date']
         del self.fields['bank_account']
+        self.for_lead = for_lead
+        if for_lead:
+            del self.fields['client']
+            del self.fields['project']
         if not self.is_bound and 'valid_until' not in self.initial:
             self.initial.setdefault('valid_until', timezone.localdate() + timedelta(days=30))

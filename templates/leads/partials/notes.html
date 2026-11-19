@@ -1,0 +1,29 @@
+<section id="lead-notes" class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden" aria-label="Notes">
+    <div class="px-4 py-2 border-b border-border-subtle bg-panel/80"><h2 class="text-sm font-medium text-zinc-100">Notes</h2></div>
+    <form hx-post="{% url 'lead_note_create' lead.pk %}" hx-target="#lead-notes" hx-swap="outerHTML" class="p-4 border-b border-border-subtle space-y-2">
+        <label for="lead-note-body" class="sr-only">New note</label>
+        <textarea id="lead-note-body" name="body" rows="3" required placeholder="Call notes, what they need, next steps…"
+                  onkeydown="if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); this.form.requestSubmit(); }"
+                  class="w-full bg-elevated border border-border-subtle rounded-control px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-border-strong focus:ring-1 focus:ring-border-strong focus:outline-none"></textarea>
+        <div class="flex items-center gap-3">
+            <button type="submit" class="bg-elevated border border-border-subtle px-3 py-1.5 rounded-control text-xs text-zinc-200 hover:bg-hover" title="Add note (Ctrl/⌘ Enter)" aria-keyshortcuts="Control+Enter Meta+Enter">Add note</button>
+            <span class="text-xs text-zinc-600">Only the team sees notes. They move to the client's notes when the lead becomes a client.</span>
+        </div>
+    </form>
+    {% if notes %}
+    <ul class="divide-y divide-border-subtle">
+        {% for note in notes %}
+        <li class="px-4 py-3 text-sm group/note">
+            <div class="flex items-center justify-between gap-3 text-xs text-zinc-500">
+                <span>{% if note.author %}{% firstof note.author.name note.author.email %} · {% endif %}{{ note.created_at|date:"j M Y H:i" }}</span>
+                {% if note.author_id == request.user.pk or request.user.is_admin %}
+                <button hx-post="{% url 'lead_note_delete' lead.pk note.pk %}" hx-target="#lead-notes" hx-swap="outerHTML" hx-confirm="Delete this note?"
+                        class="opacity-0 group-hover/note:opacity-100 focus-visible:opacity-100 hover:text-error">Delete</button>
+                {% endif %}
+            </div>
+            <div class="mt-1 text-zinc-200 whitespace-pre-line">{{ note.body }}</div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</section>

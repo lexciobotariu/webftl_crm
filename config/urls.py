@@ -25,6 +25,9 @@ urlpatterns = [
     path('salaries/', include('apps.salaries.urls')),
     path('invoices/', include('apps.invoices.urls')),
     path('estimates/', include('apps.invoices.estimate_urls')),
+    # An estimate's online page, opened from the emailed link without logging in.
+    path('e/', include('apps.invoices.public_urls')),
+    path('leads/', include('apps.leads.urls')),
     path('search/', include('apps.search.urls')),
     path('inbox/', include('apps.notifications.urls')),
     path('settings/', include('apps.crm.urls')),

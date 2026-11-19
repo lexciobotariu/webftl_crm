@@ -49,9 +49,18 @@
                 {% endif %}
                 {% endif %}
                 {% if estimate.status == 'accepted' and perms_map.invoices_create %}
+                {% if estimate.for_lead %}
+                {% if perms_map.access_leads and perms_map.clients_create %}
+                <button hx-get="{% url 'lead_convert' estimate.lead_id %}?estimate={{ estimate.pk }}" hx-target="#slide-over" hx-swap="innerHTML" data-after-success="open-drawer"
+                        title="{{ estimate.lead.name }} is a lead. Make it a client first, then the invoice is created." class="{{ primary }}">
+                    <i data-lucide="receipt" class="w-3.5 h-3.5"></i>Convert to invoice
+                </button>
+                {% endif %}
+                {% else %}
                 <button hx-post="{% url 'estimate_convert' estimate.pk %}" hx-confirm="Create a draft invoice from {{ estimate.number_label }}?" class="{{ primary }}">
                     <i data-lucide="receipt" class="w-3.5 h-3.5"></i>Convert to invoice
                 </button>
+                {% endif %}
                 {% endif %}
                 {% if request.user.is_admin and not estimate.invoice_id %}
                 <button hx-post="{% url 'estimate_delete' estimate.pk %}" hx-confirm="Delete {{ estimate.number_label }}?" class="inline-flex items-center gap-1.5 bg-error/10 border border-error/20 text-error px-3 py-1.5 rounded-control text-xs hover:bg-error/20 transition-colors">
@@ -69,6 +78,24 @@
             Invoiced as <a href="{% url 'invoice_detail' estimate.invoice.pk %}" class="text-zinc-100 hover:text-zinc-50">{{ estimate.invoice.number_label }}</a>.
         </p>
         {% endif %}
+        {% if public_url %}
+        <div class="mb-4 flex items-center gap-2 flex-wrap text-sm" x-data="{ copied: false }">
+            <i data-lucide="link" class="w-4 h-4 text-zinc-500"></i>
+            <span class="text-zinc-400">Online link</span>
+            <input type="text" readonly value="{{ public_url }}" aria-label="Online link" @focus="$el.select()"
+                   class="flex-1 min-w-[16rem] max-w-xl bg-elevated border border-border-subtle rounded-control px-2.5 py-1 text-xs text-zinc-300 font-mono">
+            <button type="button" class="{{ btn }}" @click="navigator.clipboard.writeText('{{ public_url }}'); copied = true; setTimeout(() => copied = false, 1500)">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i><span x-text="copied ? 'Copied' : 'Copy'">Copy</span>
+            </button>
+            <a href="{{ public_url }}" target="_blank" rel="noopener" class="{{ btn }}"><i data-lucide="external-link" class="w-3.5 h-3.5"></i>Open</a>
+            {% if perms_map.invoices_edit %}
+            <button hx-post="{% url 'estimate_link_reset' estimate.pk %}" hx-confirm="Make a new link? The one already sent stops working." class="{{ btn }}" title="The link already sent stops working">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>New link
+            </button>
+            {% endif %}
+            <span class="w-full text-xs text-zinc-600">Anyone with this link can read {{ estimate.number_label }} and accept or decline it until {{ estimate.valid_until|date:"j M Y" }}, without logging in.</span>
+        </div>
+        {% endif %}
         {% if editor %}
         {% include "invoices/partials/editor_header.html" %}
         {% include "invoices/partials/editor_lines.html" %}
@@ -79,16 +106,28 @@
                 <div class="text-sm font-medium text-zinc-100">{{ estimate.bill_to_name }}</div>
                 {% if estimate.bill_to_email %}<div class="text-sm text-zinc-400 mt-1">{{ estimate.bill_to_email }}</div>{% endif %}
                 {% if estimate.bill_to_address %}<div class="text-sm text-zinc-400 mt-1 whitespace-pre-line">{{ estimate.bill_to_address }}</div>{% endif %}
+                {% if estimate.introduction %}
+                <div class="text-[10px] uppercase tracking-wider text-zinc-500 mt-4 mb-1">Introduction</div>
+                {% include "invoices/partials/estimate_introduction.html" %}
+                {% endif %}
                 {% if estimate.notes %}
                 <div class="text-[10px] uppercase tracking-wider text-zinc-500 mt-4 mb-1">Notes</div>
                 <div class="text-sm text-zinc-300 whitespace-pre-line">{{ estimate.notes }}</div>
                 {% endif %}
             </div>
             <div class="bg-panel/50 border border-border-subtle rounded-card p-4 space-y-2">
+                {% if estimate.client_id %}
                 <div class="flex items-center justify-between text-sm">
                     <span class="text-zinc-500">Client</span>
                     <a href="{% url 'client_detail' estimate.client_id %}" class="text-zinc-200 hover:text-zinc-50">{{ estimate.client.name }}</a>
                 </div>
+                {% endif %}
+                {% if estimate.lead_id %}
+                <div class="flex items-center justify-between text-sm">
+                    <span class="text-zinc-500">Lead</span>
+                    {% if perms_map.access_leads %}<a href="{% url 'lead_detail' estimate.lead_id %}" class="text-zinc-200 hover:text-zinc-50">{{ estimate.lead.name }}</a>{% else %}<span class="text-zinc-200">{{ estimate.lead.name }}</span>{% endif %}
+                </div>
+                {% endif %}
                 {% if estimate.project %}
                 <div class="flex items-center justify-between text-sm">
                     <span class="text-zinc-500">Project</span>
@@ -111,6 +150,9 @@
                 <div class="flex items-center justify-between text-sm"><span class="text-zinc-500">Accepted</span><span class="text-success">{{ estimate.accepted_at|date:"M j, Y" }}</span></div>
                 {% elif estimate.declined_at %}
                 <div class="flex items-center justify-between text-sm"><span class="text-zinc-500">Declined</span><span class="text-error">{{ estimate.declined_at|date:"M j, Y" }}</span></div>
+                {% endif %}
+                {% if estimate.answered_name %}
+                <div class="flex items-center justify-between gap-3 text-sm" title="Typed on the online page{% if estimate.answered_ip %}, from {{ estimate.answered_ip }}{% endif %}"><span class="text-zinc-500">Online, by</span><span class="text-zinc-200 truncate">{{ estimate.answered_name }}</span></div>
                 {% endif %}
             </div>
         </div>

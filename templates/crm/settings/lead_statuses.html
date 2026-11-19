@@ -1,0 +1,72 @@
+{% extends "crm/settings/_layout.html" %}
+
+{% block page_title %}Lead statuses{% endblock %}
+
+{% block settings_content %}
+{% with field="bg-elevated border border-border-subtle rounded-control px-2.5 py-1.5 text-sm text-zinc-100 focus:border-border-strong focus:outline-none" %}
+<section class="bg-card border border-border-subtle rounded-card overflow-hidden shadow-sm">
+    {% include "crm/settings/_card_header.html" with icon="columns-3" title="Lead statuses" description="The columns of the leads board, left to right by position. Open statuses are the pipeline. A lead reaches Won when it becomes a client; Lost asks why. Keep at least one of each." %}
+    {% if status_error %}<p class="px-5 pt-4 text-sm text-error">{{ status_error }}</p>{% endif %}
+    {% if edit_form and edit_form.errors %}<p class="px-5 pt-4 text-sm text-error">{% for errors in edit_form.errors.values %}{{ errors.0 }} {% endfor %}</p>{% endif %}
+    <div class="overflow-x-auto">
+    <table class="w-full">
+        <thead class="border-b border-border-subtle">
+            <tr class="text-left text-xs text-zinc-500 uppercase tracking-wider">
+                <th class="px-5 py-2 font-medium">Name</th>
+                <th class="px-3 py-2 font-medium">Kind</th>
+                <th class="px-3 py-2 font-medium">Colour</th>
+                <th class="px-3 py-2 font-medium w-20">Position</th>
+                <th class="px-3 py-2 font-medium text-right">Leads</th>
+                <th class="px-5 py-2 font-medium w-32"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-border-subtle">
+            {% for status in statuses %}
+            <tr>
+                <td class="px-5 py-2">
+                    <form id="status-{{ status.pk }}" method="post" action="{% url 'lead_status_edit' status.pk %}">{% csrf_token %}</form>
+                    <div class="flex items-center gap-2">
+                        {% include "leads/partials/status_dot.html" %}
+                        <input form="status-{{ status.pk }}" type="text" name="s{{ status.pk }}-name" value="{{ status.name }}" maxlength="50" required aria-label="Name" class="w-full {{ field }}">
+                    </div>
+                </td>
+                <td class="px-3 py-2">
+                    <select form="status-{{ status.pk }}" name="s{{ status.pk }}-kind" aria-label="Kind" class="{{ field }}">
+                        {% for value, label in status.KIND_CHOICES %}<option value="{{ value }}" {% if value == status.kind %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                    </select>
+                </td>
+                <td class="px-3 py-2">
+                    <select form="status-{{ status.pk }}" name="s{{ status.pk }}-color" aria-label="Colour" class="{{ field }}">
+                        {% for value, label in status.COLOR_CHOICES %}<option value="{{ value }}" {% if value == status.color %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                    </select>
+                </td>
+                <td class="px-3 py-2"><input form="status-{{ status.pk }}" type="number" min="0" name="s{{ status.pk }}-position" value="{{ status.position }}" aria-label="Position" class="w-16 {{ field }}"></td>
+                <td class="px-3 py-2 text-sm text-zinc-400 text-right tabular-nums">{{ status.lead_count }}</td>
+                <td class="px-5 py-2 text-right whitespace-nowrap">
+                    <button form="status-{{ status.pk }}" type="submit" class="text-xs text-zinc-300 hover:text-zinc-50">Save</button>
+                    <form method="post" action="{% url 'lead_status_delete' status.pk %}" class="inline ml-3">
+                        {% csrf_token %}
+                        <button type="submit" class="text-xs text-zinc-500 hover:text-error transition-colors">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</section>
+
+<section class="bg-card border border-border-subtle rounded-card overflow-hidden shadow-sm">
+    {% include "crm/settings/_card_header.html" with icon="plus" title="Add a status" description="A new column on the leads board." %}
+    <form method="post" action="{% url 'lead_status_add' %}">
+        {% csrf_token %}
+        <div class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {% for field in form %}{% include "crm/settings/_field.html" %}{% endfor %}
+        </div>
+        <div class="px-5 py-3 border-t border-border-subtle bg-panel/60 flex items-center gap-3">
+            <button type="submit" class="bg-accent text-on-accent px-4 py-2 rounded-control text-sm font-medium hover:bg-accent-hover transition-colors">Add status</button>
+        </div>
+    </form>
+</section>
+{% endwith %}
+{% endblock %}

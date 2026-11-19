@@ -79,7 +79,7 @@
         </div>
         {% endif %}
 
-        {% if deadlines.late_tasks or deadlines.week_tasks or deadlines.projects or money.overdue_invoices %}
+        {% if deadlines.late_tasks or deadlines.week_tasks or deadlines.projects or money.overdue_invoices or follow_ups %}
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6" id="dashboard-deadlines">
             {% if deadlines.late_tasks or deadlines.week_tasks or deadlines.projects %}
             <div class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden">
@@ -110,6 +110,28 @@
                             <span class="text-xs w-20 shrink-0 {% if project.deadline < today %}text-error{% else %}text-zinc-400{% endif %}">{{ project.deadline|date:"j M" }}{% if project.deadline < today %}, late{% endif %}</span>
                             <span class="text-sm text-zinc-100 truncate flex-1"><i data-lucide="folder-kanban" class="w-3.5 h-3.5 inline text-zinc-500 mr-1"></i>{{ project.name }}</span>
                             <span class="text-xs text-zinc-500 truncate">{{ project.client.name }}</span>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            {% if follow_ups %}
+            <div class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden" id="dashboard-follow-ups">
+                <div class="px-4 py-2 border-b border-border-subtle bg-panel/80 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="bell" class="w-4 h-4 text-zinc-500"></i>
+                        <h2 class="text-sm font-medium text-zinc-100">Follow-ups</h2>
+                    </div>
+                    <a href="{% url 'lead_list' %}?view=list&amp;follow_up=due" class="text-xs text-zinc-200 hover:text-zinc-50">Leads</a>
+                </div>
+                <ul class="divide-y divide-border-subtle">
+                    {% for lead in follow_ups %}
+                    <li>
+                        <a href="{% url 'lead_detail' lead.pk %}" class="px-4 py-2 flex items-center gap-3 hover:bg-elevated/50">
+                            <span class="text-xs w-20 shrink-0 {% if lead.next_follow_up < today %}text-error{% elif lead.next_follow_up == today %}text-amber-400{% else %}text-zinc-400{% endif %}">{% if lead.next_follow_up == today %}Today{% else %}{{ lead.next_follow_up|date:"D j M" }}{% if lead.next_follow_up < today %}, late{% endif %}{% endif %}</span>
+                            <span class="text-sm text-zinc-100 truncate flex-1"><i data-lucide="target" class="w-3.5 h-3.5 inline text-zinc-500 mr-1"></i>{{ lead.name }}</span>
+                            <span class="text-xs text-zinc-500 truncate">{{ lead.status.name }}</span>
                         </a>
                     </li>
                     {% endfor %}

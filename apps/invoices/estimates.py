@@ -1,4 +1,5 @@
 """Estimates: create, change while a draft, send, record the client's answer, turn into an invoice."""
+import secrets
 from datetime import timedelta
 
 from django.core.exceptions import ValidationError
@@ -33,21 +34,39 @@ def _check_dates(issue_date, valid_until):
         raise ValidationError({'valid_until': 'Valid until cannot be before the issue date.'})
 
 
-def create_estimate(*, client, issue_date, valid_until, tax_rate, notes='', project=None):
+def _recipient(client, lead):
+    if (client is None) == (lead is None):
+        raise ValidationError('Choose a client or a lead.')
+    return client or lead
+
+
+def create_estimate(
+    *, client=None, lead=None, issue_date, valid_until, tax_rate, notes='', project=None, introduction='',
+):
+    """A draft for ``client`` or for ``lead`` (exactly one). A lead's estimate has no project."""
+    recipient = _recipient(client, lead)
     _check_dates(issue_date, valid_until)
-    check_project(client, project)
-    snapshot = {**currency_snapshot(client), **company_snapshot(), **bill_to_snapshot(client)}
+    if lead is not None:
+        if project is not None:
+            raise ValidationError({'project': 'A lead has no projects yet.'})
+        if lead.is_converted:
+            raise ValidationError('This lead is a client now. Create the estimate for the client.')
+    else:
+        check_project(client, project)
+    snapshot = {**currency_snapshot(recipient), **company_snapshot(), **bill_to_snapshot(recipient)}
     for _ in range(5):
         try:
             with transaction.atomic():
                 return Estimate.objects.create(
                     client=client,
+                    lead=lead,
                     project=project,
                     number=_next_number(),
                     issue_date=issue_date,
                     valid_until=valid_until,
                     tax_rate=money(tax_rate),
                     notes=(notes or '').strip(),
+                    introduction=(introduction or '').strip(),
                     **snapshot,
                 )
         except IntegrityError:
@@ -62,13 +81,25 @@ def _locked_draft(estimate):
     return locked
 
 
-def update_estimate(estimate, *, client, issue_date, valid_until, tax_rate, notes='', project=None):
-    """Change a draft. A new client refreshes bill-to and currency."""
+def update_estimate(
+    estimate, *, client=None, issue_date, valid_until, tax_rate, notes='', project=None, introduction=None,
+):
+    """Change a draft. A new client refreshes bill-to and currency.
+
+    A lead's estimate keeps its lead: ``client`` and ``project`` stay empty.
+    ``introduction`` left as None keeps the one it has.
+    """
     _check_dates(issue_date, valid_until)
-    check_project(client, project)
     with transaction.atomic():
         locked = _locked_draft(estimate)
-        if client.pk != locked.client_id:
+        if locked.client_id is None:
+            if client is not None or project is not None:
+                raise ValidationError('Convert the lead to a client before choosing a client or project.')
+        else:
+            if client is None:
+                raise ValidationError({'client': 'Choose a client.'})
+            check_project(client, project)
+        if client is not None and client.pk != locked.client_id:
             if locked.lines.filter(project__isnull=False).exclude(project__client=client).exists():
                 raise ValidationError('Remove project lines from the previous client before changing it.')
             locked.client = client
@@ -79,6 +110,8 @@ def update_estimate(estimate, *, client, issue_date, valid_until, tax_rate, note
         locked.valid_until = valid_until
         locked.tax_rate = money(tax_rate)
         locked.notes = (notes or '').strip()
+        if introduction is not None:
+            locked.introduction = introduction.strip()
         locked.save()
         return locked
 
@@ -86,7 +119,7 @@ def update_estimate(estimate, *, client, issue_date, valid_until, tax_rate, note
 def _line_description(estimate, project, description):
     description = (description or '').strip()
     if project is not None:
-        if project.client_id != estimate.client_id:
+        if estimate.client_id is None or project.client_id != estimate.client_id:
             raise ValidationError({'project': 'Choose a project that belongs to this client.'})
         return description or project.name
     if not description:
@@ -135,12 +168,18 @@ def mark_estimate_sent(estimate):
         if locked.total <= 0:
             raise ValidationError('Add a line with an amount before sending this estimate.')
         locked.sent_at = timezone.now()
-        locked.save(update_fields=['sent_at', 'updated_at'])
+        if not locked.public_key:
+            # The online link (apps/invoices/public.py) works from now on.
+            locked.public_key = secrets.token_hex(16)
+        locked.save(update_fields=['sent_at', 'public_key', 'updated_at'])
         return locked
 
 
-def record_answer(estimate, answer):
-    """``accepted``, ``declined``, or ``open`` to clear a mistaken answer. Only a sent estimate has one."""
+def record_answer(estimate, answer, *, name='', ip=None):
+    """``accepted``, ``declined``, or ``open`` to clear a mistaken answer. Only a sent estimate has one.
+
+    ``name`` and ``ip`` are what the online page records: the name typed and where from.
+    """
     with transaction.atomic():
         locked = Estimate.objects.select_for_update().get(pk=estimate.pk)
         if locked.sent_at is None:
@@ -150,7 +189,9 @@ def record_answer(estimate, answer):
         now = timezone.now()
         locked.accepted_at = now if answer == 'accepted' else None
         locked.declined_at = now if answer == 'declined' else None
-        locked.save(update_fields=['accepted_at', 'declined_at', 'updated_at'])
+        locked.answered_name = (name or '').strip() if answer != 'open' else ''
+        locked.answered_ip = ip if answer != 'open' else None
+        locked.save(update_fields=['accepted_at', 'declined_at', 'answered_name', 'answered_ip', 'updated_at'])
         return locked
 
 
@@ -163,6 +204,8 @@ def convert_to_invoice(estimate, today=None):
             raise ValidationError('This estimate has already been invoiced.')
         if locked.accepted_at is None:
             raise ValidationError('Mark the estimate accepted before invoicing it.')
+        if locked.client_id is None:
+            raise ValidationError('Convert the lead to a client before invoicing this estimate.')
         invoice = create_invoice(
             client=locked.client,
             issue_date=today,

@@ -47,6 +47,14 @@ The only coloured element is what the client has to pay (and the title).
     .lines .details { white-space: pre-line; color: #5d6474; font-size: 9pt; margin-top: 2px; }
     .lines tr { page-break-inside: avoid; }
     .notes { padding: 6px 8px; white-space: pre-line; }
+    /* The estimate's introduction (Markdown): plain text width, before the lines. */
+    .intro { margin-top: 6mm; }
+    .intro > :first-child { margin-top: 0; }
+    .intro p, .intro ul, .intro ol { margin: 0 0 2.5mm; }
+    .intro h1, .intro h2, .intro h3 { font-size: 11pt; margin: 4mm 0 2mm; }
+    .intro a { color: inherit; }
+    .intro table { margin: 0 0 2.5mm; }
+    .intro th, .intro td { border: 1px solid #d5d9e1; padding: 3px 6px; text-align: left; }
     .row.bottom { page-break-inside: avoid; }
     .payments { margin-top: 6mm; }
     .no-print { margin-bottom: 1.5rem; }

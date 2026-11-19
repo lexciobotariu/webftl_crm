@@ -458,14 +458,19 @@ def visible_invoices(user):
 
 
 class Estimate(models.Model):
-    """A quote for a client: lines and a total the client can accept before any invoice exists.
+    """A quote for a client or a lead: lines and a total they can accept before any invoice exists.
 
     It has its own number series (EST-0001). Bill-to, company and currency are
     a snapshot from create time, as on an invoice. Lines can change only while
-    it is a draft. Once accepted it can be turned into a draft invoice, once.
+    it is a draft. Once accepted it can be turned into a draft invoice, once,
+    and only with a client: a lead's estimate needs the lead converted first.
+    Converting the lead sets ``client`` and keeps ``lead``, for the lead's history.
     """
 
-    client = models.ForeignKey(Client, on_delete=models.PROTECT, related_name='estimates')
+    client = models.ForeignKey(Client, on_delete=models.PROTECT, null=True, blank=True, related_name='estimates')
+    lead = models.ForeignKey(
+        'leads.Lead', on_delete=models.PROTECT, null=True, blank=True, related_name='estimates',
+    )
     project = models.ForeignKey(
         'projects.Project', on_delete=models.SET_NULL, null=True, blank=True, related_name='estimates',
     )
@@ -474,6 +479,8 @@ class Estimate(models.Model):
     valid_until = models.DateField()
     tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
     notes = models.TextField(blank=True)
+    # Markdown shown above the lines: what the work is, how it will go. Optional.
+    introduction = models.TextField(blank=True, default='')
     bill_to_name = models.CharField(max_length=255)
     bill_to_email = models.EmailField(blank=True)
     bill_to_address = models.TextField(blank=True)
@@ -489,6 +496,13 @@ class Estimate(models.Model):
     sent_at = models.DateTimeField(null=True, blank=True)
     accepted_at = models.DateTimeField(null=True, blank=True)
     declined_at = models.DateTimeField(null=True, blank=True)
+    # The online link (apps/invoices/public.py). The URL carries an HMAC of this
+    # key, so the database alone cannot open an estimate; a new key revokes the
+    # old link and an empty one turns the link off.
+    public_key = models.CharField(max_length=32, blank=True, default='')
+    # Who answered on the online page: the name they typed and where from.
+    answered_name = models.CharField(max_length=255, blank=True, default='')
+    answered_ip = models.GenericIPAddressField(null=True, blank=True)
     invoice = models.OneToOneField(
         Invoice, on_delete=models.SET_NULL, null=True, blank=True, related_name='estimate',
     )
@@ -501,6 +515,10 @@ class Estimate(models.Model):
             models.CheckConstraint(
                 condition=models.Q(tax_rate__gte=0) & models.Q(tax_rate__lte=100),
                 name='estimate_tax_rate_between_0_and_100',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(client__isnull=False) | models.Q(lead__isnull=False),
+                name='estimate_has_client_or_lead',
             ),
         ]
 
@@ -553,6 +571,15 @@ class Estimate(models.Model):
     def status_label(self):
         return self.status.capitalize()
 
+    @property
+    def for_lead(self):
+        """Prepared for a lead that is not a client yet."""
+        return self.client_id is None
+
+    @property
+    def recipient_name(self):
+        return self.client.name if self.client_id else self.lead.name
+
 
 class EstimateLine(models.Model):
     """One line of an estimate: a project line or free text, as on an invoice."""
@@ -582,8 +609,15 @@ class EstimateLine(models.Model):
 
 
 def visible_estimates(user):
-    """Estimates this user may open: the same rule as ``visible_invoices``."""
-    estimates = Estimate.objects.select_related('client', 'project', 'invoice').prefetch_related('lines__project')
+    """Estimates this user may open.
+
+    A client's estimates follow ``visible_invoices``. A lead's estimates (not
+    converted yet) need the Leads module, where every lead is visible.
+    """
+    estimates = Estimate.objects.select_related('client', 'lead', 'project', 'invoice').prefetch_related(
+        'lines__project',
+    )
+    lead_rule = models.Q(client__isnull=True) if user.has_app_permission('access_leads') else models.Q(pk__in=[])
     if user.has_app_permission('invoices_view_all'):
-        return estimates
-    return estimates.filter(client__in=visible_clients(user))
+        return estimates.filter(models.Q(client__isnull=False) | lead_rule)
+    return estimates.filter(models.Q(client__in=visible_clients(user)) | lead_rule)

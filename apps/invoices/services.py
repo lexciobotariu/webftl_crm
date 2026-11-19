@@ -8,7 +8,10 @@ from .models import Invoice, InvoiceLine, Payment, money
 
 
 def bill_to_snapshot(client):
-    """Copy the client's billing fields. Later client edits do not change it."""
+    """Copy the client's billing fields. Later client edits do not change it.
+
+    ``client`` may also be a lead (apps.leads), which has the same names.
+    """
     return {
         'bill_to_name': client.bill_to_name,
         'bill_to_email': client.bill_to_email or '',
@@ -37,6 +40,8 @@ def currency_snapshot(client):
     """
     currency = client.currency
     if currency is None:
+        if client._meta.model_name == 'lead':
+            raise ValidationError('Choose a currency for this lead before creating an estimate.')
         raise ValidationError(
             'Choose a currency for this client before creating an invoice.'
         )

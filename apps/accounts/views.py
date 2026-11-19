@@ -96,6 +96,9 @@ def dashboard(request):
     context['deadlines'] = deadlines(request.user, today)
     if request.user.has_app_permission('access_invoices'):
         context['money'] = money_summary(request.user, today)
+    if request.user.has_app_permission('access_leads'):
+        from .dashboard import follow_ups
+        context['follow_ups'] = follow_ups(request.user, today)
 
     return render(request, 'accounts/dashboard.html', context)
 
