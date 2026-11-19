@@ -67,6 +67,17 @@
             </div>
         </div>
 
+        <!-- Repeat -->
+        <div class="flex items-start py-2 px-2 hover:bg-hover rounded-card" x-data="{ freq: '{{ request.POST.repeat|default:'never' }}' }">
+            <div class="flex items-center gap-2 w-28 text-zinc-500 text-sm pt-1.5 shrink-0">
+                <i data-lucide="repeat" class="w-4 h-4"></i>
+                <span>Repeat</span>
+            </div>
+            <div class="flex-1 min-w-0 px-2">
+                {% include "tasks/partials/_repeat_fields.html" with repeat_rule=None %}
+            </div>
+        </div>
+
         <!-- Time Estimate -->
         <div class="flex items-center py-2 px-2 hover:bg-hover rounded-card">
             <div class="flex items-center gap-2 w-28 text-zinc-500 text-sm">

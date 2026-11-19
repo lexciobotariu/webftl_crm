@@ -1,0 +1,65 @@
+{% comment %}A client's Vault (apps/vault/views.py): logins and notes, secrets shown on request and logged.
+Reloads itself after any change (vaultChanged).{% endcomment %}
+<section id="vault-entries" class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden" aria-label="Vault"
+         hx-get="{% url 'vault_list' client.pk %}" hx-trigger="vaultChanged from:body" hx-swap="outerMorph">
+    <div class="px-4 py-2 border-b border-border-subtle bg-panel/80 flex items-center justify-between gap-3">
+        <h2 class="text-sm font-medium text-zinc-100 flex items-center gap-2"><i data-lucide="lock-keyhole" class="w-4 h-4 text-zinc-500"></i>Vault</h2>
+        <div class="flex items-center gap-3">
+            <button hx-get="{% url 'vault_create' client.pk %}?kind=login" hx-target="#slide-over" hx-swap="innerHTML" data-after-success="open-drawer" class="text-xs text-zinc-300 hover:text-zinc-50 inline-flex items-center gap-1"><i data-lucide="key-round" class="w-3.5 h-3.5"></i>New login</button>
+            <button hx-get="{% url 'vault_create' client.pk %}?kind=note" hx-target="#slide-over" hx-swap="innerHTML" data-after-success="open-drawer" class="text-xs text-zinc-300 hover:text-zinc-50 inline-flex items-center gap-1"><i data-lucide="file-lock" class="w-3.5 h-3.5"></i>New note</button>
+        </div>
+    </div>
+    {% if vault_rows %}
+    <ul class="divide-y divide-border-subtle">
+        {% for row in vault_rows %}{% with entry=row.entry %}
+        <li class="px-4 py-3 text-sm" id="vault-entry-{{ entry.pk }}">
+            <div class="flex items-start justify-between gap-4">
+                <div class="min-w-0 space-y-1">
+                    <div class="text-zinc-100 font-medium flex items-center gap-2">
+                        <i data-lucide="{% if entry.kind == 'note' %}file-lock{% else %}key-round{% endif %}" class="w-3.5 h-3.5 text-zinc-500 shrink-0"></i>{{ entry.title }}
+                    </div>
+                    {% if entry.url %}<div class="text-xs break-all">{% if entry.link %}<a href="{{ entry.link }}" target="_blank" rel="noopener noreferrer" class="text-zinc-300 hover:text-zinc-50">{{ entry.url }}</a>{% else %}<span class="text-zinc-300">{{ entry.url }}</span>{% endif %}</div>{% endif %}
+                    {% if entry.username %}<div class="text-xs text-zinc-400">User <span class="text-zinc-200 font-mono select-all">{{ entry.username }}</span></div>{% endif %}
+                    <div id="vault-secret-{{ entry.pk }}" class="text-xs text-zinc-400 flex flex-wrap items-center gap-x-3 gap-y-1">
+                        {% if entry.has_secret %}
+                        <button hx-get="{% url 'vault_reveal' entry.pk %}" hx-target="#vault-secret-{{ entry.pk }}" hx-swap="innerHTML" class="inline-flex items-center gap-1 text-zinc-300 hover:text-zinc-50"><i data-lucide="eye" class="w-3.5 h-3.5"></i>Show{% if entry.password %} password{% endif %}{% if entry.notes %}{% if entry.password %} and{% endif %} notes{% endif %}</button>
+                        {% endif %}
+                        {% if entry.password %}
+                        <button type="button" data-copy-url="{% url 'vault_copy' entry.pk %}" onclick="vaultCopy(this)" class="inline-flex items-center gap-1 text-zinc-300 hover:text-zinc-50"><i data-lucide="copy" class="w-3.5 h-3.5"></i><span>Copy password</span></button>
+                        {% endif %}
+                    </div>
+                    {% if row.history %}
+                    <details class="text-[11px] text-zinc-500">
+                        <summary class="cursor-pointer hover:text-zinc-300">Opened {{ row.history|length }}{% if row.history|length == 10 %}+{% endif %} time{{ row.history|length|pluralize }}, last by {{ row.history.0.user.name|default:"a removed user" }} {{ row.history.0.at|date:"j M, H:i" }}</summary>
+                        <ul class="mt-1 space-y-0.5 pl-3">
+                            {% for access in row.history %}<li>{{ access.at|date:"j M Y, H:i" }} · {{ access.user.name|default:"a removed user" }} · {{ access.get_action_display|lower }}</li>{% endfor %}
+                        </ul>
+                    </details>
+                    {% endif %}
+                </div>
+                <div class="flex items-center gap-1 flex-shrink-0">
+                    <button hx-get="{% url 'vault_edit' entry.pk %}" hx-target="#slide-over" hx-swap="innerHTML" data-after-success="open-drawer" class="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-elevated rounded" aria-label="Edit {{ entry.title }}"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+                    <button hx-post="{% url 'vault_delete' entry.pk %}" hx-swap="none" hx-confirm="Delete {{ entry.title }} from the vault?" class="p-1.5 text-zinc-500 hover:text-error hover:bg-elevated rounded" aria-label="Delete {{ entry.title }}"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                </div>
+            </div>
+        </li>
+        {% endwith %}{% endfor %}
+    </ul>
+    {% else %}
+    <p class="px-4 py-5 text-sm text-zinc-500">Nothing in the vault yet. Keep hosting, admin and social media logins, API keys or 2FA backup codes here: they are stored encrypted, shown only when you ask, and every time is logged.</p>
+    {% endif %}
+</section>
+<script>
+if (typeof window.vaultCopy !== 'function') {
+    window.vaultCopy = function (button) {
+        const token = document.querySelector('meta[name="csrf-token"]').content;
+        const label = button.querySelector('span');
+        fetch(button.dataset.copyUrl, { method: 'POST', headers: { 'X-CSRFToken': token }, credentials: 'same-origin' })
+            .then(function (response) { if (!response.ok) { throw new Error(response.status); } return response.text(); })
+            .then(function (text) { return navigator.clipboard.writeText(text); })
+            .then(function () { label.textContent = 'Copied'; })
+            .catch(function () { label.textContent = 'Could not copy'; });
+    };
+}
+if (typeof lucide !== 'undefined') { lucide.createIcons(); }
+</script>

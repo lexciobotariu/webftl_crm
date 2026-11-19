@@ -22,9 +22,6 @@ SECTIONS = (
         ('settings_bank_accounts', 'Bank accounts', 'landmark'),
         ('settings_currencies', 'Currencies', 'coins'),
     )),
-    ('Services', (
-        ('settings_service_types', 'Service types', 'layers'),
-    )),
     ('Leads', (
         ('settings_lead_statuses', 'Lead statuses', 'columns-3'),
         ('settings_lead_sources', 'Lead sources', 'signpost'),

@@ -81,20 +81,6 @@
     {% endif %}
 </section>
 
-{% if service_reports %}
-<section aria-labelledby="services-title" class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden">
-    <h2 id="services-title" class="px-4 py-2 border-b border-border-subtle bg-panel/80 text-sm font-medium text-zinc-100">Service reports</h2>
-    <ul class="divide-y divide-border-subtle">
-        {% for report in service_reports %}
-        <li class="px-4 py-2.5 flex items-center justify-between gap-4 text-sm">
-            <span class="text-zinc-100 min-w-0 truncate">{{ report.month|date:"F Y" }} <span class="text-zinc-500">· {{ report.service.name }}</span></span>
-            <a href="{% url 'portal_service_report_pdf' report.pk %}" target="_blank" class="text-xs text-zinc-300 hover:text-zinc-50 flex-shrink-0">PDF</a>
-        </li>
-        {% endfor %}
-    </ul>
-</section>
-{% endif %}
-
 <section aria-labelledby="projects-title" class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden">
     <h2 id="projects-title" class="px-4 py-2 border-b border-border-subtle bg-panel/80 text-sm font-medium text-zinc-100">Projects</h2>
     {% if projects %}

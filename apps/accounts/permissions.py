@@ -29,7 +29,7 @@ PERMISSION_KEYS = [
     'invoices_create',
     'invoices_edit',
     'access_leads',
-    'access_services',
+    'access_vault',
     'access_team',
     'team_create',
     'team_edit',
@@ -52,8 +52,8 @@ class PermissionPreset(models.Model):
     access_invoices = models.BooleanField(default=False)
     # Leads: every lead is visible to whoever has the module. Opt-in, like money.
     access_leads = models.BooleanField(default=False)
-    # Services (maintenance, social media, ...), sites and their logins. Opt-in: services carry prices and passwords.
-    access_services = models.BooleanField(default=False)
+    # Vault: clients' logins and private notes. Opt-in; only Admin has it by default.
+    access_vault = models.BooleanField(default=False)
     access_team = models.BooleanField(default=True)
 
     # Unchecked means view own. Admins still see everything via has_app_permission.

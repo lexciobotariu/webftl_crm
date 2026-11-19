@@ -136,15 +136,6 @@
             {% include "tasks/partials/activity_panel.html" %}
         </div>
 
-        {% if can_create_recurring %}
-        <div class="border-t border-border-subtle pt-4">
-            <button hx-get="{% url 'recurring_create' task.project_id %}?from_task={{ task.pk }}" hx-target="#slide-over" hx-swap="innerHTML" data-after-success="open-drawer"
-                    class="text-sm text-zinc-400 hover:text-zinc-100 inline-flex items-center gap-1.5 transition-colors">
-                <i data-lucide="repeat" class="w-3.5 h-3.5"></i>Make recurring
-            </button>
-        </div>
-        {% endif %}
-
         {% if request.user.is_admin %}
         <!-- Danger zone -->
         <div class="border-t border-border-subtle pt-4">

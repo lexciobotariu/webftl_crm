@@ -59,13 +59,6 @@ def _estimates(client):
     return Estimate.objects.filter(client=client, sent_at__isnull=False)
 
 
-def _service_reports(client):
-    """Monthly maintenance reports that were emailed to the client."""
-    from apps.services.models import ServiceReport
-
-    return ServiceReport.objects.filter(service__client=client, sent_at__isnull=False).select_related('service')
-
-
 def login(request):
     if current_contact(request) is not None:
         return redirect('portal_home')
@@ -123,7 +116,6 @@ def home(request):
         invoices=invoices,
         to_pay=[invoice for invoice in invoices if invoice.balance > 0],
         projects=projects,
-        service_reports=_service_reports(client)[:12],
     ))
 
 
@@ -170,16 +162,6 @@ def invoice_pdf_view(request, pk):
 def estimate_pdf_view(request, pk):
     estimate = get_object_or_404(_estimates(request.portal_client), pk=pk)
     return _pdf_response(estimate_pdf(estimate), estimate)
-
-
-@portal_login_required
-def service_report_pdf_view(request, pk):
-    from apps.services.core import report_filename, report_pdf
-
-    report = get_object_or_404(_service_reports(request.portal_client), pk=pk)
-    response = HttpResponse(report_pdf(report), content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="{report_filename(report)}"'
-    return response
 
 
 @login_required

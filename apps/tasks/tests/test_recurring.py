@@ -1,15 +1,17 @@
-"""Recurring tasks: the schedule, the daily job and the views."""
+"""Repeat on a task: the schedule, the copies the daily job makes, and the views."""
 import json
 from datetime import date
 
 import pytest
+from django.core.exceptions import ValidationError
+from django.http import QueryDict
 from django.urls import reverse
 
 from apps.accounts.factories import AdminUserFactory, UserFactory
-from apps.projects.factories import ProjectFactory
+from apps.projects.factories import ProjectAccessFactory, ProjectFactory
 from apps.projects.models import Project
 from apps.tasks import recurring
-from apps.tasks.factories import SubtaskFactory, TaskFactory
+from apps.tasks.factories import LabelFactory, SubtaskFactory, TaskFactory
 from apps.tasks.models import RecurringTask, Task
 
 pytestmark = pytest.mark.django_db
@@ -17,7 +19,7 @@ pytestmark = pytest.mark.django_db
 
 def _rule(project=None, **extra):
     values = {
-        'project': project or ProjectFactory(), 'title': 'Checks', 'frequency': RecurringTask.MONTHLY,
+        'project': project or ProjectFactory(), 'frequency': RecurringTask.MONTHLY,
         'start_date': date(2026, 1, 1), 'month_day': 1,
     }
     values.update(extra)
@@ -67,7 +69,6 @@ def test_every_three_months_from_the_start():
 def test_yearly_on_29_february_falls_back_to_28():
     rule = _rule(frequency=RecurringTask.YEARLY, month_day=None, start_date=date(2028, 2, 29))
     assert _dates(rule, date(2028, 3, 1), 2) == [date(2029, 2, 28), date(2030, 2, 28)]
-    assert recurring.date_label(rule, date(2029, 2, 28)) == '2029'
 
 
 def test_schedule_stops_at_the_end_date():
@@ -75,189 +76,223 @@ def test_schedule_stops_at_the_end_date():
     assert list(recurring.occurrences(rule)) == [date(2026, 1, 1), date(2026, 2, 1), date(2026, 3, 1)]
 
 
-def test_saving_schedules_from_today_not_the_past():
-    rule = _rule(start_date=date(2026, 1, 1))
-    recurring.schedule(rule, today=date(2026, 11, 19))
-    assert rule.next_date == date(2026, 12, 1)
+# --- Reading and setting Repeat ------------------------------------------
 
 
-# --- Creating tasks ------------------------------------------------------
+def test_parse_repeat():
+    assert recurring.parse_repeat({'repeat': 'never'}) is None
+    assert recurring.parse_repeat({}) is None
+    spec = recurring.parse_repeat(QueryDict('repeat=weekly&repeat_interval=2&repeat_days=3&repeat_days=0&repeat_days=9'))
+    assert spec == {'frequency': 'weekly', 'interval': 2, 'weekdays': '0,3', 'month_day': None, 'end_date': None}
+    spec = recurring.parse_repeat({'repeat': 'monthly', 'repeat_month_day': '0', 'repeat_end': '2027-06-30'})
+    assert spec['month_day'] == RecurringTask.LAST_DAY and spec['end_date'] == date(2027, 6, 30)
+    for bad in ({'repeat': 'hourly'}, {'repeat': 'daily', 'repeat_interval': 'x'},
+                {'repeat': 'daily', 'repeat_interval': '0'}, {'repeat': 'daily', 'repeat_end': 'soon'}):
+        with pytest.raises(ValidationError):
+            recurring.parse_repeat(bad)
 
 
-def test_daily_job_creates_the_task_with_its_settings():
-    admin = AdminUserFactory()
-    project = ProjectFactory()
-    rule = _rule(project, checklist='Backup\n\nUpdate plugins', assignee=admin, priority='high',
-                 due_after_days=5, estimate_minutes=90, billable=False, next_date=date(2026, 11, 1))
-    created = recurring.create_due_tasks(date(2026, 11, 1))
-    assert len(created) == 1
-    task = created[0]
-    assert task.title == 'Checks · November 2026'
-    assert task.assignee == admin and task.priority == 'high'
-    assert task.start_date == date(2026, 11, 1) and task.due_date == date(2026, 11, 6)
-    assert task.estimate_minutes == 90 and task.billable is False
-    assert list(task.subtasks.values_list('title', flat=True)) == ['Backup', 'Update plugins']
-    assert task.recurring == rule and task.recurring_date == date(2026, 11, 1)
+def _repeat(task, today=date(2026, 11, 19), **values):
+    data = {'repeat': 'monthly', 'repeat_month_day': '1', **values}
+    return recurring.set_repeat(task, recurring.parse_repeat(data), today=today)
+
+
+def test_setting_repeat_makes_the_task_this_periods_and_schedules_the_next():
+    task = TaskFactory(title='Checks')
+    rule = _repeat(task)
+    task.refresh_from_db()
+    # The series starts today, so today is this task's date; the first copy comes on 1 Dec.
+    assert task.recurring == rule and task.recurring_date == date(2026, 11, 19)
+    assert rule.start_date == date(2026, 11, 19) and rule.next_date == date(2026, 12, 1)
+    assert recurring.summary(task) == 'Every month on day 1'
+
+
+def test_changing_repeat_on_any_task_changes_the_series():
+    task = TaskFactory()
+    rule = _repeat(task)
+    copy = recurring.create_task_for(rule, date(2026, 12, 1))
+    _repeat(copy, today=date(2026, 12, 2), repeat='weekly', repeat_days='0', repeat_end='2027-03-01')
     rule.refresh_from_db()
-    assert rule.next_date == date(2026, 12, 1)
-    assert recurring.create_due_tasks(date(2026, 11, 2)) == []
+    assert RecurringTask.objects.count() == 1
+    assert rule.frequency == RecurringTask.WEEKLY and rule.weekdays == '0' and rule.end_date == date(2027, 3, 1)
+    assert rule.next_date == date(2026, 12, 7)
+    assert recurring.summary(copy) == 'Every week on Mon, until 1 Mar 2027'
+
+
+def test_never_ends_the_series_and_keeps_the_tasks():
+    task = TaskFactory()
+    rule = _repeat(task)
+    copy = recurring.create_task_for(rule, date(2026, 12, 1))
+    assert recurring.set_repeat(copy, None) is None
+    assert not RecurringTask.objects.exists()
+    assert Task.objects.filter(pk__in=[task.pk, copy.pk], recurring__isnull=True).count() == 2
+
+
+def test_an_end_date_in_the_past_is_refused():
+    with pytest.raises(ValidationError):
+        _repeat(TaskFactory(), repeat_end='2026-11-01')
+    assert not RecurringTask.objects.exists()
+
+
+# --- The copies ------------------------------------------------------------
+
+
+def test_a_copy_is_the_latest_task_again():
+    project = ProjectFactory()
+    member = UserFactory()
+    ProjectAccessFactory(project=project, user=member)
+    label = LabelFactory(project=project)
+    done = project.statuses.exclude(pk=project.statuses.first().pk).last()
+    task = TaskFactory(project=project, status=done, title='Checks', description='Update plugins', assignee=member,
+                       priority='high', estimate_minutes=90, billable=False,
+                       start_date=date(2026, 11, 3), due_date=date(2026, 11, 10))
+    task.labels.set([label])
+    SubtaskFactory(task=task, title='Backups', completed=True, order=1)
+    SubtaskFactory(task=task, title='Plugins', order=0)
+    rule = _repeat(task)
+
+    created = recurring.create_due_tasks(today=date(2026, 12, 1))
+
+    assert len(created) == 1
+    copy = created[0]
+    assert copy.title == 'Checks' and copy.description == 'Update plugins'
+    assert copy.assignee == member and copy.priority == 'high' and copy.estimate_minutes == 90
+    assert copy.billable is False and list(copy.labels.all()) == [label]
+    assert copy.status == recurring._first_column(project) and copy.status != done
+    assert copy.start_date == date(2026, 12, 1) and copy.due_date == date(2026, 12, 8)
+    assert list(copy.subtasks.order_by('order').values_list('title', 'completed')) == [
+        ('Plugins', False), ('Backups', False),
+    ]
+    assert copy.recurring == rule and copy.recurring_date == date(2026, 12, 1)
+    rule.refresh_from_db()
+    assert rule.next_date == date(2027, 1, 1)
+
+
+def test_the_next_copy_follows_changes_to_the_latest_task():
+    task = TaskFactory(title='Checks')
+    rule = _repeat(task)
+    copy = recurring.create_task_for(rule, date(2026, 12, 1))
+    Task.objects.filter(pk=copy.pk).update(title='Checks and report', due_date=None)
+    following = recurring.create_task_for(rule, date(2027, 1, 1))
+    assert following.title == 'Checks and report' and following.due_date is None
 
 
 def test_a_new_task_comes_even_when_the_last_one_is_open():
-    rule = _rule(next_date=date(2026, 10, 1))
-    first = recurring.create_due_tasks(date(2026, 10, 1))
-    second = recurring.create_due_tasks(date(2026, 11, 1))
-    assert first[0].closed_at is None
-    assert len(second) == 1 and rule.tasks.count() == 2
+    task = TaskFactory()
+    _repeat(task)
+    assert len(recurring.create_due_tasks(today=date(2026, 12, 1))) == 1
+    assert len(recurring.create_due_tasks(today=date(2027, 1, 1))) == 1
+    assert Task.objects.filter(recurring__isnull=False).count() == 3
 
 
 def test_missed_dates_are_skipped_not_created_late():
-    rule = _rule(next_date=date(2026, 8, 1))
-    created = recurring.create_due_tasks(date(2026, 11, 19))
-    assert [task.recurring_date for task in created] == [date(2026, 11, 1)]
+    task = TaskFactory()
+    rule = _repeat(task)
+    created = recurring.create_due_tasks(today=date(2027, 2, 10))
+    assert [item.recurring_date for item in created] == [date(2027, 2, 1)]
     rule.refresh_from_db()
-    assert rule.next_date == date(2026, 12, 1)
+    assert rule.next_date == date(2027, 3, 1)
 
 
-def test_paused_rule_or_inactive_project_creates_nothing_but_moves_on():
-    paused = _rule(paused=True, next_date=date(2026, 11, 1))
-    on_hold = _rule(ProjectFactory(status=Project.ON_HOLD), next_date=date(2026, 11, 1))
-    assert recurring.create_due_tasks(date(2026, 11, 1)) == []
-    for rule in (paused, on_hold):
-        rule.refresh_from_db()
-        assert rule.next_date == date(2026, 12, 1)
+def test_inactive_project_creates_nothing_but_moves_on():
+    task = TaskFactory()
+    rule = _repeat(task)
+    Project.objects.filter(pk=task.project_id).update(status=Project.ON_HOLD)
+    assert recurring.create_due_tasks(today=date(2026, 12, 1)) == []
+    rule.refresh_from_db()
+    assert rule.next_date == date(2027, 1, 1)
 
 
 def test_one_task_per_date():
-    rule = _rule()
-    assert recurring.create_task_for(rule, date(2026, 11, 1)) is not None
-    assert recurring.create_task_for(rule, date(2026, 11, 1)) is None
-    assert Task.objects.filter(recurring=rule).count() == 1
+    rule = _repeat(TaskFactory())
+    assert recurring.create_task_for(rule, date(2026, 12, 1)) is not None
+    assert recurring.create_task_for(rule, date(2026, 12, 1)) is None
 
 
 def test_assignee_without_access_is_dropped():
-    rule = _rule(assignee=UserFactory())
-    task = recurring.create_task_for(rule, date(2026, 11, 1))
-    assert task.assignee is None
+    outsider = UserFactory()
+    task = TaskFactory(assignee=outsider)
+    rule = _repeat(task)
+    assert recurring.create_task_for(rule, date(2026, 12, 1)).assignee is None
 
 
-def test_create_now_makes_the_current_periods_task():
-    rule = _rule(start_date=date(2026, 1, 1))
-    day, task = recurring.create_now(rule, today=date(2026, 11, 19))
-    assert day == date(2026, 11, 1) and task.recurring_date == day
-    assert recurring.create_now(rule, today=date(2026, 11, 20)) == (day, None)
-    rule.refresh_from_db()
-    assert rule.next_date == date(2026, 12, 1)
+def test_daily_command_reports_tasks(capsys):
+    from io import StringIO
+
+    from django.core.management import call_command
+
+    out = StringIO()
+    call_command('create_recurring_invoices', stdout=out)
+    assert 'Repeating tasks: 0 created.' in out.getvalue()
 
 
-def test_create_now_before_the_start_says_when_it_starts():
-    from django.core.exceptions import ValidationError
-
-    rule = _rule(start_date=date(2027, 1, 1))
-    with pytest.raises(ValidationError) as error:
-        recurring.create_now(rule, today=date(2026, 11, 19))
-    assert '1 Jan 2027' in error.value.messages[0]
+# --- The views ---------------------------------------------------------------
 
 
-def test_title_without_the_date():
-    rule = _rule(add_date_to_title=False)
-    assert recurring.task_title(rule, date(2026, 11, 1)) == 'Checks'
+def _post_repeat(client, task, **data):
+    return client.post(reverse('task_update_repeat', args=[task.pk]), data, HTTP_HX_REQUEST='true')
 
 
-# --- Views ---------------------------------------------------------------
+def test_drawer_shows_repeat_and_saves_it(client):
+    client.force_login(AdminUserFactory())
+    task = TaskFactory()
+    drawer = client.get(reverse('task_detail', args=[task.pk]), HTTP_HX_REQUEST='true')
+    assert drawer.status_code == 200
+    assert f'id="repeat-value-{task.pk}"'.encode() in drawer.content
+    assert reverse('task_update_repeat', args=[task.pk]).encode() in drawer.content
 
-
-def _post_rule(client, project, **extra):
-    data = {
-        'title': 'Weekly report', 'frequency': 'weekly', 'interval': '1', 'weekday_choices': ['0', '4'],
-        'start_date': '2026-11-02', 'due_after_days': '2', 'estimate': '1h 30m', 'add_date_to_title': 'on',
-        'priority': '', 'checklist': 'Collect numbers\nSend',
-    }
-    data.update(extra)
-    return client.post(reverse('recurring_create', args=[project.pk]), data)
-
-
-def test_create_edit_pause_run_and_delete(client):
-    admin = AdminUserFactory()
-    project = ProjectFactory()
-    client.force_login(admin)
-    assert client.get(reverse('recurring_create', args=[project.pk])).status_code == 200
-
-    response = _post_rule(client, project)
-    assert response.status_code == 200, response.content
-    events = json.loads(response['HX-Trigger'])
-    assert 'recurringChanged' in events and 'closeSlideOver' in events
-    assert events['infoToast']['message'].startswith('Recurring task saved: Weekly report.')
-    rule = RecurringTask.objects.get()
-    assert rule.weekday_list == [0, 4] and rule.estimate_minutes == 90 and rule.created_by == admin
-    assert rule.next_date is not None
-
-    assert client.get(reverse('recurring_edit', args=[rule.pk])).status_code == 200
-    response = client.post(reverse('recurring_edit', args=[rule.pk]), {
-        'title': 'Monthly numbers', 'frequency': 'monthly', 'interval': '1', 'month_day_choice': '0',
-        'start_date': '2026-01-01', 'priority': '',
-    })
-    assert response.status_code == 200, response.content
-    rule.refresh_from_db()
-    assert rule.title == 'Monthly numbers' and rule.month_day == RecurringTask.LAST_DAY
-
-    client.post(reverse('recurring_pause', args=[rule.pk]))
-    rule.refresh_from_db()
-    assert rule.paused
-    client.post(reverse('recurring_pause', args=[rule.pk]))
-    rule.refresh_from_db()
-    assert not rule.paused
-
-    response = client.post(reverse('recurring_run', args=[rule.pk]))
-    events = json.loads(response['HX-Trigger'])
-    task = rule.tasks.get()
-    assert events['infoToast']['message'] == f'Created {task.identifier}: {task.title}'
-    assert 'taskChanged' in events
-
-    panel = client.get(reverse('recurring_panel', args=[project.pk]))
-    assert task.identifier.encode() in panel.content and b'Every month on the last day' in panel.content
-    assert client.get(reverse('recurring_list', args=[project.pk])).status_code == 200
-
-    client.post(reverse('recurring_delete', args=[rule.pk]))
-    assert not RecurringTask.objects.filter(pk=rule.pk).exists()
+    response = _post_repeat(client, task, repeat='weekly', repeat_interval='1', repeat_days=['0', '3'])
+    assert response.status_code == 200
+    assert b'Every week on Mon, Thu' in response.content
+    trigger = json.loads(response['HX-Trigger'])
+    assert trigger['infoToast']['message'].startswith('Repeats every week on Mon, Thu. Next task on ')
+    assert f'taskUpdated-{task.pk}' in trigger
     task.refresh_from_db()
-    assert task.recurring is None
+    assert task.recurring.weekdays == '0,3'
 
-
-def test_make_recurring_prefills_from_the_task(client):
-    admin = AdminUserFactory()
-    task = TaskFactory(title='Send newsletter', priority='high')
-    SubtaskFactory(task=task, title='Write intro')
-    client.force_login(admin)
-    drawer = client.get(reverse('task_detail', args=[task.pk]))
-    assert reverse('recurring_create', args=[task.project_id]).encode() in drawer.content
-    response = client.get(reverse('recurring_create', args=[task.project_id]), {'from_task': task.pk})
-    html = response.content.decode()
-    assert 'value="Send newsletter"' in html and 'Write intro' in html
-
-
-def test_end_before_start_is_refused(client):
-    client.force_login(AdminUserFactory())
-    project = ProjectFactory()
-    response = _post_rule(client, project, end_date='2026-10-01')
+    response = _post_repeat(client, task, repeat='never')
+    assert json.loads(response['HX-Trigger'])['infoToast']['message'] == 'This task no longer repeats.'
     assert not RecurringTask.objects.exists()
-    assert b'before the start' in response.content
 
 
-def test_people_without_task_rights_cannot_change_rules(client):
-    rule = _rule()
-    client.force_login(UserFactory())
-    assert client.get(reverse('recurring_create', args=[rule.project_id])).status_code == 403
-    assert client.post(reverse('recurring_run', args=[rule.pk])).status_code == 403
-    assert client.post(reverse('recurring_delete', args=[rule.pk])).status_code == 403
-    assert client.get(reverse('recurring_panel', args=[rule.project_id])).status_code == 403
-    assert RecurringTask.objects.filter(pk=rule.pk).exists()
+def test_a_wrong_value_shows_the_error_and_saves_nothing(client):
+    client.force_login(AdminUserFactory())
+    task = TaskFactory()
+    response = _post_repeat(client, task, repeat='daily', repeat_end='2000-01-01')
+    assert response.status_code == 200
+    assert b'The end date has passed.' in response.content
+    assert 'HX-Trigger' not in response
+    assert not RecurringTask.objects.exists()
 
 
-def test_new_rule_drawer_starts_today(client):
-    from django.utils import timezone
+def test_people_without_task_rights_cannot_change_repeat(client):
+    task = TaskFactory()
+    member = UserFactory()
+    ProjectAccessFactory(project=task.project, user=member)
+    member.permission_preset.tasks_create = False
+    member.permission_preset.save()
+    client.force_login(member)
+    assert _post_repeat(client, task, repeat='daily').status_code == 403
+    assert not RecurringTask.objects.exists()
 
+
+def test_new_task_with_repeat(client):
     client.force_login(AdminUserFactory())
     project = ProjectFactory()
-    html = client.get(reverse('recurring_create', args=[project.pk])).content.decode()
-    assert f'value="{timezone.localdate():%Y-%m-%d}"' in html
+    response = client.post(reverse('task_create', args=[project.pk]), {
+        'title': 'Social posts', 'priority': '', 'billable': 'on',
+        'repeat': 'weekly', 'repeat_interval': '1', 'repeat_days': ['4'],
+    }, HTTP_HX_REQUEST='true')
+    assert response.status_code == 200
+    task = Task.objects.get(title='Social posts')
+    assert task.recurring.frequency == RecurringTask.WEEKLY and task.recurring.weekdays == '4'
+
+
+def test_new_task_with_a_wrong_repeat_is_not_created(client):
+    client.force_login(AdminUserFactory())
+    project = ProjectFactory()
+    response = client.post(reverse('task_create', args=[project.pk]), {
+        'title': 'Social posts', 'priority': '', 'repeat': 'daily', 'repeat_end': '2000-01-01',
+    }, HTTP_HX_REQUEST='true')
+    assert b'The end date has passed.' in response.content
+    assert not Task.objects.filter(title='Social posts').exists()

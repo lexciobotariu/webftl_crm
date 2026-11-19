@@ -29,9 +29,9 @@ urlpatterns = [
     # An estimate's online page, opened from the emailed link without logging in.
     path('e/', include('apps.invoices.public_urls')),
     path('leads/', include('apps.leads.urls')),
-    path('services/', include('apps.services.urls')),
-    # The module was "Maintenance" until 0.47.0: old links and bookmarks still work.
-    re_path(r'^maintenance/(?P<rest>.*)$', RedirectView.as_view(url='/services/%(rest)s', permanent=True, query_string=True)),
+    path('vault/', include('apps.vault.urls')),
+    # Services (earlier Maintenance) was removed in 0.48.0: its links lead to the projects.
+    re_path(r'^(?:services|maintenance)/', RedirectView.as_view(pattern_name='project_list')),
     path('search/', include('apps.search.urls')),
     path('inbox/', include('apps.notifications.urls')),
     path('settings/', include('apps.crm.urls')),

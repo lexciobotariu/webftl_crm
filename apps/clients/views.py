@@ -115,24 +115,20 @@ def client_detail(request, pk):
         'client_detail_notes': 'notes',
         'client_detail_invoices': 'invoices',
         'client_detail_messages': 'messages',
-        'client_detail_services': 'services',
-        'client_detail_sites': 'sites',
+        'client_detail_vault': 'vault',
     }
     active_tab = tab_mapping.get(url_name, 'overview')
     if active_tab == 'invoices' and not request.user.has_app_permission('access_invoices'):
         return HttpResponseForbidden("You don't have access to this section")
-    can_maintain = request.user.has_app_permission('access_services')
-    if active_tab in ('services', 'sites') and not can_maintain:
+    can_vault = request.user.has_app_permission('access_vault')
+    if active_tab == 'vault' and not can_vault:
         return HttpResponseForbidden("You don't have access to this section")
-    services_context = {}
-    if can_maintain:
-        services_context = {
-            'service_count': client.services.count(),
-            'site_count': client.sites.count(),
-        }
-        if active_tab in ('services', 'sites'):
-            from apps.services.views import client_tab_context
-            services_context.update(client_tab_context(client, active_tab))
+    vault_context = {}
+    if can_vault:
+        vault_context['vault_count'] = client.vault_entries.count()
+        if active_tab == 'vault':
+            from apps.vault.views import client_tab_context
+            vault_context.update(client_tab_context(client))
 
     from apps.invoices.models import visible_invoices
     from apps.notes.models import notes_visible_to_user
@@ -171,7 +167,7 @@ def client_detail(request, pk):
         'show_completed': False,
         'today': timezone.localdate(),
         'active_tab': active_tab,
-        **services_context,
+        **vault_context,
     })
 
 

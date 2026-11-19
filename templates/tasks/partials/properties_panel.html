@@ -56,6 +56,17 @@
         </div>
     </div>
 
+    <!-- Repeat -->
+    <div class="flex items-start py-2 px-2 hover:bg-hover rounded-card" id="prop-repeat-{{ task.pk }}">
+        <div class="flex items-center gap-2 w-28 text-zinc-500 text-sm pt-1">
+            <i data-lucide="repeat" class="w-4 h-4"></i>
+            <span>Repeat</span>
+        </div>
+        <div class="flex-1 min-w-0" id="repeat-value-{{ task.pk }}">
+            {% include "tasks/partials/repeat_property.html" %}
+        </div>
+    </div>
+
     <!-- Time -->
     {% include "tasks/partials/time_property.html" %}
 

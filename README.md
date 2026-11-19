@@ -152,9 +152,8 @@ python manage.py create_recurring_invoices
 ```
 
 Running it more than once a day is harmless, and a missed day is caught up on
-the next run (recurring tasks skip missed dates and create only the latest). The
-same command creates the tasks of recurring tasks that are due and renews (or
-ends) services past their renewal date.
+the next run. The same command creates the tasks of repeating tasks (Repeat in
+the task drawer) that are due; missed dates are skipped, only the latest is created.
 
 ## File storage
 
