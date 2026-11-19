@@ -374,6 +374,12 @@ class Task(models.Model):
     labels = models.ManyToManyField(Label, blank=True, related_name='tasks')
     order = models.PositiveIntegerField(default=0)
 
+    # Made by a recurring task (apps/tasks/recurring.py), for the date it was due to repeat.
+    recurring = models.ForeignKey(
+        'RecurringTask', on_delete=models.SET_NULL, null=True, blank=True, related_name='tasks',
+    )
+    recurring_date = models.DateField(null=True, blank=True)
+
     # GitHub integration
     github_issue_id = models.PositiveIntegerField(null=True, blank=True)
     github_issue_number = models.PositiveIntegerField(null=True, blank=True)
@@ -397,6 +403,11 @@ class Task(models.Model):
             models.UniqueConstraint(
                 fields=['project', 'number'],
                 name='unique_task_number_per_project',
+            ),
+            models.UniqueConstraint(
+                fields=['recurring', 'recurring_date'],
+                condition=Q(recurring__isnull=False),
+                name='unique_task_per_recurring_date',
             ),
         ]
 
@@ -467,6 +478,82 @@ class Task(models.Model):
         if total == 0:
             return None
         return f"{completed}/{total}"
+
+
+class RecurringTask(models.Model):
+    """A task that is created again on a schedule, on any project.
+
+    The daily job (``create_recurring_invoices``) creates the task of each date
+    that has come (``apps/tasks/recurring.py``), even when the previous one is
+    still open, so every period has its own task. Dates missed while the
+    project was not Active or the rule was paused are skipped.
+    """
+
+    DAILY = 'daily'
+    WEEKLY = 'weekly'
+    MONTHLY = 'monthly'
+    YEARLY = 'yearly'
+    FREQUENCY_CHOICES = [(DAILY, 'Day'), (WEEKLY, 'Week'), (MONTHLY, 'Month'), (YEARLY, 'Year')]
+    LAST_DAY = 0  # month_day: the month's last day
+
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='recurring_tasks')
+    title = models.CharField(max_length=500)
+    description = models.TextField(blank=True)
+    # One sub-task per line.
+    checklist = models.TextField(blank=True)
+    # The status, assignee, priority, estimate, billing and labels each new task gets.
+    status = models.ForeignKey(Status, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    assignee = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
+    )
+    priority = models.CharField(max_length=20, choices=Task.PRIORITY_CHOICES, blank=True)
+    estimate_minutes = models.PositiveIntegerField(null=True, blank=True)
+    billable = models.BooleanField(default=True)
+    labels = models.ManyToManyField(Label, blank=True, related_name='recurring_tasks')
+
+    # Every ``interval`` days, weeks, months or years from ``start_date``.
+    frequency = models.CharField(max_length=10, choices=FREQUENCY_CHOICES, default=MONTHLY)
+    interval = models.PositiveSmallIntegerField(default=1)
+    # Weekly: the days, Monday 0 to Sunday 6, as "0,3". Blank: the start date's day.
+    weekdays = models.CharField(max_length=20, blank=True)
+    # Monthly: the day of the month (1-31, the last day when the month is shorter),
+    # 0 for the last day, blank for the start date's day.
+    month_day = models.PositiveSmallIntegerField(null=True, blank=True)
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    # The new task is due this many days after it is created. Blank: no due date.
+    due_after_days = models.PositiveSmallIntegerField(null=True, blank=True)
+    # "Checks · November 2026" rather than "Checks".
+    add_date_to_title = models.BooleanField(default=True)
+    paused = models.BooleanField(default=False)
+    # The next date that gets a task. Blank once the schedule has ended.
+    next_date = models.DateField(null=True, blank=True)
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['title', 'pk']
+        constraints = [
+            models.CheckConstraint(condition=Q(interval__gte=1), name='recurring_interval_positive'),
+            models.CheckConstraint(
+                condition=Q(month_day__isnull=True) | Q(month_day__lte=31), name='recurring_month_day_valid',
+            ),
+        ]
+
+    def __str__(self):
+        return self.title
+
+    @property
+    def weekday_list(self):
+        return sorted({int(day) for day in self.weekdays.split(',') if day.strip().isdigit() and int(day) < 7})
+
+    @property
+    def checklist_items(self):
+        return [line.strip() for line in self.checklist.splitlines() if line.strip()][:100]
 
 
 def _on_project(user, project):

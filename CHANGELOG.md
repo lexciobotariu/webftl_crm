@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.47.0] - 2026-11-19
+
+**Maintenance becomes Services**, and **recurring tasks** on any project. Five database migrations, all keeping existing data:
+- `accounts.0017_access_services` renames the Maintenance permission to Services; presets keep their choice.
+- `maintenance.0002_services` renames the plan, overage and report tables and adds service types. Every service, site, login, overage and report keeps its row and id. The app keeps its `maintenance` label.
+- `tasks.0029_recurring_tasks` adds recurring tasks.
+- `maintenance.0003_checks_to_recurring_tasks` gives existing services the type "Maintenance" and turns each service's checks into a recurring task "Checks" on its project, continuing from the next period. The checks tasks already created are linked to it.
+- `maintenance.0004_remove_checks` then drops the old checks tables.
+
+Nothing to set in Dokploy (the daily `create_recurring_invoices` schedule also creates recurring tasks), no new dependencies.
+
+### Added
+- **Recurring tasks** on any project (Tasks > Recurring, and on a service's page): title, description, sub-tasks, status, assignee, priority, estimate, billing and labels for each new task. It repeats every N days, weeks (on chosen days), months (on day N or the last day) or years, from a start date to an optional end date, with a due date N days after each task is created. The daily job creates each task even if the previous one is still open; dates missed while paused or while the project was not Active are skipped. "Create now" makes the current period's task at once; pause, edit and delete from the list (deleting keeps the tasks it created)
+- **Make recurring** in the task drawer opens a recurring task filled in from that task
+- **Service types** in Settings > Services: name, description, billing, price, included hours, extra-hour price and a checklist. Picking a type in New service fills these in; the checklist becomes a monthly recurring task on the new service's project
+
+### Changed
+- **Maintenance is now Services** (`/services/`; old `/maintenance/` links redirect): the sidebar, client tab, dashboard card, permission, command palette, portal ("Service reports") and report emails all say Services. A service can be maintenance, social media, content or anything else billed regularly; sites stay optional
+- The service page's **Checks** section is replaced by **Recurring tasks**, showing each rule with its schedule, next date and its latest tasks (Done, Overdue or their status). Pausing a service pauses its recurring tasks (its project goes On hold); ending it stops them
+- The monthly report lists the month's recurring tasks that have sub-tasks (e.g. "Checks · November 2026") with each sub-task done or not
+
+### Removed
+- The checks list and its "Create this period's task" button on the service page (now a recurring task)
+
 ## [0.46.1] - 2026-11-19
 
 Maintenance plan page follow-up. No migrations, nothing to set in Dokploy, no new dependencies.

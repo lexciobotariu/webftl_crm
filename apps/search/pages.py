@@ -32,7 +32,7 @@ PAGES = (
     Page('Dashboard', 'dashboard', 'access_dashboard'),
     Page('Clients', 'client_list', 'access_clients'),
     Page('Leads', 'lead_list', 'access_leads'),
-    Page('Maintenance', 'maintenance_plan_list', 'access_maintenance'),
+    Page('Services', 'service_list', 'access_services'),
     Page('Projects', 'project_list', 'access_projects'),
     Page('Inbox', 'inbox', 'access_tasks'),
     Page('My Tasks', 'my_tasks', 'access_tasks'),

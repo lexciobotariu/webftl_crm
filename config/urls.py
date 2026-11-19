@@ -1,7 +1,8 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
+from django.views.generic import RedirectView
 
 from apps.todos import views as todo_views
 from config import views as config_views
@@ -28,7 +29,9 @@ urlpatterns = [
     # An estimate's online page, opened from the emailed link without logging in.
     path('e/', include('apps.invoices.public_urls')),
     path('leads/', include('apps.leads.urls')),
-    path('maintenance/', include('apps.maintenance.urls')),
+    path('services/', include('apps.services.urls')),
+    # The module was "Maintenance" until 0.47.0: old links and bookmarks still work.
+    re_path(r'^maintenance/(?P<rest>.*)$', RedirectView.as_view(url='/services/%(rest)s', permanent=True, query_string=True)),
     path('search/', include('apps.search.urls')),
     path('inbox/', include('apps.notifications.urls')),
     path('settings/', include('apps.crm.urls')),

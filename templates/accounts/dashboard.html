@@ -79,7 +79,7 @@
         </div>
         {% endif %}
 
-        {% if deadlines.late_tasks or deadlines.week_tasks or deadlines.projects or money.overdue_invoices or follow_ups or maintenance_alerts %}
+        {% if deadlines.late_tasks or deadlines.week_tasks or deadlines.projects or money.overdue_invoices or follow_ups or service_alerts %}
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6" id="dashboard-deadlines">
             {% if deadlines.late_tasks or deadlines.week_tasks or deadlines.projects %}
             <div class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden">
@@ -138,17 +138,17 @@
                 </ul>
             </div>
             {% endif %}
-            {% if maintenance_alerts %}
-            <div class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden" id="dashboard-maintenance">
+            {% if service_alerts %}
+            <div class="border border-border-subtle rounded-card bg-panel/50 overflow-hidden" id="dashboard-services">
                 <div class="px-4 py-2 border-b border-border-subtle bg-panel/80 flex items-center justify-between">
                     <div class="flex items-center gap-3">
-                        <i data-lucide="wrench" class="w-4 h-4 text-zinc-500"></i>
-                        <h2 class="text-sm font-medium text-zinc-100">Maintenance</h2>
+                        <i data-lucide="layers" class="w-4 h-4 text-zinc-500"></i>
+                        <h2 class="text-sm font-medium text-zinc-100">Services</h2>
                     </div>
-                    <a href="{% url 'maintenance_plan_list' %}" class="text-xs text-zinc-200 hover:text-zinc-50">Plans</a>
+                    <a href="{% url 'service_list' %}" class="text-xs text-zinc-200 hover:text-zinc-50">All services</a>
                 </div>
                 <ul class="divide-y divide-border-subtle">
-                    {% for alert in maintenance_alerts %}
+                    {% for alert in service_alerts %}
                     <li>
                         <a href="{{ alert.url }}" class="px-4 py-2 flex items-center gap-3 hover:bg-elevated/50">
                             <span class="text-xs w-20 shrink-0 {% if alert.state == 'late' %}text-error{% elif alert.day == today %}text-amber-400{% else %}text-zinc-400{% endif %}">{% if alert.day == today %}Today{% else %}{{ alert.day|date:"D j M" }}{% if alert.day < today %}, late{% endif %}{% endif %}</span>

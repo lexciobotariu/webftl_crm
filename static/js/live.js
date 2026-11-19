@@ -7,8 +7,8 @@
 // says "whole") reloads the list or board. Reloads use htmx's outerMorph (with the alpine-compat extension), so
 // scroll, focus and Alpine state survive them.
 //
-// A page can also show a summary built from a project's tasks (a maintenance plan's
-// hours, open tasks and checks): an element with data-live-section="<url>" is re-fetched
+// A page can also show a summary built from a project's tasks (a service's
+// hours, open tasks and recurring tasks): an element with data-live-section="<url>" is re-fetched
 // from that URL and morphed into place on any change, including changes this tab makes
 // in the task drawer (its taskChanged / taskStatusChanged / timerChanged events).
 (() => {

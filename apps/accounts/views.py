@@ -99,9 +99,9 @@ def dashboard(request):
     if request.user.has_app_permission('access_leads'):
         from .dashboard import follow_ups
         context['follow_ups'] = follow_ups(request.user, today)
-    if request.user.has_app_permission('access_maintenance'):
-        from apps.maintenance.services import dashboard_alerts
-        context['maintenance_alerts'] = dashboard_alerts(today)
+    if request.user.has_app_permission('access_services'):
+        from apps.services.core import dashboard_alerts
+        context['service_alerts'] = dashboard_alerts(today)
 
     return render(request, 'accounts/dashboard.html', context)
 

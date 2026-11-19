@@ -1,0 +1,23 @@
+{% comment %}One form field in a drawer grid: label, input, help and error. wide spans both columns; bare drops the grid cell.{% endcomment %}
+{% if field.widget_type == 'checkbox' %}
+<div class="{% if wide %}col-span-2 {% endif %}flex items-center gap-2 {% if not wide %}pt-6{% endif %}">
+    {{ field }}
+    <label class="text-sm text-zinc-300" for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {% if field.errors %}<p class="text-xs text-error">{{ field.errors.0 }}</p>{% endif %}
+</div>
+{% elif field.widget_type == 'checkboxselectmultiple' %}
+<fieldset class="{% if wide %}col-span-2{% endif %}">
+    <legend class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5">{{ field.label }}</legend>
+    <div class="flex flex-wrap gap-x-4 gap-y-2">
+        {% for option in field %}<label class="inline-flex items-center gap-2 text-sm text-zinc-300">{{ option.tag }}{{ option.choice_label }}</label>{% endfor %}
+    </div>
+    {% if field.errors %}<p class="mt-1 text-xs text-error">{{ field.errors.0 }}</p>{% endif %}
+</fieldset>
+{% else %}
+<div{% if wide %} class="col-span-2"{% endif %}>
+    <label class="block text-xs uppercase tracking-wide text-zinc-500 mb-1.5" for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+    {% if field.help_text %}<p class="mt-1 text-xs text-zinc-600">{{ field.help_text }}</p>{% endif %}
+    {% if field.errors %}<p class="mt-1 text-xs text-error">{{ field.errors.0 }}</p>{% endif %}
+</div>
+{% endif %}

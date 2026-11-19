@@ -1,7 +1,7 @@
 from django.urls import path
 from django.views.generic import RedirectView
 
-from . import views
+from . import recurring_views, views
 
 urlpatterns = [
     path('my/', views.my_tasks, name='my_tasks'),
@@ -15,6 +15,13 @@ urlpatterns = [
     path('move/', views.task_move, name='task_move'),
     path('markdown/preview/', views.markdown_preview, name='markdown_preview'),
     path('project/<int:project_pk>/create/', views.task_create, name='task_create'),
+    path('project/<int:project_pk>/recurring/', recurring_views.recurring_list, name='recurring_list'),
+    path('project/<int:project_pk>/recurring/panel/', recurring_views.recurring_panel, name='recurring_panel'),
+    path('project/<int:project_pk>/recurring/new/', recurring_views.recurring_create, name='recurring_create'),
+    path('recurring/<int:pk>/edit/', recurring_views.recurring_edit, name='recurring_edit'),
+    path('recurring/<int:pk>/pause/', recurring_views.recurring_pause, name='recurring_pause'),
+    path('recurring/<int:pk>/run/', recurring_views.recurring_run, name='recurring_run'),
+    path('recurring/<int:pk>/delete/', recurring_views.recurring_delete, name='recurring_delete'),
     path('<int:pk>/', views.task_detail, name='task_detail'),
     path('<int:pk>/time-property/', views.task_time_property, name='task_time_property'),
     path('<int:pk>/timer/start/', views.timer_start, name='timer_start'),

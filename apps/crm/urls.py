@@ -1,6 +1,7 @@
 from django.urls import path
 
 from apps.leads import settings_views as lead_settings
+from apps.services import settings_views as service_settings
 
 from . import views
 
@@ -24,4 +25,8 @@ urlpatterns = [
     path('lead-sources/<int:pk>/', lead_settings.lead_source_edit, name='lead_source_edit'),
     path('lead-sources/<int:pk>/delete/', lead_settings.lead_source_delete, name='lead_source_delete'),
     path('storage/', views.settings_storage, name='settings_storage'),
+    path('service-types/', service_settings.settings_service_types, name='settings_service_types'),
+    path('service-types/new/', service_settings.service_type_add, name='settings_service_type_add'),
+    path('service-types/<int:pk>/', service_settings.service_type_edit, name='settings_service_type_edit'),
+    path('service-types/<int:pk>/delete/', service_settings.service_type_delete, name='settings_service_type_delete'),
 ]

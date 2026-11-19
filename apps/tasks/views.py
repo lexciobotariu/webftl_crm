@@ -316,6 +316,7 @@ def render_task_drawer(request, task_id, embedded=False):
         'priority_choices': priority_choices,
         'embedded': embedded,
         'can_add_subtask': can_add_subtask(request.user, task),
+        'can_create_recurring': not embedded and can_create_task(request.user, task.project),
         **_time_context(request.user, task),
     })
 
