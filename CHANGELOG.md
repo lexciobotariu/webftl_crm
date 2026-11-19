@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.46.1] - 2026-11-19
+
+Maintenance plan page follow-up. No migrations, nothing to set in Dokploy, no new dependencies.
+
+### Changed
+- The plan page's sections (details, hours, open tasks, checks, reports, invoices) now reload by themselves when the plan's tasks or time change: from another tab, a colleague, Claude (MCP), or the task drawer opened on the page. They use the same live connection as the task pages (`static/js/live.js`, new `data-live-section`), and wait while you are typing a check
+- Adding or removing a check and "Create this period's task" update every section at once and confirm in a message ("Created WEBS-12: Checks November 2026", or that this period's task already exists)
+- A plan's project now takes the plan's start date and its renewal or end date as its deadline, when the plan is created, edited or renewed automatically
+
+### Fixed
+- "Create this period's task" also created the due checks tasks of other plans; it now creates only this plan's task
+
 ## [0.46.0] - 2026-11-19
 
 **Maintenance**: agreements to look after a client's sites, whether we built them or someone else did. Two database migrations (`maintenance.0001_initial`, `accounts.0016_access_maintenance`): they add the maintenance tables and a new preset permission; nothing existing changes. Only the Admin preset gets the new Maintenance permission. Nothing to set in Dokploy (the daily `create_recurring_invoices` schedule now also runs the maintenance work), no new dependencies.

@@ -73,6 +73,7 @@ def create_plan(plan, user, sites=()):
         description=plan.description,
         billing_type=Project.FIXED,
         start_date=plan.start_date,
+        deadline=plan.renewal_date,
         status=PROJECT_STATUS[plan.status],
     )
     ProjectAccess.objects.get_or_create(project=project, user=user)
@@ -83,16 +84,24 @@ def create_plan(plan, user, sites=()):
     return plan
 
 
+def sync_project(plan):
+    """Give the plan's project the plan's name, start date and end (renewal) date."""
+    project = plan.project
+    wanted = {'name': plan.name, 'start_date': plan.start_date, 'deadline': plan.renewal_date}
+    changed = [field for field, value in wanted.items() if getattr(project, field) != value]
+    if changed:
+        for field in changed:
+            setattr(project, field, wanted[field])
+        project.save(update_fields=[*changed, 'updated_at'])
+
+
 @transaction.atomic
 def update_plan(plan, sites=None):
-    """Save an edited plan, keeping its project's name in step."""
+    """Save an edited plan, keeping its project's name and dates in step."""
     plan.save()
     if sites is not None:
         plan.sites.set(sites)
-    project = plan.project
-    if project.name != plan.name:
-        project.name = plan.name
-        project.save(update_fields=['name', 'updated_at'])
+    sync_project(plan)
     return plan
 
 
@@ -376,6 +385,27 @@ def create_due_checks(today=None):
     return created
 
 
+def create_current_checks(plan, user=None, today=None):
+    """Create the checks task of the plan's current period now. Returns (period_start, task).
+
+    ``task`` is None when that period's task was already created.
+    """
+    today = today or timezone.localdate()
+    schedule_checks(plan, today)
+    months = FREQUENCY_MONTHS[plan.check_frequency]
+    period = plan.next_check_date
+    while period > today:
+        period = add_months(period, -months)
+    while add_months(period, months) <= today:
+        period = add_months(period, months)
+    task = create_checks_task(plan, period, user)
+    following = add_months(period, months)
+    if plan.next_check_date < following:
+        plan.next_check_date = following
+        plan.save(update_fields=['next_check_date', 'updated_at'])
+    return period, task
+
+
 # --- Renewal -----------------------------------------------------------
 
 
@@ -383,7 +413,7 @@ def process_renewals(today=None):
     """Move the renewal date of auto-renewing plans past it; end the others. Returns (renewed, ended)."""
     today = today or timezone.localdate()
     renewed, ended = [], []
-    due = MaintenancePlan.objects.exclude(status=MaintenancePlan.ENDED).filter(
+    due = MaintenancePlan.objects.select_related('project').exclude(status=MaintenancePlan.ENDED).filter(
         renewal_date__isnull=False, renewal_date__lt=today,
     )
     for plan in due:
@@ -391,6 +421,7 @@ def process_renewals(today=None):
             while plan.renewal_date < today:
                 plan.renewal_date = add_months(plan.renewal_date, plan.term_months)
             plan.save(update_fields=['renewal_date', 'updated_at'])
+            sync_project(plan)
             renewed.append(plan)
         else:
             set_status(plan, MaintenancePlan.ENDED)

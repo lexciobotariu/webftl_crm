@@ -1,4 +1,5 @@
 """Maintenance plans: project, hours, invoices, extra hours, checks, renewals, sites and logins, reports."""
+import json
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
@@ -87,6 +88,15 @@ def test_renaming_the_plan_renames_its_project():
     plan.name = 'New name'
     services.update_plan(plan)
     assert Project.objects.get(pk=plan.project_id).name == 'New name'
+
+
+def test_project_takes_the_plans_dates():
+    plan = _plan(renewal_date=date(2026, 12, 31), auto_renew=True, term_months=12)
+    assert (plan.project.start_date, plan.project.deadline) == (date(2026, 1, 1), date(2026, 12, 31))
+    plan.start_date, plan.renewal_date = date(2026, 2, 1), None
+    services.update_plan(plan)
+    project = Project.objects.get(pk=plan.project_id)
+    assert (project.start_date, project.deadline) == (date(2026, 2, 1), None)
 
 
 # --- Hours ------------------------------------------------------------
@@ -244,6 +254,7 @@ def test_auto_renewing_plan_moves_its_date_and_others_end():
     renewing.refresh_from_db()
     ending.refresh_from_db()
     assert renewing.renewal_date == add_months(today - timedelta(days=1), 12)
+    assert Project.objects.get(pk=renewing.project_id).deadline == renewing.renewal_date
     assert renewing.status == MaintenancePlan.ACTIVE
     assert ending.status == MaintenancePlan.ENDED
     assert ending.project.status == Project.FINISHED
@@ -389,8 +400,43 @@ def test_check_buttons(client):
     assert b'Update plugins' in response.content
     plan.refresh_from_db()
     assert plan.next_check_date == services.month_start(timezone.localdate())
+    assert json.loads(response['HX-Trigger'])['infoToast']['message'] == 'Check added: Update plugins'
+    assert b'id="plan-sections"' in response.content and b'<html' not in response.content
+
+    response = client.post(reverse('maintenance_check_run', args=[plan.pk]))
+    run = MaintenanceCheckRun.objects.get(plan=plan)
+    assert json.loads(response['HX-Trigger'])['infoToast']['message'] == f'Created {run.task.identifier}: {run.task.title}'
+    # The new task shows in Open tasks and under Checks tasks straight away.
+    assert response.content.count(run.task.title.encode()) >= 2
+
+    again = client.post(reverse('maintenance_check_run', args=[plan.pk]))
+    assert 'was already created' in json.loads(again['HX-Trigger'])['infoToast']['message']
+    assert MaintenanceCheckRun.objects.filter(plan=plan).count() == 1
+
+
+def test_check_run_creates_only_this_plans_task(client):
+    admin = AdminUserFactory()
+    plan, other = _plan(admin), _plan(admin)
+    for item in (plan, other):
+        MaintenanceCheck.objects.create(plan=item, title='Backups', position=1)
+        services.schedule_checks(item)
+    client.force_login(admin)
     client.post(reverse('maintenance_check_run', args=[plan.pk]))
-    assert MaintenanceCheckRun.objects.filter(plan=plan, task__isnull=False).count() == 1
+    assert MaintenanceCheckRun.objects.filter(plan=plan).count() == 1
+    assert not MaintenanceCheckRun.objects.filter(plan=other).exists()
+
+
+def test_plan_sections_render_alone(client):
+    admin = AdminUserFactory()
+    plan = _plan(admin)
+    TaskFactory(project=plan.project, title='Fix the contact form')
+    client.force_login(admin)
+    response = client.get(reverse('maintenance_plan_sections', args=[plan.pk]), {'month': '2026-01'})
+    assert response.status_code == 200
+    assert b'Fix the contact form' in response.content
+    assert b'month=2026-01' in response.content
+    page = client.get(reverse('maintenance_plan_detail', args=[plan.pk]))
+    assert b'data-live-section=' in page.content and b'id="live-tasks"' in page.content
 
 
 def test_report_pdf_email_and_portal(client):
