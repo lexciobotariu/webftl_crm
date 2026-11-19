@@ -52,6 +52,14 @@ def permissions(request):
 
         return unread_count(user) if user.has_app_permission('access_tasks') else 0
 
+    def todo_open_count():
+        # Same lazy pattern as the inbox badge: only the sidebar asks for it.
+        from apps.todos.models import Todo
+
+        if not user.has_app_permission('access_todos'):
+            return 0
+        return Todo.objects.filter(owner=user, is_completed=False).count()
+
     return {
         'perms_map': {
             key: request.user.has_app_permission(key)
@@ -59,4 +67,5 @@ def permissions(request):
         },
         'running_timer': running_timer,
         'inbox_unread': inbox_unread,
+        'todo_open_count': todo_open_count,
     }

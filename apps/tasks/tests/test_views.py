@@ -399,21 +399,15 @@ class TestComments:
 
 @pytest.mark.django_db
 class TestMyTasksTabs:
-    def test_my_tasks_default_tab_is_tasks(self, client):
-        """GET /tasks/my/ should set active_tab to 'tasks'"""
+    def test_my_tasks_has_no_todos_tab(self, client):
+        """To-Dos moved to their own page; My Tasks is only the task list."""
         user = UserFactory()
         client.force_login(user)
         response = client.get(reverse('my_tasks'), {'layout': 'list'})
         assert response.status_code == 200
-        assert response.context['active_tab'] == 'tasks'
-
-    def test_my_tasks_todos_tab(self, client):
-        """GET /tasks/my/todos/ should set active_tab to 'todos'"""
-        user = UserFactory()
-        client.force_login(user)
-        response = client.get(reverse('my_tasks_todos'))
-        assert response.status_code == 200
-        assert response.context['active_tab'] == 'todos'
+        main = response.content.decode().split('</aside>', 1)[1]
+        assert reverse('my_tasks_todos') not in main
+        assert 'To-Dos' not in main
 
 
 @pytest.mark.django_db

@@ -90,15 +90,32 @@
             <i data-lucide="user-check" class="w-4 h-4"></i>
             My Tasks
         </a>
+        {% endif %}
+        {% if perms_map.access_todos %}
+        {% with open_todos=todo_open_count %}
+        <a href="{% url 'todos' %}"
+           class="flex items-center gap-2.5 px-3 py-2 rounded-control text-[13px] font-medium transition-colors duration-150
+                  {% if request.resolver_match.url_name == 'todos' %}
+                  bg-elevated text-zinc-100 border border-border-subtle
+                  {% else %}
+                  text-zinc-400 hover:text-zinc-200 hover:bg-hover
+                  {% endif %}">
+            <i data-lucide="list-checks" class="w-4 h-4"></i>
+            To-Dos
+            {% if open_todos %}<span class="ml-auto text-[11px] text-zinc-500 tabular-nums" aria-label="{{ open_todos }} open">{{ open_todos }}</span>{% endif %}
+        </a>
+        {% endwith %}
+        {% endif %}
+        {% if perms_map.access_tasks %}
         <a href="{% url 'time_week' %}"
-           class="flex items-center gap-2.5 pl-9 pr-3 py-1.5 rounded-control text-[13px] font-medium transition-colors duration-150
+           class="flex items-center gap-2.5 px-3 py-2 rounded-control text-[13px] font-medium transition-colors duration-150
                   {% if request.resolver_match.url_name == 'time_week' %}
                   bg-elevated text-zinc-100 border border-border-subtle
                   {% else %}
                   text-zinc-400 hover:text-zinc-200 hover:bg-hover
                   {% endif %}">
-            <i data-lucide="clock" class="w-3.5 h-3.5"></i>
-            My Week
+            <i data-lucide="clock" class="w-4 h-4"></i>
+            My Time
         </a>
         {% endif %}
         {% if perms_map.access_salaries or perms_map.access_invoices %}

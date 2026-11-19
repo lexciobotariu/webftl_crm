@@ -238,7 +238,7 @@ class TestPages:
 
         assert 'Settings' in [p.label for p in services.search(admin, 'sett').pages]
         assert services.search(member, 'sett').pages == []
-        assert [p.label for p in services.search(member, 'my ').pages] == ['My Tasks', 'My Week']
+        assert [p.label for p in services.search(member, 'my ').pages] == ['My Tasks', 'My Time']
 
     def test_the_page_list_is_the_sidebars_for_several_kinds_of_user(self, client):
         users = [

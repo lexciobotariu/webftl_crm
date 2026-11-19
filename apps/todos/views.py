@@ -29,6 +29,19 @@ def _set_todo_triggers(response, *, has_client=False, close=False):
 
 @login_required
 @require_permission('access_todos')
+def todo_page(request):
+    """The To-Dos page in the sidebar: this person's open personal to-dos."""
+    todos_qs = Todo.objects.filter(owner=request.user, is_completed=False).select_related('client')
+    return render(request, 'todos/todos_page.html', {
+        'todos': todos_qs,
+        'todo_count': todos_qs.count(),
+        'show_completed': False,
+        'today': timezone.localdate(),
+    })
+
+
+@login_required
+@require_permission('access_todos')
 def todo_list(request):
     """Personal to-dos list (HTMX partial)."""
     todos_qs = Todo.objects.filter(owner=request.user).select_related('client')

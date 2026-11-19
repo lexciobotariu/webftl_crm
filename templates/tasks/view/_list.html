@@ -28,6 +28,9 @@
             {% include "components/priority_icon.html" with priority=group.priority %}
             {% elif group.kind == 'project' %}
             <i data-lucide="folder" class="w-3.5 h-3.5 text-zinc-500"></i>
+            {% elif group.kind == 'due' %}
+            <i data-lucide="{% if group.due == 'overdue' %}calendar-x{% elif group.due == 'none' %}calendar-off{% else %}calendar{% endif %}"
+               class="w-3.5 h-3.5 {% if group.due == 'overdue' %}text-error{% else %}text-zinc-500{% endif %}"></i>
             {% else %}
             {% include "components/avatar.html" with user=group.user size=18 %}
             {% endif %}

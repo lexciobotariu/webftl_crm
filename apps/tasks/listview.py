@@ -15,10 +15,17 @@ from django_htmx.http import push_url, replace_url
 from apps.accounts.models import User
 from apps.projects.models import Status, get_assignable_users
 
-from .models import PRIORITY_FILTER_CHOICES, Task, priority_filter_options
+from .models import (
+    DUE_BUCKETS,
+    PRIORITY_FILTER_CHOICES,
+    Task,
+    due_bucket,
+    priority_filter_options,
+)
 from .viewspec import (
     ASSIGNEE_NONE,
     CATEGORIES,
+    DUE_CHOICES,
     START_CHOICES,
     TaskViewSpec,
     default_show_empty,
@@ -28,6 +35,15 @@ from .viewspec import (
 PRIORITY_LABELS = dict(PRIORITY_FILTER_CHOICES)
 PRIORITY_LABELS[''] = PRIORITY_LABELS['none']
 CATEGORY_LABELS = dict(Status.CATEGORY_CHOICES)
+DUE_LABELS = dict(DUE_BUCKETS)
+# The due-date groups each Due filter value can leave on the page.
+DUE_FILTER_GROUPS = {
+    'overdue': {'overdue'},
+    'today': {'overdue', 'today'},
+    'week': {'overdue', 'today', 'week'},
+    'next_week': {'next_week'},
+    'none': {'none'},
+}
 # Priority groups in list order (``_priority_rank``), with the filter's token for each.
 PRIORITY_GROUP_ORDER = (
     ('urgent', 'urgent'), ('high', 'high'), ('medium', 'medium'), ('low', 'low'), ('', 'none'),
@@ -38,6 +54,7 @@ GROUP_LABELS = {
     'priority': 'Priority',
     'project': 'Project',
     'category': 'Status type',
+    'due': 'Due date',
     'none': 'No grouping',
 }
 
@@ -99,7 +116,8 @@ def apply_url_headers(response, request, spec, from_toolbar, page_url):
 
 
 def _group_object(spec, task):
-    """What a task's group stands for: a status, a user (or None), a project, a status type or a priority."""
+    """What a task's group stands for: a status, a user (or None), a project, a status
+    type, a due-date group or a priority."""
     if spec.group == 'status':
         return task.status_id, task.status
     if spec.group == 'assignee':
@@ -108,6 +126,9 @@ def _group_object(spec, task):
         return task.project_id, task.project
     if spec.group == 'category':
         return task.status.category, task.status.category
+    if spec.group == 'due':
+        bucket = due_bucket(task.due_date)
+        return bucket, bucket
     return task.priority, task.priority
 
 
@@ -122,6 +143,7 @@ def _make_group(spec, key, obj, rows, count):
         'priority': obj if spec.group == 'priority' else None,
         'project': obj if spec.group == 'project' else None,
         'category': obj if spec.group == 'category' else None,
+        'due': obj if spec.group == 'due' else None,
     }
     if spec.group == 'status':
         group['label'] = obj.name
@@ -131,6 +153,8 @@ def _make_group(spec, key, obj, rows, count):
         group['label'] = obj.name
     elif spec.group == 'category':
         group['label'] = CATEGORY_LABELS.get(obj, obj)
+    elif spec.group == 'due':
+        group['label'] = DUE_LABELS[obj]
     else:
         group['label'] = PRIORITY_LABELS[obj]
     # What the "+" on the header fills in for a new task. None for a group a
@@ -224,6 +248,9 @@ def group_slots(spec, statuses=(), assignees=()):
         ]
     if spec.group == 'category':
         return [(value, value) for value in CATEGORIES if not spec.categories or value in spec.categories]
+    if spec.group == 'due':
+        wanted = DUE_FILTER_GROUPS.get(spec.due)
+        return [(key, key) for key, _label in DUE_BUCKETS if not wanted or key in wanted]
     return []
 
 
@@ -289,6 +316,7 @@ def filter_options(statuses, spec, assignable_users, labels, categories=()):
     options = {
         'archive_after_days': settings.TASK_ARCHIVE_AFTER_DAYS,
         'start_choices': START_CHOICES,
+        'due_choices': DUE_CHOICES,
         'priority_options': priority_filter_options(spec.priorities),
         'label_options': [
             {'value': label.pk, 'label': label.name, 'checked': label.pk in spec.labels}

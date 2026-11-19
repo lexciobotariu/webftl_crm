@@ -107,7 +107,7 @@ def _format_total(entries):
 # status type and a drop would have to pick one concrete column in every project.
 MY_TASKS_OPTIONS = TaskViewOptions(
     layouts=('list',),
-    groups=('project', 'category', 'priority', 'none'),
+    groups=('project', 'due', 'category', 'priority', 'none'),
     # Manual order is per project column, so it means nothing across projects.
     sorts=tuple(value for value in SORTS if value != 'manual'),
     columns=frozenset({'id', 'project', 'labels', 'due', 'estimate'}),
@@ -123,88 +123,72 @@ MY_TASKS_OPTIONS = TaskViewOptions(
 @require_permission('access_tasks')
 def my_tasks(request):
     """My Tasks: the tasks assigned to this person, in the URL-driven list view."""
-    tasks_tab = request.resolver_match.url_name == 'my_tasks'
     assigned = Task.objects.open_for(request.user)
-    # Needed on both tabs: the Assigned Tasks count in the top bar must not change
-    # with the tab or the filters. It is the dashboard's "My Active Tasks" number.
-    context = {
-        'active_tab': 'tasks' if tasks_tab else 'todos',
-        'total_count': assigned.active().count(),
-    }
+    # The count in the top bar must not change with the filters. It is the
+    # dashboard's "My Active Tasks" number.
+    context = {'total_count': assigned.active().count()}
 
-    # The To-Dos tab renders without a query string; only the Tasks tab restores a view.
-    if tasks_tab:
-        page_url = request.path
-        resolved = resolve_view(
-            request,
-            options=MY_TASKS_OPTIONS,
-            model=MyTasksView,
-            lookup={'user': request.user},
-            page_url=page_url,
-        )
-        if isinstance(resolved, HttpResponseRedirect):
-            return resolved
-        spec, from_toolbar = resolved
+    page_url = request.path
+    resolved = resolve_view(
+        request,
+        options=MY_TASKS_OPTIONS,
+        model=MyTasksView,
+        lookup={'user': request.user},
+        page_url=page_url,
+    )
+    if isinstance(resolved, HttpResponseRedirect):
+        return resolved
+    spec, from_toolbar = resolved
 
-        quick_edit, quick_edit_projects = editable_scope(request.user)
-        matching = assigned.matching(spec)
-        if 'row' in request.GET:
-            return render_task_row(request, request.GET['row'], matching, spec, {
-                'show_project': True,
-                'quick_edit': quick_edit,
-                'quick_edit_projects': quick_edit_projects,
-            })
-        total_matching = matching.count()
-        archived_count = archived_matching(assigned, spec).count()
-        # What the default view leaves out is hidden too, so every page of this
-        # view measures "hidden" against all of the person's tasks. Archived ones
-        # that pass the filters are counted on their own.
-        total_visible = assigned.count()
-        page = (
-            matching.ordered_for(spec)
-            .select_related('project', 'status', 'assignee')
-            .prefetch_related('labels')[: spec.limit]
-        )
-        context.update({
-            'spec': spec,
-            'groups': build_groups(page, spec, assigned.group_counts(spec), group_slots(spec)),
-            'total_matching': total_matching,
-            'total_visible': total_visible,
-            'hidden_count': total_visible - total_matching - archived_count,
-            'archived_count': archived_count,
-            'more_url': None,
-            'show_all_url': None,
-            'page_url': page_url,
+    quick_edit, quick_edit_projects = editable_scope(request.user)
+    matching = assigned.matching(spec)
+    if 'row' in request.GET:
+        return render_task_row(request, request.GET['row'], matching, spec, {
             'show_project': True,
             'quick_edit': quick_edit,
             'quick_edit_projects': quick_edit_projects,
-            'priority_choices': Task.PRIORITY_CHOICES,
-            'empty_message': 'No open tasks assigned to you',
-            'sort_choices': sort_choices(MY_TASKS_OPTIONS),
-            'column_choices': column_choices(spec),
-            'group_choices': group_choices(MY_TASKS_OPTIONS),
-            **filter_options(
-                [], spec, [], [], categories=MY_TASKS_OPTIONS.categories
-            ),
         })
-        if total_matching > spec.limit:
-            more = spec.replace(limit=spec.limit + LIMIT_STEP).to_query_string()
-            context['more_url'] = f'{page_url}?{more}'
-        everything = spec.replace(categories=MY_TASKS_OPTIONS.categories, archived=True)
-        context['show_all_url'] = f'{page_url}?{everything.to_query_string()}'
-
-    from apps.todos.models import Todo
-    todos_qs = Todo.objects.filter(owner=request.user, is_completed=False).select_related('client')
+    total_matching = matching.count()
+    archived_count = archived_matching(assigned, spec).count()
+    # What the default view leaves out is hidden too, so every page of this
+    # view measures "hidden" against all of the person's tasks. Archived ones
+    # that pass the filters are counted on their own.
+    total_visible = assigned.count()
+    page = (
+        matching.ordered_for(spec)
+        .select_related('project', 'status', 'assignee')
+        .prefetch_related('labels')[: spec.limit]
+    )
     context.update({
-        'todos': todos_qs,
-        'todo_count': todos_qs.count(),
-        'show_completed': False,
-        'today': timezone.localdate(),
+        'spec': spec,
+        'groups': build_groups(page, spec, assigned.group_counts(spec), group_slots(spec)),
+        'total_matching': total_matching,
+        'total_visible': total_visible,
+        'hidden_count': total_visible - total_matching - archived_count,
+        'archived_count': archived_count,
+        'more_url': None,
+        'show_all_url': None,
+        'page_url': page_url,
+        'show_project': True,
+        'quick_edit': quick_edit,
+        'quick_edit_projects': quick_edit_projects,
+        'priority_choices': Task.PRIORITY_CHOICES,
+        'empty_message': 'No open tasks assigned to you',
+        'sort_choices': sort_choices(MY_TASKS_OPTIONS),
+        'column_choices': column_choices(spec),
+        'group_choices': group_choices(MY_TASKS_OPTIONS),
+        **filter_options(
+            [], spec, [], [], categories=MY_TASKS_OPTIONS.categories
+        ),
     })
+    if total_matching > spec.limit:
+        more = spec.replace(limit=spec.limit + LIMIT_STEP).to_query_string()
+        context['more_url'] = f'{page_url}?{more}'
+    everything = spec.replace(categories=MY_TASKS_OPTIONS.categories, archived=True)
+    context['show_all_url'] = f'{page_url}?{everything.to_query_string()}'
 
     response = render(request, 'tasks/my_tasks.html', context)
-    if tasks_tab:
-        apply_url_headers(response, request, spec, from_toolbar, page_url)
+    apply_url_headers(response, request, spec, from_toolbar, page_url)
     return response
 
 

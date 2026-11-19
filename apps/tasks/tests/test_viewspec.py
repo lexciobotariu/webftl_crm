@@ -1,5 +1,8 @@
+from datetime import date
+
 from django.http import QueryDict
 
+from apps.tasks.models import due_bucket, due_week_ends
 from apps.tasks.viewspec import DEFAULT_LIMIT, LIMIT_STEP, TaskViewOptions, TaskViewSpec
 
 OPTIONS = TaskViewOptions(
@@ -182,7 +185,7 @@ OPEN_CATEGORIES = frozenset({'backlog', 'unstarted', 'started'})
 # The shape My Tasks gives the spec: list only, grouped by project, open tasks first.
 MY_OPTIONS = TaskViewOptions(
     layouts=('list',),
-    groups=('project', 'category', 'priority', 'none'),
+    groups=('project', 'due', 'category', 'priority', 'none'),
     categories=ALL_CATEGORIES,
     has_assignee_filter=False,
     default_group='project',
@@ -299,3 +302,39 @@ class TestCategories:
 
     def test_replace_keeps_the_page_options(self):
         assert parse_my().replace(limit=400).to_params() == {'layout': 'list', 'limit': '400'}
+
+
+class TestDue:
+    def test_due_is_read_written_and_counted(self):
+        spec = parse_my('due=week')
+        assert spec.due == 'week'
+        assert spec.to_params()['due'] == 'week'
+        assert spec.filter_count == 1
+
+    def test_unknown_due_is_dropped(self):
+        assert parse_my('due=soon').due == ''
+
+    def test_grouped_by_due_sorts_by_due_by_default(self):
+        spec = parse_my('group=due')
+        assert spec.sort == 'due'
+        assert 'sort' not in spec.to_params()
+
+
+class TestDueBuckets:
+    # Thursday 2026-11-19: this week ends Sunday the 22nd, next week the 29th.
+    TODAY = date(2026, 11, 19)
+
+    def test_buckets(self):
+        def bucket(day):
+            return due_bucket(date(2026, 11, day), self.TODAY)
+
+        assert due_bucket(None, self.TODAY) == 'none'
+        assert bucket(18) == 'overdue'
+        assert bucket(19) == 'today'
+        assert bucket(22) == 'week'
+        assert bucket(23) == 'next_week'
+        assert bucket(29) == 'next_week'
+        assert bucket(30) == 'later'
+
+    def test_on_a_sunday_this_week_is_only_today(self):
+        assert due_week_ends(date(2026, 11, 22)) == (date(2026, 11, 22), date(2026, 11, 29))

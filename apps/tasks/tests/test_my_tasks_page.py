@@ -1,12 +1,15 @@
+from datetime import timedelta
+
 import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.accounts.factories import UserFactory
 from apps.projects.factories import ProjectAccessFactory, ProjectFactory
 from apps.tasks.factories import LabelFactory, TaskFactory
-from apps.tasks.models import MyTasksView
+from apps.tasks.models import MyTasksView, due_week_ends
 
 TOOLBAR = {'HTTP_HX_REQUEST': 'true', 'HTTP_HX_SOURCE': 'form#task-toolbar'}
 SEARCH = {'HTTP_HX_REQUEST': 'true', 'HTTP_HX_SOURCE': 'input#task-search'}
@@ -51,10 +54,10 @@ class TestDefaultView:
         assert response.status_code == 302
         assert response['Location'] == f'{reverse("my_tasks")}?layout=list'
 
-    def test_the_todos_tab_renders_without_a_query_string(self, client, person):
+    def test_the_old_todos_tab_redirects_to_the_todos_page(self, client, person):
         response = client.get(reverse('my_tasks_todos'))
-        assert response.status_code == 200
-        assert response.context['active_tab'] == 'todos'
+        assert response.status_code == 302
+        assert response['Location'] == reverse('todos')
 
     def test_only_open_assigned_tasks_are_shown(self, client, person):
         project = _project(person)
@@ -96,9 +99,8 @@ class TestDefaultView:
         _task(project, person, 'Review', 'c')
         page = client.get(_url('layout=list'))
         assert page.context['total_count'] == 2
-        # Still two while looking at finished tasks, and on the To-Dos tab.
+        # Still two while looking at finished tasks.
         assert client.get(_url('layout=list&category=completed')).context['total_count'] == 2
-        assert client.get(reverse('my_tasks_todos')).context['total_count'] == 2
         assert client.get(reverse('dashboard')).context['my_task_count'] == 2
 
     def test_a_refresh_after_an_edit_updates_the_badge_too(self, client, person):
@@ -168,6 +170,62 @@ class TestFilters:
 
     def test_a_group_the_page_does_not_offer_falls_back(self, client, person):
         assert client.get(_url('layout=list&group=assignee')).context['spec'].group == 'project'
+
+
+@pytest.mark.django_db
+class TestDueDate:
+    def _tasks(self, person):
+        today = timezone.localdate()
+        end_of_week, end_of_next_week = due_week_ends(today)
+        project = _project(person)
+        _task(project, person, 'To Do', 'late', due_date=today - timedelta(days=1))
+        _task(project, person, 'To Do', 'today', due_date=today)
+        _task(project, person, 'To Do', 'next week', due_date=end_of_next_week)
+        _task(project, person, 'To Do', 'later', due_date=end_of_next_week + timedelta(days=1))
+        _task(project, person, 'To Do', 'no date')
+        if end_of_week > today:
+            _task(project, person, 'To Do', 'this week', due_date=end_of_week)
+        return end_of_week > today
+
+    def test_filter_overdue_today_and_this_week(self, client, person):
+        has_rest_of_week = self._tasks(person)
+        assert _titles(client.get(_url('layout=list&due=overdue'))) == ['late']
+        assert sorted(_titles(client.get(_url('layout=list&due=today')))) == ['late', 'today']
+        week = sorted(_titles(client.get(_url('layout=list&due=week'))))
+        assert week == sorted(['late', 'today'] + (['this week'] if has_rest_of_week else []))
+
+    def test_filter_next_week_and_no_date(self, client, person):
+        self._tasks(person)
+        assert _titles(client.get(_url('layout=list&due=next_week'))) == ['next week']
+        assert _titles(client.get(_url('layout=list&due=none'))) == ['no date']
+
+    def test_the_filter_counts_and_is_remembered(self, client, person):
+        response = client.get(_url('layout=list&due=week'), **TOOLBAR)
+        assert response.context['spec'].filter_count == 1
+        assert MyTasksView.objects.get(user=person).params['due'] == 'week'
+        assert 'name="due" value="week" checked' in response.content.decode()
+
+    def test_an_unknown_value_is_no_filter(self, client, person):
+        assert client.get(_url('layout=list&due=someday')).context['spec'].due == ''
+
+    def test_clear_drops_it(self, client, person):
+        assert client.get(_url('layout=list&due=today&clear=1')).context['spec'].due == ''
+
+    def test_group_by_due_date_in_order_with_earliest_first(self, client, person):
+        has_rest_of_week = self._tasks(person)
+        response = client.get(_url('layout=list&group=due'))
+        labels = [g['label'] for g in response.context['groups']]
+        expected = ['Overdue', 'Today'] + (['This week'] if has_rest_of_week else []) + [
+            'Next week', 'Later', 'No due date'
+        ]
+        assert labels == expected
+        assert response.context['spec'].sort == 'due'
+        assert [g['count'] for g in response.context['groups']] == [1] * len(expected)
+
+    def test_grouped_and_filtered_shows_only_those_groups(self, client, person):
+        self._tasks(person)
+        response = client.get(_url('layout=list&group=due&due=today&empty=1'))
+        assert [g['label'] for g in response.context['groups']] == ['Overdue', 'Today']
 
 
 @pytest.mark.django_db
